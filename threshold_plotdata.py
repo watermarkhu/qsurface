@@ -1,31 +1,29 @@
 from matplotlib import pyplot as plt
 import numpy as np
-import pandas as pd
 
-file_name = "190625_peeling_toric_pX_vanilla_N30000"
-plot_name = "Peeling decoder on toric lattice with Pauli X error (vanilla)"
-
-
-data = pd.read_csv("./data/" + file_name + ".csv", index_col=0)
-thresholds = np.array(data)
-lattices = [int(k) for k in data.index.values]
-p = [float(k) for k in data.columns.values]
-
-plotn = 500
-X = np.linspace(p[0], p[-1], plotn)
-f0 = plt.figure()
+lattice = "Planar"
+lattices = [8,12,16]
+p = list(np.linspace(0.09, 0.11,9))
+Num = 200
 
 
-for i, (lat, thres) in enumerate(zip(lattices, thresholds)):
-    fit = np.polyfit(p, thres, 2)
+
+X = np.linspace(p[0], p[-1], 100)
+f  = plt.figure()
+
+
+for lati in range(len(lattices)):
+    Name = "./data/" + lattice + "_Thres_L" + str(lattices[lati]) + "_N" + str(Num) + ".txt"
+    thresholds = np.loadtxt(Name)
+    fit = np.polyfit(p, thresholds, 2)
     polyfit = np.poly1d(fit)
-    plt.plot([pi*100 for pi in p], thres, 'x', color='C'+str(i))
-    plt.plot([x*100 for x in X], polyfit(X), '-', label=lat, color='C'+str(i))
+    plt.plot([pi*100 for pi in p], thresholds, 'x', color='C'+str(lati))
+    plt.plot(X*100, polyfit(X), '-', label=lattices[lati], color='C'+str(lati))
 
-plt.title(plot_name)
+plt.title("performance planar")
 plt.legend()
-plt.xlabel("probability Pauli X error (%)")
+plt.xlabel("p (%)")
 plt.ylabel("Decoding success rate (%)")
 plt.show()
-fname = "./figures/" + file_name + ".pdf"
-f0.savefig(fname, transparent=True, format="pdf", bbox_inches="tight")
+fname = "./figures/" + lattice + "_thres_N" + str(Num) + ".pdf"
+f.savefig(fname, transparent = True, format = "pdf", bbox_inches="tight")

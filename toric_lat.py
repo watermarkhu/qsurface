@@ -392,7 +392,7 @@ class lattice:
 
         PL = pel.toric(self)
         PL.find_clusters()
-        PL.grow_clusters()
+        PL.grow_bucket()
         PL.peel_trees()
 
         for edge in self.G.E.values():

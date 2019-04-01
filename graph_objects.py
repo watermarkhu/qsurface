@@ -21,8 +21,6 @@ class Graph(object):
         self.E = {}
         self.wind = ["u", "d", "l", "r"]
 
-        self.cluster_index = []
-
     def __repr__(self):
 
         numC = 0
@@ -50,7 +48,6 @@ class Graph(object):
         V2 = self.V[sIDrd]
         E = Edge(qID, V1, V2)
         self.E[qID] = E
-
         if orientation == 'H':
             V1.neighbors['r'] = (V2, E)
             V2.neighbors['l'] = (V1, E)
@@ -58,16 +55,6 @@ class Graph(object):
             V1.neighbors['d'] = (V2, E)
             V2.neighbors['u'] = (V1, E)
         return E
-
-    def merge_clusters(self, bcID, scID):
-        '''Merges two clusters'''
-
-        self.C[bcID].merged.append(scID)
-        self.C[scID].merged.append(bcID)
-
-        self.C[bcID].merge_with(self.C[scID])
-        self.C[scID].delete_atr()
-        self.cluster_index[scID] = bcID
 
     def reset(self):
         '''
@@ -85,18 +72,15 @@ class Cluster(object):
     '''
     Cluster obejct with parameters:
     cID         ID number of cluster
-    V           dict of vertices contained within this cluster with
-                    Key:    sID number
-                    Value:  Vertex object
-    E           dict of edges contained within this cluster with
-                    Key:    qID number
-                    Value:  Edge object
-    B           dict of Boundary edges of this cluster with
-                    Key:    Edge object
-                    Value:  (base vertex object, grow vertex object)
-    size        Size of this cluster based on the number contained vertices
-    parity      Parity of this cluster based on the number of contained anyons
-    merged      list of other clusters merged into this cluster
+    size        size of this cluster based on the number contained vertices
+    parity      parity of this cluster based on the number of contained anyons
+    parent      the parent cluster of this cluster
+    childs      the children clusters of this cluster
+    half_grown  growth state of the cluster: 1 if False, 2 if True
+    full_bound  boundary for growth step 1
+    half_bound  boundary for growth step 2
+    bucket      the appropiate bucket number of this cluster
+
     '''
 
     def __init__(self, cID):
@@ -104,13 +88,12 @@ class Cluster(object):
         self.cID = cID
         self.size = 0
         self.parity = 0
-
         self.parent = self
         self.childs = []
-
         self.half_grown = False
         self.half_bound = []
         self.full_bound = []
+        self.bucket = 0
 
     def __repr__(self):
         return "C" + str(self.cID)
@@ -127,7 +110,7 @@ class Cluster(object):
         edge.cluster = self
 
     def add_full_bound(self, base_vertex, edge, grow_vertex):
-        '''Add an edge to the boundary of the cluster'''
+        '''Add an edge to the boundary of the cluster after growth step 2'''
         self.full_bound.append((base_vertex, edge, grow_vertex))
 
     def merge_with(self, cluster):
@@ -180,7 +163,6 @@ class Edge(object):
     vertices    tuple of the two conected vertices
     state       boolean indicating the state of the qubit
     cluster     Cluster object of which this edge is apart of
-    tree        boolean indicating whether this edge has been traversed
     peeled      boolean indicating whether this edge has peeled
     matching    boolean indicating whether this edge is apart of the matching
     '''

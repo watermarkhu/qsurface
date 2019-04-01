@@ -50,8 +50,10 @@ class toric_peeling_plot:
         self.ax.legend(handles=[le_xv, le_zv, le_xe, le_ze], bbox_to_anchor=(1.15, 0.95), loc='upper right', ncol=1)
 
 
-    def waitforkeypress(self, str):
-        print(str, "Press any key (on plot) to continue...")
+    def waitforkeypress(self, str=""):
+        if str != "":
+            str += " "
+        print(str + "Press any key (on plot) to continue...")
         keyboardClick = False
         while not keyboardClick:
             keyboardClick = plt.waitforbuttonpress(120)

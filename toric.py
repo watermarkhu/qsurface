@@ -3,14 +3,15 @@ import numpy as np
 from operator import xor
 import Toric_plot as tp
 import copy
+from matplotlib import pyplot as plt
 import time
 
 class Toric_lattice:
 
-    def __init__(self, size, p, plot):
+    def __init__(self, size = 10, p=0.1, plot=True, base_image_size=17):
         self.size = size
         self.p = p
-        self.L = tp.plotlattice(size, plot)
+        self.L = tp.plotlattice(size, plot, base_image_size)
 
     def init_Z_errors(self, ploterrors=False, plotstrings=False, new_errors=True, Error_file = "Z_errors.txt"):
         def find_min_d(p, size):
@@ -72,12 +73,22 @@ class Toric_lattice:
                 self.com[str_i, 2] = dist
                 str_i += 1
 
-    def Z_MWPM(self, plot, plot_iter):
+    def Z_MWPM(self, plot = False, plot_percentage = 90, fps = 2):
+
+        if plot:
+            fig = plt.figure()
+            fig.canvas.draw()
+            ax = plt.gca()
+            fig.canvas.draw()
+            i_plot = ax.imshow(self.L.lattice)
+            axbackground = fig.canvas.copy_from_bbox(ax.bbox)
+            t_start = time.time()
+
 
         strings_to_remove = int(self.N_str - self.N_err / 2)
         N_removed = 0
         iter = 0
-
+        bad_matching = False
 
         while not all([num_str == 1 for num_str in self.inf[:, 2]]):
 
@@ -95,6 +106,10 @@ class Toric_lattice:
             available_distances = self.com[available_strings, 2]
             available_sum_string = com_s0[available_strings] + com_s1[available_strings]
             sorted_indices = np.lexsort((available_distances, available_sum_string))[::-1]
+
+            if len(sorted_indices) == 0:
+                bad_matching = True
+                break
             sort_index = sorted_indices[0]
             sort_string = available_strings[sort_index]
 
@@ -330,16 +345,58 @@ class Toric_lattice:
             print(pre + "Removed #", removed_strings, ", pinned #", pinned_strings, "Iter:", iter,
                   "Strings removed:", N_removed, "of",strings_to_remove)
 
-            if plot and plot_iter <= iter:
-                self.L.drawlines(self.inf, self.com)
+            if plot and N_removed/strings_to_remove*100 > plot_percentage:
+                t_i = time.time()
 
+                if t_i - t_start < 1/fps:
+                    time.sleep(1/fps - t_i + t_start)
 
-            time.sleep(0.001)
+                im = self.L.drawlines(self.inf, self.com)
+                i_plot.set_data(im)
+                fig.canvas.restore_region(axbackground)
+                ax.draw_artist(i_plot)
+                fig.canvas.blit(ax.bbox)
+                fig.canvas.draw()
+                fig.canvas.flush_events()
+                plt.pause(0.000000000001)
+
+                t_start = t_i
+
+        if bad_matching:
+            bad_mates = [i for i,x in enumerate(self.inf[:,2]) if x == 2]
+            connections = []
+            connect_str = []
+            for bad_mate in bad_mates:
+                for str in range(self.N_str):
+                    if self.com[str, 0] == bad_mate and (self.com[str, 3] == 2):  # or com[str, 3] == 2):
+                        connections.append(self.com[str, 1])
+                        connect_str.append(str)
+                    elif self.com[str, 1] == bad_mate and (self.com[str, 3] == 2):  # or com[str, 3] == 2):
+                        connections.append(self.com[str, 0])
+                        connect_str.append(str)
+
+            str_a = 0
+            str_b = 2
+
+            self.com[connect_str[str_a],3] = 1
+            self.com[connect_str[str_b],3] = 1
+
+            for str in range(self.N_str):
+                if self.com[str, 0] == connections[str_a] and self.com[str,1] == connections[str_b]:
+                    self.com[str,3] = 0
+                    break
+                elif self.com[str, 0] == connections[str_b] and self.com[str,1] == connections[str_a]:
+                    self.com[str,3] = 0
+                    break
+
 
         if all([num_str == 1 for num_str in self.inf[:, 2]]):
             print("MWPM code finished successfully, all vertices paired")
         else:
-            print("MWPM code finished unsuccessfully :(")
+            print("MWPM code finished unsuccessfully :(, not best matching")
 
     def showplot(self):
-        self.L.drawlines(self.inf, self.com)
+        im = self.L.drawlines(self.inf, self.com)
+        plt.figure()
+        plt.imshow(im)
+        plt.show()

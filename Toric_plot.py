@@ -65,7 +65,6 @@ class plotlattice:
         self.l1 = int(((self.baseL-2)/2 - self.erL)/2 + 1)
         self.l2 = int(self.baseL/2 + self.l1)
         self.fnt = ImageFont.truetype("arial.ttf", 10, encoding="unic")
-        self.fig = plt.figure()
         if plot:
             plt.imshow(self.lattice)
             plt.show()

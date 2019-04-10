@@ -2,6 +2,7 @@ import math
 import numpy as np
 from operator import xor
 import Toric_plot as tp
+import blossom_cpp as bl
 import copy
 from matplotlib import pyplot as plt
 import time
@@ -394,6 +395,21 @@ class Toric_lattice:
             print("MWPM code finished successfully, all vertices paired")
         else:
             print("MWPM code finished unsuccessfully :(, not best matching")
+
+    def blossom(self):
+        edges = [list(x[:3]) for x in self.com]
+        result = bl.blossom(self.N_err,edges)
+
+        self.inf[:,2] = 1
+        self.com[:,3] = 1
+
+        for edge in result:
+            p0 = edge[0]
+            p1 = edge[1]
+            for str in range(self.N_str):
+                if self.com[str,0] == p0 and self.com[str,1] == p1:
+                    self.com[str,3] = 0
+                    break
 
     def showplot(self):
         im = self.L.drawlines(self.inf, self.com)

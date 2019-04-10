@@ -13,11 +13,12 @@ def printcode(A):
         print(line)
 
 
-size = 8
+size = 16
 p = 0.3
 
 
-TL = Toric_lattice(size, p, plot=False,base_image_size=27)
-TL.init_Z_errors(ploterrors=True, plotstrings = True, new_errors=False)
-TL.Z_MWPM(plot=True,plot_percentage=90, fps = 2)
+TL = Toric_lattice(size, p, plot=False,base_image_size=17)
+TL.init_Z_errors(ploterrors=False, plotstrings = False, new_errors=True)
+TL.blossom()
+#TL.Z_MWPM(plot=True,plot_percentage=95, fps = 5)
 TL.showplot()

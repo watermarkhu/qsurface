@@ -1,0 +1,26 @@
+index 3b6bedd..44338f7 100644
+--- Autotune/blossomv/MinCost/MinCost.cpp
++++ Autotune/blossomv/MinCost/MinCost.cpp
+@@ -253,19 +253,19 @@ template <typename CostType>
+ template <typename CostType> 
+ 	void DualMinCost<CostType>::SetLowerBound(NodeId i, CostType cmin)
+ {
+-	AddEdge(i, source, FLOW_INFTY, 0, -cmin);
++	DualMinCost<CostType>::AddEdge(i, source, FLOW_INFTY, 0, -cmin);
+ }
+ 
+ template <typename CostType> 
+ 	void DualMinCost<CostType>::SetUpperBound(NodeId i, CostType cmax)
+ {
+-	AddEdge(source, i, FLOW_INFTY, 0, cmax);
++	DualMinCost<CostType>::AddEdge(source, i, FLOW_INFTY, 0, cmax);
+ }
+ 
+ template <typename CostType> 
+ 	void DualMinCost<CostType>::AddConstraint(NodeId i, NodeId j, CostType cmax)
+ {
+-	AddEdge(i, j, FLOW_INFTY, 0, cmax);
++	DualMinCost<CostType>::AddEdge(i, j, FLOW_INFTY, 0, cmax);
+ }
+ 
+ template <typename CostType> 

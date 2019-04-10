@@ -2,20 +2,13 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="31e8ac97-2d80-42aa-bbb7-a4b591b2d63e" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/playground.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/blossom_cpp.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Toric_plot.py" beforeDir="false" afterPath="$PROJECT_DIR$/Toric_plot.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/X_5.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Y_5.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/Z_5.jpg" beforeDir="false" />
       <change beforePath="$PROJECT_DIR$/Z_errors.txt" beforeDir="false" afterPath="$PROJECT_DIR$/Z_errors.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/Z_errors_03.txt" beforeDir="false" afterPath="$PROJECT_DIR$/Z_errors_03.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/base.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/bluevertice.jpg" beforeDir="false" />
-      <change beforePath="$PROJECT_DIR$/hline.jpg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/playground.py" beforeDir="false" afterPath="$PROJECT_DIR$/playground.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/toric.py" beforeDir="false" afterPath="$PROJECT_DIR$/toric.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/vline.jpg" beforeDir="false" />
     </list>
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
     <option name="SHOW_DIALOG" value="false" />
@@ -28,45 +21,20 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/Toric_plot.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="3190">
-              <caret line="186" lean-forward="true" selection-start-line="186" selection-end-line="186" />
+            <state>
+              <caret line="45" column="10" selection-start-line="45" selection-start-column="10" selection-end-line="45" selection-end-column="10" />
               <folding>
                 <element signature="e#0#36#0" expanded="true" />
-                <element signature="e#196#1447#0" />
               </folding>
             </state>
           </provider>
         </entry>
       </file>
       <file pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/toric.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="188">
-              <caret line="351" column="20" selection-start-line="351" selection-start-column="20" selection-end-line="351" selection-end-column="20" />
-              <folding>
-                <element signature="e#0#11#0" expanded="true" />
-              </folding>
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/test.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="422">
-              <caret line="20" column="65" selection-start-line="20" selection-start-column="65" selection-end-line="20" selection-end-column="65" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/playground.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="506">
-              <caret line="30" column="90" selection-start-line="30" selection-start-column="83" selection-end-line="30" selection-end-column="90" />
-              <folding>
-                <element signature="e#0#11#0" expanded="true" />
-              </folding>
+            <state relative-caret-position="330">
+              <caret line="15" column="9" lean-forward="true" selection-start-line="15" selection-start-column="9" selection-end-line="15" selection-end-column="9" />
             </state>
           </provider>
         </entry>
@@ -122,24 +90,26 @@
         <option value="$PROJECT_DIR$/toric4.py" />
         <option value="$PROJECT_DIR$/edmonds.py" />
         <option value="$PROJECT_DIR$/tmp102.py" />
+        <option value="$PROJECT_DIR$/blossom5/blossom_cpp.py" />
         <option value="$PROJECT_DIR$/playground.py" />
-        <option value="$PROJECT_DIR$/Toric_plot.py" />
-        <option value="$PROJECT_DIR$/test.py" />
         <option value="$PROJECT_DIR$/toric.py" />
+        <option value="$PROJECT_DIR$/blossom_cpp.py" />
+        <option value="$PROJECT_DIR$/test.py" />
+        <option value="$PROJECT_DIR$/Toric_plot.py" />
       </list>
     </option>
   </component>
   <component name="ProjectFrameBounds" extendedState="6">
-    <option name="x" value="-7" />
-    <option name="width" value="974" />
-    <option name="height" value="1057" />
+    <option name="x" value="672" />
+    <option name="y" value="-14" />
+    <option name="width" value="1522" />
+    <option name="height" value="1950" />
   </component>
   <component name="ProjectView">
     <navigator proportions="" version="1">
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
-      <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
           <expand>
@@ -151,13 +121,19 @@
           <select />
         </subPane>
       </pane>
+      <pane id="Scope" />
     </panes>
   </component>
   <component name="PropertiesComponent">
     <property name="SHARE_PROJECT_CONFIGURATION_FILES" value="true" />
-    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$/../fault_tolerance_simulations/blossom5" />
     <property name="restartRequiresConfirmation" value="false" />
     <property name="settings.editor.selected.configurable" value="preferences.pluginManager" />
+  </component>
+  <component name="RecentsManager">
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="C:\Users\water\Documents\GitHub\Toric_code" />
+    </key>
   </component>
   <component name="RunDashboard">
     <option name="ruleStates">
@@ -253,7 +229,7 @@
       <option name="USE_PATTERN" value="false" />
       <method v="2" />
     </configuration>
-    <configuration name="Unittests in edmonds.py" type="tests" factoryName="Unittests" temporary="true" nameIsGenerated="true">
+    <configuration name="Unittests in C:/Users/water/Documents/GitHub/Toric_code/edmonds.py" type="tests" factoryName="Unittests" temporary="true" nameIsGenerated="true">
       <module name="Script" />
       <option name="INTERPRETER_OPTIONS" value="" />
       <option name="PARENT_ENVS" value="true" />
@@ -272,7 +248,7 @@
         <item itemvalue="Python.test" />
         <item itemvalue="Python.playground" />
         <item itemvalue="Python.Toric_plot" />
-        <item itemvalue="Python tests.Unittests in edmonds.py" />
+        <item itemvalue="Python tests.Unittests in C:/Users/water/Documents/GitHub/Toric_code/edmonds.py" />
         <item itemvalue="Python tests.Doctests in edmonds" />
       </list>
     </recent_temporary>
@@ -308,21 +284,20 @@
     </todo-panel>
   </component>
   <component name="ToolWindowManager">
-    <frame x="-8" y="-8" width="1936" height="1096" extended-state="6" />
-    <editor active="true" />
+    <frame x="-7" y="-7" width="1513" height="1013" extended-state="6" />
     <layout>
-      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.1564805" />
+      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.15618661" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="bottom" id="Find" order="1" />
-      <window_info active="true" anchor="bottom" x="1920" y="23" width="1280" height="1001" id="Run" order="2" type="WINDOWED" visible="true" weight="0.48338693" />
-      <window_info anchor="bottom" x="1920" y="23" width="1280" height="1001" id="Debug" maximized="true" order="3" type="WINDOWED" visible="true" weight="0.5755627" />
+      <window_info anchor="bottom" auto_hide="true" x="391" y="439" width="717" height="121" id="Run" order="2" weight="0.280543" />
+      <window_info anchor="bottom" x="1920" y="23" width="1280" height="1001" id="Debug" maximized="true" order="3" type="WINDOWED" weight="0.5755627" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
       <window_info anchor="bottom" id="TODO" order="6" weight="0.3290461" />
       <window_info anchor="bottom" id="Version Control" order="7" />
-      <window_info anchor="bottom" id="Terminal" order="8" visible="true" weight="0.32917964" />
+      <window_info anchor="bottom" id="Terminal" order="8" weight="0.3280543" />
       <window_info anchor="bottom" id="Event Log" order="9" side_tool="true" />
       <window_info anchor="bottom" id="Python Console" order="10" weight="0.32900432" />
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
@@ -357,54 +332,63 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/edmonds.py" />
     <entry file="file://$PROJECT_DIR$/toric4.py" />
-    <entry file="file://$PROJECT_DIR$/base.jpg">
-      <provider selected="true" editor-type-id="images" />
-    </entry>
-    <entry file="file://$PROJECT_DIR$/bluevertice.jpg">
-      <provider selected="true" editor-type-id="images" />
-    </entry>
-    <entry file="file://$PROJECT_DIR$/tmp102.py">
+    <entry file="file://$PROJECT_DIR$/base.jpg" />
+    <entry file="file://$PROJECT_DIR$/bluevertice.jpg" />
+    <entry file="file://$PROJECT_DIR$/tmp102.py" />
+    <entry file="file://$PROJECT_DIR$/blossom5/command_test.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-303">
-          <caret line="8" lean-forward="true" selection-start-line="8" selection-end-line="8" />
-        </state>
-      </provider>
-    </entry>
-    <entry file="file://$PROJECT_DIR$/test.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="422">
-          <caret line="20" column="65" selection-start-line="20" selection-start-column="65" selection-end-line="20" selection-end-column="65" />
+        <state relative-caret-position="88">
+          <caret line="4" selection-start-line="4" selection-end-line="5" selection-end-column="11" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/playground.py">
       <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="44">
+          <caret line="2" column="55" lean-forward="true" selection-start-line="2" selection-start-column="55" selection-end-line="2" selection-end-column="55" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/blossom5/results.txt">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="220">
+          <caret line="11" lean-forward="true" selection-start-line="11" selection-end-line="11" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/blossom_cpp.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="412">
+          <caret line="30" column="4" selection-start-line="30" selection-start-column="4" selection-end-line="30" selection-end-column="4" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/toric.py">
+      <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="506">
-          <caret line="30" column="90" selection-start-line="30" selection-start-column="83" selection-end-line="30" selection-end-column="90" />
+          <caret line="409" column="63" selection-start-line="409" selection-start-column="63" selection-end-line="409" selection-end-column="63" />
           <folding>
             <element signature="e#0#11#0" expanded="true" />
+            <element signature="e#245#341#0" />
+            <element signature="e#3060#17152#0" />
           </folding>
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/Toric_plot.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="3190">
-          <caret line="186" lean-forward="true" selection-start-line="186" selection-end-line="186" />
+        <state>
+          <caret line="45" column="10" selection-start-line="45" selection-start-column="10" selection-end-line="45" selection-end-column="10" />
           <folding>
             <element signature="e#0#36#0" expanded="true" />
-            <element signature="e#196#1447#0" />
           </folding>
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/toric.py">
+    <entry file="file://$PROJECT_DIR$/test.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="188">
-          <caret line="351" column="20" selection-start-line="351" selection-start-column="20" selection-end-line="351" selection-end-column="20" />
-          <folding>
-            <element signature="e#0#11#0" expanded="true" />
-          </folding>
+        <state relative-caret-position="330">
+          <caret line="15" column="9" lean-forward="true" selection-start-line="15" selection-start-column="9" selection-end-line="15" selection-end-column="9" />
         </state>
       </provider>
     </entry>

@@ -143,20 +143,20 @@ class plotlattice:
             plt.imshow(self.lattice)
             plt.show()
 
-    def drawlines(self,inf,com):
+    def drawlines(self,qui,sti):
         im = Image.new("RGBA", (self.latticeL,self.latticeL),(255,255,255,0))
         np.random.seed(1)
-        color = np.array(np.round(np.random.random([com.shape[0],3])*255),dtype = int)
+        color = np.array(np.round(np.random.random([sti.shape[0],3])*255),dtype = int)
         imbase = self.lattice
-        for string in range(com.shape[0]):
+        for string in range(sti.shape[0]):
             c = color[string,:]
-            if com[string,3] == 0 or com[string,3] == 2:
+            if sti[string,3] == 0 or sti[string,3] == 2:
                 d = ImageDraw.Draw(im)
                 thiscolor1 = (c[0],c[1],c[2],150)
-                topx = inf[com[string,0],1]
-                topy = inf[com[string,0],0]
-                botx = inf[com[string,1],1]
-                boty = inf[com[string,1],0]
+                topx = qui[sti[string,0],1]
+                topy = qui[sti[string,0],0]
+                botx = qui[sti[string,1],1]
+                boty = qui[sti[string,1],0]
                 top = (topx*self.baseL+self.vecL,topy*self.baseL+self.vecL)
                 bot = (botx*self.baseL+self.vecL,boty*self.baseL+self.vecL)
                 d.line([top,bot],fill = thiscolor1, width = 1)
@@ -170,15 +170,15 @@ class plotlattice:
                 im = Image.alpha_composite(imbase,im)
 
         er = int(round(self.vecL/4))
-        for string in range(com.shape[0]):
+        for string in range(sti.shape[0]):
             c = color[string,:]
-            if com[string,3] == 0 or com[string,3] == 2:
+            if sti[string,3] == 0 or sti[string,3] == 2:
                 d = ImageDraw.Draw(im)
                 thiscolor1 = (c[0],c[1],c[2],150)
-                topx = inf[com[string,0],1]
-                topy = inf[com[string,0],0]
-                botx = inf[com[string,1],1]
-                boty = inf[com[string,1],0]
+                topx = qui[sti[string,0],1]
+                topy = qui[sti[string,0],0]
+                botx = qui[sti[string,1],1]
+                boty = qui[sti[string,1],0]
                 top = [topx*self.baseL+self.vecL,topy*self.baseL+self.vecL]
                 bot = [botx*self.baseL+self.vecL,boty*self.baseL+self.vecL]
                 d.ellipse([top[0] - er, top[1] - er, top[0] + er, top[1] + er], fill=thiscolor1)

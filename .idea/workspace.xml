@@ -2,11 +2,10 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="31e8ac97-2d80-42aa-bbb7-a4b591b2d63e" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/blossom_cpp.py" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/.idea/dictionaries/water.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Toric_plot.py" beforeDir="false" afterPath="$PROJECT_DIR$/Toric_plot.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Z_errors.txt" beforeDir="false" afterPath="$PROJECT_DIR$/Z_errors.txt" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/playground.py" beforeDir="false" afterPath="$PROJECT_DIR$/playground.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/toric.py" beforeDir="false" afterPath="$PROJECT_DIR$/toric.py" afterDir="false" />
     </list>
@@ -21,8 +20,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/Toric_plot.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state>
-              <caret line="45" column="10" selection-start-line="45" selection-start-column="10" selection-end-line="45" selection-end-column="10" />
+            <state relative-caret-position="227">
+              <caret line="55" column="65" selection-start-line="55" selection-start-column="65" selection-end-line="55" selection-end-column="87" />
               <folding>
                 <element signature="e#0#36#0" expanded="true" />
               </folding>
@@ -30,11 +29,28 @@
           </provider>
         </entry>
       </file>
-      <file pinned="false" current-in-tab="true">
+      <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/test.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="330">
-              <caret line="15" column="9" lean-forward="true" selection-start-line="15" selection-start-column="9" selection-end-line="15" selection-end-column="9" />
+            <state relative-caret-position="638">
+              <caret line="29" column="68" selection-start-line="29" selection-start-column="68" selection-end-line="29" selection-end-column="68" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/toric.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="528">
+              <caret line="223" selection-start-line="223" selection-end-line="223" selection-end-column="23" />
+              <folding>
+                <element signature="e#0#11#0" expanded="true" />
+                <element signature="e#1053#1515#0" />
+                <element signature="e#1564#1876#0" />
+                <element signature="e#1189#1479#0" />
+                <element signature="e#3789#17881#0" />
+                <element signature="e#23903#23914#0" />
+              </folding>
             </state>
           </provider>
         </entry>
@@ -67,6 +83,12 @@
       <find>217</find>
       <find>erL-1</find>
       <find>vecL</find>
+      <find>N</find>
+      <find>size</find>
+      <find>N_err</find>
+      <find>self.com</find>
+      <find>com</find>
+      <find>Vline</find>
     </findStrings>
     <replaceStrings>
       <replace>sm</replace>
@@ -76,6 +98,11 @@
       <replace>self.com</replace>
       <replace>iter</replace>
       <replace>end</replace>
+      <replace>Vline</replace>
+      <replace>self.size</replace>
+      <replace>N_qua</replace>
+      <replace>self.sti</replace>
+      <replace>self.Vline</replace>
     </replaceStrings>
   </component>
   <component name="Git.Settings">
@@ -92,16 +119,16 @@
         <option value="$PROJECT_DIR$/tmp102.py" />
         <option value="$PROJECT_DIR$/blossom5/blossom_cpp.py" />
         <option value="$PROJECT_DIR$/playground.py" />
-        <option value="$PROJECT_DIR$/toric.py" />
         <option value="$PROJECT_DIR$/blossom_cpp.py" />
-        <option value="$PROJECT_DIR$/test.py" />
+        <option value="$PROJECT_DIR$/Z_errors.txt" />
         <option value="$PROJECT_DIR$/Toric_plot.py" />
+        <option value="$PROJECT_DIR$/toric.py" />
+        <option value="$PROJECT_DIR$/test.py" />
       </list>
     </option>
   </component>
-  <component name="ProjectFrameBounds" extendedState="6">
-    <option name="x" value="672" />
-    <option name="y" value="-14" />
+  <component name="ProjectFrameBounds">
+    <option name="x" value="-12" />
     <option name="width" value="1522" />
     <option name="height" value="1950" />
   </component>
@@ -110,6 +137,7 @@
       <foldersAlwaysOnTop value="true" />
     </navigator>
     <panes>
+      <pane id="Scope" />
       <pane id="ProjectPane">
         <subPane>
           <expand>
@@ -121,7 +149,6 @@
           <select />
         </subPane>
       </pane>
-      <pane id="Scope" />
     </panes>
   </component>
   <component name="PropertiesComponent">
@@ -284,15 +311,16 @@
     </todo-panel>
   </component>
   <component name="ToolWindowManager">
-    <frame x="-7" y="-7" width="1513" height="1013" extended-state="6" />
+    <frame x="-6" y="0" width="761" height="975" extended-state="0" />
+    <editor active="true" />
     <layout>
-      <window_info content_ui="combo" id="Project" order="0" visible="true" weight="0.15618661" />
+      <window_info content_ui="combo" id="Project" order="0" weight="0.31636864" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="bottom" id="Find" order="1" />
-      <window_info anchor="bottom" auto_hide="true" x="391" y="439" width="717" height="121" id="Run" order="2" weight="0.280543" />
-      <window_info anchor="bottom" x="1920" y="23" width="1280" height="1001" id="Debug" maximized="true" order="3" type="WINDOWED" weight="0.5755627" />
+      <window_info active="true" anchor="bottom" auto_hide="true" x="750" y="29" width="749" height="940" id="Run" order="2" type="WINDOWED" visible="true" weight="0.47260273" />
+      <window_info anchor="bottom" x="750" y="29" width="749" height="940" id="Debug" maximized="true" order="3" type="WINDOWED" visible="true" weight="0.5755627" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
       <window_info anchor="bottom" id="TODO" order="6" weight="0.3290461" />
@@ -315,13 +343,6 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/main.py" />
     <entry file="file://$PROJECT_DIR$/toric2.py" />
-    <entry file="file://$PROJECT_DIR$/Z_errors.txt">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="66">
-          <caret line="3" column="9" selection-start-line="3" selection-start-column="9" selection-end-line="3" selection-end-column="9" />
-        </state>
-      </provider>
-    </entry>
     <entry file="file://$PROJECT_DIR$/toric3.py" />
     <entry file="file://$USER_HOME$/.PyCharmCE2019.1/system/python_stubs/-313451744/builtins.py">
       <provider selected="true" editor-type-id="text-editor">
@@ -349,13 +370,7 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/blossom5/results.txt">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="220">
-          <caret line="11" lean-forward="true" selection-start-line="11" selection-end-line="11" />
-        </state>
-      </provider>
-    </entry>
+    <entry file="file://$PROJECT_DIR$/blossom5/results.txt" />
     <entry file="file://$PROJECT_DIR$/blossom_cpp.py">
       <provider selected="true" editor-type-id="text-editor">
         <state relative-caret-position="412">
@@ -363,22 +378,13 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/toric.py">
-      <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="506">
-          <caret line="409" column="63" selection-start-line="409" selection-start-column="63" selection-end-line="409" selection-end-column="63" />
-          <folding>
-            <element signature="e#0#11#0" expanded="true" />
-            <element signature="e#245#341#0" />
-            <element signature="e#3060#17152#0" />
-          </folding>
-        </state>
-      </provider>
+    <entry file="file://$PROJECT_DIR$/Z_errors.txt">
+      <provider selected="true" editor-type-id="text-editor" />
     </entry>
     <entry file="file://$PROJECT_DIR$/Toric_plot.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state>
-          <caret line="45" column="10" selection-start-line="45" selection-start-column="10" selection-end-line="45" selection-end-column="10" />
+        <state relative-caret-position="227">
+          <caret line="55" column="65" selection-start-line="55" selection-start-column="65" selection-end-line="55" selection-end-column="87" />
           <folding>
             <element signature="e#0#36#0" expanded="true" />
           </folding>
@@ -387,8 +393,23 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/test.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="330">
-          <caret line="15" column="9" lean-forward="true" selection-start-line="15" selection-start-column="9" selection-end-line="15" selection-end-column="9" />
+        <state relative-caret-position="638">
+          <caret line="29" column="68" selection-start-line="29" selection-start-column="68" selection-end-line="29" selection-end-column="68" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/toric.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="528">
+          <caret line="223" selection-start-line="223" selection-end-line="223" selection-end-column="23" />
+          <folding>
+            <element signature="e#0#11#0" expanded="true" />
+            <element signature="e#1053#1515#0" />
+            <element signature="e#1564#1876#0" />
+            <element signature="e#1189#1479#0" />
+            <element signature="e#3789#17881#0" />
+            <element signature="e#23903#23914#0" />
+          </folding>
         </state>
       </provider>
     </entry>

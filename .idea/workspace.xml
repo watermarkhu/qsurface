@@ -2,8 +2,6 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="31e8ac97-2d80-42aa-bbb7-a4b591b2d63e" name="Default Changelist" comment="">
-      <change afterPath="$PROJECT_DIR$/.idea/dictionaries/water.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Toric_plot.py" beforeDir="false" afterPath="$PROJECT_DIR$/Toric_plot.py" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/Z_errors.txt" beforeDir="false" afterPath="$PROJECT_DIR$/Z_errors.txt" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/test.py" beforeDir="false" afterPath="$PROJECT_DIR$/test.py" afterDir="false" />
@@ -20,10 +18,44 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/Toric_plot.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="227">
-              <caret line="55" column="65" selection-start-line="55" selection-start-column="65" selection-end-line="55" selection-end-column="87" />
+            <state relative-caret-position="668">
+              <caret line="125" column="30" lean-forward="true" selection-start-line="125" selection-start-column="30" selection-end-line="125" selection-end-column="30" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/Z_errors.txt">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="352">
+              <caret line="16" lean-forward="true" selection-start-line="16" selection-end-line="16" />
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/purification_simulations.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="913">
+              <caret line="255" selection-start-line="255" selection-end-line="262" selection-end-column="19" />
               <folding>
-                <element signature="e#0#36#0" expanded="true" />
+                <element signature="e#0#18#0" expanded="true" />
+              </folding>
+            </state>
+          </provider>
+        </entry>
+      </file>
+      <file pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/toric.py">
+          <provider selected="true" editor-type-id="text-editor">
+            <state relative-caret-position="242">
+              <caret line="76" lean-forward="true" selection-start-line="76" selection-end-line="76" />
+              <folding>
+                <element signature="e#0#11#0" expanded="true" />
+                <element signature="e#12686#13144#0" />
+                <element signature="e#13184#13464#0" />
+                <element signature="e#13504#17275#0" />
+                <element signature="e#15694#29786#0" />
               </folding>
             </state>
           </provider>
@@ -32,25 +64,8 @@
       <file pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/test.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="638">
-              <caret line="29" column="68" selection-start-line="29" selection-start-column="68" selection-end-line="29" selection-end-column="68" />
-            </state>
-          </provider>
-        </entry>
-      </file>
-      <file pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/toric.py">
-          <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="528">
-              <caret line="223" selection-start-line="223" selection-end-line="223" selection-end-column="23" />
-              <folding>
-                <element signature="e#0#11#0" expanded="true" />
-                <element signature="e#1053#1515#0" />
-                <element signature="e#1564#1876#0" />
-                <element signature="e#1189#1479#0" />
-                <element signature="e#3789#17881#0" />
-                <element signature="e#23903#23914#0" />
-              </folding>
+            <state relative-caret-position="66">
+              <caret line="3" column="7" selection-start-line="3" selection-start-column="7" selection-end-line="3" selection-end-column="7" />
             </state>
           </provider>
         </entry>
@@ -89,6 +104,9 @@
       <find>self.com</find>
       <find>com</find>
       <find>Vline</find>
+      <find>N_qua</find>
+      <find>Syn_</find>
+      <find>V_dis[1]</find>
     </findStrings>
     <replaceStrings>
       <replace>sm</replace>
@@ -103,6 +121,7 @@
       <replace>N_qua</replace>
       <replace>self.sti</replace>
       <replace>self.Vline</replace>
+      <replace>Xc</replace>
     </replaceStrings>
   </component>
   <component name="Git.Settings">
@@ -118,19 +137,21 @@
         <option value="$PROJECT_DIR$/edmonds.py" />
         <option value="$PROJECT_DIR$/tmp102.py" />
         <option value="$PROJECT_DIR$/blossom5/blossom_cpp.py" />
+        <option value="$PROJECT_DIR$/Z_errors.txt" />
         <option value="$PROJECT_DIR$/playground.py" />
         <option value="$PROJECT_DIR$/blossom_cpp.py" />
-        <option value="$PROJECT_DIR$/Z_errors.txt" />
+        <option value="$PROJECT_DIR$/Threshold_main.py" />
         <option value="$PROJECT_DIR$/Toric_plot.py" />
         <option value="$PROJECT_DIR$/toric.py" />
         <option value="$PROJECT_DIR$/test.py" />
       </list>
     </option>
   </component>
-  <component name="ProjectFrameBounds">
-    <option name="x" value="-12" />
+  <component name="ProjectFrameBounds" extendedState="6">
+    <option name="x" value="1779" />
+    <option name="y" value="-521" />
     <option name="width" value="1522" />
-    <option name="height" value="1950" />
+    <option name="height" value="1057" />
   </component>
   <component name="ProjectView">
     <navigator proportions="" version="1">
@@ -311,22 +332,21 @@
     </todo-panel>
   </component>
   <component name="ToolWindowManager">
-    <frame x="-6" y="0" width="761" height="975" extended-state="0" />
-    <editor active="true" />
+    <frame x="1912" y="-512" width="1096" height="1906" extended-state="6" />
     <layout>
-      <window_info content_ui="combo" id="Project" order="0" weight="0.31636864" />
+      <window_info content_ui="combo" id="Project" order="0" weight="0.2362949" />
       <window_info id="Structure" order="1" side_tool="true" weight="0.25" />
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="bottom" id="Find" order="1" />
-      <window_info active="true" anchor="bottom" auto_hide="true" x="750" y="29" width="749" height="940" id="Run" order="2" type="WINDOWED" visible="true" weight="0.47260273" />
-      <window_info anchor="bottom" x="750" y="29" width="749" height="940" id="Debug" maximized="true" order="3" type="WINDOWED" visible="true" weight="0.5755627" />
+      <window_info anchor="bottom" x="733" y="580" width="749" height="940" id="Run" order="2" sideWeight="0.49947312" weight="0.24873096" />
+      <window_info anchor="bottom" x="0" y="0" width="1501" height="978" id="Debug" order="3" type="WINDOWED" weight="0.5755627" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
       <window_info anchor="bottom" id="TODO" order="6" weight="0.3290461" />
       <window_info anchor="bottom" id="Version Control" order="7" />
       <window_info anchor="bottom" id="Terminal" order="8" weight="0.3280543" />
-      <window_info anchor="bottom" id="Event Log" order="9" side_tool="true" />
+      <window_info anchor="bottom" id="Event Log" order="9" sideWeight="0.50052685" side_tool="true" weight="0.471597" />
       <window_info anchor="bottom" id="Python Console" order="10" weight="0.32900432" />
       <window_info anchor="right" id="Commander" internal_type="SLIDING" order="0" type="SLIDING" weight="0.4" />
       <window_info anchor="right" id="Ant Build" order="1" weight="0.25" />
@@ -363,52 +383,97 @@
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/playground.py">
+    <entry file="file://$PROJECT_DIR$/blossom5/results.txt" />
+    <entry file="file://C:/ProgramData/Anaconda3/Lib/site-packages/numpy/lib/npyio.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="44">
-          <caret line="2" column="55" lean-forward="true" selection-start-line="2" selection-start-column="55" selection-end-line="2" selection-end-column="55" />
+        <state relative-caret-position="273">
+          <caret line="1369" selection-start-line="1369" selection-end-line="1369" />
         </state>
       </provider>
     </entry>
-    <entry file="file://$PROJECT_DIR$/blossom5/results.txt" />
+    <entry file="file://C:/ProgramData/Anaconda3/Lib/site-packages/numpy/core/fromnumeric.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="273">
+          <caret line="55" selection-start-line="55" selection-end-line="55" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/playground.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="66">
+          <caret line="3" column="16" selection-start-line="3" selection-start-column="16" selection-end-line="3" selection-end-column="16" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/thresholds.txt" />
     <entry file="file://$PROJECT_DIR$/blossom_cpp.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="412">
-          <caret line="30" column="4" selection-start-line="30" selection-start-column="4" selection-end-line="30" selection-end-column="4" />
+        <state relative-caret-position="704">
+          <caret line="32" column="17" selection-start-line="32" selection-start-column="17" selection-end-line="32" selection-end-column="17" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/thresholds.npy">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="22">
+          <caret line="1" column="106" lean-forward="true" selection-start-line="1" selection-start-column="106" selection-end-line="1" selection-end-column="106" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/Toric_plot.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="668">
+          <caret line="125" column="30" lean-forward="true" selection-start-line="125" selection-start-column="30" selection-end-line="125" selection-end-column="30" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/Z_errors.txt">
-      <provider selected="true" editor-type-id="text-editor" />
-    </entry>
-    <entry file="file://$PROJECT_DIR$/Toric_plot.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="227">
-          <caret line="55" column="65" selection-start-line="55" selection-start-column="65" selection-end-line="55" selection-end-column="87" />
+        <state relative-caret-position="352">
+          <caret line="16" lean-forward="true" selection-start-line="16" selection-end-line="16" />
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/purification_simulations.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="913">
+          <caret line="255" selection-start-line="255" selection-end-line="262" selection-end-column="19" />
           <folding>
-            <element signature="e#0#36#0" expanded="true" />
+            <element signature="e#0#18#0" expanded="true" />
           </folding>
         </state>
       </provider>
     </entry>
+    <entry file="file://$PROJECT_DIR$/Threshold_main.py">
+      <provider selected="true" editor-type-id="text-editor">
+        <state relative-caret-position="418">
+          <caret line="19" column="11" lean-forward="true" selection-start-line="19" selection-start-column="11" selection-end-line="20" />
+          <folding>
+            <element signature="e#0#31#0" expanded="true" />
+          </folding>
+        </state>
+      </provider>
+    </entry>
+    <entry file="file://$PROJECT_DIR$/blossom5/USAGE.TXT">
+      <provider selected="true" editor-type-id="text-editor" />
+    </entry>
     <entry file="file://$PROJECT_DIR$/test.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="638">
-          <caret line="29" column="68" selection-start-line="29" selection-start-column="68" selection-end-line="29" selection-end-column="68" />
+        <state relative-caret-position="66">
+          <caret line="3" column="7" selection-start-line="3" selection-start-column="7" selection-end-line="3" selection-end-column="7" />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/toric.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="528">
-          <caret line="223" selection-start-line="223" selection-end-line="223" selection-end-column="23" />
+        <state relative-caret-position="242">
+          <caret line="76" lean-forward="true" selection-start-line="76" selection-end-line="76" />
           <folding>
             <element signature="e#0#11#0" expanded="true" />
-            <element signature="e#1053#1515#0" />
-            <element signature="e#1564#1876#0" />
-            <element signature="e#1189#1479#0" />
-            <element signature="e#3789#17881#0" />
-            <element signature="e#23903#23914#0" />
+            <element signature="e#12686#13144#0" />
+            <element signature="e#13184#13464#0" />
+            <element signature="e#13504#17275#0" />
+            <element signature="e#15694#29786#0" />
           </folding>
         </state>
       </provider>

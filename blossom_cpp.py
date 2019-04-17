@@ -14,7 +14,7 @@ def blossom(numNode,edges):
     input_file.close()
 
     # Run C++ code from the command line, save results to file
-    cmd_command = "cd " + cwd + "/blossom5 & blossom5 -e graph.txt -w results.txt"
+    cmd_command = "cd " + cwd + "/blossom5 & blossom5 -e graph.txt -w results.txt -V"
     os.system(cmd_command)
 
     # Read output file

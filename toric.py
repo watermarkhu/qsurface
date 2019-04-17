@@ -16,6 +16,288 @@ class Toric_lattice:
             self.L = tp.plotlattice(size, plotlattice, base_image_size, plot_indices)
 
 
+    def update_syndrome(self,V_dis,V_new,Ycross,Xcross):
+        # V_dis: Disappearing vertice, this vertices is already in a syndrome
+        # V_new: New vertices, this vertice is not yet in a syndrome, and will be matched with V_con
+        # V_con: Connected vertice to the disappearing vertice, will be matched to V_new as new syndrome
+
+        # Get indices of dis and con
+        ind_dis = [i for i, x in enumerate(self.Syn_list) if x == V_dis][0]
+        ind_bas = math.floor(ind_dis / 2) * 2
+        ind_con = ind_bas + (1 - ind_dis % 2)
+
+        # M is the closest mate/neighbor of syndrome endpoints. It determines the path orientation
+        M_dis = self.Mat_list[ind_dis]
+        V_con = self.Syn_list[ind_con]
+        M_con = self.Mat_list[ind_con]
+        Ycr_con = self.Hom_list[ind_bas]
+        Xcr_con = self.Hom_list[ind_bas + 1]
+
+        # Center, Around this disappearing vertice are two points
+        #   1. A new vertice
+        #   2. A old vertice or a syndrome path
+        Yc = V_dis[0]
+        Xc = V_dis[1]
+
+        # Get the respective distances of two points
+        Pall = [M_dis[0] - Yc, M_dis[1] - Xc, V_new[0] - Yc, V_new[1] - Xc]
+        Pt= [-i/abs(i) if abs(i) == self.size - 1 else i for i in Pall]
+        Pc = [[Pt[0],Pt[1]],[Pt[2],Pt[3]]]
+
+        # Define vectors
+        Wvec = [0, -1]
+        Evec = [0, 1]
+        Nvec = [-1, 0]
+        Svec = [1, 0]
+
+        # Find which vectors are present, determine orientation or green path
+        if Nvec in Pc and Evec in Pc:  # -
+            self.Vline[Yc, Xc, 2] = True
+            self.Vline[Yc, Xc, 1] = True
+        elif Nvec in Pc and Wvec in Pc:
+            self.Vline[Yc, Xc, 2] = True
+            self.Vline[Yc, Xc, 0] = True
+        elif Svec in Pc and Wvec in Pc:
+            self.Vline[Yc, Xc, 3] = True
+            self.Vline[Yc, Xc, 0] = True
+        elif Svec in Pc and Evec in Pc:
+            self.Vline[Yc, Xc, 3] = True
+            self.Vline[Yc, Xc, 1] = True
+        elif Nvec in Pc and Svec in Pc:
+            self.Vline[Yc, Xc, 2] = True
+            self.Vline[Yc, Xc, 3] = True
+        elif Evec in Pc and Wvec in Pc:
+            self.Vline[Yc, Xc, 0] = True
+            self.Vline[Yc, Xc, 1] = True
+        else:
+            print("Error no path found")
+
+        if Ycr_con: Ycross = not Ycross
+        if Xcr_con: Xcross = not Xcross
+
+        del self.Hom_list[ind_bas: ind_bas + 2]
+        del self.Mat_list[ind_bas: ind_bas + 2]
+        del self.Syn_list[ind_bas: ind_bas + 2]
+        self.Syn_list += [V_con, V_new]
+        self.Mat_list += [M_con, V_dis]
+        self.Hom_list += [Ycross, Xcross]
+
+        return V_con
+
+    def init_Z_errors(self, ploterrors=False, plotstrings=False, new_errors=True, write_error = True, Error_file = "Z_errors.txt"):
+        def find_min_d(p1, p2, size):
+            ps = min([p1,p2])
+            pb = max([p1,p2])
+            d1 = pb - ps
+            d2 = ps - pb + size
+            if d1 <= d2:
+                d = d1
+                crosshom = False
+            else:
+                d = d2
+                crosshom = True
+            return (d,crosshom)
+
+        if new_errors:
+            self.Z_errors = np.array(np.random.random([self.size, self.size, 2]) < self.p)
+            if write_error:
+                np.savetxt(Error_file, self.Z_errors.reshape(2*self.size,self.size), fmt="%d")
+        else:
+            self.Z_errors = np.reshape(np.loadtxt(Error_file, dtype=bool), (self.size,self.size,2))
+
+        if self.loadplot:
+            self.L.plot_errors(self.Z_errors, "Z", ploterrors)
+
+        # self.Vplus is matrix of vertices
+        # self.Vline contains 4 lines per vertice
+        self.Vplus = np.zeros([self.size, self.size], dtype=bool)
+        self.Vline = np.zeros([self.size, self.size, 4], dtype=bool)
+
+        # Syn_list is a list of syndromes, each syndrome as two vertices, appended directly afte reach other
+        # Mat_list is the direct mate/neighbor of the two vertices of these syndromes, in the same order
+        # Hom_list stores whether the syndrome suffers X or Y errors, luckily also two values.
+        self.Syn_list = []
+        self.Mat_list = []
+        self.Hom_list = []
+        Yloc, Xloc, HVloc = np.where(self.Z_errors == True)
+        for Y, X, HV in zip(Yloc, Xloc, HVloc):
+            V0 = [Y, X]
+            Ycross = False
+            Xcross = False
+
+            # Find vertices for a certain error
+            if HV == 0:                 # Horizontal
+                if X == self.size - 1:  # right edge
+                    V1 = [Y, 0]
+                    Xcross = True
+                else:                   # normal case
+                    V1 = [Y, X + 1]
+            else:                       # Vertical
+                if Y == self.size - 1:  # bottom edge
+                    V1 = [0, X]
+                    Ycross = True
+                else:                   # normal case
+                    V1 = [Y + 1, X]
+
+            # If both vertices are not yet in syndrome endpoints, append vertices as a new syndrome
+            if self.Vplus[V0[0], V0[1]] == False and self.Vplus[V1[0], V1[1]] == False:
+                self.Vplus[V0[0], V0[1]] = True
+                self.Vplus[V1[0], V1[1]] = True
+                self.Syn_list += [V0, V1]
+                self.Mat_list += [V1, V0]
+                self.Hom_list += [Ycross, Xcross]
+
+            # If one of the vertices is already in a syndrome, apply syndrome algorithm
+            elif self.Vplus[V0[0], V0[1]] == True and self.Vplus[V1[0], V1[1]] == False:
+                self.Vplus[V0[0], V0[1]] = False
+                self.Vplus[V1[0], V1[1]] = True
+                V_new = V1
+                V_dis = V0
+                self.update_syndrome(V_dis, V_new, Ycross, Xcross)
+            elif self.Vplus[V0[0], V0[1]] == False and self.Vplus[V1[0], V1[1]] == True:
+                self.Vplus[V0[0], V0[1]] = True
+                self.Vplus[V1[0], V1[1]] = False
+                V_new = V0
+                V_dis = V1
+                self.update_syndrome(V_dis, V_new, Ycross, Xcross)
+
+            # If both vertices al already in syndromes, apply syndrome algorithm to both
+            #   If the syndrome is a closing loop, apply only to one
+            else:
+                self.Vplus[V0[0], V0[1]] = False
+                self.Vplus[V1[0], V1[1]] = False
+                V_new = V1
+                V_dis = V0
+                V_con = self.update_syndrome(V_dis, V_new, Ycross, Xcross)
+                if V_con != V1:
+                    V_new = V0
+                    V_dis = V1
+                    self.update_syndrome(V_dis, V_new, Ycross, Xcross)
+
+
+            #print(Syn_list)
+            #self.L.plotXstrings(self.Vplus, self.Vline, plotstrings, save=False)
+
+
+        (Yplus, Xplus) = np.where(self.Vplus == True)
+        if self.loadplot:
+            self.L.plotXstrings(self.Vplus, self.Vline, plotstrings)
+
+        # Number of quasiparticles (-1 measurements)
+        self.N_qua = Yplus.shape[0]
+        self.N_syn = int(self.N_qua / 2)
+
+        # quasiparticle info: y, x, connectivity, #
+        self.qui = np.array(np.concatenate((Yplus[:, None], Xplus[:, None], np.ones([self.N_qua, 1]) * (self.N_qua - 1), \
+                                            np.reshape(np.arange(self.N_qua), (self.N_qua, 1))), axis=1), dtype=int)
+
+        # Syndrome info: quasi_0, quasi_1, homology y, homology x
+        self.syi = np.zeros([self.N_syn, 4], dtype=int)
+        #self.get_syndromes()
+        #print(self.syi)
+        for iq in range(self.N_syn):
+            V0 = self.Syn_list[int(2 * iq)]
+            V1 = self.Syn_list[int(2 * iq) + 1]
+            self.syi[iq, 2]  = self.Hom_list[int(2 * iq)]
+            self.syi[iq, 3]  = self.Hom_list[int(2 * iq) + 1]
+            for iv in range(self.N_qua):
+                if Yplus[iv] == V0[0] and Xplus[iv] == V0[1]:
+                    self.syi[iq, 0] = iv
+                if Yplus[iv] == V1[0] and Xplus[iv] == V1[1]:
+                    self.syi[iq, 1] = iv
+
+        # number of total connected strings
+        self.N_str = int(np.sum(range(self.N_qua)))
+
+        # String info: quasi_0, quasi_1, distance, state, homology y, homology x, #
+        self.sti = np.zeros([self.N_str, 7], dtype=int)
+
+        str_i = 0
+        for v1 in range(self.N_qua):
+            for v2 in np.arange(v1 + 1, self.N_qua):
+                self.sti[str_i, 6] = str_i
+                self.sti[str_i, 0] = v1
+                self.sti[str_i, 1] = v2
+                loc1 = self.qui[v1, 0:2]
+                loc2 = self.qui[v2, 0:2]
+                (disty, self.sti[str_i, 4]) = find_min_d(loc1[0], loc2[0], self.size)
+                (distx, self.sti[str_i, 5]) = find_min_d(loc1[1], loc2[1], self.size)
+                self.sti[str_i, 2] = disty + distx
+                str_i += 1
+
+
+    def blossom(self):
+        edges = [list(x[:3]) for x in self.sti]
+        result = bl.blossom(self.N_qua,edges)
+        self.qui[:,2] = 1
+        self.sti[:,3] = 1
+
+        self.result = np.zeros([self.N_syn, 7], dtype=int)
+
+        res_i = 0
+        for edge in result:
+            p0 = edge[0]
+            p1 = edge[1]
+            for str in range(self.N_str):
+                if self.sti[str,0] == p0 and self.sti[str,1] == p1:
+                    self.sti[str,3] = 0
+                    self.result[res_i,:] = self.sti[str,:]
+                    res_i += 1
+                    break
+
+    def logical_error(self):
+
+        #print(self.syi)
+        #print(self.result)
+
+        synY_n = np.sum(self.syi[:, 2])
+        synX_n = np.sum(self.syi[:, 3])
+        mwmY_n = np.sum(self.result[:, 4])
+        mwmX_n = np.sum(self.result[:, 5])
+
+        # L0 logical error
+        # Returns True: if number of Y and X logical errors in syndrome and matching are equal
+        if synY_n == mwmY_n and synX_n == mwmX_n:
+            N_cross_eq = True
+        else:
+            N_cross_eq = False
+
+        # L1 logical error
+        # Returns True: if parity of number of Y, X logical errors (effective errors) matches in
+        #     syndrome and matching
+        if synY_n % 2 == mwmY_n % 2 and synX_n % 2 == mwmX_n % 2:
+            cross_eq = True
+        else:
+            cross_eq = False
+
+        # L2 logical error
+        # Returns true if only all matchings are equal to the syndromes
+        perfect_matching = True
+        for syn_i in range(self.N_syn):
+            p0 = self.syi[syn_i, 0]
+            p1 = self.syi[syn_i, 1]
+
+            num, locA = np.where(self.result[:,:2] == p0)
+            locB = 1 - locA
+
+            if self.result[num,locB] != p1:
+                perfect_matching = False
+                break
+
+        return N_cross_eq, cross_eq, perfect_matching
+
+
+    def showplot(self):
+
+        if self.loadplot == True:
+            im = self.L.drawlines(self.qui, self.sti)
+            plt.figure()
+            plt.imshow(im)
+            plt.show()
+        else:
+            print("Plot not loaded during initialization")
+
+
     def new_yx(self, y, x, dy, dx):
         ny = y + dy
         nx = x + dx
@@ -34,7 +316,6 @@ class Toric_lattice:
             nx = x - self.size + dx
             crossX = True
         return [ny,nx, crossY, crossX]
-
     def star_get_Z(self,y,x):
         if x != 0:
             w = [2 * y, x -1]
@@ -47,7 +328,6 @@ class Toric_lattice:
             n = [2 * (self.size -1) + 1, x]
         s = [2 * y + 1, x]
         return [w,e,n,s]
-
     def get_syndromes(self):
         # West, East, North, South steps
         WENS = [[0, -1], [0, 1],[-1, 0], [1, 0]]
@@ -140,113 +420,6 @@ class Toric_lattice:
                         self.syi[syn_i,3] = crossX
                         qua_done[i] = False
                         qua_list.append(mate)
-
-    def init_Z_errors(self, ploterrors=False, plotstrings=False, new_errors=True, write_error = True, Error_file = "Z_errors.txt"):
-        def find_min_d(p1, p2, size):
-            ps = min([p1,p2])
-            pb = max([p1,p2])
-            d1 = pb - ps
-            d2 = ps - pb + size
-            if d1 <= d2:
-                d = d1
-                crosshom = False
-            else:
-                d = d2
-                crosshom = True
-            return (d,crosshom)
-
-        if new_errors:
-            self.Z_errors = np.array(np.random.random([2 * self.size, self.size]) < self.p)
-            if write_error:
-                np.savetxt(Error_file, self.Z_errors, fmt="%d")
-        else:
-            self.Z_errors = np.loadtxt(Error_file, dtype=int)
-
-        if self.loadplot:
-            self.L.plot_errors(self.Z_errors, "Z", ploterrors)
-
-        # self.Vplus is matrix of vertices, self.Vline contains 4 lines per vertice
-        self.Vplus = np.zeros([self.size, self.size], dtype=bool)
-        self.Vline = np.zeros([2 * self.size, 2 * self.size], dtype=bool)
-
-
-        # Vplus: bool (L x L) array of all stars or quasiparticles
-        # S00   S01   S02 ...
-        # S10   S11   S12 ...
-        # S20   S21   S22 ...
-        # ..    ..    ..
-
-        # Vline: bool (2L x 2L) array of half vertices, 4 for each star, indicated by north (n),
-        #   south (s), east (e) and west (w)
-        #  vw00   ve00   vw01   ve01   vw02   ve02 ...
-        #  vn00   vs00   vn01   vs01   vn02   vs02 ...
-        #  vw10   ve10   vw11   ve11   vw12   ve12 ...
-        #  vn10   vs10   vn11   vs11   vn12   vs12 ...
-        #  ..     ..     ..     ..     ..     ..
-
-        Yloc, Xloc = np.where(self.Z_errors == 1)
-
-        for Y2, X in zip(Yloc, Xloc):
-            Y = math.floor(Y2 / 2)
-            self.Vplus[Y, X] = not self.Vplus[Y, X]
-            if Y2 % 2 == 0:  # Even rows
-                self.Vline[2 * Y, 2 * X + 1] = True
-                if X == self.size - 1:  #right edge
-                    self.Vplus[Y, 0] = not self.Vplus[Y, 0]
-                    self.Vline[2 * Y, 0] = True
-                else:                   #normal case
-                    self.Vplus[Y, X + 1] = not self.Vplus[Y, X + 1]
-                    self.Vline[2 * Y, 2 * X + 2] = True
-            else:                       # Odd rows
-                self.Vline[2 * Y + 1, 2 * X + 1] = True
-                if Y == self.size - 1:  # bottom edge
-                    self.Vplus[0, X] = not self.Vplus[0, X]
-                    self.Vline[1, 2 * X] = True
-                else:                   # normal case
-                    self.Vplus[Y + 1, X] = not self.Vplus[Y + 1, X]
-                    self.Vline[2 * Y + 3, 2 * X] = True
-        for iy,ix in np.ndindex(self.Vplus.shape):
-            if self.Vplus[iy,ix] == True:
-                self.Vline[2*iy:2*iy+2,2*ix:2*ix+2] = False
-
-        (Yplus, Xplus) = np.where(self.Vplus == True)
-
-        # Number of quasiparticles (-1 measurements)
-        self.N_qua = Yplus.shape[0]
-
-        # quasiparticle info: y, x, connectivity, #
-        self.qui = np.array(np.concatenate((Yplus[:, None], Xplus[:, None], np.ones([self.N_qua, 1]) * (self.N_qua - 1), \
-                                            np.reshape(np.arange(self.N_qua), (self.N_qua, 1))), axis=1), dtype=int)
-
-        # Syndrome info: quasi_0, quasi_1, homology y, homology x
-        self.syi = np.zeros([int(self.N_qua / 2), 4], dtype=int)
-        self.get_syndromes()
-        print(self.syi)
-
-        # number of total connected strings
-        self.N_str = int(np.sum(range(self.N_qua)))
-
-        # String info: quasi_0, quasi_1, distance, state, homology y, homology x, #
-        self.sti = np.zeros([self.N_str, 7], dtype=int)
-
-        str_i = 0
-        for v1 in range(self.N_qua):
-            for v2 in np.arange(v1 + 1, self.N_qua):
-                self.sti[str_i, 6] = str_i
-                self.sti[str_i, 0] = v1
-                self.sti[str_i, 1] = v2
-                loc1 = self.qui[v1, 0:2]
-                loc2 = self.qui[v2, 0:2]
-                (disty, self.sti[str_i, 4]) = find_min_d(loc1[0], loc2[0], self.size)
-                (distx, self.sti[str_i, 5]) = find_min_d(loc1[1], loc2[1], self.size)
-                self.sti[str_i, 2] = disty + distx
-                str_i += 1
-
-        if self.loadplot:
-            self.L.plotXstrings(self.Vplus, self.Vline, plotstrings)
-
-
-
     def Z_MWPM(self, plot = False, plot_percentage = 90, fps = 2):
 
         if plot:
@@ -568,91 +741,3 @@ class Toric_lattice:
             print("MWPM code finished successfully, all vertices paired")
         else:
             print("MWPM code finished unsuccessfully :(, not best matching")
-
-    def blossom(self):
-        edges = [list(x[:3]) for x in self.sti]
-        result = bl.blossom(self.N_qua,edges)
-        self.qui[:,2] = 1
-        self.sti[:,3] = 1
-
-        self.result = np.zeros([int(self.N_qua/2), 7], dtype=int)
-
-        res_i = 0
-        for edge in result:
-            p0 = edge[0]
-            p1 = edge[1]
-            for str in range(self.N_str):
-                if self.sti[str,0] == p0 and self.sti[str,1] == p1:
-                    self.sti[str,3] = 0
-                    self.result[res_i,:] = self.sti[str,:]
-                    res_i += 1
-                    break
-
-    def logical_error(self, lucky_logic = False):
-
-        N_syn = int(self.N_qua/2)
-
-        cross_trigger = False
-        crossX = False
-        crossY = False
-
-        for syn_i in range(N_syn):
-
-            res_hom_y = self.result[syn_i, 4]
-            res_hom_x = self.result[syn_i, 5]
-
-            (y0, x0) = np.where(self.syi[:, :2] == self.result[syn_i, 0])
-            (y1, x1) = np.where(self.syi[:, :2] == self.result[syn_i, 1])
-
-            print(syn_i, y0, y1)
-
-            syn_hom_0_y = self.syi[y0, 2]
-            syn_hom_0_x = self.syi[y0, 3]
-            syn_hom_1_y = self.syi[y1, 2]
-            syn_hom_1_x = self.syi[y1, 3]
-
-
-
-            if res_hom_y != syn_hom_0_y:
-                crossY = not crossY
-                cross_trigger = True
-            if res_hom_y != syn_hom_1_y:
-                crossY = not crossY
-                cross_trigger = True
-            if res_hom_x != syn_hom_0_x:
-                crossY = not crossY
-                cross_trigger = True
-            if res_hom_x != syn_hom_1_x:
-                crossY = not crossY
-                cross_trigger = True
-
-            if lucky_logic == True and cross_trigger == True:
-                break
-
-        if lucky_logic == True:
-            logical_error = cross_trigger
-        else:
-            logical_error = crossY or crossX
-
-        return logical_error
-
-
-
-
-
-
-
-
-
-        print("ha")
-
-
-    def showplot(self):
-
-        if self.loadplot == True:
-            im = self.L.drawlines(self.qui, self.sti)
-            plt.figure()
-            plt.imshow(im)
-            plt.show()
-        else:
-            print("Plot not loaded during initialization")

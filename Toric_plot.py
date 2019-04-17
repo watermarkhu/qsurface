@@ -1,7 +1,8 @@
 from matplotlib import pyplot as plt
-import matplotlib.image as mpimg
+
 from PIL import Image,ImageDraw,ImageFont
 import math
+import copy
 import numpy as np
 import cv2
 
@@ -69,10 +70,9 @@ class plotlattice:
             plt.imshow(self.lattice)
             plt.show()
     def plot_errors(self,errors,type,plot):
-        Yloc,Xloc = np.where(errors==True)
-        for Y2,X in zip(Yloc,Xloc):
-            Y = math.floor(Y2/2)
-            if Y2%2==0:
+        Yloc,Xloc,HVloc = np.where(errors==True)
+        for Y,X,HV in zip(Yloc,Xloc,HVloc):
+            if HV == 0:
                 Yb = Y*self.baseL+self.l1
                 Xb = X*self.baseL+self.l2
             else:
@@ -91,8 +91,10 @@ class plotlattice:
         if plot:
             plt.imshow(self.lattice)
             plt.show()
-    def plotXstrings(self,vertices,strings,plot):
+    def plotXstrings(self,vertices,strings,plot,save = True):
         ##########################
+
+        lattice = copy.copy(self.lattice)
         # Plot strings (green) first
 
         # Create horizontal and vertical lines
@@ -100,20 +102,18 @@ class plotlattice:
         line[:,1] = 255
 
         # Loop over all stings
-        Yloc,Xloc = np.where(strings==True)
-        for Y2,X2 in zip(Yloc,Xloc):
-            Yb = math.floor(Y2/2)*self.baseL
-            Xb = math.floor(X2/2)*self.baseL
-            if Y2%2==0:
-                if X2%2==0:     #top
-                    self.lattice[Yb+self.vecL, Xb:(Xb+self.vecL + 1), :] = line
-                else:           #bottom
-                    self.lattice[Yb+self.vecL, (Xb+self.vecL):(Xb+2*self.vecL + 1), :] = line
-            else:
-                if X2%2==0:     #left
-                    self.lattice[Yb:(Yb+self.vecL + 1), Xb + self.vecL,:] = line
-                else:           #right
-                    self.lattice[(Yb+self.vecL):(Yb+self.vecL*2 + 1), Xb + self.vecL, :] = line
+        Yloc,Xloc,Wloc = np.where(strings==True)
+        for Y,X,W in zip(Yloc,Xloc,Wloc):
+            Yb = Y*self.baseL
+            Xb = X*self.baseL
+            if W == 0:    #West
+                lattice[Yb+self.vecL, Xb:(Xb+self.vecL + 1), :] = line
+            elif W == 1:  #East
+                lattice[Yb+self.vecL, (Xb+self.vecL):(Xb+2*self.vecL + 1), :] = line
+            elif W == 2:  #North
+                lattice[Yb:(Yb+self.vecL + 1), Xb + self.vecL,:] = line
+            else: #W == 3: South
+                lattice[(Yb+self.vecL):(Yb+self.vecL*2 + 1), Xb + self.vecL, :] = line
 
         #############################
         # Plot the vertices over the stings
@@ -131,17 +131,20 @@ class plotlattice:
         for i in range(len(Xloc)):
             Yb = Yloc[i]*self.baseL
             Xb = Xloc[i]*self.baseL
-            self.lattice[Yb + self.vecL, Xb:(Xb + self.vecL * 2 + 1), :] = line
-            self.lattice[Yb:(Yb + self.vecL * 2 + 1), Xb + self.vecL, :] = line
+            lattice[Yb + self.vecL, Xb:int(Xb + self.vecL * 2 + 1), :] = line
+            lattice[Yb:int(Yb + self.vecL * 2 + 1), Xb + self.vecL, :] = line
             if self.plot_indices:
                 d.text((Xb + 5,Yb+1),str(i), font=self.fnt, fill=(0, 0, 0, 255))
 
-        imbase = Image.fromarray(self.lattice).convert("RGBA")
-        self.lattice = Image.alpha_composite(imbase,im)
+        imbase = Image.fromarray(lattice).convert("RGBA")
+        lattice = Image.alpha_composite(imbase,im)
 
         if plot:
-            plt.imshow(self.lattice)
+            plt.imshow(lattice)
             plt.show()
+
+        if save:
+            self.lattice = copy.copy(lattice)
 
     def drawlines(self,qui,sti):
         im = Image.new("RGBA", (self.latticeL,self.latticeL),(255,255,255,0))

@@ -1,5 +1,5 @@
 BLOSSOM V - implementation of Edmonds' algorithm for computing a minimum cost perfect matching in a graph
-Version 2.05
+Version 2.04
 http://pub.ist.ac.at/~vnk/software.html
 
 Details of the implementation are described in
@@ -14,17 +14,15 @@ If you use this software for research purposes, you should cite the aforemention
 
 License & disclaimer:
 
-    Copyright 2008-2009 UCL Business PLC, Author Vladimir Kolmogorov (vnk@ist.ac.at)
+    Copyright 2008-2009 Vladimir Kolmogorov (vnk@ist.ac.at)
 
-    This software can be used for evaluation and non-commercial research purposes only. Commercial use is prohibited.
+    This software can be used for research and evaluation purposes only. Commercial use is prohibited.
     Public redistribution of the code or its derivatives is prohibited.
     If you use this software for research purposes, you should cite the following paper in any resulting publication:
-
         Vladimir Kolmogorov. "Blossom V: A new implementation of a minimum cost perfect matching algorithm."
         In Mathematical Programming Computation (MPC), July 2009, 1(1):43-67.
 
-    For commercial use of the software not covered by this agreement, you may obtain a licence from
-    the copyright holders UCL Business via their licensing site: www.e-lucid.com/i/software/optimisation_software/BlossomV.html.
+    For commercial use of the software not covered by this agreement, please contact the author.
 
     THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
     "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT

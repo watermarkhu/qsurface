@@ -1,3 +1,4 @@
-import math
+import peeling
 
-print(1%3, -1%3)
+pl = peeling.toric()
+pl.init_trees()

@@ -1,6 +1,6 @@
 import math
 import numpy as np
-import planar_plot as pp
+import planar_plot2 as pp
 import blossom_cpp as bl
 import blossom5.pyMatch as pm
 import time
@@ -35,13 +35,15 @@ class lattice:
         self.plot_load = plot_load
 
         # Initiate plot
-        if plot_load:   self.L = pp.plotlattice(size)
+        if plot_load:
+            self.L = pp.lattice_plot(size)
+            self.L.plot_lattice()
 
         self.array = np.ones([2, 2, self.size, self.size])
 
 
 
-    def init_errors(self, pX = 0.1, pZ=0.1, new_errors=True, write_error = True, array_file = "array.txt"):
+    def init_pauli(self, pX = 0.1, pZ=0.1, new_errors=True, write_errors = True, array_file = "pauli.txt"):
 
         '''
         :param pX:                      probability of X error
@@ -60,7 +62,7 @@ class lattice:
             self.errors = np.random.random([2,2,self.size, self.size])
             self.errors[0, :, :, :] = self.errors[0, :, :, :] < self.pX
             self.errors[1, :, :, :] = self.errors[1, :, :, :] < self.pZ
-            if write_error:
+            if write_errors:
                 np.savetxt("./temp/X_" + array_file, self.errors[0, :, :, :].reshape(2 * self.size, self.size), fmt="%d")
                 np.savetxt("./temp/Z_" + array_file, self.errors[1, :, :, :].reshape(2 * self.size, self.size), fmt="%d")
         else:
@@ -77,23 +79,7 @@ class lattice:
         for non_bit in non_bits:
             self.array[non_bit] = 2
 
-
-        # Save locations for errors (y, x, TD{0,1}) for X, Z, and Y (X and Z) errors
-        self.X_er_loc = []
-        self.Z_er_loc = []
-        self.Y_er_loc = []
-        for iy in range(self.size):
-            for ix in range(self.size):
-                for hv in range(2):
-                    if self.array[0,hv,iy,ix] == 0: self.X_er_loc.append((iy,ix,hv))
-                    if self.array[1,hv,iy,ix] == 0: self.Z_er_loc.append((iy,ix,hv))
-
-                    if self.plot_load:
-                        if self.array[0,hv,iy,ix] == 0 and self.array[1,hv,iy,ix] == 0:
-                            self.Y_er_loc.append((iy, ix, hv))
-
-        if self.plot_load:
-            self.L.plot_errors(self.X_er_loc, self.Z_er_loc, self. Y_er_loc)
+        if self.plot_load: self.L.plot_errors(self.array)
 
     def measure_stab(self):
         '''
@@ -221,6 +207,7 @@ class lattice:
         '''
         Finds the qubits that needs to be flipped in order to correct the errors
         '''
+
         flips = []
         for ertype in range(2):
             for pair in self.results[ertype]:
@@ -233,8 +220,8 @@ class lattice:
 
                 sy = min([y0, y1])
                 sx = min([x0, x1])
-                my = max([y0, y1])
-                mx = max([x0, x1])
+
+                mx = [x0, x1][[y0, y1].index(max([y0, y1]))]
 
                 for x in range(dx):
                     newx = sx + x + 1
@@ -254,6 +241,8 @@ class lattice:
         for flip in flips:
             self.array[flip] = 1 - self.array[flip]
 
+        if self.plot_load: self.L.plot_final(flips, self.array)
+
 
 
     def logical_error(self):
@@ -266,41 +255,8 @@ class lattice:
         for q in range(self.size):
             if self.array[0, 0, 0, q] == 0:
                 logical_error[0] = 1 - logical_error[0]
-            if self.array[0, 1, q, 0] == 0:
+            if self.array[1, 0, q, 0] == 0:
                 logical_error[1] = 1 - logical_error[1]
 
 
         return logical_error
-
-    def plot_corrected(self):
-        '''
-        Plots the flipped correction-qubits over the inital lattice
-        '''
-
-        if self.plot_load:
-
-            singles = []
-            poly    = []
-            for flip in self.flips:
-                count = self.flips.count(flip)
-                if count == 1:
-                    singles.append(flip)
-                elif count % 2 == 1 and flip not in poly:
-                    singles.append(flip)
-                    poly.append(flip)
-
-            X_er_loc = []
-            Z_er_loc = []
-            Y_er_loc = []
-            for flip in singles:
-                plot = (flip[2], flip[3], flip[1])
-                if flip[0] == 0 and plot not in Z_er_loc:
-                    X_er_loc.append(plot)
-                elif flip[0] == 1 and plot not in X_er_loc:
-                    Z_er_loc.append(plot)
-                else:
-                    Y_er_loc.append(plot)
-
-            self.L.plot_errors(X_er_loc, Z_er_loc, Y_er_loc, plot = "matching")
-        else:
-            print("Plot initially not loaded, nothing can be plotted")

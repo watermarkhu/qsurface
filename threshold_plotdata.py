@@ -1,9 +1,9 @@
 from matplotlib import pyplot as plt
 import numpy as np
 
-lattice = "Toric"
+lattice = "Planar"
 lattices = [8,12,16,20]
-p = list(np.linspace(0.09, 0.11, 11))
+p = list(np.linspace(0.09, 0.11,9))
 Num = 20000
 
 
@@ -13,7 +13,7 @@ f  = plt.figure()
 
 
 for lati in range(len(lattices)):
-    Name = "./data/Thres_L" + str(lattices[lati]) + "_N" + str(Num) + ".txt"
+    Name = "./data/" + lattice + "_Thres_L" + str(lattices[lati]) + "_N" + str(Num) + ".txt"
     thresholds = np.loadtxt(Name)
     fit = np.polyfit(p, thresholds, 2)
     polyfit = np.poly1d(fit)

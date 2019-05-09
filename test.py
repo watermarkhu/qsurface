@@ -1,27 +1,21 @@
-from toric import toric_lattice
+from toric_lattice import lattice
+from matplotlib import pyplot as plt
 
-size = 8
+size = 20
 pX = 0
-pZ = 0.09
+pZ = 0
+pE = 0.1
 
-loadplot = True
+loadplot = False
 new_errors = True
 write_errors = True
 
-TL = toric_lattice(size, loadplot)
-TL.init_errors(pX, pZ, new_errors, write_errors)
-TL.measure_stab()
-TL.get_matching()
-TL.apply_matching()
+L = lattice(size, loadplot)
+L.init_erasure(pE, new_errors, write_errors)
+L.init_pauli(pX, pZ, new_errors, write_errors)
 
-# Make squash mathcings
-
-logical_error = TL.logical_error()
-print(logical_error)
-
-#TL.plot_corrected()
-
-
-
-
-
+L.measure_stab()
+L.get_matching_peeling()
+# L.apply_matching()
+# logical_error = L.logical_error()
+# print(logical_error)

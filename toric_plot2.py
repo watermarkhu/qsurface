@@ -34,7 +34,7 @@ class lattice_plot:
 
 
         # Initiate figure
-        self.f = plt.figure()
+        self.f = plt.figure(1, figsize = (12, 12))
         plt.ion()
         plt.show()
         self.ax = self.f.gca()
@@ -246,3 +246,5 @@ class lattice_plot:
             plt.cla()
             self.plot_lattice()
             self.plot_errors(array)
+            print("Final lattice plotted. Press on the plot to continue")
+            plt.waitforbuttonpress()

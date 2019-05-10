@@ -2,9 +2,9 @@ from matplotlib import pyplot as plt
 import numpy as np
 
 lattice = "Planar"
-lattices = [8,12,16,20]
+lattices = [8,12,16]
 p = list(np.linspace(0.09, 0.11,9))
-Num = 20000
+Num = 200
 
 
 

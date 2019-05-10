@@ -1,3 +1,4 @@
+import os
 import math
 import random
 import numpy as np
@@ -41,7 +42,10 @@ class lattice:
 
         self.array = np.ones([2, 2, self.size, self.size])
 
-    def init_erasure(self, pE = 0.05, new_errors=True, write_errors=True, array_file = "error.txt"):
+        if not os.path.exists("./errors/"):
+            os.makedirs("./errors/")
+
+    def init_erasure(self, pE = 0.05, new_errors=True, write_errors=False, array_file = "error.txt"):
 
         '''
         :param pE:                      probability of erasure error
@@ -91,9 +95,9 @@ class lattice:
                                 self.erasures[td, y, x] = 4
 
             if write_errors:
-                np.savetxt("./temp/Erasure_" + array_file, self.erasures.reshape(2 * self.size, self.size), fmt="%d")
+                np.savetxt("./errors/Erasure_" + array_file, self.erasures.reshape(2 * self.size, self.size), fmt="%d")
         else:
-            self.erasures = np.reshape(np.loadtxt("./temp/Erasure_" + array_file), (2, self.size, self.size))
+            self.erasures = np.reshape(np.loadtxt("./errors/Erasure_" + array_file), (2, self.size, self.size))
 
         if self.plot_load:   self.L.plot_erasures(self.erasures)
 
@@ -108,7 +112,7 @@ class lattice:
                         self.array[1, td, y, x] = 1 - self.array[1, td, y, x]
 
 
-    def init_pauli(self, pX = 0.1, pZ=0.1, pE=0.05, new_errors=True, write_errors = True, array_file = "error.txt"):
+    def init_pauli(self, pX = 0.1, pZ=0.1, new_errors=True, write_errors = False, array_file = "error.txt"):
 
         '''
         :param pX:                      probability of X error
@@ -128,13 +132,12 @@ class lattice:
             self.errors[0, :, :, :] = self.errors[0, :, :, :] < self.pX
             self.errors[1, :, :, :] = self.errors[1, :, :, :] < self.pZ
 
-
             if write_errors:
-                np.savetxt("./temp/PauliX_" + array_file, self.errors[0, :, :, :].reshape(2 * self.size, self.size), fmt="%d")
-                np.savetxt("./temp/PauliZ_" + array_file, self.errors[1, :, :, :].reshape(2 * self.size, self.size), fmt="%d")
+                np.savetxt("./errors/PauliX_" + array_file, self.errors[0, :, :, :].reshape(2 * self.size, self.size), fmt="%d")
+                np.savetxt("./errors/PauliZ_" + array_file, self.errors[1, :, :, :].reshape(2 * self.size, self.size), fmt="%d")
         else:
-            X_errors = np.reshape(np.loadtxt("./temp/PauliX_" + array_file), (2, self.size, self.size))
-            Z_errors = np.reshape(np.loadtxt("./temp/PauliZ_" + array_file), (2, self.size, self.size))
+            X_errors = np.reshape(np.loadtxt("./errors/PauliX_" + array_file), (2, self.size, self.size))
+            Z_errors = np.reshape(np.loadtxt("./errors/PauliZ_" + array_file), (2, self.size, self.size))
             self.errors = np.stack((X_errors, Z_errors), axis = 0)
 
         # Apply pauli errors to array
@@ -187,9 +190,22 @@ class lattice:
         '''
 
         erloc = [(hv, y, x) for hv in range(2) for y in range(self.size) for x in range(self.size) if self.erasures[hv, y, x] != 0]
-        pel.toric(self.size, self.qua_loc, erloc)
+        PL = pel.toric(self.size, self.qua_loc, erloc)
+        PL.find_clusters()
+        PL.init_trees()
+        matching = PL.peel_tree()
 
+        flips = []
+        for ertype in range(2):
+            for vertice in matching[ertype]:
+                hv = vertice[0]
+                y  = vertice[1]
+                x  = vertice[2]
+                loc = (ertype, hv, y, x)
+                self.array[loc] = 1 - self.array[loc]
+                flips.append(loc)
 
+        if self.plot_load: self.L.plot_final(flips, self.array)
 
     def get_matching_MWPM(self):
         '''

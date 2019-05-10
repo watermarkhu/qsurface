@@ -2,3 +2,9 @@
 *.pyc
 *.xml
 *.xml
+errors/
+peel_data/
+figures/
+data/
+blossom5/
+__pycache__/

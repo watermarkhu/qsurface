@@ -1,10 +1,11 @@
-
 *.pyc
 *.xml
 *.xml
+*.o
+*.so
+__pycache__/
 errors/
 peel_data/
 figures/
 data/
-blossom5/
-__pycache__/
+blossom5/*.txt

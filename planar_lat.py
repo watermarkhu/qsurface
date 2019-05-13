@@ -191,16 +191,18 @@ class lattice:
 
         # Number of quasiparticles, syndromes, and total strings
         # Quasiparticles locations [(y,x),..]
-        self.qua_loc =  [[(y, x) for y in range(self.size - 1) for x in range(self.size) if plaq[y][x] == False]]
-        self.qua_loc += [[(y, x) for y in range(self.size) for x in range(self.size - 1) if star[y][x] == False]]
-        self.N_qua = [len(qua) for qua in self.qua_loc]
-        self.N_syn = [int(len(qua))/2 for qua in self.qua_loc]
+        plaq_qua_loc = [(y, x) for y in range(self.size - 1) for x in range(self.size) if plaq[y][x] == False]
+        star_qua_loc = [(y, x) for y in range(self.size) for x in range(self.size - 1) if star[y][x] == False]
+        self.qua_loc = [plaq_qua_loc, star_qua_loc]
+        self.N_qua = tuple([len(qua) for qua in self.qua_loc])
+        self.N_syn = tuple([int(len(qua))/2 for qua in self.qua_loc])
 
         if self.plot_load:  self.L.plot_anyons(self.qua_loc)
 
     def get_matching_MWPM(self):
         '''
         Uses the MWPM algorithm to get the matchings
+        A list of combinations of all the anyons and their respective weights are feeded to the blossom5 algorithm
         '''
 
         self.results = []
@@ -248,6 +250,7 @@ class lattice:
                     edges.append([self.N_qua[ertype] + v0, self.N_qua[ertype] + v1 + v0 + 1, 0])
 
             self.qua_loc[ertype] += qua_loc_m
+            self.qua_loc[ertype] = tuple(self.qua_loc[ertype])
 
             # Apply BlossomV algorithm if there are quasiparticles
             output = pm.getMatching(self.N_qua[ertype]*2, edges) if self.N_qua[ertype] != 0 else []
@@ -259,8 +262,6 @@ class lattice:
 
         if self.plot_load: self.L.plot_lines(self.results)
 
-
-    def apply_matching(self):
 
         '''
         Finds the qubits that needs to be flipped in order to correct the errors

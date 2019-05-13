@@ -1,4 +1,4 @@
-from planar_lat import lattice
+from toric_lat import lattice
 from matplotlib import pyplot as plt
 
 size = 8
@@ -17,10 +17,9 @@ L.init_stab_data()
 L.init_pauli(pX, pZ, new_errors, write_errors)
 
 L.measure_stab()
-# L.get_matching_peeling()
 
+# L.get_matching_peeling()
 L.get_matching_MWPM()
-L.apply_matching()
 
 logical_error = L.logical_error()
 print(logical_error)

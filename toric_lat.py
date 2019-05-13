@@ -195,7 +195,8 @@ class lattice:
                     if eZ[td][y][x] == 1:
                         self.array[1][td][y][x] = not self.array[0][td][y][x]
 
-        if self.plot_load: self.LP.plot_errors(self.array)
+        if self.plot_load:
+            self.LP.plot_errors(self.array)
 
 
     def measure_stab(self, stab_data = []):
@@ -230,24 +231,36 @@ class lattice:
         self.qua_loc = []
         for er in range(2):
 
-            qua_loc = [(y, x) for y in range(self.size) for x in range(self.size) if stab[er][y][x] == False]
+            qua_loc = tuple([(y, x) for y in range(self.size) for x in range(self.size) if stab[er][y][x] == False])
 
             self.qua_loc.append(qua_loc)
             self.N_qua.append(len(qua_loc))
             self.N_syn.append(int(len(qua_loc) / 2))
 
+        self.qua_loc = tuple(self.qua_loc)
+        self.N_qua = tuple(self.N_qua)
+        self.N_syn = tuple(self.N_syn)
+
         if self.plot_load:  self.LP.plot_anyons(self.qua_loc)
 
-    def get_matching_peeling(self):
+
+
+    def get_matching_peeling(self, edge_data = ()):
         '''
         Uses the Peeling algorithm to get the matchings
+        Optionally, edge_data can be inputted here, which is useful in multiple iteration simulations
         '''
 
-        erloc = [(hv, y, x) for hv in range(2) for y in range(self.size) for x in range(self.size) if self.erasures[hv, y, x] != 0]
-        PL = pel.toric(self.size, self.qua_loc, erloc)
+        erloc = [(hv, y, x) for hv in range(2) for y in range(self.size) for x in range(self.size) if self.erasures[hv][y][x] != 0]
+        if edge_data == ():
+            PL = pel.toric(self.size, self.qua_loc, erloc)
+        else:
+            PL = pel.toric(self.size, self.qua_loc, erloc, edge_data)
+
         PL.find_clusters()
         PL.init_trees()
-        matching = PL.peel_tree()
+        PL.peel_trees()
+        matching = PL.match_to_loc()
 
         flips = []
         for ertype in range(2):
@@ -256,7 +269,7 @@ class lattice:
                 y  = vertice[1]
                 x  = vertice[2]
                 loc = (ertype, hv, y, x)
-                self.array[loc] = 1 - self.array[loc]
+                self.array[ertype][hv][y][x] = not self.array[ertype][hv][y][x]
                 flips.append(loc)
 
         if self.plot_load: self.LP.plot_final(flips, self.array)
@@ -264,6 +277,7 @@ class lattice:
     def get_matching_MWPM(self):
         '''
         Uses the MWPM algorithm to get the matchings
+        A list of combinations of all the anyons and their respective weights are feeded to the blossom5 algorithm
         '''
 
         self.results = []
@@ -296,8 +310,6 @@ class lattice:
 
         if self.plot_load: self.LP.plot_lines(self.results)
 
-
-    def apply_matching(self):
 
         '''
         Finds the qubits that needs to be flipped in order to correct the errors

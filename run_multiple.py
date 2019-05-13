@@ -1,5 +1,6 @@
 import toric_lat as tl
 import planar_lat as pl
+import peeling as pel
 
 
 import sys
@@ -19,7 +20,6 @@ def toric_2D_MWPM(size, pX, pZ, iters, new_errors = True, write_errors = False, 
         TL.init_pauli(pX, pZ, new_errors, write_errors)
         TL.measure_stab(stab_data)
         TL.get_matching_MWPM()
-        TL.apply_matching()
         logical_error = TL.logical_error()
         if logical_error == [False, False, False, False]:  N_succes += 1
     return N_succes
@@ -29,12 +29,15 @@ def toric_2D_peeling(size, pX, pZ, iters, new_errors = True, write_errors = Fals
     TL = tl.lattice(size, load_plot)
     stab_data = TL.init_stab_data()
 
+    peel = pel.toric(size, [], [])
+    edge_data = peel.init_edge_data()
+
     N_succes = 0
     for i in range(iters):
         TL = tl.lattice(size, load_plot)
         TL.init_pauli(pX, pZ, new_errors, write_errors)
         TL.measure_stab(stab_data)
-        TL.get_matching_peeling()
+        TL.get_matching_peeling(edge_data)
         logical_error = TL.logical_error()
         if logical_error == [False, False, False, False]:  N_succes += 1
     return N_succes
@@ -50,12 +53,9 @@ def planar_2D_MWPM(size, pX, pZ, iters, new_errors = True, write_errors = False,
         PL.init_pauli(pX, pZ, new_errors, write_errors)
         PL.measure_stab(plaq_data, star_data)
         PL.get_matching_MWPM()
-        PL.apply_matching()
         logical_error = PL.logical_error()
         if logical_error == [False, False]:  N_succes += 1
     return N_succes
-
-
 
 
 ### Other code

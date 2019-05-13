@@ -4,9 +4,10 @@ import time
 
 class toric_peeling_plot:
 
-    def __init__(self, size, plotstep_peel = False, plotstep_click = False):
+    def __init__(self, size, edge_list, plotstep_peel = False, plotstep_click = False):
 
         self.size = size
+        self.edge_list = edge_list
 
         self.cl = [0.8, 0.8, 0.8]       # Line color
         self.cx = [0.9, 0.3, 0.3]       # X error color
@@ -89,25 +90,29 @@ class toric_peeling_plot:
 
         plt.figure(self.f.number)
 
-        for (hv, y, x) in rem_list[0]:
-            if hv == 0:
-                self.ax.plot([x, x], [y, y-1], c = self.cl, lw = self.lw, ls = '-')
-            else:
-                self.ax.plot([x, x-1], [y, y], c = self.cl, lw = self.lw, ls = '-')
+        for edge in rem_list:
 
-        for (hv, y, x) in rem_list[1]:
-            y1 = y-1/2
-            x1 = x-1/2
-            if hv == 0:
-                self.ax.plot([x1, x1+1], [y1, y1], c = self.cl, lw = self.lw, ls = '--')
-            else:
-                self.ax.plot([x1, x1], [y1, y1+1], c = self.cl, lw = self.lw, ls = '--')
+            (ertype, hv, y, x) = self.edge_list[edge][0:4]
+
+            if ertype == 0:
+                if hv == 0:
+                    self.ax.plot([x, x], [y, y-1], c = self.cl, lw = self.lw, ls = '-')
+                else:
+                    self.ax.plot([x, x-1], [y, y], c = self.cl, lw = self.lw, ls = '-')
+
+            if ertype == 1:
+                y1 = y-1/2
+                x1 = x-1/2
+                if hv == 0:
+                    self.ax.plot([x1, x1+1], [y1, y1], c = self.cl, lw = self.lw, ls = '--')
+                else:
+                    self.ax.plot([x1, x1], [y1, y1+1], c = self.cl, lw = self.lw, ls = '--')
 
         plt.draw()
         print("Tree-like structure formed. Press on the plot to continue")
         plt.waitforbuttonpress()
 
-    def plot_matching(self, qua_loc, erasures, matching):
+    def plot_matching(self, qua_loc, erasures, match_loc):
         '''
         :param qua_loc          locations of the find_anyons (hv, y, x)
         :param erasures         locations of the erasures (hv, y, x)
@@ -133,13 +138,13 @@ class toric_peeling_plot:
                 self.ax.add_artist(circle)
         else:
 
-            for (hv, y, x) in [edge for edge in erasures if edge not in matching[0]]:
+            for (hv, y, x) in [edge for edge in erasures if edge not in match_loc[0]]:
                 if hv == 0:
                     self.ax.plot([x, x], [y, y-1], c = self.cl, lw = self.lw, ls = '-')
                 else:
                     self.ax.plot([x, x-1], [y, y], c = self.cl, lw = self.lw, ls = '-')
 
-            for (hv, y, x) in [edge for edge in erasures if edge not in matching[1]]:
+            for (hv, y, x) in [edge for edge in erasures if edge not in match_loc[1]]:
                 y1 = y - 1/2
                 x1 = x - 1/2
                 if hv == 0:
@@ -161,7 +166,7 @@ class toric_peeling_plot:
 
     '''
 
-    def plot_removed_step(self, ertype, edge):
+    def plot_removed_step(self, edge):
         '''
         plots an edge that is to be removed from the plot
         1.  plots black edge as indication
@@ -171,9 +176,7 @@ class toric_peeling_plot:
 
         plt.figure(self.f.number)
 
-        hv = edge[0]
-        y = edge[1]
-        x = edge[2]
+        (ertype, hv, y, x) = self.edge_list[edge][0:4]
 
         if ertype == 0:
             if hv == 0:
@@ -205,7 +208,7 @@ class toric_peeling_plot:
             else:
                 self.ax.plot([x1, x1], [y1, y1+1], c = self.cl, lw = self.lw, ls = '--')
 
-    def plot_tree_step(self, ertype, edge):
+    def plot_tree_step(self, edge):
         '''
         plots an edge that is confirmed into the tree structure
         changes color slightly
@@ -214,9 +217,7 @@ class toric_peeling_plot:
 
         plt.figure(self.f.number)
 
-        hv = edge[0]
-        y = edge[1]
-        x = edge[2]
+        (ertype, hv, y, x) = self.edge_list[edge][0:4]
 
         if ertype == 0:
             if hv == 0:
@@ -235,7 +236,7 @@ class toric_peeling_plot:
         if self.plotstep_click: plt.waitforbuttonpress()
         else: plt.pause(self.step)
 
-    def plot_strip_step(self, ertype, edge):
+    def plot_strip_step(self, edge):
         '''
         plots an edge that is added tot the matching
         1.  plots black edge as indication
@@ -245,9 +246,7 @@ class toric_peeling_plot:
 
         plt.figure(self.f.number)
 
-        hv = edge[0]
-        y = edge[1]
-        x = edge[2]
+        (ertype, hv, y, x) = self.edge_list[edge][0:4]
 
         if ertype == 0:
             if hv == 0:

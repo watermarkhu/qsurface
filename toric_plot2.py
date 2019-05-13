@@ -94,7 +94,7 @@ class lattice_plot:
                     self.ax.add_artist(circle)
 
 
-    def plot_errors(self, array, plot = None):
+    def plot_errors(self, array):
         '''
         :param arrays       array of qubit states
         plots colored circles within the qubits if there is an error
@@ -132,7 +132,7 @@ class lattice_plot:
             self.ax.add_artist(circle)
 
 
-        if self.plot_error or plot:
+        if self.plot_error:
             plt.draw()
             print("Errors plotted. Press on the plot to continue")
             plt.waitforbuttonpress()

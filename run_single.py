@@ -14,7 +14,6 @@ def toric_2D_MWPM(size, pX, pZ, new_errors = True, write_errors = False, load_pl
     TL.init_pauli(pX, pZ, new_errors, write_errors)
     TL.measure_stab()
     TL.get_matching_MWPM()
-    TL.apply_matching()
     logical_error = TL.logical_error()
     correct = True if logical_error == [False, False, False, False] else False
     return correct
@@ -35,7 +34,6 @@ def planar_2D_MWPM(size, pX, pZ, new_errors = True, write_errors = False, load_p
     PL.init_pauli(pX, pZ, new_errors, write_errors)
     PL.measure_stab()
     PL.get_matching_MWPM()
-    PL.apply_matching()
     logical_error = PL.logical_error()
     correct = True if logical_error == [False, False] else False
     return correct

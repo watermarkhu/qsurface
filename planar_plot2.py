@@ -5,6 +5,7 @@ import copy
 import numpy as np
 import cv2
 
+# TODO: add plot erasures
 
 class lattice_plot:
 
@@ -35,7 +36,7 @@ class lattice_plot:
 
 
         # Initiate figure
-        self.f = plt.figure()
+        self.f = plt.figure(1, figsize = (12, 12))
         plt.ion()
         plt.show()
         self.ax = self.f.gca()
@@ -152,9 +153,9 @@ class lattice_plot:
         for iy in range(self.size):
             for ix in range(self.size):
                 for hv in range(2):
-                    if array[0,hv,iy,ix] == 0: Xer.append((iy,ix,hv))
-                    if array[1,hv,iy,ix] == 0: Zer.append((iy,ix,hv))
-                    if array[0,hv,iy,ix] == 0 and array[1,hv,iy,ix] == 0:
+                    if array[0][hv][iy][ix] == 0: Xer.append((iy,ix,hv))
+                    if array[1][hv][iy][ix] == 0: Zer.append((iy,ix,hv))
+                    if array[0][hv][iy][ix] == 0 and array[1][hv][iy][ix] == 0:
                         Yer.append((iy, ix, hv))
 
 
@@ -189,7 +190,7 @@ class lattice_plot:
             plt.waitforbuttonpress()
 
 
-    def plotXstrings(self, qua_loc):
+    def plot_anyons(self, qua_loc):
 
 
         plt.figure(self.f.number)
@@ -231,7 +232,7 @@ class lattice_plot:
             plt.waitforbuttonpress()
 
 
-    def drawlines(self, Results):
+    def plot_lines(self, results):
 
         plt.figure(self.f.number)
         ploc = [3, 1]
@@ -241,15 +242,15 @@ class lattice_plot:
         for type in range(2):
 
             np.random.seed(1)
-            color = np.random.random([len(Results[type]),3])*0.8 + 0.2
+            color = np.random.random([len(results[type]),3])*0.8 + 0.2
 
-            for string in range(len(Results[type])):
+            for string in range(len(results[type])):
                 C = color[string,:]
 
-                topx = Results[type][string][0][1] * 4
-                topy = Results[type][string][0][0] * 4
-                botx = Results[type][string][1][1] * 4
-                boty = Results[type][string][1][0] * 4
+                topx = results[type][string][0][1] * 4
+                topy = results[type][string][0][0] * 4
+                botx = results[type][string][1][1] * 4
+                boty = results[type][string][1][0] * 4
 
                 if type == 1:
                     topx += 4
@@ -326,3 +327,5 @@ class lattice_plot:
             plt.cla()
             self.plot_lattice()
             self.plot_errors(array)
+            print("Final lattice plotted. Press on the plot to continue")
+            plt.waitforbuttonpress()

@@ -1,11 +1,11 @@
-import surface_run
+import run_multiple
 from matplotlib import pyplot as plt
 import numpy as np
 import time
 import random
 
 lattices = [8, 12, 16]
-p =  list(np.linspace(0.09, 0.11,9))
+p =  list(np.linspace(0.09, 0.11, 9))
 Num = 10000
 
 colors = ['r','g','b']
@@ -21,21 +21,20 @@ for lati in range(len(lattices)):
         tNi = 0
         tEd = 0
 
-        for i in range(Num):
+        t0 = time.time()
+        print("Own")
+        correct = run_multiple.toric_2D_MWPM(lattices[lati], p[pi], 0, Num)
+        t1 = time.time()
+        print("Nickerson")
+        correct = run_multiple.toric_2D_nickerson(lattices[lati], p[pi], 0, Num)
+        t2 = time.time()
+        print("Eduardo")
+        correct = run_multiple.toric_2D_eduardo(lattices[lati], p[pi], 0, Num)
+        t3 = time.time()
 
-            if i % 1000 == 0: print("Iteration", str(i), ": ")
-
-            t0 = time.time()
-            correct = surface_run.toric_2D_MWPM(lattices[lati], p[pi], 0)
-            t1 = time.time()
-            correct = surface_run.toric_2D_nickerson(lattices[lati], p[pi], 0, i)
-            t2 = time.time()
-            correct = surface_run.toric_2D_eduardo(lattices[lati], p[pi], 0)
-            t3 = time.time()
-
-            tMe += t1 - t0
-            tNi += t2 - t1
-            tEd += t3 - t2
+        tMe = t1 - t0
+        tNi = t2 - t1
+        tEd = t3 - t2
 
         timing[0,lati,pi] = tMe/Num*1000
         timing[1,lati,pi] = tNi/Num*1000
@@ -47,8 +46,6 @@ for lati in range(len(lattices)):
 
 
 print(timing)
-
-
 
 plt.title("Average runtime")
 plt.xlabel("p (%)")

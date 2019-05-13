@@ -8,7 +8,7 @@ class lattice_plot:
 
     def __init__(self,size = 10):
 
-        self.plot_error = False
+        self.plot_error = True
         self.plot_syndrome = True
         self.plot_matching = True
         self.plot_correction = True
@@ -41,6 +41,10 @@ class lattice_plot:
 
 
     def plot_lattice(self):
+        '''
+        Plots the toric lattice.
+        Which includes the vertices on the initial and secundary lattices, and two qubits per cell
+        '''
 
         plt.figure(self.f.number)
         self.ax.invert_yaxis()
@@ -71,6 +75,10 @@ class lattice_plot:
                 self.ax.add_artist(circled)
 
     def plot_erasures(self, erasures):
+        '''
+        :param erasures         list of locations (td, y, x) of the erased stab_qubits
+        plots an additional blue cicle around the qubits which has been erased
+        '''
         plt.figure(self.f.number)
 
         for yb in range(self.size):
@@ -78,17 +86,19 @@ class lattice_plot:
             for xb in range(self.size):
                 x = xb * 4
 
-                if erasures[0, yb, xb] != 0:
+                if erasures[0][yb][xb] != 0:
                     circle = plt.Circle((x+3, y+1), self.qsizeE, edgecolor = self.cE, fill = False, linewidth = self.lw, linestyle = ":")
                     self.ax.add_artist(circle)
-                if erasures[1, yb, xb] != 0:
+                if erasures[1][yb][xb] != 0:
                     circle = plt.Circle((x+1, y+3), self.qsizeE, edgecolor = self.cE, fill = False, linewidth = self.lw, linestyle = ":")
                     self.ax.add_artist(circle)
 
 
-
-
     def plot_errors(self, array, plot = None):
+        '''
+        :param arrays       array of qubit states
+        plots colored circles within the qubits if there is an error
+        '''
 
         # Save locations for errors (y, x, TD{0,1}) for X, Z, and Y (X and Z) errors
         Xer = []
@@ -97,9 +107,9 @@ class lattice_plot:
         for iy in range(self.size):
             for ix in range(self.size):
                 for hv in range(2):
-                    if array[0,hv,iy,ix] == 0: Xer.append((iy,ix,hv))
-                    if array[1,hv,iy,ix] == 0: Zer.append((iy,ix,hv))
-                    if array[0,hv,iy,ix] == 0 and array[1,hv,iy,ix] == 0:
+                    if array[0][hv][iy][ix] == 0: Xer.append((iy,ix,hv))
+                    if array[1][hv][iy][ix] == 0: Zer.append((iy,ix,hv))
+                    if array[0][hv][iy][ix] == 0 and array[1][hv][iy][ix] == 0:
                         Yer.append((iy, ix, hv))
 
         plt.figure(self.f.number)
@@ -128,14 +138,16 @@ class lattice_plot:
             plt.waitforbuttonpress()
 
 
-
-    def plotXstrings(self, qua_loc):
+    def plot_anyons(self, qua_loc):
+        '''
+        :param qua_loc      list of quasiparticle/anyon positions (y,x)
+        plots the vertices of the anyons on the lattice
+        '''
 
         plt.figure(self.f.number)
         ploc = [2, 0]
         C = [self.cX, self.cZ]
         LS = ['--', '-']
-
 
         # Plot errors on primary and secondary lattice
         for type in range(2):
@@ -148,14 +160,17 @@ class lattice_plot:
                 plt.plot([x+1+ploc[type], x+1+ploc[type]], [y+0+ploc[type], y+1+ploc[type]], c = C[type], lw = self.lw, ls = LS[type])
                 plt.plot([x+1+ploc[type], x+1+ploc[type]], [y+1+ploc[type], y+2+ploc[type]], c = C[type], lw = self.lw, ls = LS[type])
 
-
         if self.plot_syndrome:
             plt.draw()
             print("Syndromes plotted. Press on the plot to continue")
             plt.waitforbuttonpress()
 
 
-    def drawlines(self, Results):
+    def plot_lines(self, results):
+        '''
+        :param results      list of matchings of anyon
+        plots strings between the two anyons of each match
+        '''
 
         plt.figure(self.f.number)
         ploc = [3, 1]
@@ -165,15 +180,15 @@ class lattice_plot:
         for type in range(2):
 
             np.random.seed(1)
-            color = np.random.random([len(Results[type]),3])*0.8 + 0.2
+            color = np.random.random([len(results[type]),3])*0.8 + 0.2
 
-            for string in range(len(Results[type])):
+            for string in range(len(results[type])):
                 C = color[string,:]
 
-                topx = Results[type][string][0][1] * 4
-                topy = Results[type][string][0][0] * 4
-                botx = Results[type][string][1][1] * 4
-                boty = Results[type][string][1][0] * 4
+                topx = results[type][string][0][1] * 4
+                topy = results[type][string][0][0] * 4
+                botx = results[type][string][1][1] * 4
+                boty = results[type][string][1][0] * 4
 
                 plt.plot([topx + ploc[type], botx + ploc[type]], [topy + ploc[type], boty + ploc[type]], c = C, lw = self.slw, ls = LS[type])
                 circle1 = plt.Circle((topx + ploc[type], topy + ploc[type]), 0.25, fill = True, facecolor = C)
@@ -188,6 +203,14 @@ class lattice_plot:
             plt.waitforbuttonpress()
 
     def plot_final(self, flips, array):
+        '''
+        param: flips        qubits that have flipped in value (y,x)
+        param: arrays       data array of the (corrected) qubit states
+        plots the applied stabilizer measurements over the lattices
+        also, in the qubits that have flipped in value a smaller white circle is plotted
+
+        optionally, the axis is clear and the final state of the lattice is plotted
+        '''
 
         plt.figure(self.f.number)
 

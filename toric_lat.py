@@ -1,11 +1,10 @@
 import os
+import csv
 import math
 import random
-import numpy as np
 import toric_plot2 as tp
 import blossom5.pyMatch as pm
 import peeling as pel
-import time
 from matplotlib import pyplot as plt
 
 
@@ -37,15 +36,62 @@ class lattice:
 
         # Initiate plot
         if plot_load:
-            self.L = tp.lattice_plot(size)
-            self.L.plot_lattice()
+            self.LP = tp.lattice_plot(size)
+            self.LP.plot_lattice()
 
-        self.array = np.ones([2, 2, self.size, self.size])
+        self.array = [[[[True for _ in range(self.size)] for _ in range(self.size)] for _ in range(2)] for _ in range(2)]
 
         if not os.path.exists("./errors/"):
             os.makedirs("./errors/")
 
-    def init_erasure(self, pE = 0.05, new_errors=True, write_errors=False, array_file = "error.txt"):
+    def init_stab_data(self):
+        '''
+        Initializes a multidimentional tuple containing the qubit locations for each stabilizers
+        This is especially handy when dealing with multiple iterations, such that the qubit locations needs not to be
+            calculated for each round of stabilizer measurements
+        Each stabilizer has the tuple (errortype, num_qubits, (td, y, x), ...)
+
+        '''
+        stab_list = []
+
+        for er in range(2):
+            for y in range(self.size):
+                for x in range(self.size):
+                    stab_list.append((er, (0, y, x), (1, y, x), (er, (y + 1 - 2*er) % self.size, x), (1 - er, y, (x + 1 - 2*er) % self.size)))
+
+        self.stab_data = tuple(stab_list)
+        return self.stab_data
+
+
+    def write_error(self, array, file_name):
+        '''
+        :param array        2D list of L x L new_errors
+        :param file_name    name of the file to write to
+        Writes the error list to a csv file to check for the errors
+        '''
+        a1 = array[0]
+        a2 = array[1]
+        write_array = a1 + a2
+        with open(file_name, "w") as csvFile:
+            writer = csv.writer(csvFile)
+            writer.writerows(write_array)
+        csvFile.close()
+
+    def read_error(self, file_name):
+        '''
+        :param file_name    name of the file to read
+        Reads the csv file to load errors made in a previous round or made manually
+        '''
+        with open(file_name, "r") as csvFile:
+            read_array = [list(map(bool,rec)) for rec in csv.reader(csvFile)]
+        csvFile.close()
+        a1 = read_array[:self.size]
+        a2 = read_array[self.size:]
+        array = [a1, a2]
+        return array
+
+
+    def init_erasure(self, pE = 0.05, new_errors=True, write_errors=False):
 
         '''
         :param pE:                      probability of erasure error
@@ -55,61 +101,62 @@ class lattice:
         '''
 
         self.pE = pE
+        file_name = "./errors/L" + str(self.size) + "_erasure_error.csv"
+
         if new_errors:
             # Generate erasure errors
-            self.erasures = np.random.random([2, self.size, self.size])
-            self.erasures[:, :, :] = self.erasures[:, :, :] < self.pE
+            self.erasures = [[[1 if random.random() < self.pE else 0 for x in range(self.size)] for y in range(self.size)] for td in range(2)]
 
 
             # Increase error size, make blob
             extra = []
             for y in range(self.size):
                 for x in range(self.size):
-                    if self.erasures[0, y, x] == 1:
+                    if self.erasures[0][y][x] == 1:
                         extra.append((0, y, (x-1)%self.size))
                         extra.append((0, y, (x+1)%self.size))
                         extra.append((1, y, x))
                         extra.append((1, (y-1)%self.size, x))
                         extra.append((1, y, (x+1)%self.size))
                         extra.append((1, (y-1)%self.size, (x+1)%self.size))
-                    if self.erasures[1, y, x] == 1:
+                    if self.erasures[1][y][x] == 1:
                         extra.append((1, (y-1)%self.size, x))
                         extra.append((1, (y+1)%self.size, x))
                         extra.append((0, y, (x-1)%self.size))
                         extra.append((0, y, x))
                         extra.append((0, (y+1)%self.size, (x-1)%self.size))
                         extra.append((0, (y+1)%self.size, x))
-            for bound in extra:
-                self.erasures[bound] = 1
+            for (td, y, x) in extra:
+                self.erasures[td][y][x] = 1
             # Uniform I, X, Y, Z
             for y in range(self.size):
                 for x in range(self.size):
                     for td in range(2):
-                        if self.erasures[td, y, x] == 1:
+                        if self.erasures[td][y][x] == 1:
                             rand = random.random()
                             if rand < 0.25:
-                                self.erasures[td, y, x] = 2
+                                self.erasures[td][y][x] = 2
                             elif rand >= 0.25 and rand < 0.5:
-                                self.erasures[td, y, x] = 3
+                                self.erasures[td][y][x] = 3
                             elif rand >= 0.5 and rand < 0.75:
-                                self.erasures[td, y, x] = 4
+                                self.erasures[td][y][x] = 4
 
             if write_errors:
-                np.savetxt("./errors/Erasure_" + array_file, self.erasures.reshape(2 * self.size, self.size), fmt="%d")
+                self.write_error(self.erasures, file_name)
         else:
-            self.erasures = np.reshape(np.loadtxt("./errors/Erasure_" + array_file), (2, self.size, self.size))
+            self.erasures = self.read_error(file_name)
 
-        if self.plot_load:   self.L.plot_erasures(self.erasures)
+        if self.plot_load:   self.LP.plot_erasures(self.erasures)
 
 
         # Apply erasure errors to array
         for td in range(2):
             for x in range(self.size):
                 for y in range(self.size):
-                    if self.erasures[td, y, x] in [2, 4]:
-                        self.array[0, td, y, x] = 1 - self.array[0, td, y, x]
-                    if self.erasures[td, y, x] in [3, 4]:
-                        self.array[1, td, y, x] = 1 - self.array[1, td, y, x]
+                    if self.erasures[td][y][x] in [2, 4]:
+                        self.array[0][td][y][x] = not self.array[0][td][y][x]
+                    if self.erasures[td][y][x] in [3, 4]:
+                        self.array[1][td][y][x] = not self.array[1][td][y][x]
 
 
     def init_pauli(self, pX = 0.1, pZ=0.1, new_errors=True, write_errors = False, array_file = "error.txt"):
@@ -124,29 +171,34 @@ class lattice:
 
         self.pX = pX
         self.pZ = pZ
+        X_name = "./errors/L" + str(self.size) + "_X_pauli_error.csv"
+        Z_name = "./errors/L" + str(self.size) + "_Z_pauli_error.csv"
         if new_errors:
 
             # Generate X and Z errors or load from previous
-            np.random.seed(int((time.time()%100)*10000000))
-            self.errors = np.random.random([2,2,self.size, self.size])
-            self.errors[0, :, :, :] = self.errors[0, :, :, :] < self.pX
-            self.errors[1, :, :, :] = self.errors[1, :, :, :] < self.pZ
+            eX = [[[1 if random.random() < self.pX else 0 for x in range(self.size)] for y in range(self.size)] for td in range(2)]
+            eZ = [[[1 if random.random() < self.pZ else 0 for x in range(self.size)] for y in range(self.size)] for td in range(2)]
 
             if write_errors:
-                np.savetxt("./errors/PauliX_" + array_file, self.errors[0, :, :, :].reshape(2 * self.size, self.size), fmt="%d")
-                np.savetxt("./errors/PauliZ_" + array_file, self.errors[1, :, :, :].reshape(2 * self.size, self.size), fmt="%d")
+                self.write_error(eX, X_name)
+                self.write_error(eZ, Z_name)
         else:
-            X_errors = np.reshape(np.loadtxt("./errors/PauliX_" + array_file), (2, self.size, self.size))
-            Z_errors = np.reshape(np.loadtxt("./errors/PauliZ_" + array_file), (2, self.size, self.size))
-            self.errors = np.stack((X_errors, Z_errors), axis = 0)
+            eX = self.read_error(X_name)
+            eZ = self.read_error(Z_name)
 
         # Apply pauli errors to array
-        self.array = np.mod(self.array + self.errors, 2)
+        for y in range(self.size):
+            for x in range(self.size):
+                for td in range(2):
+                    if eX[td][y][x] == 1:
+                        self.array[0][td][y][x] = not self.array[0][td][y][x]
+                    if eZ[td][y][x] == 1:
+                        self.array[1][td][y][x] = not self.array[0][td][y][x]
 
-        if self.plot_load: self.L.plot_errors(self.array)
+        if self.plot_load: self.LP.plot_errors(self.array)
 
 
-    def measure_stab(self):
+    def measure_stab(self, stab_data = []):
         '''
         self.stab is an array that stores the measurement outcomes for the stabilizer measurements
             It has dimension [XZ{0,1}, size, size]
@@ -154,20 +206,22 @@ class lattice:
             The 0 values are the quasiparticles
         '''
 
-        self.stab = np.ones([2, self.size, self.size], dtype=bool)
+        # if not stab_data not inputted, used self data. This is the case for single simulations
+        if stab_data == []: stab_data = self.stab_data
+
+        stab = [[[True for _ in range(self.size)] for _ in range(self.size)] for _ in range(2)]
 
         # Measure plaquettes and stars
-        for er in range (2):
-            for y in range(self.size):
-                for x in range(self.size):
+        for stab_qubits in stab_data:
+            er = stab_qubits[0]
+            y = stab_qubits[1][1]
+            x = stab_qubits[1][2]
 
-                    # Get neighboring qubits for stabilizer
-                    stab_qubits = [(er, 0, y, x), (er, 1, y, x), (er, er, (y + 1 - 2*er) % self.size, x), (er, 1 - er, y, (x + 1 - 2*er) % self.size)]
+            # Flip value of stabilizer measurement
+            for (tds, ys, xs) in stab_qubits[1:]:
+                if self.array[er][tds][ys][xs] == False:
+                    stab[er][y][x] = not stab[er][y][x]
 
-                    # Flip value of stabilizer measurement
-                    for qubit in stab_qubits:
-                        if self.array[qubit] == 0:
-                            self.stab[er, y, x] = 1 - self.stab[er, y, x]
 
         # Number of quasiparticles, syndromes
         # Quasiparticles locations [(y,x),..]
@@ -176,13 +230,13 @@ class lattice:
         self.qua_loc = []
         for er in range(2):
 
-            qua_loc = [(y, x) for y in range(self.size) for x in range(self.size) if self.stab[er, y, x] == 0]
+            qua_loc = [(y, x) for y in range(self.size) for x in range(self.size) if stab[er][y][x] == False]
 
             self.qua_loc.append(qua_loc)
             self.N_qua.append(len(qua_loc))
             self.N_syn.append(int(len(qua_loc) / 2))
 
-        if self.plot_load:  self.L.plotXstrings(self.qua_loc)
+        if self.plot_load:  self.LP.plot_anyons(self.qua_loc)
 
     def get_matching_peeling(self):
         '''
@@ -205,7 +259,7 @@ class lattice:
                 self.array[loc] = 1 - self.array[loc]
                 flips.append(loc)
 
-        if self.plot_load: self.L.plot_final(flips, self.array)
+        if self.plot_load: self.LP.plot_final(flips, self.array)
 
     def get_matching_MWPM(self):
         '''
@@ -240,7 +294,7 @@ class lattice:
             result = [] if len(matching_pairs) == 0 else [[self.qua_loc[ertype][i] for i in x] for x in matching_pairs]
             self.results.append(result)
 
-        if self.plot_load: self.L.drawlines(self.results)
+        if self.plot_load: self.LP.plot_lines(self.results)
 
 
     def apply_matching(self):
@@ -284,30 +338,30 @@ class lattice:
         self.flips = flips
 
         # Apply flips on qubits
-        for flip in flips:
-            self.array[flip] = 1 - self.array[flip]
+        for (ertype, td, y, x) in flips:
+            self.array[ertype][td][y][x] = not self.array[ertype][td][y][x]
 
 
-        if self.plot_load: self.L.plot_final(flips, self.array)
+        if self.plot_load: self.LP.plot_final(flips, self.array)
 
 
 
     def logical_error(self):
 
         # logical error in [Xvertical, Xhorizontal, Zvertical, Zhorizontal]
-        logical_error = [0, 0, 0, 0]
+        logical_error = [False, False, False, False]
 
 
         # Check number of flips around borders
         for q in range(self.size):
-            if self.array[0, 0, 0, q] == 0:
-                logical_error[0] = 1 - logical_error[0]
-            if self.array[0, 1, q, 0] == 0:
-                logical_error[1] = 1 - logical_error[1]
-            if self.array[1, 1, self.size - 1, q] == 0:
-                logical_error[2] = 1 - logical_error[2]
-            if self.array[1, 0, q, self.size - 1] == 0:
-                logical_error[3] = 1 - logical_error[3]
+            if self.array[0][0][0][q] == 0:
+                logical_error[0] = not logical_error[0]
+            if self.array[0][1][q][0] == 0:
+                logical_error[1] = not logical_error[1]
+            if self.array[1][1][self.size - 1][q] == 0:
+                logical_error[2] = not logical_error[2]
+            if self.array[1][0][q][self.size - 1] == 0:
+                logical_error[3] = not logical_error[3]
 
 
         return logical_error
@@ -519,4 +573,4 @@ class lattice:
     #         self.syn_inf.append(syndromes)
     #
     #     if self.plot_load:
-    #         self.L.plotXstrings(self.stab, self.qua_loc, self.body)
+    #         self.LP.plotXstrings(self.stab, self.qua_loc, self.body)

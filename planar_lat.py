@@ -1,11 +1,15 @@
+import os
+import csv
 import math
-import numpy as np
+import random
 import planar_plot2 as pp
 import blossom_cpp as bl
 import blossom5.pyMatch as pm
-import time
 import copy
 from matplotlib import pyplot as plt
+
+
+# TODO: add erasure code
 
 
 class lattice:
@@ -39,11 +43,78 @@ class lattice:
             self.L = pp.lattice_plot(size)
             self.L.plot_lattice()
 
-        self.array = np.ones([2, 2, self.size, self.size])
+        self.array = [[[[True for _ in range(self.size)] for _ in range(self.size)] for _ in range(2)] for _ in range(2)]
+
+        if not os.path.exists("./errors/"):
+            os.makedirs("./errors/")
+
+    def init_stab_data(self):
+        '''
+        Initializes a multidimentional tuple containing the qubit locations for each stabilizers
+        This is especially handy when dealing with multiple iterations, such that the qubit locations needs not to be
+            calculated for each round of stabilizer measurements
+        Each stabilizer has the tuple (errortype, num_qubits, (td, y, x), ...)
+
+        '''
+        plaq_list = []
+        star_list = []
+
+        # Measure plaquettes
+        for y in range(self.size - 1):
+            for x in range(self.size):
+                # Get neighboring qubits for stabilizer
+                if x not in [0, self.size - 1]:
+                    plaq_list.append(((0, y, x), (1, y, x), (0, y + 1, x), (1, y,x + 1)))
+                elif x == 0:
+                    plaq_list.append(((0, y, x), (0, y + 1, x), (1, y, x + 1)))
+                else:
+                    plaq_list.append(((0, y, x), (1, y, x), (0, y + 1, x)))
+
+        # Measure stars
+        for y in range(self.size):
+            for x1 in range(self.size - 1):
+                x = x1 + 1
+                # Get neighboring qubits for stabilizer
+                if y not in [0, self.size - 1]:
+                    star_list.append(((0, y, x), (1, y, x), (1, y - 1, x), (0, y, x - 1)))
+                elif y == 0:
+                    star_list.append(((0, y, x), (1, y, x), (0, y, x - 1)))
+                else:
+                    star_list.append(((0, y, x), (1, y - 1, x), (0, y, x - 1)))
+
+        self.plaq_data = tuple(plaq_list)
+        self.star_data = tuple(star_list)
+        return (self.plaq_data, self.star_data)
 
 
+    def write_error(self, array, file_name):
+        '''
+        :param array        2D list of L x L new_errors
+        :param file_name    name of the file to write to
+        Writes the error list to a csv file to check for the errors
+        '''
+        a1 = array[0]
+        a2 = array[1]
+        write_array = a1 + a2
+        with open(file_name, "w") as csvFile:
+            writer = csv.writer(csvFile)
+            writer.writerows(write_array)
+        csvFile.close()
 
-    def init_pauli(self, pX = 0.1, pZ=0.1, new_errors=True, write_errors = True, array_file = "pauli.txt"):
+    def read_error(self, file_name):
+        '''
+        :param file_name    name of the file to read
+        Reads the csv file to load errors made in a previous round or made manually
+        '''
+        with open(file_name, "r") as csvFile:
+            read_array = [list(map(bool,rec)) for rec in csv.reader(csvFile)]
+        csvFile.close()
+        a1 = read_array[:self.size]
+        a2 = read_array[self.size:]
+        array = [a1, a2]
+        return array
+
+    def init_pauli(self, pX = 0.1, pZ=0.1, new_errors=True, write_errors = True, array_file = "error.txt"):
 
         '''
         :param pX:                      probability of X error
@@ -55,89 +126,79 @@ class lattice:
 
         self.pX = pX
         self.pZ = pZ
+        X_name = "./errors/L" + str(self.size) + "_X_pauli_error.csv"
+        Z_name = "./errors/L" + str(self.size) + "_Z_pauli_error.csv"
 
-        # Generate X and Z errors or load from previous
         if new_errors:
-            np.random.seed(int((time.time()%100)*10000000))
-            self.errors = np.random.random([2,2,self.size, self.size])
-            self.errors[0, :, :, :] = self.errors[0, :, :, :] < self.pX
-            self.errors[1, :, :, :] = self.errors[1, :, :, :] < self.pZ
+
+            # Generate X and Z errors or load from previous
+            eX = [[[1 if random.random() < self.pX else 0 for x in range(self.size)] for y in range(self.size)] for td in range(2)]
+            eZ = [[[1 if random.random() < self.pZ else 0 for x in range(self.size)] for y in range(self.size)] for td in range(2)]
+
             if write_errors:
-                np.savetxt("./temp/X_" + array_file, self.errors[0, :, :, :].reshape(2 * self.size, self.size), fmt="%d")
-                np.savetxt("./temp/Z_" + array_file, self.errors[1, :, :, :].reshape(2 * self.size, self.size), fmt="%d")
+                self.write_error(eX, X_name)
+                self.write_error(eZ, Z_name)
         else:
-            X_errors = np.reshape(np.loadtxt("./temp/X_" + array_file), (2, self.size, self.size))
-            Z_errors = np.reshape(np.loadtxt("./temp/Z_" + array_file), (2, self.size, self.size))
-            self.errors = np.stack((X_errors, Z_errors), axis = 0)
+            eX = self.read_error(X_name)
+            eZ = self.read_error(Z_name)
 
-        # Apply errors to array
-        self.array = np.mod(self.array + self.errors, 2)
-
-        # Save array locations that are not qubits
-        non_bits = [(er, 1, y, 0) for y in range(self.size) for er in range(2)] + [(er, 1, self.size-1, x+1) for x in range(self.size - 1) for er in range(2)]
-
-        for non_bit in non_bits:
-            self.array[non_bit] = 2
+        # Apply pauli errors to array
+        for y in range(self.size):
+            for x in range(self.size):
+                for td in range(2):
+                    if eX[td][y][x] == 1:
+                        self.array[0][td][y][x] = not self.array[0][td][y][x]
+                    if eZ[td][y][x] == 1:
+                        self.array[1][td][y][x] = not self.array[0][td][y][x]
 
         if self.plot_load: self.L.plot_errors(self.array)
 
-    def measure_stab(self):
+    def measure_stab(self, star_data = [], plaq_data = []):
         '''
         self.stab is an array that stores the measurement outcomes for the stabilizer measurements
             It has dimension [XZ{0,1}, size, size]
             Measurements outcomes are either 0 or 1, analogous to -1 and 1 states
             The 0 values are the quasiparticles
         '''
+        # if not stab_data not inputted, used self data. This is the case for single simulations
+        if plaq_data == []: plaq_data = self.plaq_data
+        if star_data == []: star_data = self.star_data
 
-        self.plaq = np.ones([self.size - 1, self.size], dtype=bool)
-        self.star = np.ones([self.size, self.size - 1], dtype=bool)
+
+        plaq = [[True for _ in range(self.size)] for _ in range(self.size - 1)]
+        star = [[True for _ in range(self.size - 1)] for _ in range(self.size)]
 
         # Measure plaquettes
-        for y in range(self.size-1):
-            for x in range(self.size):
-                # Get neighboring qubits for stabilizer
-                if x not in [0, self.size -1]:
-                    plaq_qubits = [(0, 0, y, x), (0, 1, y, x), (0, 0, y + 1, x), (0, 1, y,x + 1)]
-                elif x == 0:
-                    plaq_qubits = [(0, 0, y, x), (0, 0, y + 1, x), (0, 1, y, x + 1)]
-                else:
-                    plaq_qubits = [(0, 0, y, x), (0, 1, y, x), (0, 0, y + 1, x)]
+        for plaq_qubits in plaq_data:
+            y = plaq_qubits[0][1]
+            x = plaq_qubits[0][2]
 
-                # Flip value of stabilizer measurement
-                for qubit in plaq_qubits:
-                    if self.array[qubit] == 0:
-                        self.plaq[y, x] = 1 - self.plaq[y, x]
+            # Flip value of stabilizer measurement
+            for (tds, ys, xs) in plaq_qubits:
+                if self.array[0][tds][ys][xs] == False:
+                    plaq[y][x] = not plaq[y][x]
 
         # Measure stars
-        for y in range(self.size):
-            for x1 in range(self.size - 1):
+        for star_qubits in star_data:
+            y = star_qubits[0][1]
+            x = star_qubits[0][2]
 
-                x = x1 + 1
-                # Get neighboring qubits for stabilizer
-                if y not in [0, self.size -1]:
-                    star_qubits = [(1, 0, y, x), (1, 1, y, x), (1, 1, y - 1, x), (1, 0, y, x - 1)]
-                elif y == 0:
-                    star_qubits = [(1, 0, y, x), (1, 1, y, x), (1, 0, y, x - 1)]
-                else:
-                    star_qubits = [(1, 0, y, x), (1, 1, y - 1, x), (1, 0, y, x - 1)]
+            # Flip value of stabilizer measurement
+            for (tds, ys, xs) in star_qubits:
+                if self.array[1][tds][ys][xs] == False:
+                    star[y][x] = not star[y][x]
 
-                # Flip value of stabilizer measurement
-                for qubit in star_qubits:
-                    if self.array[qubit] == 0:
-                        self.star[y, x1] = 1 - self.star[y, x1]
 
         # Number of quasiparticles, syndromes, and total strings
         # Quasiparticles locations [(y,x),..]
-
-
-        self.qua_loc =  [[(y, x) for y in range(self.size - 1) for x in range(self.size) if self.plaq[y, x] == 0]]
-        self.qua_loc += [[(y, x) for y in range(self.size) for x in range(self.size - 1) if self.star[y, x] == 0]]
+        self.qua_loc =  [[(y, x) for y in range(self.size - 1) for x in range(self.size) if plaq[y][x] == False]]
+        self.qua_loc += [[(y, x) for y in range(self.size) for x in range(self.size - 1) if star[y][x] == False]]
         self.N_qua = [len(qua) for qua in self.qua_loc]
         self.N_syn = [int(len(qua))/2 for qua in self.qua_loc]
 
-        if self.plot_load:  self.L.plotXstrings(self.qua_loc)
+        if self.plot_load:  self.L.plot_anyons(self.qua_loc)
 
-    def get_matching(self):
+    def get_matching_MWPM(self):
         '''
         Uses the MWPM algorithm to get the matchings
         '''
@@ -164,7 +225,7 @@ class lattice:
                     weight = wy + wx
                     edges.append([v0, v1 + v0 + 1, weight])
 
-
+            # Get all strings between mirror anyons
             for loci in range(self.N_qua[ertype]):
 
                 loc = self.qua_loc[ertype][loci]
@@ -186,10 +247,7 @@ class lattice:
                 for v1 in range(self.N_qua[ertype] - v0 - 1):
                     edges.append([self.N_qua[ertype] + v0, self.N_qua[ertype] + v1 + v0 + 1, 0])
 
-
-
             self.qua_loc[ertype] += qua_loc_m
-
 
             # Apply BlossomV algorithm if there are quasiparticles
             output = pm.getMatching(self.N_qua[ertype]*2, edges) if self.N_qua[ertype] != 0 else []
@@ -199,7 +257,7 @@ class lattice:
             result = [] if len(matching_pairs) == 0 else [[self.qua_loc[ertype][i] for i in x] for x in matching_pairs]
             self.results.append(result)
 
-        if self.plot_load: self.L.drawlines(self.results)
+        if self.plot_load: self.L.plot_lines(self.results)
 
 
     def apply_matching(self):
@@ -238,8 +296,8 @@ class lattice:
 
         self.flips = flips
         # Apply flips on qubits
-        for flip in flips:
-            self.array[flip] = 1 - self.array[flip]
+        for (ertype, td, y, x) in flips:
+            self.array[ertype][td][y][x] = not self.array[ertype][td][y][x]
 
         if self.plot_load: self.L.plot_final(flips, self.array)
 
@@ -248,15 +306,15 @@ class lattice:
     def logical_error(self):
 
         # logical error in [Xhorizontal, Zvertical]
-        logical_error = [0, 0]
+        logical_error = [False, False]
 
 
         # Check number of flips around borders
         for q in range(self.size):
-            if self.array[0, 0, 0, q] == 0:
-                logical_error[0] = 1 - logical_error[0]
-            if self.array[1, 0, q, 0] == 0:
-                logical_error[1] = 1 - logical_error[1]
+            if self.array[0][0][0][q] == 0:
+                logical_error[0] = not logical_error[0]
+            if self.array[1][0][q][0] == 0:
+                logical_error[1] = not logical_error[1]
 
 
         return logical_error

@@ -11,8 +11,8 @@ import Eduardo
 
 def toric_2D_MWPM(size, pX, pZ, iters, new_errors = True, write_errors = False, load_plot = False):
 
-    TL = tl.lattice(size, load_plot)
-    stab_data = TL.init_stab_data()
+    TL0 = tl.lattice(size, False)
+    stab_data = TL0.init_stab_data()
 
     N_succes = 0
     for i in range(iters):
@@ -24,18 +24,19 @@ def toric_2D_MWPM(size, pX, pZ, iters, new_errors = True, write_errors = False, 
         if logical_error == [False, False, False, False]:  N_succes += 1
     return N_succes
 
-def toric_2D_peeling(size, pX, pZ, iters, new_errors = True, write_errors = False, load_plot = False):
+def toric_2D_peeling(size, pE, pX, pZ, iters, new_errors = True, write_errors = False, load_plot = False):
 
-    TL = tl.lattice(size, load_plot)
-    stab_data = TL.init_stab_data()
+    TL0 = tl.lattice(size, False)
+    stab_data = TL0.init_stab_data()
 
-    peel = pel.toric(size, [], [])
+    peel = pel.toric(size, [], [], loadplot = False)
     edge_data = peel.init_edge_data()
 
     N_succes = 0
     for i in range(iters):
         TL = tl.lattice(size, load_plot)
         TL.init_pauli(pX, pZ, new_errors, write_errors)
+        TL.init_erasure(pE, new_errors, write_errors)
         TL.measure_stab(stab_data)
         TL.get_matching_peeling(edge_data)
         logical_error = TL.logical_error()
@@ -44,8 +45,8 @@ def toric_2D_peeling(size, pX, pZ, iters, new_errors = True, write_errors = Fals
 
 def planar_2D_MWPM(size, pX, pZ, iters, new_errors = True, write_errors = False, load_plot = False):
 
-    PL = pl.lattice(size, load_plot)
-    (plaq_data, star_data) = PL.init_stab_data()
+    PL0 = pl.lattice(size, False)
+    (plaq_data, star_data) = PL0.init_stab_data()
 
     N_succes = 0
     for i in range(iters):

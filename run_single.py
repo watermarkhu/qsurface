@@ -18,9 +18,10 @@ def toric_2D_MWPM(size, pX, pZ, new_errors = True, write_errors = False, load_pl
     correct = True if logical_error == [False, False, False, False] else False
     return correct
 
-def toric_2D_peeling(size, pX, pZ, new_errors = True, write_errors = False, load_plot = False):
+def toric_2D_peeling(size, pE, pX = 0, pZ = 0, new_errors = True, write_errors = False, load_plot = False):
     TL = tl.lattice(size, load_plot)
     TL.init_stab_data()
+    TL.init_erasure(pE, new_errors, write_errors)
     TL.init_pauli(pX, pZ, new_errors, write_errors)
     TL.measure_stab()
     TL.get_matching_peeling()

@@ -138,7 +138,7 @@ class lattice_plot:
                 self.ax.add_artist(circlet)
 
 
-    def plot_errors(self, array, plot = None):
+    def plot_errors(self, array, non_bits):
 
         plt.figure(self.f.number)
         # legend_elements = [Line2D([0], [0], color = 'w', markerfacecolor = self.cx, marker = 'o', markersize = 15, label = "X error"),
@@ -153,10 +153,11 @@ class lattice_plot:
         for iy in range(self.size):
             for ix in range(self.size):
                 for hv in range(2):
-                    if array[0][hv][iy][ix] == 0: Xer.append((iy,ix,hv))
-                    if array[1][hv][iy][ix] == 0: Zer.append((iy,ix,hv))
-                    if array[0][hv][iy][ix] == 0 and array[1][hv][iy][ix] == 0:
-                        Yer.append((iy, ix, hv))
+                    xer = True if array[0][hv][iy][ix] == 0 and (0, hv, iy, ix) not in non_bits else False
+                    zer = True if array[1][hv][iy][ix] == 0 and (1, hv, iy, ix) not in non_bits else False
+                    if xer: Xer.append((iy,ix,hv))
+                    if zer: Zer.append((iy,ix,hv))
+                    if xer and zer: Yer.append((iy, ix, hv))
 
 
         # Plot X errors
@@ -184,7 +185,7 @@ class lattice_plot:
             self.ax.add_artist(circle)
 
 
-        if self.plot_error or plot:
+        if self.plot_error:
             plt.draw()
             print("Errors plotted. Press on the plot to continue")
             plt.waitforbuttonpress()
@@ -268,7 +269,7 @@ class lattice_plot:
             print("Matchings plotted. Press on the plot to continue")
             plt.waitforbuttonpress()
 
-    def plot_final(self, flips, array):
+    def plot_final(self, flips, array, non_bits):
 
         plt.figure(self.f.number)
 
@@ -326,6 +327,6 @@ class lattice_plot:
         if self.plot_result:
             plt.cla()
             self.plot_lattice()
-            self.plot_errors(array)
+            self.plot_errors(array, non_bits)
             print("Final lattice plotted. Press on the plot to continue")
             plt.waitforbuttonpress()

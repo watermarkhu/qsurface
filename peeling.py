@@ -9,22 +9,12 @@ class toric:
     def __init__(self, size, qua_loc, erasures, edge_data = (), loadplot = True):
         '''
         :param size             size of the lattice
-        :param qua_loc
+        :param qua_loc          tuple of anyon locations (y,x)
+        :param erasures         tuple of all the erased qubits (td, y, x)
+        :init_edge_data         tuple of edge neighbor and anyon data, see init_edge_data
 
-        Finds the neighbors of the input edges for both the X and Z lattice
-        The edges on the X and Z lattices are defined by the unit cell:
-            X:     Z:
-                    _
-            _|     |
-
-        For each edge _, this fucntions finds all _|_|_
-                                                       | |
-
-                                                      _|_
-        For each edge |, this functions finds all _|_
-                                                       |
-
-        v1-v3 and v4-v6 are neighbors located at opposite sides of the edge
+        Optionally, the edge_data, which contains the neighbors information, can be loaded here.
+        During loops, this has benefits to the computation time
         '''
 
         self.size = size
@@ -41,74 +31,18 @@ class toric:
         else:
             self.edge_data = edge_data
 
-    def init_edge_data(self):
-
-
-
-        edge_list = []
-
-        for ertype in range(2):
-            for hv in range(2):
-                for y in range(self.size):
-                    for x in range(self.size):
-
-                        edge_list.append([ertype, hv, y, x])
-
-        neighbor_list = []
-        anyon_list = []
-
-        for edge in edge_list:
-            ertype  = edge[0]
-            hv      = edge[1]
-            y       = edge[2]
-            x       = edge[3]
-
-            if ertype == 0:
-                v1 = edge_list.index([0, 1 - hv, y, x])
-                v2 = edge_list.index([0, 0, (y + 1) % self.size, x])
-                v3 = edge_list.index([0, 1, y, (x + 1) % self.size])
-                v4 = edge_list.index([0, 0, (y - 1 + hv) % self.size, (x - hv) % self.size])
-                v5 = edge_list.index([0, 1, (y - 1 + hv) % self.size, (x - hv) % self.size])
-                v6 = edge_list.index([0, 1 - hv, (y - 1 + 2*hv) % self.size, (x + 1 - 2*hv) % self.size])
-            else:
-                v1 = edge_list.index([1, 1 - hv, y, x])
-                v2 = edge_list.index([1, 0, y, (x - 1) % self.size])
-                v3 = edge_list.index([1, 1, (y - 1) % self.size, x])
-                v4 = edge_list.index([1, 0, (y + hv) % self.size, (x + 1 - hv) % self.size])
-                v5 = edge_list.index([1, 1, (y + hv) % self.size, (x + 1 - hv) % self.size])
-                v6 = edge_list.index([1, 1 - hv, (y - 1 + 2*hv) % self.size, (x + 1 - 2*hv) % self.size])
-
-            neighbor_list.append([v1, v2, v3, v4, v5, v6])
-
-            if ertype == 0 and hv == 0:
-                a = [(y - 1) % self.size, x]
-            elif ertype == 0 and hv == 1:
-                a = [y, (x - 1) % self.size]
-            elif ertype == 1 and hv == 0:
-                a = [y, (x + 1) % self.size]
-            else:
-                a = [(y + 1) % self.size, x]
-
-            anyon_list.append(a)
-
-        edge_data = []
-
-        for (edge, neighbor, anyon) in zip(edge_list, neighbor_list, anyon_list):
-            edge_data.append(tuple(edge + neighbor + anyon))
-
-        self.edge_data = tuple(edge_data)
-
         if self.loadplot:
             self.pl = tpplot(self.size, self.edge_data, self.plotstep_peel, self.plotstep_click)
             self.pl.plot_lattice(self.qua_loc, self.erasures)
-
-        return self.edge_data
 
 
     '''
     Helper functions
     '''
     def gettuple_edge(self, id):
+        '''
+        Gets the location of an edge (hv, y, x) in tuple form
+        '''
         hv = self.edge_data[id][1]
         y  = self.edge_data[id][2]
         x  = self.edge_data[id][3]
@@ -137,7 +71,102 @@ class toric:
     Main functions
     '''
 
+
+        def init_edge_data(self):
+            '''
+            Initializes a tuple (edge_data) which contains information of every edge on lattice (primary and secundary)
+
+            The edges on the X and Z lattices are defined by the unit cell:
+                X:     Z:
+                        _
+                _|     |
+
+            Each edge has 2 connected anyons and 6 neighbor edges:
+            - for each edge _, the neigbors are  _|_|_
+                                                  | |
+
+                                                  _|_
+            - for each edge |, the neighbors are  _|_
+                                                   |
+
+            v1-v3 and v4-v6 are neighbors located at opposite sides of the edge (loc A and loc B)
+
+            The tuple stores the information in the following order:
+                0   error type (primary or secundary)
+                1   hv, horizontal or vertical (top or down) qubit/edge in the unit cell
+                2   y location of unit cell
+                3   x location of unit cell
+                4   id of neighbor 0 (loc A)
+                5   id of neighbor 1 (loc A)
+                6   id of neighbor 2 (loc A)
+                7   id of neighbor 3 (loc B)
+                8   id of neighbor 4 (loc B)
+                9   id of neighbor 5 (loc B)
+                10  anyon 1 y location
+                11  anyon 1 x location
+            The y and x position of anyon 0 are within the same unit cell of the edge, and are defined in 2 and 3 already
+            '''
+
+            edge_list = []
+
+            for ertype in range(2):
+                for hv in range(2):
+                    for y in range(self.size):
+                        for x in range(self.size):
+
+                            edge_list.append([ertype, hv, y, x])
+
+            neighbor_list = []
+            anyon_list = []
+
+            for edge in edge_list:
+                ertype  = edge[0]
+                hv      = edge[1]
+                y       = edge[2]
+                x       = edge[3]
+
+                if ertype == 0:
+                    v1 = edge_list.index([0, 1 - hv, y, x])
+                    v2 = edge_list.index([0, 0, (y + 1) % self.size, x])
+                    v3 = edge_list.index([0, 1, y, (x + 1) % self.size])
+                    v4 = edge_list.index([0, 0, (y - 1 + hv) % self.size, (x - hv) % self.size])
+                    v5 = edge_list.index([0, 1, (y - 1 + hv) % self.size, (x - hv) % self.size])
+                    v6 = edge_list.index([0, 1 - hv, (y - 1 + 2*hv) % self.size, (x + 1 - 2*hv) % self.size])
+                else:
+                    v1 = edge_list.index([1, 1 - hv, y, x])
+                    v2 = edge_list.index([1, 0, y, (x - 1) % self.size])
+                    v3 = edge_list.index([1, 1, (y - 1) % self.size, x])
+                    v4 = edge_list.index([1, 0, (y + hv) % self.size, (x + 1 - hv) % self.size])
+                    v5 = edge_list.index([1, 1, (y + hv) % self.size, (x + 1 - hv) % self.size])
+                    v6 = edge_list.index([1, 1 - hv, (y - 1 + 2*hv) % self.size, (x + 1 - 2*hv) % self.size])
+
+                neighbor_list.append([v1, v2, v3, v4, v5, v6])
+
+                if ertype == 0 and hv == 0:
+                    a = [(y - 1) % self.size, x]
+                elif ertype == 0 and hv == 1:
+                    a = [y, (x - 1) % self.size]
+                elif ertype == 1 and hv == 0:
+                    a = [y, (x + 1) % self.size]
+                else:
+                    a = [(y + 1) % self.size, x]
+
+                anyon_list.append(a)
+
+            edge_data = []
+
+            for (edge, neighbor, anyon) in zip(edge_list, neighbor_list, anyon_list):
+                edge_data.append(tuple(edge + neighbor + anyon))
+
+            self.edge_data = tuple(edge_data)
+
+            return self.edge_data
+
     def find_clusters(self):
+        '''
+        Given a set of erased qubits/edges on a lattice, this functions finds all edges that are connected
+            and sorts them in separate clusters
+        '''
 
         self.cluster_list = []
         in_a_cluster = []

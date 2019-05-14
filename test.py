@@ -1,25 +1,23 @@
-from toric_lat import lattice
-from matplotlib import pyplot as plt
+import run_single
+import run_multiple
 
 size = 8
 pX = 0.1
 pZ = 0
 pE = 0.05
+iters = 2
 
-loadplot = True
+load_plot = True
 new_errors = True
 write_errors = True
 
-L = lattice(size, loadplot)
-L.init_stab_data()
+# output = run_single.toric_2D_MWPM(size, pX, pZ, new_errors, write_errors, load_plot)
+# output = run_single.toric_2D_peeling(size, pE, pX, pZ, new_errors, write_errors, load_plot)
+# output = run_single.planar_2D_MWPM(size, pX, pZ, new_errors, write_errors, load_plot)
 
-# L.init_erasure(pE, new_errors, write_errors)
-L.init_pauli(pX, pZ, new_errors, write_errors)
 
-L.measure_stab()
+# output = run_multiple.toric_2D_MWPM(size, pX, pZ, iters, new_errors, write_errors, load_plot)
+# output = run_multiple.toric_2D_peeling(size, pE, pX, pZ, iters, new_errors, write_errors, load_plot)
+output = run_multiple.planar_2D_MWPM(size, pX, pZ, iters, new_errors, write_errors, load_plot)
 
-# L.get_matching_peeling()
-L.get_matching_MWPM()
-
-logical_error = L.logical_error()
-print(logical_error)
+print(output)

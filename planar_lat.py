@@ -107,7 +107,7 @@ class lattice:
         Reads the csv file to load errors made in a previous round or made manually
         '''
         with open(file_name, "r") as csvFile:
-            read_array = [list(map(bool,rec)) for rec in csv.reader(csvFile)]
+            read_array = [list(map(int,rec)) for rec in csv.reader(csvFile)]
         csvFile.close()
         a1 = read_array[:self.size]
         a2 = read_array[self.size:]
@@ -151,9 +151,11 @@ class lattice:
                     if eZ[td][y][x] == 1:
                         self.array[1][td][y][x] = not self.array[0][td][y][x]
 
-        if self.plot_load: self.L.plot_errors(self.array)
+        self.non_bits = tuple([(er, 1, y, 0) for y in range(self.size) for er in range(2)] + [(er, 1, self.size-1, x+1) for x in range(self.size - 1) for er in range(2)])
 
-    def measure_stab(self, star_data = [], plaq_data = []):
+        if self.plot_load: self.L.plot_errors(self.array, self.non_bits)
+
+    def measure_stab(self, plaq_data = [], star_data = []):
         '''
         self.stab is an array that stores the measurement outcomes for the stabilizer measurements
             It has dimension [XZ{0,1}, size, size]
@@ -168,6 +170,8 @@ class lattice:
         plaq = [[True for _ in range(self.size)] for _ in range(self.size - 1)]
         star = [[True for _ in range(self.size - 1)] for _ in range(self.size)]
 
+        print(star)
+
         # Measure plaquettes
         for plaq_qubits in plaq_data:
             y = plaq_qubits[0][1]
@@ -181,7 +185,7 @@ class lattice:
         # Measure stars
         for star_qubits in star_data:
             y = star_qubits[0][1]
-            x = star_qubits[0][2]
+            x = star_qubits[0][2] - 1
 
             # Flip value of stabilizer measurement
             for (tds, ys, xs) in star_qubits:
@@ -300,7 +304,7 @@ class lattice:
         for (ertype, td, y, x) in flips:
             self.array[ertype][td][y][x] = not self.array[ertype][td][y][x]
 
-        if self.plot_load: self.L.plot_final(flips, self.array)
+        if self.plot_load: self.L.plot_final(flips, self.array, self.non_bits)
 
 
 

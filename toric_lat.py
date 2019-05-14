@@ -83,7 +83,7 @@ class lattice:
         Reads the csv file to load errors made in a previous round or made manually
         '''
         with open(file_name, "r") as csvFile:
-            read_array = [list(map(bool,rec)) for rec in csv.reader(csvFile)]
+            read_array = [list(map(int,rec)) for rec in csv.reader(csvFile)]
         csvFile.close()
         a1 = read_array[:self.size]
         a2 = read_array[self.size:]

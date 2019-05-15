@@ -170,8 +170,6 @@ class lattice:
         plaq = [[True for _ in range(self.size)] for _ in range(self.size - 1)]
         star = [[True for _ in range(self.size - 1)] for _ in range(self.size)]
 
-        print(star)
-
         # Measure plaquettes
         for plaq_qubits in plaq_data:
             y = plaq_qubits[0][1]

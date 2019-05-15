@@ -66,101 +66,192 @@ class toric:
         a2 = (self.edge_data[id][10], self.edge_data[id][11])
         return (a1, a2)
 
+    def walk_leaf_tree(self, edges, cluster):
+        '''
+        :param edges            list of edges to walk over
+        :param cluster          the current cluster to walk in
+        This function walks over the pendant leafs from the list of edges that are within the cluster
+        All leafs (edges that are not in a cycle) are stored in the self.e_tree list
+        '''
+
+        for edge in edges:
+            if edge not in self.e_tree:
+
+                # find neighbor of edge
+                cn1, cn2 = self.get_neighbors_id_tree(edge, cluster, self.e_tree)
+
+                # if edge is an ending branch, add to tree
+                if cn1 == [] or cn2 == []:
+
+                    # get branch body
+                    cn = cn2 if cn1 == [] else cn1
+                    old_e = edge
+
+                    # find entire body of current branch, add to tree, and stop at bisection
+                    while len(cn) == 1:
+                        new_e = cn[0]
+                        cn1, cn2 = self.get_neighbors_id_tree(new_e, cluster, self.e_tree)
+                        cn = cn2 if old_e in cn1 else cn1
+                        self.e_tree.append(old_e)
+                        if self.plotstep_tree: self.pl.plot_tree_step(old_e)
+                        old_e = new_e
+                    else:
+                        self.e_tree.append(old_e)
+                        if self.plotstep_tree: self.pl.plot_tree_step(old_e)
+
+    def walk_cycle_random(self, edge, cluster):
+        '''
+        :param edge         randomly chosen edge that is in a cycle
+        :param cluster      the list of edges of the current cluster
+        This function does a random walk over the edges in a cluster that are in cycles
+        when it encounters an edge that it has already walked over, a cycle is detected and stored
+        '''
+        this_cycle = [edge]
+        old_e = edge
+        cn1, cn2 = self.get_neighbors_id_tree(edge, cluster, self.e_tree)
+        cn = cn1 if random.random() < 0.5 else cn2
+        while all([e not in this_cycle for e in cn]):
+            new_e = cn[random.randint(0, len(cn) - 1)]
+            this_cycle.append(new_e)
+            cn1, cn2 = self.get_neighbors_id_tree(new_e, cluster, self.e_tree)
+            cn = cn2 if old_e in cn1 else cn1
+            old_e = new_e
+        else:
+            begin = [e for e in this_cycle if e in cn][-1]
+            cut_cycle = this_cycle[this_cycle.index(begin):]
+        return cut_cycle
+
+    def walk_cycle_graph(self, edge, cluster):
+
+        cn1, cn2 = self.get_neighbors_id_tree(edge, cluster, self.e_tree)
+        cn = cn1 + cn2
+        branches = cn
+        graph = [[edge]] + [[branch, 0] for branch in cn]
+
+        found_cycle = False
+        parent = 1
+
+        while found_cycle == False:
+            new_branches = []
+            for branch in branches:
+                children1, children2 = self.get_neighbors_id_tree(branch, cluster, self.e_tree)
+                children = children2 if graph[graph[parent][1]][0] in children1 else children1
+                graph += [[child, parent] for child in children]
+
+                if edge in children:
+                    cycle = [graph[parent][0]]
+                    cycle_parent = graph[parent][1]
+                    found_cycle = True
+                    break
+
+                parent += 1
+                new_branches += children
+
+            branches = new_branches
+
+        while cycle_parent != 0:
+            cycle.append(graph[cycle_parent][0])
+            cycle_parent = graph[cycle_parent][1]
+        else:
+            cycle.append(graph[0][0])
+
+        return cycle
+
 
     '''
     Main functions
     '''
 
 
-        def init_edge_data(self):
-            '''
-            Initializes a tuple (edge_data) which contains information of every edge on lattice (primary and secundary)
+    def init_edge_data(self):
+        '''
+        Initializes a tuple (edge_data) which contains information of every edge on lattice (primary and secundary)
 
-            The edges on the X and Z lattices are defined by the unit cell:
-                X:     Z:
-                        _
-                _|     |
+        The edges on the X and Z lattices are defined by the unit cell:
+            X:     Z:
+                    _
+            _|     |
 
-            Each edge has 2 connected anyons and 6 neighbor edges:
-            - for each edge _, the neigbors are  _|_|_
-                                                  | |
+        Each edge has 2 connected anyons and 6 neighbor edges:
+        - for each edge _, the neigbors are  _|_|_
+                                              | |
 
-                                                  _|_
-            - for each edge |, the neighbors are  _|_
-                                                   |
+                                              _|_
+        - for each edge |, the neighbors are  _|_
+                                               |
 
-            v1-v3 and v4-v6 are neighbors located at opposite sides of the edge (loc A and loc B)
+        v1-v3 and v4-v6 are neighbors located at opposite sides of the edge (loc A and loc B)
 
-            The tuple stores the information in the following order:
-                0   error type (primary or secundary)
-                1   hv, horizontal or vertical (top or down) qubit/edge in the unit cell
-                2   y location of unit cell
-                3   x location of unit cell
-                4   id of neighbor 0 (loc A)
-                5   id of neighbor 1 (loc A)
-                6   id of neighbor 2 (loc A)
-                7   id of neighbor 3 (loc B)
-                8   id of neighbor 4 (loc B)
-                9   id of neighbor 5 (loc B)
-                10  anyon 1 y location
-                11  anyon 1 x location
-            The y and x position of anyon 0 are within the same unit cell of the edge, and are defined in 2 and 3 already
-            '''
+        The tuple stores the information in the following order:
+            0   error type (primary or secundary)
+            1   hv, horizontal or vertical (top or down) qubit/edge in the unit cell
+            2   y location of unit cell
+            3   x location of unit cell
+            4   id of neighbor 0 (loc A)
+            5   id of neighbor 1 (loc A)
+            6   id of neighbor 2 (loc A)
+            7   id of neighbor 3 (loc B)
+            8   id of neighbor 4 (loc B)
+            9   id of neighbor 5 (loc B)
+            10  anyon 1 y location
+            11  anyon 1 x location
+        The y and x position of anyon 0 are within the same unit cell of the edge, and are defined in 2 and 3 already
+        '''
 
-            edge_list = []
+        edge_list = []
 
-            for ertype in range(2):
-                for hv in range(2):
-                    for y in range(self.size):
-                        for x in range(self.size):
+        for ertype in range(2):
+            for hv in range(2):
+                for y in range(self.size):
+                    for x in range(self.size):
 
-                            edge_list.append([ertype, hv, y, x])
+                        edge_list.append([ertype, hv, y, x])
 
-            neighbor_list = []
-            anyon_list = []
+        neighbor_list = []
+        anyon_list = []
 
-            for edge in edge_list:
-                ertype  = edge[0]
-                hv      = edge[1]
-                y       = edge[2]
-                x       = edge[3]
+        for edge in edge_list:
+            ertype  = edge[0]
+            hv      = edge[1]
+            y       = edge[2]
+            x       = edge[3]
 
-                if ertype == 0:
-                    v1 = edge_list.index([0, 1 - hv, y, x])
-                    v2 = edge_list.index([0, 0, (y + 1) % self.size, x])
-                    v3 = edge_list.index([0, 1, y, (x + 1) % self.size])
-                    v4 = edge_list.index([0, 0, (y - 1 + hv) % self.size, (x - hv) % self.size])
-                    v5 = edge_list.index([0, 1, (y - 1 + hv) % self.size, (x - hv) % self.size])
-                    v6 = edge_list.index([0, 1 - hv, (y - 1 + 2*hv) % self.size, (x + 1 - 2*hv) % self.size])
-                else:
-                    v1 = edge_list.index([1, 1 - hv, y, x])
-                    v2 = edge_list.index([1, 0, y, (x - 1) % self.size])
-                    v3 = edge_list.index([1, 1, (y - 1) % self.size, x])
-                    v4 = edge_list.index([1, 0, (y + hv) % self.size, (x + 1 - hv) % self.size])
-                    v5 = edge_list.index([1, 1, (y + hv) % self.size, (x + 1 - hv) % self.size])
-                    v6 = edge_list.index([1, 1 - hv, (y - 1 + 2*hv) % self.size, (x + 1 - 2*hv) % self.size])
+            if ertype == 0:
+                v1 = edge_list.index([0, 1 - hv, y, x])
+                v2 = edge_list.index([0, 0, (y + 1) % self.size, x])
+                v3 = edge_list.index([0, 1, y, (x + 1) % self.size])
+                v4 = edge_list.index([0, 0, (y - 1 + hv) % self.size, (x - hv) % self.size])
+                v5 = edge_list.index([0, 1, (y - 1 + hv) % self.size, (x - hv) % self.size])
+                v6 = edge_list.index([0, 1 - hv, (y - 1 + 2*hv) % self.size, (x + 1 - 2*hv) % self.size])
+            else:
+                v1 = edge_list.index([1, 1 - hv, y, x])
+                v2 = edge_list.index([1, 0, y, (x - 1) % self.size])
+                v3 = edge_list.index([1, 1, (y - 1) % self.size, x])
+                v4 = edge_list.index([1, 0, (y + hv) % self.size, (x + 1 - hv) % self.size])
+                v5 = edge_list.index([1, 1, (y + hv) % self.size, (x + 1 - hv) % self.size])
+                v6 = edge_list.index([1, 1 - hv, (y - 1 + 2*hv) % self.size, (x + 1 - 2*hv) % self.size])
 
-                neighbor_list.append([v1, v2, v3, v4, v5, v6])
+            neighbor_list.append([v1, v2, v3, v4, v5, v6])
 
-                if ertype == 0 and hv == 0:
-                    a = [(y - 1) % self.size, x]
-                elif ertype == 0 and hv == 1:
-                    a = [y, (x - 1) % self.size]
-                elif ertype == 1 and hv == 0:
-                    a = [y, (x + 1) % self.size]
-                else:
-                    a = [(y + 1) % self.size, x]
+            if ertype == 0 and hv == 0:
+                a = [(y - 1) % self.size, x]
+            elif ertype == 0 and hv == 1:
+                a = [y, (x - 1) % self.size]
+            elif ertype == 1 and hv == 0:
+                a = [y, (x + 1) % self.size]
+            else:
+                a = [(y + 1) % self.size, x]
 
-                anyon_list.append(a)
+            anyon_list.append(a)
 
-            edge_data = []
+        edge_data = []
 
-            for (edge, neighbor, anyon) in zip(edge_list, neighbor_list, anyon_list):
-                edge_data.append(tuple(edge + neighbor + anyon))
+        for (edge, neighbor, anyon) in zip(edge_list, neighbor_list, anyon_list):
+            edge_data.append(tuple(edge + neighbor + anyon))
 
-            self.edge_data = tuple(edge_data)
+        self.edge_data = tuple(edge_data)
 
-            return self.edge_data
+        return self.edge_data
 
     def find_clusters(self):
         '''
@@ -194,7 +285,6 @@ class toric:
 
                 self.cluster_list.append(this_cluster)
 
-
     def init_trees(self):
         '''
         Makes trees from clusters.
@@ -215,85 +305,36 @@ class toric:
 
         self.rem_list = []
 
-        for c_i in range(len(self.cluster_list)):
+        for c_i, cluster in enumerate(self.cluster_list):
 
-            cluster = self.cluster_list[c_i]
-            e_tree = []     # edges that are confirmed into the tree
+            self.e_tree = []     # edges that are confirmed into the tree
             e_rem = []      # edges that are to be removed from the cluster
 
             ### Step 1. Find existing leafs or branches
-            for edge in cluster:
-                if edge not in e_tree:
 
-                    # find neighbor of edge
-                    cn1, cn2 = self.get_neighbors_id_tree(edge, cluster, e_tree)
-
-                    # if edge is an ending branch, add to tree
-                    if cn1 == [] or cn2 == []:
-
-                        # get branch body
-                        cn = cn2 if cn1 == [] else cn1
-                        old_e = edge
-
-                        # find entire body of current branch, add to tree, and stop at bisection
-                        while len(cn) == 1:
-                            new_e = cn[0]
-                            cn1, cn2 = self.get_neighbors_id_tree(new_e, cluster, e_tree)
-                            cn = cn2 if old_e in cn1 else cn1
-                            e_tree.append(old_e)
-                            if self.plotstep_tree: self.pl.plot_tree_step(old_e)
-                            old_e = new_e
-                        else:
-                            e_tree.append(old_e)
-                            if self.plotstep_tree: self.pl.plot_tree_step(old_e)
+            self.walk_leaf_tree(cluster, cluster)
 
             # find all edges that are in a cycle
-            e_cycle = [edge for edge in cluster if edge not in e_tree]
+            e_cycle = [edge for edge in cluster if edge not in self.e_tree]
 
             while e_cycle != []:
                 for edge in e_cycle:
-                    if edge not in e_tree:
+                    if edge not in self.e_tree:
 
                         ### Step 2. find a cycle and store its edges in this_cycle
-                        this_cycle = [edge]
-                        old_e = edge
-                        cn, cn2 = self.get_neighbors_id_tree(edge, cluster, e_tree)
-                        while all([e not in this_cycle for e in cn]):
-                            new_e = cn[0]
-                            this_cycle.append(new_e)
-                            cn1, cn2 = self.get_neighbors_id_tree(new_e, cluster, e_tree)
-                            cn = cn2 if old_e in cn1 else cn1
-                            old_e = new_e
-                        else:
-                            begin = [e for e in this_cycle if e in cn][-1]
-                            cut_cycle = this_cycle[this_cycle.index(begin):]
+                        cycle = self.walk_cycle_graph(edge, cluster)
 
                         ### Step 3. remove a random edge from this cycle
-                        rand = random.randint(0, len(cut_cycle)-1)
-                        rem_e = cut_cycle.pop(rand)
-                        e_tree.append(rem_e)
+                        rand = random.randint(0, len(cycle)-1)
+                        rem_e = cycle.pop(rand)
+                        self.e_tree.append(rem_e)
                         e_rem.append(rem_e)
                         if self.plotstep_tree: self.pl.plot_removed_step(rem_e)
 
                         ### Step 4. other edges of the cycle are checked for tree form, added to tree if yes
-                        for edge in cut_cycle:
-                            cn1, cn2 = self.get_neighbors_id_tree(edge, cluster, e_tree)
-                            if cn1 == [] or cn2 == []:
+                        self.walk_leaf_tree(cycle, cluster)
 
-                                cn = cn2 if cn1 == [] else cn1
-                                old_e = edge
-                                while len(cn) == 1:
-                                    new_e = cn[0]
-                                    cn1, cn2 = self.get_neighbors_id_tree(new_e, cluster, e_tree)
-                                    cn = cn2 if old_e in cn1 else cn1
-                                    e_tree.append(old_e)
-                                    if self.plotstep_tree: self.pl.plot_tree_step(old_e)
-                                    old_e = new_e
-                                else:
-                                    e_tree.append(old_e)
-                                    if self.plotstep_tree: self.pl.plot_tree_step(old_e)
-
-                for edge in e_tree:
+                for edge in self.e_tree:
                     if edge in e_cycle:
                         e_cycle.remove(edge)
             for edge in e_rem:

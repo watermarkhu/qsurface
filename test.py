@@ -9,6 +9,8 @@ pE = 0.05
 iters = 2
 
 load_plot = True
+new_errors = False
+write_errors = True
 
 # output = run_single.toric_2D_MWPM(size, pX, pZ, new_errors, write_errors, load_plot)
 # output = run_single.toric_2D_peeling(size, pE, pX, pZ, new_errors, write_errors, load_plot)

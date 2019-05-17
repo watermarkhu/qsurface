@@ -121,7 +121,7 @@ class toric:
             cut_cycle = this_cycle[this_cycle.index(begin):]
         return cut_cycle
 
-    def walk_cycle_graph(self, edge, cluster):
+    def walk_cycle_graph(self, eA, cluster):
         '''
         :param edge         randomly chose edge that is in a cycle
         :param clusters     the list of edges of the currect cluster
@@ -136,37 +136,96 @@ class toric:
         When a cycle is detected (the initial edge is encounted as a branch), we walk the graph from bottom to top to get the cycle
         '''
 
-        cn1, cn2 = self.get_neighbors_id_tree(edge, cluster, self.e_tree)
-        cn = cn1 + cn2
-        branches = cn
-        graph = [[edge]] + [[branch, 0] for branch in cn]
+        eAn1, eAn2 = self.get_neighbors_id_tree(eA, cluster, self.e_tree)
+
+        cA = eAn2
+        eB = eAn1[0]
+
+        eBn1, eBn2 = self.get_neighbors_id_tree(eB, cluster, self.e_tree)
+
+        cB = eBn2 if eA in eBn1 else eBn1
+
+        graphA = [(eA, None)]
+        graphB = [(eB, None)]
+        branchesA = [(e, 0) for e in cA]
+        branchesB = [(e, 0) for e in cB]
+        iA = 1
+        iB = 1
 
         found_cycle = False
-        parent = 1
 
         while found_cycle == False:
-            new_branches = []
-            for branch in branches:
-                children1, children2 = self.get_neighbors_id_tree(branch, cluster, self.e_tree)
-                children = children2 if graph[graph[parent][1]][0] in children1 else children1
-                graph += [[child, parent] for child in children]
 
-                if edge in children:
-                    cycle = [graph[parent][0]]
-                    cycle_parent = graph[parent][1]
+            nodeA = []
+            new_branchesA = []
+            new_branchesB = []
+
+            for branch, parent in branchesA:
+
+                graphA.append((branch, parent))
+
+
+                c1, c2 = self.get_neighbors_id_tree(branch, cluster, self.e_tree)
+                a1, a2 = self.get_anyons_id(branch)
+
+                if graphA[parent][0] in c1:
+                    children = c2
+                    node = a2
+                else:
+                    children = c1
+                    node = a1
+
+                new_branchesA += [(child, iA) for child in children]
+                iA += 1
+                nodeA.append(a1)
+
+            print("A", graphA)
+
+
+            for branch, parent in branchesB:
+
+                graphB.append((branch, parent))
+
+                c1, c2 = self.get_neighbors_id_tree(branch, cluster, self.e_tree)
+                a1, a2 = self.get_anyons_id(branch)
+                if graphB[parent][0] in c1:
+                    children = c2
+                    node = a2
+                else:
+                    children = c1
+                    node = a1
+
+                if node in nodeA:
+
+
+
+                    cycle = [branch]
+                    while parent != None:
+                        branch = graphB[parent][0]
+                        parent = graphB[parent][1]
+                        cycle.append(branch)
+
+                    (branch, parent) = branchesA[nodeA.index(node)]
+                    cycle.append(branch)
+                    while parent != None:
+                        branch = graphA[parent][0]
+                        parent = graphA[parent][1]
+                        cycle.append(branch)
+
                     found_cycle = True
+                    print(cycle)
+                    input()
                     break
 
-                parent += 1
-                new_branches += children
+                new_branchesB += [(child, iB) for child in children]
+                iB += 1
 
-            branches = new_branches
+            print("B", graphB)
+            input()
 
-        while cycle_parent != 0:
-            cycle.append(graph[cycle_parent][0])
-            cycle_parent = graph[cycle_parent][1]
-        else:
-            cycle.append(graph[0][0])
+            branchesA = new_branchesA
+            branchesB = new_branchesB
+
 
         return cycle
 

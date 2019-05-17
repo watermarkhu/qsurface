@@ -6,7 +6,7 @@ import csv
 import os
 
 class toric:
-    def __init__(self, size, qua_loc, erasures, edge_data = (), loadplot = True):
+    def __init__(self, lat):
         '''
         :param size             size of the lattice
         :param qua_loc          tuple of anyon locations (y,x)
@@ -17,23 +17,21 @@ class toric:
         During loops, this has benefits to the computation time
         '''
 
-        self.size = size
-        self.qua_loc = qua_loc
-        self.erasures = erasures
+        self.size = lat.size
+        self.qua_loc = lat.qua_loc
+        self.er_loc = lat.er_loc
+        self.edge_data = lat.qubit_data
+        self.anyon_data = lat.stab_data
 
-        self.loadplot = loadplot
+        self.plot_load = lat.plot_load
         self.plotstep_tree = False
         self.plotstep_peel = False
         self.plotstep_click = False
 
-        if edge_data == ():
-            self.init_edge_data()
-        else:
-            self.edge_data = edge_data
 
-        if self.loadplot:
-            self.pl = tpplot(self.size, self.edge_data, self.plotstep_peel, self.plotstep_click)
-            self.pl.plot_lattice(self.qua_loc, self.erasures)
+        if self.plot_load:
+            self.pl = tpplot(lat, self.plotstep_peel, self.plotstep_click)
+            self.pl.plot_lattice()
 
 
     '''
@@ -41,29 +39,31 @@ class toric:
     '''
     def gettuple_edge(self, id):
         '''
-        Gets the location of an edge (hv, y, x) in tuple form
+        Gets the location of an edge (td, y, x) in tuple form
         '''
-        hv = self.edge_data[id][1]
-        y  = self.edge_data[id][2]
-        x  = self.edge_data[id][3]
-        return (hv, y, x)
+        y  = self.edge_data[id][1]
+        x  = self.edge_data[id][2]
+        td = self.edge_data[id][3]
+        return (y, x, td)
 
-    def get_neighbors_id_tree(self, id, cluster, e_tree):
+
+    def get_neighbors_id_tree(self, id, inlist, outlist):
         '''
         finds the neighbors of a vertex within the cluster, and not yet added to the trees
         '''
-        n1 = self.edge_data[id][4:7]
-        n2 = self.edge_data[id][7:10]
-        cn1 = [cn for cn in n1 if cn in cluster and cn not in e_tree]
-        cn2 = [cn for cn in n2 if cn in cluster and cn not in e_tree]
+        n1 = self.edge_data[id][5]
+        n2 = self.edge_data[id][7]
+        cn1 = [cn for cn in n1 if cn in inlist and cn not in outlist]
+        cn2 = [cn for cn in n2 if cn in inlist and cn not in outlist]
         return (cn1, cn2)
+
 
     def get_anyons_id(self, id):
         '''
         finds the two anyons/quasiparticles/vertices that are located on either sides of the edge
         '''
-        a1 = (self.edge_data[id][2], self.edge_data[id][3])
-        a2 = (self.edge_data[id][10], self.edge_data[id][11])
+        a1 = self.edge_data[id][8]
+        a2 = self.edge_data[id][9]
         return (a1, a2)
 
     def walk_leaf_tree(self, edges, cluster):
@@ -122,6 +122,19 @@ class toric:
         return cut_cycle
 
     def walk_cycle_graph(self, edge, cluster):
+        '''
+        :param edge         randomly chose edge that is in a cycle
+        :param clusters     the list of edges of the currect cluster
+        This function makes a graph of all possible paths or branches, starting from the initial edge
+        The branches are stored in a list named graph as:
+            [edge, parent]
+        where edge indicateds the edge id, and the parent points to the index of the previous branch in the graph
+        for example:
+             ..__ __..
+               3  4
+        is stored as [..[3, some parent],[4, 3]..]
+        When a cycle is detected (the initial edge is encounted as a branch), we walk the graph from bottom to top to get the cycle
+        '''
 
         cn1, cn2 = self.get_neighbors_id_tree(edge, cluster, self.e_tree)
         cn = cn1 + cn2
@@ -162,97 +175,6 @@ class toric:
     Main functions
     '''
 
-
-    def init_edge_data(self):
-        '''
-        Initializes a tuple (edge_data) which contains information of every edge on lattice (primary and secundary)
-
-        The edges on the X and Z lattices are defined by the unit cell:
-            X:     Z:
-                    _
-            _|     |
-
-        Each edge has 2 connected anyons and 6 neighbor edges:
-        - for each edge _, the neigbors are  _|_|_
-                                              | |
-
-                                              _|_
-        - for each edge |, the neighbors are  _|_
-                                               |
-
-        v1-v3 and v4-v6 are neighbors located at opposite sides of the edge (loc A and loc B)
-
-        The tuple stores the information in the following order:
-            0   error type (primary or secundary)
-            1   hv, horizontal or vertical (top or down) qubit/edge in the unit cell
-            2   y location of unit cell
-            3   x location of unit cell
-            4   id of neighbor 0 (loc A)
-            5   id of neighbor 1 (loc A)
-            6   id of neighbor 2 (loc A)
-            7   id of neighbor 3 (loc B)
-            8   id of neighbor 4 (loc B)
-            9   id of neighbor 5 (loc B)
-            10  anyon 1 y location
-            11  anyon 1 x location
-        The y and x position of anyon 0 are within the same unit cell of the edge, and are defined in 2 and 3 already
-        '''
-
-        edge_list = []
-
-        for ertype in range(2):
-            for hv in range(2):
-                for y in range(self.size):
-                    for x in range(self.size):
-
-                        edge_list.append([ertype, hv, y, x])
-
-        neighbor_list = []
-        anyon_list = []
-
-        for edge in edge_list:
-            ertype  = edge[0]
-            hv      = edge[1]
-            y       = edge[2]
-            x       = edge[3]
-
-            if ertype == 0:
-                v1 = edge_list.index([0, 1 - hv, y, x])
-                v2 = edge_list.index([0, 0, (y + 1) % self.size, x])
-                v3 = edge_list.index([0, 1, y, (x + 1) % self.size])
-                v4 = edge_list.index([0, 0, (y - 1 + hv) % self.size, (x - hv) % self.size])
-                v5 = edge_list.index([0, 1, (y - 1 + hv) % self.size, (x - hv) % self.size])
-                v6 = edge_list.index([0, 1 - hv, (y - 1 + 2*hv) % self.size, (x + 1 - 2*hv) % self.size])
-            else:
-                v1 = edge_list.index([1, 1 - hv, y, x])
-                v2 = edge_list.index([1, 0, y, (x - 1) % self.size])
-                v3 = edge_list.index([1, 1, (y - 1) % self.size, x])
-                v4 = edge_list.index([1, 0, (y + hv) % self.size, (x + 1 - hv) % self.size])
-                v5 = edge_list.index([1, 1, (y + hv) % self.size, (x + 1 - hv) % self.size])
-                v6 = edge_list.index([1, 1 - hv, (y - 1 + 2*hv) % self.size, (x + 1 - 2*hv) % self.size])
-
-            neighbor_list.append([v1, v2, v3, v4, v5, v6])
-
-            if ertype == 0 and hv == 0:
-                a = [(y - 1) % self.size, x]
-            elif ertype == 0 and hv == 1:
-                a = [y, (x - 1) % self.size]
-            elif ertype == 1 and hv == 0:
-                a = [y, (x + 1) % self.size]
-            else:
-                a = [(y + 1) % self.size, x]
-
-            anyon_list.append(a)
-
-        edge_data = []
-
-        for (edge, neighbor, anyon) in zip(edge_list, neighbor_list, anyon_list):
-            edge_data.append(tuple(edge + neighbor + anyon))
-
-        self.edge_data = tuple(edge_data)
-
-        return self.edge_data
-
     def find_clusters(self):
         '''
         Given a set of erased qubits/edges on a lattice, this functions finds all edges that are connected
@@ -262,20 +184,19 @@ class toric:
         self.cluster_list = []
         in_a_cluster = []
 
-        for id in range(len(self.edge_data)):
-            edge = self.gettuple_edge(id)
-            if edge in self.erasures and id not in in_a_cluster:
+        print(self.er_loc)
+
+        for id in self.er_loc:
+            if id not in in_a_cluster:
                 this_cluster = [id]
                 in_a_cluster += [id]
                 new_e = [id]
 
                 while not new_e == []:
-
                     nb_e = []
                     for new_id in new_e:
-                        for nb_id in self.edge_data[new_id][4:10]:
-                            if self.gettuple_edge(nb_id) in self.erasures and nb_id not in in_a_cluster:
-                                nb_e.append(nb_id)
+                        cn1, cn2 = self.get_neighbors_id_tree(id, self.er_loc, in_a_cluster)
+                        nb_e += cn1 + cn2
 
                     non_dub_nb_e = list(set(nb_e))
 
@@ -284,6 +205,7 @@ class toric:
                     new_e = non_dub_nb_e
 
                 self.cluster_list.append(this_cluster)
+
 
     def init_trees(self):
         '''
@@ -322,7 +244,8 @@ class toric:
                     if edge not in self.e_tree:
 
                         ### Step 2. find a cycle and store its edges in this_cycle
-                        cycle = self.walk_cycle_graph(edge, cluster)
+                        cycle = self.walk_cycle_random(edge, cluster)
+                        # cycle = self.walk_cycle_graph(edge, cluster)
 
                         ### Step 3. remove a random edge from this cycle
                         rand = random.randint(0, len(cycle)-1)
@@ -342,8 +265,8 @@ class toric:
 
             self.rem_list += e_rem
 
-        if self.loadplot:
-            self.pl.plot_removed(self.rem_list)
+        # if self.plot_load:
+        #     self.pl.plot_removed(self.rem_list)
 
     def peel_trees(self):
         '''
@@ -434,15 +357,15 @@ class toric:
         matchingX = []
         matchingZ = []
         for edge in self.matching:
-            (ertype, hv, y, x) = self.edge_data[edge][0:4]
+            (ertype, td, y, x) = self.edge_data[edge][0:4]
             if ertype == 0:
-                matchingX.append((hv, y, x))
+                matchingX.append((td, y, x))
             else:
-                matchingZ.append((hv, y, x))
+                matchingZ.append((td, y, x))
 
         match_loc = [matchingX, matchingZ]
 
-        if self.loadplot:
-            self.pl.plot_matching(self.qua_loc, self.erasures, match_loc)
+        # if self.plot_load:
+        #     self.pl.plot_matching(self.qua_loc, self.er_loc, match_loc)
 
         return match_loc

@@ -1,6 +1,7 @@
 import os
 import csv
 import math
+import time
 import random
 import toric_plot2 as tp
 import blossom5.pyMatch as pm
@@ -34,64 +35,167 @@ class lattice:
         self.size = size
         self.plot_load = plot_load
 
-        # Initiate plot
-        if plot_load:
-            self.LP = tp.lattice_plot(size)
-            self.LP.plot_lattice()
+        random.seed(time.time())
 
-        self.array = [[[[True for _ in range(self.size)] for _ in range(self.size)] for _ in range(2)] for _ in range(2)]
+        # self.array = [[[[True for _ in range(self.size)] for _ in range(self.size)] for _ in range(2)] for _ in range(2)]
+
+        self.num_stab = self.size * self.size * 2
+        self.num_qubit = self.num_stab * 2
+        self.array = [True for _ in range(self.num_qubit)]
 
         if not os.path.exists("./errors/"):
             os.makedirs("./errors/")
 
-    def init_stab_data(self):
-        '''
-        Initializes a multidimentional tuple containing the qubit locations for each stabilizers
-        This is especially handy when dealing with multiple iterations, such that the qubit locations needs not to be
-            calculated for each round of stabilizer measurements
-        Each stabilizer has the tuple (errortype, num_qubits, (td, y, x), ...)
 
+    def init_data(self):
         '''
+        Initializes a tuple (qubit_data) which contains information of every qubit on lattice (primary and secundary)
+
+        The qubits on the X and Z lattices are defined by the unit cell:
+            X:     Z:
+                    _
+            _|     |
+
+        Each qubit (depected by an edge) has 2 connected anyons and 6 neighbor qubits:
+        - for each qubit _, the neigbors are  _|_|_
+                                               | |
+
+                                               _|_
+        - for each qubit |, the neighbors are  _|_
+                                                |
+
+        v1-v3 and v4-v6 are neighbors located at opposite sides of the qubit (loc A and loc B)
+
+        The tuple stores the information in the following order:
+            0   error type (primary or secundary)
+            1   y location of unit cell
+            2   x location of unit cell
+            3   td, top or down qubit/edge in the unit cell
+            4   number of neighbor qubits in loc A
+            5   tuple of qID's of neighbors in loc A (qID0, qID1...)
+            6   number of neighbor qubits in loc B
+            7   tuple of qID's of neighbors in loc B (qID0, qID1...)
+            8   sID of anyon 1
+            9   sID of anyon 2
+        The y and x position of anyon 0 are within the same unit cell of the qubit, and are defined in 2 and 3 already
+        '''
+
+        qubit_list = []
         stab_list = []
 
-        for er in range(2):
+        for ertype in range(2):
             for y in range(self.size):
                 for x in range(self.size):
-                    stab_list.append((er, (0, y, x), (1, y, x), (er, (y + 1 - 2*er) % self.size, x), (1 - er, y, (x + 1 - 2*er) % self.size)))
+                    stab_list.append([ertype, y, x])
+                    for td in range(2):
+                        qubit_list.append([ertype, y, x, td])
 
-        self.stab_data = tuple(stab_list)
-        return self.stab_data
+        neighbor_list = []
+        qubit_stab_list = []
 
+        for (ertype, y, x, td) in qubit_list:
 
-    def write_error(self, array, file_name):
+            if ertype == 0:
+                v1 = qubit_list.index([0, y, x, 1- td])
+                v2 = qubit_list.index([0, (y + 1) % self.size, x, 0])
+                v3 = qubit_list.index([0, y, (x + 1) % self.size, 1])
+                v4 = qubit_list.index([0, (y - 1 + td) % self.size, (x - td) % self.size, 0])
+                v5 = qubit_list.index([0, (y - 1 + td) % self.size, (x - td) % self.size, 1])
+                v6 = qubit_list.index([0, (y - 1 + 2*td) % self.size, (x + 1 - 2*td) % self.size, 1 - td])
+            else:
+                v1 = qubit_list.index([1, y, x, 1 - td])
+                v2 = qubit_list.index([1, y, (x - 1) % self.size, 0])
+                v3 = qubit_list.index([1, (y - 1) % self.size, x, 1])
+                v4 = qubit_list.index([1, (y + td) % self.size, (x + 1 - td) % self.size, 0])
+                v5 = qubit_list.index([1, (y + td) % self.size, (x + 1 - td) % self.size, 1])
+                v6 = qubit_list.index([1, (y - 1 + 2*td) % self.size, (x + 1 - 2*td) % self.size, 1 - td])
+
+            neighbor_list.append([3, (v1, v2, v3), 3, (v4, v5, v6)])
+
+            s1 = stab_list.index([ertype, y, x])
+            s2 = stab_list.index([ertype, (y + td + ertype - 1) % self.size, (x - td + ertype) % self.size])
+            qubit_stab_list.append([s1, s2])
+
+        qubit_data = []
+
+        for (qubit, neighbor, stab) in zip(qubit_list, neighbor_list, qubit_stab_list):
+            qubit_data.append(tuple(qubit + neighbor + stab))
+
+        self.qubit_data = tuple(qubit_data)
+
         '''
-        :param array        2D list of L x L new_errors
-        :param file_name    name of the file to write to
-        Writes the error list to a csv file to check for the errors
+        Also, for each possible stabilizer, there are 4 or 3 (only planar) connected qubits
+            |
+          - o -
+            |
+        We call each of these qubis the North (qN), South (qS), East (qE) and West (qW) qubits, in that order
+        Store the connected qubits to a tuple in the following order:
+            0   error type (primary or secundary)
+            1   y location of unit cell
+            2   x location of unit cell
+            3   tuple of neighbor anyons (sN, sS, sE, sW)
+            4   tuple of connected qubit id (qN, qS, qE, qW)
         '''
-        a1 = array[0]
-        a2 = array[1]
-        write_array = a1 + a2
-        with open(file_name, "w") as csvFile:
-            writer = csv.writer(csvFile)
-            writer.writerows(write_array)
-        csvFile.close()
 
-    def read_error(self, file_name):
+        stab_qubit_list = []
+
+        for (ertype, y, x) in stab_list:
+
+            sN = stab_list.index([ertype, (y - 1) % self.size, x])
+            sS = stab_list.index([ertype, (y + 1) % self.size, x])
+            sE = stab_list.index([ertype, y, (x - 1) % self.size])
+            sW = stab_list.index([ertype, y, (x + 1) % self.size])
+
+            if ertype == 0:
+                qN = qubit_list.index([0, y, x, 0])
+                qS = qubit_list.index([0, (y + 1) % self.size, x, 0])
+                qE = qubit_list.index([0, y, x, 1])
+                qW = qubit_list.index([0, y, (x + 1) % self.size, 1])
+            if ertype == 1:
+                qN = qubit_list.index([1, (y - 1) % self.size, x, 1])
+                qS = qubit_list.index([1, y, x, 1])
+                qE = qubit_list.index([1, y, (x - 1) % self.size, 0])
+                qW = qubit_list.index([1, y, x, 0])
+
+            stab_qubit_list.append([(sN, sS, sE, sW), (qN, qS, qE, qW)])
+
+        stab_data = []
+
+        for (stab, qubit) in zip(stab_list, stab_qubit_list):
+            stab_data.append(tuple(stab + qubit))
+
+        self.stab_data = tuple(stab_data)
+
         '''
-        :param file_name    name of the file to read
-        Reads the csv file to load errors made in a previous round or made manually
+        Get edge qubits for the detection of logical errors
         '''
-        with open(file_name, "r") as csvFile:
-            read_array = [list(map(int,rec)) for rec in csv.reader(csvFile)]
-        csvFile.close()
-        a1 = read_array[:self.size]
-        a2 = read_array[self.size:]
-        array = [a1, a2]
-        return array
+
+        lx0 = [2*q for q in range(self.size)]
+        lx1 = [1 + 2*q*self.size for q in range(self.size)]
+        lz0 = [self.num_stab + 2*(self.size - 1)*self.size + 1 + 2*q for q in range(self.size)]
+        lz1 = [self.num_stab + 2*(self.size - 1) + 2*q*self.size for q in range(self.size)]
+
+        self.log_data = (tuple(lx0), tuple(lx1), tuple(lz0), tuple(lz1))
+
+        # for i,a in enumerate(self.qubit_data): print(i,a)
+        # for i,a in enumerate(self.stab_data): print(i,a)
+        # print(self.log_data)
+
+        return (self.qubit_data, self.stab_data, self.log_data)
+
+    def init_plots(self):
+        # Initiate plot
+        if self.plot_load:
+            self.LP = tp.lattice_plot(self.size, self.qubit_data, self.stab_data)
+            self.LP.plot_lattice()
 
 
-    def init_erasure(self, pE = 0.05, new_errors=True, write_errors=False):
+    '''
+    Main functions
+    '''
+
+
+    def init_erasure(self, pE = 0.05):
 
         '''
         :param pE:                      probability of erasure error
@@ -103,63 +207,44 @@ class lattice:
         self.pE = pE
         file_name = "./errors/L" + str(self.size) + "_erasure_error.csv"
 
-        if new_errors:
-            # Generate erasure errors
-            self.erasures = [[[1 if random.random() < self.pE else 0 for x in range(self.size)] for y in range(self.size)] for td in range(2)]
+
+        # Generate erasure errors
+        erasures = [1 if random.random() < self.pE else 0 for _ in range(self.num_stab)]
+
+        # Increase error size, make blob
+        for id in [id for id, erasure in enumerate(erasures) if erasure == 1]:
+            for qA in self.qubit_data[id][5]:
+                erasures[qA] = 1
+            for qB in self.qubit_data[id][7]:
+                erasures[qB] = 1
 
 
-            # Increase error size, make blob
-            extra = []
-            for y in range(self.size):
-                for x in range(self.size):
-                    if self.erasures[0][y][x] == 1:
-                        extra.append((0, y, (x-1)%self.size))
-                        extra.append((0, y, (x+1)%self.size))
-                        extra.append((1, y, x))
-                        extra.append((1, (y-1)%self.size, x))
-                        extra.append((1, y, (x+1)%self.size))
-                        extra.append((1, (y-1)%self.size, (x+1)%self.size))
-                    if self.erasures[1][y][x] == 1:
-                        extra.append((1, (y-1)%self.size, x))
-                        extra.append((1, (y+1)%self.size, x))
-                        extra.append((0, y, (x-1)%self.size))
-                        extra.append((0, y, x))
-                        extra.append((0, (y+1)%self.size, (x-1)%self.size))
-                        extra.append((0, (y+1)%self.size, x))
-            for (td, y, x) in extra:
-                self.erasures[td][y][x] = 1
-            # Uniform I, X, Y, Z
-            for y in range(self.size):
-                for x in range(self.size):
-                    for td in range(2):
-                        if self.erasures[td][y][x] == 1:
-                            rand = random.random()
-                            if rand < 0.25:
-                                self.erasures[td][y][x] = 2
-                            elif rand >= 0.25 and rand < 0.5:
-                                self.erasures[td][y][x] = 3
-                            elif rand >= 0.5 and rand < 0.75:
-                                self.erasures[td][y][x] = 4
+        # Uniform I, X, Y, Z
+        for id in [id for id, erasure in enumerate(erasures) if erasure == 1]:
+            rand = random.random()
+            if rand < 0.25:
+                erasures[id] = 2
+            elif rand >= 0.25 and rand < 0.5:
+                erasures[id] = 3
+            elif rand >= 0.5 and rand < 0.75:
+                erasures[id] = 4
 
-            if write_errors:
-                self.write_error(self.erasures, file_name)
-        else:
-            self.erasures = self.read_error(file_name)
+        # if self.plot_load:   self.LP.plot_erasures(self.erasures)
 
-        if self.plot_load:   self.LP.plot_erasures(self.erasures)
-
-
+        self.er_loc = []
         # Apply erasure errors to array
-        for td in range(2):
-            for x in range(self.size):
-                for y in range(self.size):
-                    if self.erasures[td][y][x] in [2, 4]:
-                        self.array[0][td][y][x] = not self.array[0][td][y][x]
-                    if self.erasures[td][y][x] in [3, 4]:
-                        self.array[1][td][y][x] = not self.array[1][td][y][x]
+        for id, erasure in enumerate(erasures):
+            if erasure != 0:
+                self.er_loc.append(id)
 
+            if erasure in [2, 4]:
+                self.array[id] = not self.array[id]
+            if erasure in [3, 4]:
+                self.array[id + self.num_stab] = not self.array[id + self.num_stab]
 
-    def init_pauli(self, pX = 0.1, pZ=0.1, new_errors=True, write_errors = False, array_file = "error.txt"):
+        self.er_loc = tuple(self.er_loc)
+
+    def init_pauli(self, pX = 0.1, pZ=0.1):
 
         '''
         :param pX:                      probability of X error
@@ -173,33 +258,21 @@ class lattice:
         self.pZ = pZ
         X_name = "./errors/L" + str(self.size) + "_X_pauli_error.csv"
         Z_name = "./errors/L" + str(self.size) + "_Z_pauli_error.csv"
-        if new_errors:
 
-            # Generate X and Z errors or load from previous
-            eX = [[[1 if random.random() < self.pX else 0 for x in range(self.size)] for y in range(self.size)] for td in range(2)]
-            eZ = [[[1 if random.random() < self.pZ else 0 for x in range(self.size)] for y in range(self.size)] for td in range(2)]
-
-            if write_errors:
-                self.write_error(eX, X_name)
-                self.write_error(eZ, Z_name)
-        else:
-            eX = self.read_error(X_name)
-            eZ = self.read_error(Z_name)
+        # Generate X and Z errors or load from previous
+        eX = [iX for iX in range(self.num_stab) if random.random() < self.pX]
+        eZ = [iZ for iZ in range(self.num_stab) if random.random() < self.pZ]
 
         # Apply pauli errors to array
-        for y in range(self.size):
-            for x in range(self.size):
-                for td in range(2):
-                    if eX[td][y][x] == 1:
-                        self.array[0][td][y][x] = not self.array[0][td][y][x]
-                    if eZ[td][y][x] == 1:
-                        self.array[1][td][y][x] = not self.array[0][td][y][x]
-
-        if self.plot_load:
-            self.LP.plot_errors(self.array)
+        for iX in eX:
+            self.array[iX] = not self.array[iX]
+        for iZ in eZ:
+            self.array[iZ + self.num_stab] = not self.array[iZ + self.num_stab]
 
 
-    def measure_stab(self, stab_data = []):
+        if self.plot_load: self.LP.plot_errors(self.array)
+
+    def measure_stab(self):
         '''
         self.stab is an array that stores the measurement outcomes for the stabilizer measurements
             It has dimension [XZ{0,1}, size, size]
@@ -207,21 +280,15 @@ class lattice:
             The 0 values are the quasiparticles
         '''
 
-        # if not stab_data not inputted, used self data. This is the case for single simulations
-        if stab_data == []: stab_data = self.stab_data
-
-        stab = [[[True for _ in range(self.size)] for _ in range(self.size)] for _ in range(2)]
+        stab_measurement = [True for _ in range(self.num_stab)]
 
         # Measure plaquettes and stars
-        for stab_qubits in stab_data:
-            er = stab_qubits[0]
-            y = stab_qubits[1][1]
-            x = stab_qubits[1][2]
+        for sID, stabilizer in enumerate(self.stab_data):
 
             # Flip value of stabilizer measurement
-            for (tds, ys, xs) in stab_qubits[1:]:
-                if self.array[er][tds][ys][xs] == False:
-                    stab[er][y][x] = not stab[er][y][x]
+            for qID in stabilizer[4]:
+                if self.array[qID] == False:
+                    stab_measurement[sID] = not stab_measurement[sID]
 
 
         # Number of quasiparticles, syndromes
@@ -229,50 +296,38 @@ class lattice:
         self.N_qua = []
         self.N_syn = []
         self.qua_loc = []
-        for er in range(2):
 
-            qua_loc = tuple([(y, x) for y in range(self.size) for x in range(self.size) if stab[er][y][x] == False])
+        qua_loc = [sID for sID, stab in enumerate(stab_measurement) if stab == False]
 
-            self.qua_loc.append(qua_loc)
-            self.N_qua.append(len(qua_loc))
-            self.N_syn.append(int(len(qua_loc) / 2))
-
-        self.qua_loc = tuple(self.qua_loc)
-        self.N_qua = tuple(self.N_qua)
-        self.N_syn = tuple(self.N_syn)
+        self.qua_loc = (tuple([qua for qua in qua_loc if qua < self.size**2]), tuple([qua for qua in qua_loc if qua >= self.size**2]))
+        self.N_qua = (len(self.qua_loc[0]), len(self.qua_loc[1]))
+        self.N_syn = (self.N_qua[0]/2, self.N_qua[1]/2)
 
         if self.plot_load:  self.LP.plot_anyons(self.qua_loc)
 
-
-
-    def get_matching_peeling(self, edge_data = ()):
+    def get_matching_peeling(self):
         '''
         Uses the Peeling algorithm to get the matchings
         Optionally, edge_data can be inputted here, which is useful in multiple iteration simulations
         '''
 
-        erloc = [(hv, y, x) for hv in range(2) for y in range(self.size) for x in range(self.size) if self.erasures[hv][y][x] != 0]
-        if edge_data == ():
-            PL = pel.toric(self.size, self.qua_loc, erloc)
-        else:
-            PL = pel.toric(self.size, self.qua_loc, erloc, edge_data)
-
-        PL.find_clusters()
-        PL.init_trees()
-        PL.peel_trees()
-        matching = PL.match_to_loc()
-
-        flips = []
-        for ertype in range(2):
-            for vertice in matching[ertype]:
-                hv = vertice[0]
-                y  = vertice[1]
-                x  = vertice[2]
-                loc = (ertype, hv, y, x)
-                self.array[ertype][hv][y][x] = not self.array[ertype][hv][y][x]
-                flips.append(loc)
-
-        if self.plot_load: self.LP.plot_final(flips, self.array)
+        PL = pel.toric(self)
+        # PL.find_clusters()
+        # PL.init_trees()
+        # PL.peel_trees()
+        # matching = PL.match_to_loc()
+        #
+        # flips = []
+        # for ertype in range(2):
+        #     for vertice in matching[ertype]:
+        #         td = vertice[0]
+        #         y  = vertice[1]
+        #         x  = vertice[2]
+        #         loc = (ertype, td, y, x)
+        #         self.array[ertype][td][y][x] = not self.array[ertype][td][y][x]
+        #         flips.append(loc)
+        #
+        # if self.plot_load: self.LP.plot_final(flips, self.array)
 
     def get_matching_MWPM(self):
         '''
@@ -281,6 +336,7 @@ class lattice:
         '''
 
         self.results = []
+        self.flips = []
 
         for ertype in range(2):
 
@@ -288,301 +344,125 @@ class lattice:
             edges = []
 
             # Get all possible strings - connections between the quasiparticles and their weights
-            for v0 in range(self.N_qua[ertype] - 1):
+            for i0, v0 in enumerate(self.qua_loc[ertype][:-1]):
 
-                (y0, x0) = self.qua_loc[ertype][v0]
+                (y0, x0) = self.stab_data[v0][1:3]
 
-                for v1 in range(self.N_qua[ertype] - v0 - 1):
+                for i1, v1 in enumerate(self.qua_loc[ertype][i0 + 1:]):
 
-                    (y1, x1) = self.qua_loc[ertype][v1 + v0 + 1]
+                    (y1, x1) = self.stab_data[v1][1:3]
                     wy = (y0 - y1) % (self.size)
                     wx = (x0 - x1) % (self.size)
                     weight = min([wy, self.size - wy]) + min([wx, self.size - wx])
-                    edges.append([v0, v1 + v0 + 1, weight])
+                    edges.append([i0, i1 + i0 + 1, weight])
 
             # Apply BlossomV algorithm if there are quasiparticles
             output = pm.getMatching(self.N_qua[ertype], edges) if self.N_qua[ertype] != 0 else []
 
             # Save results to same format as self.syn_inf
             matching_pairs=[[i,output[i]] for i in range(self.N_qua[ertype]) if output[i]>i]
-            result = [] if len(matching_pairs) == 0 else [[self.qua_loc[ertype][i] for i in x] for x in matching_pairs]
-            self.results.append(result)
 
-        if self.plot_load: self.LP.plot_lines(self.results)
+            '''
+            Finds the qubits that needs to be flipped in order to correct the errors
+            '''
 
+            result = []
 
-        '''
-        Finds the qubits that needs to be flipped in order to correct the errors
-        '''
-        flips = []
-        for ertype in range(2):
-            for pair in self.results[ertype]:
+            for pair in matching_pairs:
 
-                [y0, x0] = pair[0]
-                [y1, x1] = pair[1]
+                v0 = self.qua_loc[ertype][pair[0]]
+                v1 = self.qua_loc[ertype][pair[1]]
+                result.append((v0, v1))
+
+                (y0, x0) = self.stab_data[v0][1:3]
+                (y1, x1) = self.stab_data[v1][1:3]
 
                 # Get distance between endpoints, take modulo to find min distance
-                dy = (y1 - y0) % self.size
-                dx = (x1 - x0) % self.size
+                dy0 = (y0 - y1) % self.size
+                dx0 = (x0 - x1) % self.size
+                dy1 = (y1 - y0) % self.size
+                dx1 = (x1 - x0) % self.size
 
-                # Make path from y0 to y1
-                if dy < self.size - dy:
-                    endy = y1
-                    for y in range(dy):
-                        flips.append((ertype, ertype, (y0 + y + 1 - ertype) % self.size, x0))
-
-                # Make path from y1 to y0
+                if dy0 < dy1:
+                    dy = dy0
+                    yd = 0
                 else:
-                    endy = y0
-                    for y in range(self.size - dy):
-                        flips.append((ertype, ertype, (y1 + y + 1 - ertype) % self.size, x1))
+                    dy = dy1
+                    yd = 1
 
-                # Make path from x0 to x1
-                if dx < self.size - dx:
-                    for x in range(dx):
-                        flips.append((ertype, 1 - ertype, endy, (x0 + x + 1 - ertype) % self.size))
-
-                # Make path from x1 to x0
+                if dx0 < dx1:
+                    dx = dx0
+                    xd = 3
                 else:
-                    for x in range(self.size - dx):
-                        flips.append((ertype, 1 - ertype, endy, (x1 + x + 1 - ertype) % self.size))
+                    dx = dx1
+                    xd = 2
 
-        self.flips = flips
+                ynext = v0
+                for y in range(dy):
+                    self.flips.append(self.stab_data[ynext][4][yd])
+                    ynext = self.stab_data[ynext][3][yd]
+
+                xnext = v1
+                for x in range(dx):
+                    self.flips.append(self.stab_data[xnext][4][xd])
+                    xnext = self.stab_data[xnext][3][xd]
+
+
+            self.results.append(result)
 
         # Apply flips on qubits
-        for (ertype, td, y, x) in flips:
-            self.array[ertype][td][y][x] = not self.array[ertype][td][y][x]
+        for id in self.flips:
+            self.array[id] = not self.array[id]
 
 
-        if self.plot_load: self.LP.plot_final(flips, self.array)
-
-
+        if self.plot_load: self.LP.plot_lines(self.results)
+        if self.plot_load: self.LP.plot_final(self.flips, self.array)
 
     def logical_error(self):
 
         # logical error in [Xvertical, Xhorizontal, Zvertical, Zhorizontal]
         logical_error = [False, False, False, False]
 
-
         # Check number of flips around borders
-        for q in range(self.size):
-            if self.array[0][0][0][q] == 0:
-                logical_error[0] = not logical_error[0]
-            if self.array[0][1][q][0] == 0:
-                logical_error[1] = not logical_error[1]
-            if self.array[1][1][self.size - 1][q] == 0:
-                logical_error[2] = not logical_error[2]
-            if self.array[1][0][q][self.size - 1] == 0:
-                logical_error[3] = not logical_error[3]
-
+        for i, error in enumerate(self.log_data):
+            for qubit in error:
+                if self.array[qubit] == False:
+                    logical_error[i] = not logical_error[i]
 
         return logical_error
 
 
-    # def connect_syndrome(self, ertype, S_dis, S_new):
-    #     '''
-    #     :param ertype:  error type: 0 for X, 1 for Z
-    #
-    #     param S_dis:   disappearing syndrome endpoint, this 0-valued stabilizer measurement is corrected by another error
-    #     param S_con:    the other syndrome endpoint, will be matched to new syndrome endpoint
-    #     param M_dis:    the 1-to-last body element of the disappearing syndrome endpoint, this will decide the bend in the syndrome body
-    #     param M_con:    the 1-to-last body element of S_con
-    #
-    #     If len(S_dis) == 1: connects one existing syndrome to a new one
-    #     If len(S_dis) == 2: connects two existing syndromes
-    #     '''
-    #     if len(S_dis) == 2:
-    #         S_new = [S_dis[1], S_dis[0]]
-    #
-    #     ind_dis = []
-    #     ind_bas = []
-    #     ind_con = []
-    #     M_dis = []
-    #     S_con = []
-    #     M_con = []
-    #
-    #     for i in range(len(S_dis)):
-    #         # Get indices of dis and con
-    #         ind_dis += [self.Syn_list.index(S_dis[i])]
-    #         ind_bas += [math.floor(ind_dis[i] / 2) * 2]
-    #         ind_con += [ind_bas[i] + (1 - ind_dis[i] % 2)]
-    #
-    #         # M is the closest mate/neighbor of syndrome endpoints. It determines the path orientation
-    #         M_dis += [self.Mat_list[ind_dis[i]]]
-    #         S_con += [self.Syn_list[ind_con[i]]]
-    #         M_con += [self.Mat_list[ind_con[i]]]
-    #
-    #         if self.plot_load:
-    #             # Center, Around this disappearing vertice are two points
-    #             #   1. A new vertice
-    #             #   2. A old vertice or a syndrome path
-    #             Yc = S_dis[i][0]
-    #             Xc = S_dis[i][1]
-    #
-    #             # Get the respective distances of two points
-    #             Pall = [M_dis[i][0] - Yc, M_dis[i][1] - Xc, S_new[i][0] - Yc, S_new[i][1] - Xc]
-    #             Pt = [-i / abs(i) if abs(i) == self.size - 1 else i for i in Pall]
-    #             Pc = [[Pt[0], Pt[1]], [Pt[2], Pt[3]]]
-    #
-    #             # Define vectors
-    #             Wvec = [0, -1]
-    #             Evec = [0, 1]
-    #             Nvec = [-1, 0]
-    #             Svec = [1, 0]
-    #
-    #             # Find which vectors are present, determine orientation or green path
-    #             if Nvec in Pc and Evec in Pc:  # -
-    #                 self.body[ertype, Yc, Xc, 2] = 0
-    #                 self.body[ertype, Yc, Xc, 1] = 0
-    #             elif Nvec in Pc and Wvec in Pc:
-    #                 self.body[ertype, Yc, Xc, 2] = 0
-    #                 self.body[ertype, Yc, Xc, 0] = 0
-    #             elif Svec in Pc and Wvec in Pc:
-    #                 self.body[ertype, Yc, Xc, 3] = 0
-    #                 self.body[ertype, Yc, Xc, 0] = 0
-    #             elif Svec in Pc and Evec in Pc:
-    #                 self.body[ertype, Yc, Xc, 3] = 0
-    #                 self.body[ertype, Yc, Xc, 1] = 0
-    #             elif Nvec in Pc and Svec in Pc:
-    #                 self.body[ertype, Yc, Xc, 2] = 0
-    #                 self.body[ertype, Yc, Xc, 3] = 0
-    #             elif Evec in Pc and Wvec in Pc:
-    #                 self.body[ertype, Yc, Xc, 0] = 0
-    #                 self.body[ertype, Yc, Xc, 1] = 0
-    #             else:
-    #                 print("Error no path found")
-    #
-    #     ind_bas_0 = max(ind_bas)
-    #     ind_bas_1 = min(ind_bas)
-    #
-    #     # Delete previous syndrome
-    #     del self.Mat_list[ind_bas_0: ind_bas_0 + 2]
-    #     del self.Syn_list[ind_bas_0: ind_bas_0 + 2]
-    #
-    #     if len(S_dis) == 1:
-    #         # Add new extended syndrome
-    #         self.Syn_list += [S_con[0], S_new[0]]
-    #         self.Mat_list += [M_con[0], S_dis[0]]
-    #     else:
-    #         # Two syndromes are connected, an extra syndrome needs to be removed, and the new extended syndrome is added
-    #         # But only if the syndrome is not closed, as it is then just a stabilizer measurements, and enough actions has been done
-    #         if S_dis[0] not in S_con and S_dis[1] not in S_con:
-    #             del self.Mat_list[ind_bas_1: ind_bas_1 + 2]
-    #             del self.Syn_list[ind_bas_1: ind_bas_1 + 2]
-    #             self.Syn_list += S_con
-    #             self.Mat_list += M_con
-    # def measure_stab_body(self):
-    #
-    #     '''
-    #     :param p_stab:  probability of measurement error [p_stab_X, p_stab_Z]
-    #
-    #     self.stab is an array that stores the measurement outcomes for the stabilizer measurements
-    #         It has dimension [XY{0,1}, size, size]
-    #         Measurements outcomes are either 0 or 1, analogous to -1 and 1 states
-    #         The 0 values are the quasiparticles
-    #
-    #     self.body stores the syndrome body information, e.g. the stabilizers for which the value
-    #         has been corrected by another error, in syndromes with length > 2.
-    #         It has dimension [XY{0,1}, size, size, Wind{0,1,2,3}],
-    #         where Wind stands for the direction. For example, on a star operator:
-    #
-    #               North 2
-    #                  |
-    #          West 0 - - East 1
-    #                  |
-    #               South 3
-    #     '''
-    #
-    #     self.stab = np.ones([2, self.size, self.size], dtype=bool)
-    #     self.body = np.ones([2, self.size, self.size, 4], dtype=bool)
-    #
-    #     # Number of quasiparticles, syndromes, and total strings
-    #     self.N_qua = []
-    #     self.N_syn = []
-    #     self.N_str = []
-    #
-    #     # Quasiparticles locations [(y,x),..] and syndromes info [[v0, v1],..]
-    #     self.qua_loc = []
-    #     self.syn_inf = []
-    #
-    #     for ertype in range(2):
-    #
-    #         if ertype == 0:
-    #             erloc = self.X_er_loc
-    #         else:
-    #             erloc = self.Z_er_loc
-    #
-    #         # Syn_list is a list of syndromes, each syndrome as two vertices, appended directly after reach other
-    #         # Mat_list is the direct mate/neighbor of the two vertices of these syndromes, in the same order
-    #         self.Syn_list = []
-    #         self.Mat_list = []
-    #
-    #         for (Y, X, HV) in erloc:
-    #
-    #             # First quasiparticle is always in the same unit cell
-    #             V0 = (Y, X)
-    #
-    #             # Find Find other quasiparticle, (toric specific)
-    #             if (ertype == 0 and HV == 0):  # Z error vertical
-    #                 if Y == 0:  # top edge
-    #                     V1 = (self.size - 1, X)
-    #                 else:
-    #                     V1 = (Y - 1, X)
-    #             elif (ertype == 0 and HV == 1):  # Z error horizontal
-    #                 if X == 0:  # left edge
-    #                     V1 = (Y, self.size - 1)
-    #                 else:
-    #                     V1 = (Y, X - 1)
-    #             elif (ertype == 1 and HV == 0):  # X error horizontal
-    #                 if X == self.size - 1:  # right edge
-    #                     V1 = (Y, 0)
-    #                 else:
-    #                     V1 = (Y, X + 1)
-    #             else:  # X error vertical
-    #                 if Y == self.size - 1:  # bottom edge
-    #                     V1 = (0, X)
-    #                 else:
-    #                     V1 = (Y + 1, X)
-    #
-    #             # If both vertices are not yet in syndrome endpoints, append vertices as a new syndrome
-    #             if self.stab[ertype, V0[0], V0[1]] == 1 and self.stab[ertype, V1[0], V1[1]] == 1:
-    #                 self.stab[ertype, V0[0], V0[1]] = 0
-    #                 self.stab[ertype, V1[0], V1[1]] = 0
-    #                 self.Syn_list += [V0, V1]
-    #                 self.Mat_list += [V1, V0]
-    #
-    #             # If one of the vertices is already in a syndrome, apply syndrome algorithm
-    #             elif self.stab[ertype, V0[0], V0[1]] == 0 and self.stab[ertype, V1[0], V1[1]] == 1:
-    #                 self.stab[ertype, V0[0], V0[1]] = 1
-    #                 self.stab[ertype, V1[0], V1[1]] = 0
-    #                 S_new = [V1]
-    #                 S_dis = [V0]
-    #                 self.connect_syndrome(ertype, S_dis, S_new)
-    #             elif self.stab[ertype, V0[0], V0[1]] == 1 and self.stab[ertype, V1[0], V1[1]] == 0:
-    #                 self.stab[ertype, V0[0], V0[1]] = 0
-    #                 self.stab[ertype, V1[0], V1[1]] = 1
-    #                 S_new = [V0]
-    #                 S_dis = [V1]
-    #                 self.connect_syndrome(ertype, S_dis, S_new)
-    #             # If both vertices al already in syndromes, apply syndrome algorithm to both
-    #             else:
-    #                 self.stab[ertype, V0[0], V0[1]] = 1
-    #                 self.stab[ertype, V1[0], V1[1]] = 1
-    #                 S_new = []
-    #                 S_dis = [V0, V1]
-    #                 self.connect_syndrome(ertype, S_dis, S_new)
-    #
-    #         self.N_syn += [int(len(self.Syn_list) / 2)]
-    #         self.N_qua += [int(len(self.Syn_list))]
-    #         self.N_str += [int(np.sum(range(self.N_qua[ertype])))]
-    #
-    #         # Save syndromes in [[v0, v1, crossY, crossX]] format
-    #         syndromes = []
-    #         for syn_i in range(self.N_syn[ertype]):
-    #             syndromes.append([int(2 * syn_i), int(2 * syn_i + 1)])
-    #
-    #         self.qua_loc.append(self.Syn_list)
-    #         self.syn_inf.append(syndromes)
-    #
-    #     if self.plot_load:
-    #         self.LP.plotXstrings(self.stab, self.qua_loc, self.body)
+    def print_array(self):
+        '''
+        used to print the qubit array at any moment
+        '''
+
+        Ername = ["X", "Z"]
+        for ertype in range(2):
+            for y in range(self.size):
+                line1 = "  "
+                line2 = ""
+                for x in range(self.size):
+                    str1 = "O" if self.array[ertype*self.num_stab + y*self.size*2 + x*2] == True else Ername[ertype]
+                    str2 = "O" if self.array[ertype*self.num_stab + y*self.size*2 + x*2 + 1] == True else Ername[ertype]
+                    line1 += str1 + "   "
+                    line2 += str2 + "   "
+                print(line1)
+                print(line2)
+            print("")
+
+    def print_LL2(self, LL2_array):
+        '''
+        print a LxLx2 array (stab, error) in a way that is nice to read
+        '''
+
+        base = 0
+        for ertype in range(2):
+            for y in range(self.size):
+                print([0 if x in [False, 0] else 1 for x in LL2_array[base : base + self.size]])
+                base += self.size
+
+
+'''
+Helper functions
+'''

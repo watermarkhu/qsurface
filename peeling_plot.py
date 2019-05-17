@@ -4,10 +4,13 @@ import time
 
 class toric_peeling_plot:
 
-    def __init__(self, size, edge_list, plotstep_peel = False, plotstep_click = False):
+    def __init__(self, lat, plotstep_peel = False, plotstep_click = False):
 
-        self.size = size
-        self.edge_list = edge_list
+        self.size = lat.size
+        self.qua_loc = lat.qua_loc
+        self.er_loc = lat.er_loc
+        self.edge_data = lat.qubit_data
+        self.anyon_data = lat.stab_data
 
         self.cl = [0.8, 0.8, 0.8]       # Line color
         self.cx = [0.9, 0.3, 0.3]       # X error color
@@ -27,6 +30,19 @@ class toric_peeling_plot:
         self.ax = plt.gca()
         self.ax.invert_yaxis()
         self.ax.set_aspect('equal')
+
+
+        for y in range(self.size):
+            y1 = y - 1/2
+            for x in range(self.size):
+                x1 = x - 1/2
+
+                self.ax.plot([x, x], [y, y-1], c = self.cl, lw = self.lw, ls = '-')
+                self.ax.plot([x1, x1+1], [y1, y1], c = self.cl, lw = self.lw, ls = '--')
+
+                self.ax.plot([x, x-1], [y, y], c = self.cl, lw = self.lw, ls = '-')
+                self.ax.plot([x1, x1], [y1, y1+1], c = self.cl, lw = self.lw, ls = '--')
+
         plt.ion()
         plt.show()
 
@@ -38,7 +54,7 @@ class toric_peeling_plot:
     '''
 
 
-    def plot_lattice(self, qua_loc, erasures):
+    def plot_lattice(self):
 
         '''
         :param qua_loc          locations of the find_anyons (hv, y, x)
@@ -47,36 +63,33 @@ class toric_peeling_plot:
         the qubits are represented by the edges and anyons appear on the vertices
 
         '''
+        for i,a in enumerate(self.anyon_data): print(i, a)
+        print(self.qua_loc)
 
         plt.figure(self.f.number)
 
-        for y in range(self.size):
-            y1 = y - 1/2
-            for x in range(self.size):
-                x1 = x - 1/2
+        for id in self.er_loc:
+            (ertype, y, x, td) = self.edge_data[id][0:4]
+            y1 = y-1/2
+            x1 = x-1/2
+            if td == 0:
+                self.ax.plot([x, x], [y, y-1], c = self.cx, lw = self.lw, ls = '-')
+                self.ax.plot([x1, x1+1], [y1, y1], c = self.cz, lw = self.lw, ls = '--')
+            else:
+                self.ax.plot([x, x-1], [y, y], c = self.cx, lw = self.lw, ls = '-')
+                self.ax.plot([x1, x1], [y1, y1+1], c = self.cz, lw = self.lw, ls = '--')
 
-                if (0, y, x) in erasures:
-                    self.ax.plot([x, x], [y, y-1], c = self.cx, lw = self.lw, ls = '-')
-                    self.ax.plot([x1, x1+1], [y1, y1], c = self.cz, lw = self.lw, ls = '--')
-                else:
-                    self.ax.plot([x, x], [y, y-1], c = self.cl, lw = self.lw, ls = '-')
-                    self.ax.plot([x1, x1+1], [y1, y1], c = self.cl, lw = self.lw, ls = '--')
+        for id in self.qua_loc[0]:
+            (y, x) = self.anyon_data[id][1:3]
+            circle0 = plt.Circle((x, y), self.qsize, facecolor = self.cx, linewidth = 0)
+            self.ax.add_artist(circle0)
 
-                if (1, y, x) in erasures:
-                    self.ax.plot([x, x-1], [y, y], c = self.cx, lw = self.lw, ls = '-')
-                    self.ax.plot([x1, x1], [y1, y1+1], c = self.cz, lw = self.lw, ls = '--')
-                else:
-                    self.ax.plot([x, x-1], [y, y], c = self.cl, lw = self.lw, ls = '-')
-                    self.ax.plot([x1, x1], [y1, y1+1], c = self.cl, lw = self.lw, ls = '--')
-
-
-                if (y,x) in qua_loc[0]:
-                    circle0 = plt.Circle((x, y), self.qsize, facecolor = self.cx, linewidth = 0)
-                    self.ax.add_artist(circle0)
-
-                if (y,x) in qua_loc[1]:
-                    circle1 = plt.Circle((x1, y1), self.qsize, facecolor = self.cz, linewidth = 0)
-                    self.ax.add_artist(circle1)
+        for id in self.qua_loc[1]:
+            (y, x) = self.anyon_data[id][1:3]
+            y1 = y-1/2
+            x1 = x-1/2
+            circle1 = plt.Circle((x1, y1), self.qsize, facecolor = self.cz, linewidth = 0)
+            self.ax.add_artist(circle1)
 
         plt.draw()
         print("Peeling lattice initiated. Press on the plot to continue")
@@ -92,7 +105,7 @@ class toric_peeling_plot:
 
         for edge in rem_list:
 
-            (ertype, hv, y, x) = self.edge_list[edge][0:4]
+            (ertype, hv, y, x) = self.edge_data[edge][0:4]
 
             if ertype == 0:
                 if hv == 0:
@@ -176,7 +189,7 @@ class toric_peeling_plot:
 
         plt.figure(self.f.number)
 
-        (ertype, hv, y, x) = self.edge_list[edge][0:4]
+        (ertype, hv, y, x) = self.edge_data[edge][0:4]
 
         if ertype == 0:
             if hv == 0:
@@ -217,7 +230,7 @@ class toric_peeling_plot:
 
         plt.figure(self.f.number)
 
-        (ertype, hv, y, x) = self.edge_list[edge][0:4]
+        (ertype, hv, y, x) = self.edge_data[edge][0:4]
 
         if ertype == 0:
             if hv == 0:
@@ -246,7 +259,7 @@ class toric_peeling_plot:
 
         plt.figure(self.f.number)
 
-        (ertype, hv, y, x) = self.edge_list[edge][0:4]
+        (ertype, hv, y, x) = self.edge_data[edge][0:4]
 
         if ertype == 0:
             if hv == 0:

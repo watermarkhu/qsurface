@@ -6,14 +6,17 @@ import numpy as np
 class lattice_plot:
 
 
-    def __init__(self,size = 10):
+    def __init__(self, size, qubit_data, stab_data):
 
+        self.plot_base = False
         self.plot_error = True
         self.plot_syndrome = True
         self.plot_matching = True
         self.plot_correction = True
         self.plot_result = True
         self.size = size
+        self.qubit_data = qubit_data
+        self.stab_data = stab_data
 
         self.qsize = 0.5
         self.qsize2 = 0.25
@@ -34,7 +37,7 @@ class lattice_plot:
 
 
         # Initiate figure
-        self.f = plt.figure(1, figsize = (12, 12))
+        self.f = plt.figure(1, figsize = (10, 10))
         plt.ion()
         plt.show()
         self.ax = self.f.gca()
@@ -74,9 +77,14 @@ class lattice_plot:
                 self.ax.add_artist(circlet)
                 self.ax.add_artist(circled)
 
+        if self.plot_base:
+            plt.draw()
+            print("Lattice plotted. Press on the plot to continue")
+            plt.waitforbuttonpress()
+
     def plot_erasures(self, erasures):
         '''
-        :param erasures         list of locations (td, y, x) of the erased stab_qubits
+        :param erasures         list of locations (TD, y, x) of the erased stab_qubits
         plots an additional blue cicle around the qubits which has been erased
         '''
         plt.figure(self.f.number)
@@ -99,36 +107,42 @@ class lattice_plot:
         :param arrays       array of qubit states
         plots colored circles within the qubits if there is an error
         '''
-
-        # Save locations for errors (y, x, TD{0,1}) for X, Z, and Y (X and Z) errors
         Xer = []
         Zer = []
+
+        for id in [id for id, state in enumerate(array[:self.size*self.size*2]) if state == False]:
+            Xer.append(id)
+        for id in [id for id, state in enumerate(array[self.size*self.size*2:]) if state == False]:
+            Zer.append(id)
         Yer = []
-        for iy in range(self.size):
-            for ix in range(self.size):
-                for hv in range(2):
-                    if array[0][hv][iy][ix] == 0: Xer.append((iy,ix,hv))
-                    if array[1][hv][iy][ix] == 0: Zer.append((iy,ix,hv))
-                    if array[0][hv][iy][ix] == 0 and array[1][hv][iy][ix] == 0:
-                        Yer.append((iy, ix, hv))
+
+        for iX in Xer:
+            if iX in Zer:
+                Yer.append(iX)
+        for iY in Yer:
+            Xer.remove(iY)
+            Zer.remove(iY)
 
         plt.figure(self.f.number)
 
         loc = [3, 1]
 
         # Plot X errors
-        for (Y,X,HV) in Xer:
-            circle = plt.Circle((X*4+loc[HV], Y*4+loc[1-HV]), self.qsize, fill = True, facecolor = self.cx, edgecolor = self.cc, linewidth = self.lw)
+        for iX in Xer:
+            (Y , X , TD) = self.qubit_data[iX][1:4]
+            circle = plt.Circle((X*4+loc[TD], Y*4+loc[1-TD]), self.qsize, fill = True, facecolor = self.cx, edgecolor = self.cc, linewidth = self.lw)
             self.ax.add_artist(circle)
 
         # Plot Z errors
-        for (Y,X,HV) in Zer:
-            circle = plt.Circle((X*4+loc[HV], Y*4+loc[1-HV]), self.qsize, fill = True, facecolor = self.cz, edgecolor = self.cc, linewidth = self.lw)
+        for iZ in Zer:
+            (Y , X , TD) = self.qubit_data[iZ][1:4]
+            circle = plt.Circle((X*4+loc[TD], Y*4+loc[1-TD]), self.qsize, fill = True, facecolor = self.cz, edgecolor = self.cc, linewidth = self.lw)
             self.ax.add_artist(circle)
 
         # Plot Y errors
-        for Y,X,HV in Yer:
-            circle = plt.Circle((X*4+loc[HV], Y*4+loc[1-HV]), self.qsize, fill = True, facecolor = self.cy, edgecolor = self.cc, linewidth = self.lw)
+        for iY in Yer:
+            (Y , X , TD) = self.qubit_data[iY][1:4]
+            circle = plt.Circle((X*4+loc[TD], Y*4+loc[1-TD]), self.qsize, fill = True, facecolor = self.cy, edgecolor = self.cc, linewidth = self.lw)
             self.ax.add_artist(circle)
 
 
@@ -150,9 +164,9 @@ class lattice_plot:
         LS = ['--', '-']
 
         # Plot errors on primary and secondary lattice
-        for type in range(2):
-            for qui in range(len(qua_loc[type])):
-                (yb, xb) = qua_loc[type][qui]
+        for type, id_type in enumerate(qua_loc):
+            for id in id_type:
+                (yb, xb) = self.stab_data[id][1:3]
                 y = yb * 4
                 x = xb * 4
                 plt.plot([x+0+ploc[type], x+1+ploc[type]], [y+1+ploc[type], y+1+ploc[type]], c = C[type], lw = self.lw, ls = LS[type])
@@ -185,10 +199,10 @@ class lattice_plot:
             for string in range(len(results[type])):
                 C = color[string,:]
 
-                topx = results[type][string][0][1] * 4
-                topy = results[type][string][0][0] * 4
-                botx = results[type][string][1][1] * 4
-                boty = results[type][string][1][0] * 4
+                topx = self.stab_data[results[type][string][0]][2] * 4
+                topy = self.stab_data[results[type][string][0]][1] * 4
+                botx = self.stab_data[results[type][string][1]][2] * 4
+                boty = self.stab_data[results[type][string][1]][1] * 4
 
                 plt.plot([topx + ploc[type], botx + ploc[type]], [topy + ploc[type], boty + ploc[type]], c = C, lw = self.slw, ls = LS[type])
                 circle1 = plt.Circle((topx + ploc[type], topy + ploc[type]), 0.25, fill = True, facecolor = C)
@@ -216,6 +230,8 @@ class lattice_plot:
 
         singles = []
         poly    = []
+
+
         for flip in flips:
             count = flips.count(flip)
             if count == 1:
@@ -228,33 +244,40 @@ class lattice_plot:
         Zer = []
         Yer = []
         for flip in singles:
-            plot = (flip[2], flip[3], flip[1])
-            if flip[0] == 0 and plot not in Zer:
-                Xer.append(plot)
-            elif flip[0] == 1 and plot not in Xer:
-                Zer.append(plot)
+            if flip < self.size*self.size*2:
+                Xer.append(flip)
             else:
-                Yer.append(plot)
+                Zer.append(flip - self.size*self.size*2)
+
+        for iX in Xer:
+            if iX in Zer:
+                Yer.append(iX)
+        for iY in Yer:
+            Xer.remove(iY)
+            Zer.remove(iY)
 
         # Plot X errors
-        for (Y,X,HV) in Xer:
-            if HV == 0:
+        for iX in Xer:
+            (Y , X , TD) = self.qubit_data[iX][1:4]
+            if TD == 0:
                 circle = plt.Circle((X*4+3, Y*4+1), self.qsize2, fill = True, facecolor = self.cw, edgecolor = self.cx, linewidth = self.lw)
             else:
                 circle = plt.Circle((X*4+1, Y*4+3), self.qsize2, fill = True, facecolor = self.cw, edgecolor = self.cx, linewidth = self.lw)
             self.ax.add_artist(circle)
 
         # Plot Z errors
-        for (Y,X,HV) in Zer:
-            if HV == 0:
+        for iZ in Zer:
+            (Y , X , TD) = self.qubit_data[iZ][1:4]
+            if TD == 0:
                 circle = plt.Circle((X*4+3, Y*4+1), self.qsize2, fill = True, facecolor = self.cw, edgecolor = self.cz, linewidth = self.lw)
             else:
                 circle = plt.Circle((X*4+1, Y*4+3), self.qsize2, fill = True, facecolor = self.cw, edgecolor = self.cz, linewidth = self.lw)
             self.ax.add_artist(circle)
 
         # Plot Y errors
-        for Y,X,HV in Yer:
-            if HV == 0:
+        for iY in Yer:
+            (Y , X , TD) = self.qubit_data[iY][1:4]
+            if TD == 0:
                 circle = plt.Circle((X*4+3, Y*4+1), self.qsize2, fill = True, facecolor = self.cw, edgecolor = self.cy, linewidth = self.lw)
             else:
                 circle = plt.Circle((X*4+1, Y*4+3), self.qsize2, fill = True, facecolor = self.cw, edgecolor = self.cy, linewidth = self.lw)
@@ -270,4 +293,3 @@ class lattice_plot:
             self.plot_lattice()
             self.plot_errors(array)
             print("Final lattice plotted. Press on the plot to continue")
-            plt.waitforbuttonpress()

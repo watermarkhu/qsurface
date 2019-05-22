@@ -2,9 +2,9 @@ import run_single
 import run_multiple
 import toric_lat as tl
 
-size = 4
-pX = 0.2
-pZ = 00
+size = 6
+pX = 0.1
+pZ = 0.1
 pE = 0.05
 iters = 2
 
@@ -26,7 +26,7 @@ TL = tl.lattice(size, load_plot)
 TL.init_data()
 TL.init_plots()
 TL.init_erasure(pE)
-# TL.init_pauli(pX, pZ)
+TL.init_pauli(pX, pZ)
 TL.measure_stab()
 TL.get_matching_peeling()
 # TL.get_matching_MWPM()

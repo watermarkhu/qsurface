@@ -26,7 +26,7 @@ class toric_peeling_plot:
         self.plotstep_peel = plotstep_peel
         self.plotstep_click = plotstep_click
 
-        self.f = plt.figure(2, figsize = (12, 12))
+        self.f = plt.figure(2, figsize = (10, 10))
         self.ax = plt.gca()
         self.ax.invert_yaxis()
         self.ax.set_aspect('equal')
@@ -63,8 +63,6 @@ class toric_peeling_plot:
         the qubits are represented by the edges and anyons appear on the vertices
 
         '''
-        for i,a in enumerate(self.anyon_data): print(i, a)
-        print(self.qua_loc)
 
         plt.figure(self.f.number)
 
@@ -79,17 +77,18 @@ class toric_peeling_plot:
                 self.ax.plot([x, x-1], [y, y], c = self.cx, lw = self.lw, ls = '-')
                 self.ax.plot([x1, x1], [y1, y1+1], c = self.cz, lw = self.lw, ls = '--')
 
-        for id in self.qua_loc[0]:
+        for id in self.qua_loc:
             (y, x) = self.anyon_data[id][1:3]
-            circle0 = plt.Circle((x, y), self.qsize, facecolor = self.cx, linewidth = 0)
-            self.ax.add_artist(circle0)
 
-        for id in self.qua_loc[1]:
-            (y, x) = self.anyon_data[id][1:3]
-            y1 = y-1/2
-            x1 = x-1/2
-            circle1 = plt.Circle((x1, y1), self.qsize, facecolor = self.cz, linewidth = 0)
-            self.ax.add_artist(circle1)
+            if id < self.size **2:
+                c = self.cx
+            else:
+                c = self.cz
+                y = y-1/2
+                x = x-1/2
+
+            circle0 = plt.Circle((x, y), self.qsize, facecolor = c, linewidth = 0)
+            self.ax.add_artist(circle0)
 
         plt.draw()
         print("Peeling lattice initiated. Press on the plot to continue")

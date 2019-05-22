@@ -236,13 +236,17 @@ class lattice:
         for id, erasure in enumerate(erasures):
             if erasure != 0:
                 self.er_loc.append(id)
+                self.er_loc.append(id + self.num_stab)
 
             if erasure in [2, 4]:
                 self.array[id] = not self.array[id]
             if erasure in [3, 4]:
                 self.array[id + self.num_stab] = not self.array[id + self.num_stab]
 
+        self.er_loc.sort()
         self.er_loc = tuple(self.er_loc)
+
+
 
     def init_pauli(self, pX = 0.1, pZ=0.1):
 
@@ -291,17 +295,8 @@ class lattice:
                     stab_measurement[sID] = not stab_measurement[sID]
 
 
-        # Number of quasiparticles, syndromes
-        # Quasiparticles locations [(y,x),..]
-        self.N_qua = []
-        self.N_syn = []
-        self.qua_loc = []
 
-        qua_loc = [sID for sID, stab in enumerate(stab_measurement) if stab == False]
-
-        self.qua_loc = (tuple([qua for qua in qua_loc if qua < self.size**2]), tuple([qua for qua in qua_loc if qua >= self.size**2]))
-        self.N_qua = (len(self.qua_loc[0]), len(self.qua_loc[1]))
-        self.N_syn = (self.N_qua[0]/2, self.N_qua[1]/2)
+        self.qua_loc = [sID for sID, stab in enumerate(stab_measurement) if stab == False]
 
         if self.plot_load:  self.LP.plot_anyons(self.qua_loc)
 
@@ -312,7 +307,7 @@ class lattice:
         '''
 
         PL = pel.toric(self)
-        # PL.find_clusters()
+        PL.find_clusters()
         # PL.init_trees()
         # PL.peel_trees()
         # matching = PL.match_to_loc()
@@ -335,6 +330,10 @@ class lattice:
         A list of combinations of all the anyons and their respective weights are feeded to the blossom5 algorithm
         '''
 
+        qua_loc = (tuple([qua for qua in self.qua_loc if qua < self.size**2]), tuple([qua for qua in self.qua_loc if qua >= self.size**2]))
+        N_qua = (len(qua_loc[0]), len(qua_loc[1]))
+        N_syn = (N_qua[0]/2, N_qua[1]/2)
+
         self.results = []
         self.flips = []
 
@@ -344,11 +343,11 @@ class lattice:
             edges = []
 
             # Get all possible strings - connections between the quasiparticles and their weights
-            for i0, v0 in enumerate(self.qua_loc[ertype][:-1]):
+            for i0, v0 in enumerate(qua_loc[ertype][:-1]):
 
                 (y0, x0) = self.stab_data[v0][1:3]
 
-                for i1, v1 in enumerate(self.qua_loc[ertype][i0 + 1:]):
+                for i1, v1 in enumerate(qua_loc[ertype][i0 + 1:]):
 
                     (y1, x1) = self.stab_data[v1][1:3]
                     wy = (y0 - y1) % (self.size)
@@ -357,10 +356,10 @@ class lattice:
                     edges.append([i0, i1 + i0 + 1, weight])
 
             # Apply BlossomV algorithm if there are quasiparticles
-            output = pm.getMatching(self.N_qua[ertype], edges) if self.N_qua[ertype] != 0 else []
+            output = pm.getMatching(N_qua[ertype], edges) if N_qua[ertype] != 0 else []
 
             # Save results to same format as self.syn_inf
-            matching_pairs=[[i,output[i]] for i in range(self.N_qua[ertype]) if output[i]>i]
+            matching_pairs=[[i,output[i]] for i in range(N_qua[ertype]) if output[i]>i]
 
             '''
             Finds the qubits that needs to be flipped in order to correct the errors
@@ -370,8 +369,8 @@ class lattice:
 
             for pair in matching_pairs:
 
-                v0 = self.qua_loc[ertype][pair[0]]
-                v1 = self.qua_loc[ertype][pair[1]]
+                v0 = qua_loc[ertype][pair[0]]
+                v1 = qua_loc[ertype][pair[1]]
                 result.append((v0, v1))
 
                 (y0, x0) = self.stab_data[v0][1:3]

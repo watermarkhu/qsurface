@@ -13,15 +13,15 @@ class toric:
         :param erasures         tuple of all the erased qubits (td, y, x)
         :init_edge_data         tuple of edge neighbor and anyon data, see init_edge_data
 
-        Optionally, the edge_data, which contains the neighbors information, can be loaded here.
+        Optionally, the qubit_data, which contains the neighbors information, can be loaded here.
         During loops, this has benefits to the computation time
         '''
 
         self.size = lat.size
         self.qua_loc = lat.qua_loc
         self.er_loc = lat.er_loc
-        self.edge_data = lat.qubit_data
-        self.anyon_data = lat.stab_data
+        self.qubit_data = lat.qubit_data
+        self.stab_data = lat.stab_data
 
         self.plot_load = lat.plot_load
         self.plotstep_tree = False
@@ -41,9 +41,9 @@ class toric:
         '''
         Gets the location of an edge (td, y, x) in tuple form
         '''
-        y  = self.edge_data[id][1]
-        x  = self.edge_data[id][2]
-        td = self.edge_data[id][3]
+        y  = self.qubit_data[id][1]
+        x  = self.qubit_data[id][2]
+        td = self.qubit_data[id][3]
         return (y, x, td)
 
 
@@ -51,8 +51,8 @@ class toric:
         '''
         finds the neighbors of a vertex within the cluster, and not yet added to the trees
         '''
-        n1 = self.edge_data[id][5]
-        n2 = self.edge_data[id][7]
+        n1 = self.qubit_data[id][5]
+        n2 = self.qubit_data[id][7]
         cn1 = [cn for cn in n1 if cn in inlist and cn not in outlist]
         cn2 = [cn for cn in n2 if cn in inlist and cn not in outlist]
         return (cn1, cn2)
@@ -62,8 +62,8 @@ class toric:
         '''
         finds the two anyons/quasiparticles/vertices that are located on either sides of the edge
         '''
-        a1 = self.edge_data[id][8]
-        a2 = self.edge_data[id][9]
+        a1 = self.qubit_data[id][8]
+        a2 = self.qubit_data[id][9]
         return (a1, a2)
 
     def walk_leaf_tree(self, edges, cluster):
@@ -170,6 +170,24 @@ class toric:
 
         return cycle
 
+    def get_neighbor_edge_anyon(self, sID, inlist, outlist, qua_loc):
+
+        stab_edges = self.stab_data[sID][4]
+        cluster_edges = [e for e in stab_edges if e in inlist and e not in outlist]
+
+        new_stabs = []
+        for qID in cluster_edges:
+            s1 = self.qubit_data[qID][8]
+            s2 = self.qubit_data[qID][9]
+            if s1 == sID:
+                new_stabs.append(s2)
+            else:
+                new_stabs.append(s1)
+
+        in_anyons = [a for a in new_stabs if a in qua_loc]
+
+        return (cluster_edges, new_stabs, in_anyons)
+
 
     '''
     Main functions
@@ -181,30 +199,51 @@ class toric:
             and sorts them in separate clusters
         '''
 
-        self.cluster_list = []
-        in_a_cluster = []
+        self.even_elist = []
+        self.even_alist = []
+        self.odd_elist = []
+        self.odd_alist = []
 
-        print(self.er_loc)
 
-        for id in self.er_loc:
-            if id not in in_a_cluster:
-                this_cluster = [id]
-                in_a_cluster += [id]
-                new_e = [id]
+        in_cluster_edge = []
+        in_cluster_anyon =[]
 
-                while not new_e == []:
-                    nb_e = []
-                    for new_id in new_e:
-                        cn1, cn2 = self.get_neighbors_id_tree(id, self.er_loc, in_a_cluster)
-                        nb_e += cn1 + cn2
 
-                    non_dub_nb_e = list(set(nb_e))
+        for sID in self.qua_loc:
+            if sID not in in_cluster_anyon:
 
-                    this_cluster += non_dub_nb_e
-                    in_a_cluster += non_dub_nb_e
-                    new_e = non_dub_nb_e
+                (new_edges, NEW_stabs, in_anyons) = self.get_neighbor_edge_anyon(sID, self.er_loc, in_cluster_edge, self.qua_loc)
 
-                self.cluster_list.append(this_cluster)
+                this_cluster_anyon = [sID] + in_anyons
+                in_cluster_anyon += in_anyons
+                this_cluster_edge = new_edges
+                in_cluster_edge += new_edges
+
+                while not NEW_stabs == []:
+
+                    round_stabs = []
+                    round_anyons = []
+
+                    for sID in NEW_stabs:
+                        (new_edges, new_stabs, in_anyons) = self.get_neighbor_edge_anyon(sID, self.er_loc, in_cluster_edge, self.qua_loc)
+
+                        round_stabs += new_stabs
+                        round_anyons += in_anyons
+                        this_cluster_edge += new_edges
+                        in_cluster_edge += new_edges
+
+                    NEW_stabs = list(set(round_stabs))
+                    new_anyons = list(set(round_anyons))
+                    this_cluster_anyon += new_anyons
+                    in_cluster_anyon += new_anyons
+
+                if len(this_cluster_anyon) % 2 == 0:
+                    self.even_elist.append(this_cluster_edge)
+                    self.even_alist.append(this_cluster_anyon)
+                else:
+                    self.odd_elist.append(this_cluster_edge)
+                    self.odd_alist.append(this_cluster_anyon)
+
 
 
     def init_trees(self):
@@ -285,7 +324,7 @@ class toric:
 
         for cluster in self.cluster_list:
 
-            ertype = self.edge_data[cluster[0]][0]
+            ertype = self.qubit_data[cluster[0]][0]
             qua_loc = list(self.qua_loc[ertype])
             e_strip = []
 
@@ -357,7 +396,7 @@ class toric:
         matchingX = []
         matchingZ = []
         for edge in self.matching:
-            (ertype, td, y, x) = self.edge_data[edge][0:4]
+            (ertype, td, y, x) = self.qubit_data[edge][0:4]
             if ertype == 0:
                 matchingX.append((td, y, x))
             else:

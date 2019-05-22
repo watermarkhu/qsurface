@@ -164,15 +164,15 @@ class lattice_plot:
         LS = ['--', '-']
 
         # Plot errors on primary and secondary lattice
-        for type, id_type in enumerate(qua_loc):
-            for id in id_type:
-                (yb, xb) = self.stab_data[id][1:3]
-                y = yb * 4
-                x = xb * 4
-                plt.plot([x+0+ploc[type], x+1+ploc[type]], [y+1+ploc[type], y+1+ploc[type]], c = C[type], lw = self.lw, ls = LS[type])
-                plt.plot([x+1+ploc[type], x+2+ploc[type]], [y+1+ploc[type], y+1+ploc[type]], c = C[type], lw = self.lw, ls = LS[type])
-                plt.plot([x+1+ploc[type], x+1+ploc[type]], [y+0+ploc[type], y+1+ploc[type]], c = C[type], lw = self.lw, ls = LS[type])
-                plt.plot([x+1+ploc[type], x+1+ploc[type]], [y+1+ploc[type], y+2+ploc[type]], c = C[type], lw = self.lw, ls = LS[type])
+        for id in qua_loc:
+            (yb, xb) = self.stab_data[id][1:3]
+            y = yb * 4
+            x = xb * 4
+            type = 0 if id < self.size **2 else 1
+            plt.plot([x+0+ploc[type], x+1+ploc[type]], [y+1+ploc[type], y+1+ploc[type]], c = C[type], lw = self.lw, ls = LS[type])
+            plt.plot([x+1+ploc[type], x+2+ploc[type]], [y+1+ploc[type], y+1+ploc[type]], c = C[type], lw = self.lw, ls = LS[type])
+            plt.plot([x+1+ploc[type], x+1+ploc[type]], [y+0+ploc[type], y+1+ploc[type]], c = C[type], lw = self.lw, ls = LS[type])
+            plt.plot([x+1+ploc[type], x+1+ploc[type]], [y+1+ploc[type], y+2+ploc[type]], c = C[type], lw = self.lw, ls = LS[type])
 
         if self.plot_syndrome:
             plt.draw()

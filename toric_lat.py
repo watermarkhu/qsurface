@@ -36,6 +36,7 @@ class lattice:
         self.plot_load = plot_load
 
         random.seed(time.time())
+        # random.seed(10)
 
         # self.array = [[[[True for _ in range(self.size)] for _ in range(self.size)] for _ in range(2)] for _ in range(2)]
 
@@ -308,6 +309,7 @@ class lattice:
 
         PL = pel.toric(self)
         PL.find_clusters()
+        PL.grow_clusters()
         # PL.init_trees()
         # PL.peel_trees()
         # matching = PL.match_to_loc()

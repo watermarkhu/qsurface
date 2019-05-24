@@ -94,6 +94,29 @@ class toric_peeling_plot:
         print("Peeling lattice initiated. Press on the plot to continue")
         plt.waitforbuttonpress()
 
+    def plot_growth(self, Fusion_edges):
+
+        plt.figure(self.f.number)
+
+        for id in Fusion_edges:
+            (ertype, y, x, td) = self.edge_data[id][0:4]
+            y1 = y-1/2
+            x1 = x-1/2
+
+            if ertype == 0 and td == 0:
+                self.ax.plot([x, x], [y, y-1], c = self.cx, lw = self.lw, ls = '-')
+            elif ertype == 0 and td == 1:
+                self.ax.plot([x, x-1], [y, y], c = self.cx, lw = self.lw, ls = '-')
+            elif ertype == 1 and td == 0:
+                self.ax.plot([x1, x1+1], [y1, y1], c = self.cz, lw = self.lw, ls = '--')
+            else:
+                self.ax.plot([x1, x1], [y1, y1+1], c = self.cz, lw = self.lw, ls = '--')
+
+        plt.draw()
+        print("Clusters grown. Press on the plot to continue")
+        plt.waitforbuttonpress()
+
+
     def plot_removed(self, rem_list):
         '''
         :param rem_list         list of edges

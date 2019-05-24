@@ -9,8 +9,8 @@ class lattice_plot:
     def __init__(self, size, qubit_data, stab_data):
 
         self.plot_base = False
-        self.plot_error = True
-        self.plot_syndrome = True
+        self.plot_error = False
+        self.plot_syndrome = False
         self.plot_matching = True
         self.plot_correction = True
         self.plot_result = True

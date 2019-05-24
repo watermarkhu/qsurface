@@ -1,11 +1,11 @@
-import run_single
-import run_multiple
+# import run_single
+# import run_multiple
 import toric_lat as tl
 
-size = 6
-pX = 0.1
-pZ = 0.1
-pE = 0.05
+size = 12
+pX = 0.05
+pZ = 0.05
+pE = 0.03
 iters = 2
 
 load_plot = True

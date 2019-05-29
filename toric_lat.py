@@ -1,17 +1,16 @@
 import os
-import csv
-import math
+import sys
 import time
+import datetime
 import random
 import toric_plot2 as tp
 import blossom5.pyMatch as pm
 import peeling as pel
-from matplotlib import pyplot as plt
 
 
 class lattice:
 
-    def __init__(self, size = 10, plot_load = True):
+    def __init__(self, size=10, plot_load=True):
 
         '''
         :param size:
@@ -34,8 +33,9 @@ class lattice:
         '''
         self.size = size
         self.plot_load = plot_load
+        self.time = time.time()
 
-        random.seed(time.time())
+        random.seed(self.time)
         # random.seed(10)
 
         # self.array = [[[[True for _ in range(self.size)] for _ in range(self.size)] for _ in range(2)] for _ in range(2)]
@@ -50,7 +50,7 @@ class lattice:
 
     def init_data(self):
         '''
-        Initializes a tuple (qubit_data) which contains information of every qubit on lattice (primary and secundary)
+        Initializes a tuple (edge_data) which contains information of every qubit on lattice (primary and secundary)
 
         The qubits on the X and Z lattices are defined by the unit cell:
             X:     Z:
@@ -97,7 +97,7 @@ class lattice:
         for (ertype, y, x, td) in qubit_list:
 
             if ertype == 0:
-                v1 = qubit_list.index([0, y, x, 1- td])
+                v1 = qubit_list.index([0, y, x, 1 - td])
                 v2 = qubit_list.index([0, (y + 1) % self.size, x, 0])
                 v3 = qubit_list.index([0, y, (x + 1) % self.size, 1])
                 v4 = qubit_list.index([0, (y - 1 + td) % self.size, (x - td) % self.size, 0])
@@ -117,12 +117,12 @@ class lattice:
             s2 = stab_list.index([ertype, (y + td + ertype - 1) % self.size, (x - td + ertype) % self.size])
             qubit_stab_list.append([s1, s2])
 
-        qubit_data = []
+        edge_data = []
 
         for (qubit, neighbor, stab) in zip(qubit_list, neighbor_list, qubit_stab_list):
-            qubit_data.append(tuple(qubit + neighbor + stab))
+            edge_data.append(tuple(qubit + neighbor + stab))
 
-        self.qubit_data = tuple(qubit_data)
+        self.edge_data = tuple(edge_data)
 
         '''
         Also, for each possible stabilizer, there are 4 or 3 (only planar) connected qubits
@@ -178,16 +178,16 @@ class lattice:
 
         self.log_data = (tuple(lx0), tuple(lx1), tuple(lz0), tuple(lz1))
 
-        # for i,a in enumerate(self.qubit_data): print(i,a)
+        # for i,a in enumerate(self.edge_data): print(i,a)
         # for i,a in enumerate(self.stab_data): print(i,a)
         # print(self.log_data)
 
-        return (self.qubit_data, self.stab_data, self.log_data)
+        return (self.edge_data, self.stab_data, self.log_data)
 
     def init_plots(self):
         # Initiate plot
         if self.plot_load:
-            self.LP = tp.lattice_plot(self.size, self.qubit_data, self.stab_data)
+            self.LP = tp.lattice_plot(self.size, self.edge_data, self.stab_data)
             self.LP.plot_lattice()
 
 
@@ -195,8 +195,68 @@ class lattice:
     Main functions
     '''
 
+    def print_errors(self, array, type, p):
+        '''
+        :param array        error list of size 2*L*L
+        :param type         string indicating the error type
+        :param p            the error probability of the current error type
 
-    def init_erasure(self, pE = 0.05):
+        Prints the given error array to an easy to read format, which can be altered by the user, and reused later.
+        '''
+
+        st = datetime.datetime.fromtimestamp(self.time).strftime('%Y-%m-%d_%H-%M-%S')
+        st2 = datetime.datetime.fromtimestamp(self.time).strftime('%Y-%m-%d %H-%M-%S')
+        name = "./errors/" + st + "_L_" + str(self.size) + "_" + type + ".txt"
+
+        f = open(name, "w")
+
+        f.write(type + " error file created on " + st2 + "\n")
+        f.write("Seed = " + str(self.time) + "\n")
+        f.write("P = " + str(p) + "\n")
+        f.write("L = " + str(self.size) + "\n\n")
+
+        for line in range(self.size):
+            f.write("  ")
+            for qubit in range(self.size):
+                f.write(str(int(array[line*self.size*2 + qubit*2])) + "   ")
+            f.write("\n")
+            for qubit in range(self.size):
+                f.write(str(int(array[line*self.size*2 + qubit*2 + 1])) + "   ")
+            f.write('\n')
+
+        f.close()
+
+    def read_errors(self, type, filetimestamp):
+        '''
+        :param ertype           string indicating the error type
+        :param filetimestamp    timestamp of error file: YYYY-MM-DD_hh_mm
+
+        Loads the error array given the filetimestamp
+        '''
+
+        filename = "./errors/" + filetimestamp + "_L_" + str(self.size) + "_" + type + ".txt"
+
+        try:
+            f = open(filename, "r")
+        except FileNotFoundError:
+            sys.exit("Error file not found")
+
+        array = []
+
+        for ln, line in enumerate(f.readlines()):
+            if ln > 4:
+                if ln % 2 == 1:
+                    l1 = []
+                    for char in range(self.size):
+                        l1.append(int(line[2 + char*4]))
+                else:
+                    for char in range(self.size):
+                        array.append(l1[char])
+                        array.append(int(line[char*4]))
+
+        return array
+
+    def init_erasure(self, pE=0.05, savefile=True, filetimestamp=None):
 
         '''
         :param pE:                      probability of erasure error
@@ -206,29 +266,35 @@ class lattice:
         '''
 
         self.pE = pE
-        file_name = "./errors/L" + str(self.size) + "_erasure_error.csv"
+
+        if filetimestamp is None:
+
+            # Generate erasure errors
+            erasures = [1 if random.random() < self.pE else 0 for _ in range(self.num_stab)]
+
+            # Increase error size, make blob
+            for id in [id for id, erasure in enumerate(erasures) if erasure == 1]:
+                for qA in self.edge_data[id][5]:
+                    erasures[qA] = 1
+                for qB in self.edge_data[id][7]:
+                    erasures[qB] = 1
 
 
-        # Generate erasure errors
-        erasures = [1 if random.random() < self.pE else 0 for _ in range(self.num_stab)]
+            # Uniform I, X, Y, Z
+            for id in [id for id, erasure in enumerate(erasures) if erasure == 1]:
+                rand = random.random()
+                if rand < 0.25:
+                    erasures[id] = 2
+                elif rand >= 0.25 and rand < 0.5:
+                    erasures[id] = 3
+                elif rand >= 0.5 and rand < 0.75:
+                    erasures[id] = 4
 
-        # Increase error size, make blob
-        for id in [id for id, erasure in enumerate(erasures) if erasure == 1]:
-            for qA in self.qubit_data[id][5]:
-                erasures[qA] = 1
-            for qB in self.qubit_data[id][7]:
-                erasures[qB] = 1
+            if savefile:
+                self.print_errors(erasures, "Erasure", pE)
 
-
-        # Uniform I, X, Y, Z
-        for id in [id for id, erasure in enumerate(erasures) if erasure == 1]:
-            rand = random.random()
-            if rand < 0.25:
-                erasures[id] = 2
-            elif rand >= 0.25 and rand < 0.5:
-                erasures[id] = 3
-            elif rand >= 0.5 and rand < 0.75:
-                erasures[id] = 4
+        else:
+            erasures = self.read_errors("Erasure", filetimestamp)
 
         # if self.plot_load:   self.LP.plot_erasures(self.erasures)
 
@@ -244,12 +310,11 @@ class lattice:
             if erasure in [3, 4]:
                 self.array[id + self.num_stab] = not self.array[id + self.num_stab]
 
-        self.er_loc.sort()
         self.er_loc = tuple(self.er_loc)
 
 
 
-    def init_pauli(self, pX = 0.1, pZ=0.1):
+    def init_pauli(self, pX=0.1, pZ=0.1, savefile=True, filetimestamp=None):
 
         '''
         :param pX:                      probability of X error
@@ -261,21 +326,28 @@ class lattice:
 
         self.pX = pX
         self.pZ = pZ
-        X_name = "./errors/L" + str(self.size) + "_X_pauli_error.csv"
-        Z_name = "./errors/L" + str(self.size) + "_Z_pauli_error.csv"
 
-        # Generate X and Z errors or load from previous
-        eX = [iX for iX in range(self.num_stab) if random.random() < self.pX]
-        eZ = [iZ for iZ in range(self.num_stab) if random.random() < self.pZ]
+        if filetimestamp is None:
+            eX = [True if random.random() < self.pX else False for _ in range(self.num_stab)]
+            eZ = [True if random.random() < self.pZ else False for _ in range(self.num_stab)]
+            if savefile:
+                self.print_errors(eX, "Pauli-X", pX)
+                self.print_errors(eZ, "Pauli-Z", pZ)
+        else:
+            eX = self.read_errors("Pauli-X", filetimestamp)
+            eZ = self.read_errors("Pauli-Z", filetimestamp)
 
         # Apply pauli errors to array
-        for iX in eX:
-            self.array[iX] = not self.array[iX]
-        for iZ in eZ:
-            self.array[iZ + self.num_stab] = not self.array[iZ + self.num_stab]
+        for id, iX in enumerate(eX):
+            if iX:
+                self.array[id] = not self.array[id]
+        for id, iZ in enumerate(eZ):
+            if iZ:
+                self.array[id + self.num_stab] = not self.array[id + self.num_stab]
 
 
-        if self.plot_load: self.LP.plot_errors(self.array)
+        if self.plot_load:
+            self.LP.plot_errors(self.array)
 
     def measure_stab(self):
         '''
@@ -292,14 +364,13 @@ class lattice:
 
             # Flip value of stabilizer measurement
             for qID in stabilizer[4]:
-                if self.array[qID] == False:
+                if not self.array[qID]:
                     stab_measurement[sID] = not stab_measurement[sID]
 
+        self.qua_loc = tuple([sID for sID, stab in enumerate(stab_measurement) if not stab])
 
-
-        self.qua_loc = [sID for sID, stab in enumerate(stab_measurement) if stab == False]
-
-        if self.plot_load:  self.LP.plot_anyons(self.qua_loc)
+        if self.plot_load:
+            self.LP.plot_anyons(self.qua_loc)
 
     def get_matching_peeling(self):
         '''
@@ -310,21 +381,17 @@ class lattice:
         PL = pel.toric(self)
         PL.find_clusters()
         PL.grow_clusters()
-        # PL.init_trees()
-        # PL.peel_trees()
-        # matching = PL.match_to_loc()
-        #
-        # flips = []
-        # for ertype in range(2):
-        #     for vertice in matching[ertype]:
-        #         td = vertice[0]
-        #         y  = vertice[1]
-        #         x  = vertice[2]
-        #         loc = (ertype, td, y, x)
-        #         self.array[ertype][td][y][x] = not self.array[ertype][td][y][x]
-        #         flips.append(loc)
-        #
-        # if self.plot_load: self.LP.plot_final(flips, self.array)
+        PL.init_trees()
+        PL.peel_trees()
+        matching = PL.return_matching()
+
+
+        for id in matching:
+
+            self.array[id] = not self.array[id]
+
+        if self.plot_load:
+            self.LP.plot_final(matching, self.array)
 
     def get_matching_MWPM(self):
         '''
@@ -334,7 +401,6 @@ class lattice:
 
         qua_loc = (tuple([qua for qua in self.qua_loc if qua < self.size**2]), tuple([qua for qua in self.qua_loc if qua >= self.size**2]))
         N_qua = (len(qua_loc[0]), len(qua_loc[1]))
-        N_syn = (N_qua[0]/2, N_qua[1]/2)
 
         self.results = []
         self.flips = []
@@ -361,7 +427,7 @@ class lattice:
             output = pm.getMatching(N_qua[ertype], edges) if N_qua[ertype] != 0 else []
 
             # Save results to same format as self.syn_inf
-            matching_pairs=[[i,output[i]] for i in range(N_qua[ertype]) if output[i]>i]
+            matching_pairs = [[i, output[i]] for i in range(N_qua[ertype]) if output[i] > i]
 
             '''
             Finds the qubits that needs to be flipped in order to correct the errors
@@ -416,8 +482,10 @@ class lattice:
             self.array[id] = not self.array[id]
 
 
-        if self.plot_load: self.LP.plot_lines(self.results)
-        if self.plot_load: self.LP.plot_final(self.flips, self.array)
+        if self.plot_load:
+            self.LP.plot_lines(self.results)
+        if self.plot_load:
+            self.LP.plot_final(self.flips, self.array)
 
     def logical_error(self):
 
@@ -444,8 +512,8 @@ class lattice:
                 line1 = "  "
                 line2 = ""
                 for x in range(self.size):
-                    str1 = "O" if self.array[ertype*self.num_stab + y*self.size*2 + x*2] == True else Ername[ertype]
-                    str2 = "O" if self.array[ertype*self.num_stab + y*self.size*2 + x*2 + 1] == True else Ername[ertype]
+                    str1 = "O" if self.array[ertype*self.num_stab + y*self.size*2 + x*2] else Ername[ertype]
+                    str2 = "O" if self.array[ertype*self.num_stab + y*self.size*2 + x*2 + 1] else Ername[ertype]
                     line1 += str1 + "   "
                     line2 += str2 + "   "
                 print(line1)
@@ -460,7 +528,7 @@ class lattice:
         base = 0
         for ertype in range(2):
             for y in range(self.size):
-                print([0 if x in [False, 0] else 1 for x in LL2_array[base : base + self.size]])
+                print([0 if x in [False, 0] else 1 for x in LL2_array[base: base + self.size]])
                 base += self.size
 
 

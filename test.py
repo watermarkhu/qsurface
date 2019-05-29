@@ -2,36 +2,33 @@
 # import run_multiple
 import toric_lat as tl
 
-size = 12
-pX = 0.05
-pZ = 0.05
-pE = 0.03
+size = 10
+pX = 0.08
+pZ = 0.08
+pE = 0.00
 iters = 2
 
 load_plot = True
-new_errors = False
-write_errors = True
+save_file = False
+time_stamp = None
 
-# output = run_single.toric_2D_MWPM(size, pX, pZ, new_errors, write_errors, load_plot)
-# output = run_single.toric_2D_peeling(size, pE, pX, pZ, new_errors, write_errors, load_plot)
-# output = run_single.planar_2D_MWPM(size, pX, pZ, new_errors, write_errors, load_plot)
-
-
-# output = run_multiple.toric_2D_MWPM(size, pX, pZ, iters, new_errors, write_errors, load_plot)
-# output = run_multiple.toric_2D_peeling(size, pE, pX, pZ, iters, new_errors, write_errors, load_plot)
-# output = run_multiple.planar_2D_MWPM(size, pX, pZ, iters, new_errors, write_errors, load_plot)
-
-# print(output)
+# output = run_single.toric_2D_MWPM(size, pX, pZ, save_file, time_stamp, load_plot)
+# output = run_single.toric_2D_peeling(size, pE, pX, pZ, save_file, time_stamp, load_plot)
+# output = run_single.planar_2D_MWPM(size, pX, pZ, save_file, time_stamp, load_plot)
+#
+# output = run_multiple.toric_2D_MWPM(size, pX, pZ, iters, save_file, time_stamp, load_plot)
+# output = run_multiple.toric_2D_peeling(size, pE, pX, pZ, iters, save_file, time_stamp, load_plot)
+# output = run_multiple.planar_2D_MWPM(size, pX, pZ, iters, save_file, time_stamp, load_plot)
 
 
 TL = tl.lattice(size, load_plot)
 TL.init_data()
 TL.init_plots()
-TL.init_erasure(pE)
-TL.init_pauli(pX, pZ)
+TL.init_erasure(pE, savefile=save_file, filetimestamp=time_stamp)
+TL.init_pauli(pX, pZ, savefile=save_file, filetimestamp=time_stamp)
 TL.measure_stab()
 TL.get_matching_peeling()
 # TL.get_matching_MWPM()
-# logical_error = TL.logical_error()
-# correct = True if logical_error == [False, False, False, False] else False
-# print(correct)
+logical_error = TL.logical_error()
+correct = True if logical_error == [False, False, False, False] else False
+print(correct)

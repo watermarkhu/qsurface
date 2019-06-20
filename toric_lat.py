@@ -6,6 +6,7 @@ import random
 import toric_plot2 as tp
 import blossom5.pyMatch as pm
 import peeling as pel
+import graph_objects as GO
 
 
 class lattice:
@@ -29,7 +30,6 @@ class lattice:
 
         self.array stores the qubit values and has dimension [XZ_error{0,1}, Top_down{0,1}, size, size]
         Qubit values are either 0 or 1, which is analogous to the -1, and 1 state, respectively
-
         '''
         self.size = size
         self.plot_load = plot_load
@@ -84,15 +84,48 @@ class lattice:
         qubit_list = []
         stab_list = []
 
+        qubitlist = []
+
+        self.G = GO.Graph(None,None,None)
+
         for ertype in range(2):
             for y in range(self.size):
                 for x in range(self.size):
                     stab_list.append([ertype, y, x])
+
+                    self.G.add_vertex((ertype, y, x))
+
                     for td in range(2):
                         qubit_list.append([ertype, y, x, td])
 
+                        qubitlist.append((ertype, y, x, td))
+
         neighbor_list = []
         qubit_stab_list = []
+
+
+        for (ertype, y, x, td) in qubitlist:
+            qID = (ertype, y, x, td)
+            if ertype == 0 and td == 0:
+                VL_sID = (ertype, y, x)
+                VR_sID = (ertype, y, (x + 1) % self.size)
+                self.G.add_edge(qID, VL_sID, VR_sID, 'H')
+            elif ertype == 1 and td == 1:
+                VL_sID = (ertype, y, (x - 1) % self.size)
+                VR_sID = (ertype, y, x)
+                self.G.add_edge(qID, VL_sID, VR_sID, 'H')
+            elif ertype == 0 and td == 1:
+                VU_sID = (ertype, y, x)
+                VD_sID = (ertype, (y + 1) % self.size, x)
+                self.G.add_edge(qID, VU_sID, VD_sID, 'V')
+            elif ertype == 1 and td == 0:
+                VU_sID = (ertype, (y - 1) % self.size, x)
+                VD_sID = (ertype, y, x)
+                self.G.add_edge(qID, VU_sID, VD_sID, 'V')
+
+
+
+
 
         for (ertype, y, x, td) in qubit_list:
 
@@ -183,6 +216,14 @@ class lattice:
         # print(self.log_data)
 
         return (self.edge_data, self.stab_data, self.log_data)
+
+    def load_data(self, edge_data, stab_data, log_data):
+        '''
+        loads the data structures initialezed in init_edge_data
+        '''
+        self.edge_data = edge_data
+        self.stab_data = stab_data
+        self.log_data = log_data
 
     def init_plots(self):
         # Initiate plot

@@ -1,47 +1,32 @@
-import surface_run
+import run_multiple
 from matplotlib import pyplot as plt
 import numpy as np
 
-
-loadplot = False
-new_errors = True
-write_errors = False
 save_result = True
 
 
-lattice = "Toric"
-lattices = [8, 12, 16]
-p =  list(np.linspace(0.09, 0.11,9))
-Num = 20000
+file_name = "Peeling_toric_only_pX"
+plot_name = "Peeling decoder toric lattice with only Pauli error"
+lattices = [8, 12, 16, 20]
+p = list(np.linspace(0.09, 0.11, 9))
+Num = 30000
 
 
-thresholds = np.zeros((len(lattices),len(p)))
+thresholds = np.zeros((len(lattices), len(p)))
 X = np.linspace(p[0], p[-1], 100)
-f  = plt.figure()
+f = plt.figure()
 
 for lati in range(len(lattices)):
     for pi in range(len(p)):
 
-        print("Calculating for L = ",str(lattices[lati]), "and p =", str(p[pi]))
-        no_error_num = 0
-        for i in range(Num):
+            print("Calculating for L = ", str(lattices[lati]), "and p =", str(p[pi]))
 
-            if i % 1000 == 0: print("Iteration", str(i), ": ")
-
-            if lattice in ["Toric", "toric", "T", "t"]:
-                correct = surface_run.toric_2D(laticces[lati], p[pi], 0)
-            elif lattice in ["Planar", "planar", "P", "p"]:
-                correct = surface_run.planar_2D(lattices[lati], p[pi], 0)
-            else:
-                exit("Not correct lattice")
-
-            if correct: no_error_num += 1
-
-        thresholds[lati, pi] = no_error_num / Num * 100
+            N_succes = run_multiple.toric_2D_peeling(lattices[lati], 0, p[pi], 0, Num)
+            thresholds[lati, pi] = N_succes / Num * 100
 
     if save_result:
-        Name = "./data/" + lattice + "_Thres_L" + str(lattices[lati]) + "_N" + str(Num) + ".txt"
-        np.savetxt(Name, thresholds[lati,:])
+        Name = "./data/" + file_name + "_Thres_L" + str(lattices[lati]) + "_N" + str(Num) + ".txt"
+        np.savetxt(Name, thresholds[lati, :])
 
     fit = np.polyfit(p, thresholds[lati, :], 2)
     polyfit = np.poly1d(fit)
@@ -51,11 +36,13 @@ for lati in range(len(lattices)):
 
 print(thresholds)
 
-plt.title(lattice +" Performance")
+plt.title(plot_name + " Performance")
 plt.xlabel("p (%)")
 plt.ylabel("Decoding success rate (%)")
 plt.legend()
 plt.show()
 
-fname = "./figures/" + lattice + "_thres_N" + str(Num) + ".pdf"
-f.savefig(fname, transparent = True, format = "pdf", bbox_inches="tight")
+
+if save_result:
+    fname = "./figures/" + file_name + "_thres_N" + str(Num) + ".pdf"
+    f.savefig(fname, transparent=True, format="pdf", bbox_inches="tight")

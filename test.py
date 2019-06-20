@@ -1,12 +1,12 @@
-# import run_single
-# import run_multiple
+import run_single
+import run_multiple
 import toric_lat as tl
 
-size = 10
-pX = 0.08
-pZ = 0.08
+size = 6
+pX = 0.05
+pZ = 0.00
 pE = 0.00
-iters = 2
+iters = 4
 
 load_plot = True
 save_file = False
@@ -19,6 +19,11 @@ time_stamp = None
 # output = run_multiple.toric_2D_MWPM(size, pX, pZ, iters, save_file, time_stamp, load_plot)
 # output = run_multiple.toric_2D_peeling(size, pE, pX, pZ, iters, save_file, time_stamp, load_plot)
 # output = run_multiple.planar_2D_MWPM(size, pX, pZ, iters, save_file, time_stamp, load_plot)
+
+# print(output)
+
+
+
 
 
 TL = tl.lattice(size, load_plot)

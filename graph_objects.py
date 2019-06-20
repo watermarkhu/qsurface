@@ -40,15 +40,25 @@ class Graph(object):
         '''Adds a cluster with cluster ID number cID'''
         self.C[cID] = Cluster(cID)
 
-    def add_vertex(self, sID, y, x, anyon):
+    def add_vertex(self, sID):
         '''Adds a vertex with vertex ID number sID'''
-        self.V[sID] = Vertex(sID, y, x, anyon)
+        self.V[sID] = Vertex(sID)
 
-    def add_edge(self, qID, sID1, sID2):
+    def add_edge(self, qID, sIDlu, sIDrd, orientation):
         '''Adds an edge with edge ID number qID with pointers to vertices. Also adds pointers to this edge on the vertices. '''
-        V1 = self.V[sID1]
-        V2 = self.V[sID2]
-        self.E[qID] = Edge(qID, V1, V2)
+        V1 = self.V[sIDlu]
+        V2 = self.V[sIDrd]
+        E = Edge(qID, V1, V2)
+        self.E[qID] = E
+
+        if orientation == 'H':
+            V1.neighbors['r'] = (V2, E)
+            V2.neighbors['l'] = (V1, E)
+        elif orientation == 'V':
+            V1.neighbors['d'] = (V2, E)
+            V2.neighbors['u'] = (V1, E)
+
+
 
     def stab_add_neigbors(self, base_sID, cID):
 
@@ -77,12 +87,11 @@ class Graph(object):
 
             if qID in self.er_loc:
 
+                self.C[cID].add_vertex(self.V[grow_sID])
                 self.C[cID].add_edge(self.V[base_sID], self.V[grow_sID], self.E[qID])
 
                 if grow_sID not in self.C[cID].V:
                     new_stabs.append(grow_sID)
-                self.C[cID].add_vertex(self.V[grow_sID])
-
             else:
                 self.C[cID].add_bound(self.V[base_sID], self.E[qID], self.V[grow_sID])
 
@@ -208,10 +217,13 @@ class Vertex(object):
                     Value:  Edge object
     '''
 
-    def __init__(self, sID, y, x, anyon):
+    def __init__(self, sID):
+        # fixed paramters
         self.sID = sID
-        self.loc = (y, x)
-        self.anyon = anyon
+        self.neighbors = {}
+
+        # iteration parameters
+        self.anyon = False
         self.cluster = None
         self.points_to = {}
         self.tree = False
@@ -232,8 +244,11 @@ class Edge(object):
     '''
 
     def __init__(self, qID, V1, V2):
+        # fixed parameters
         self.qID = qID
-        # self.halves = {V1.sID: Half_edge(V1), V2.sID: Half_edge(V2)}
+        self.opposite = {V1: V2, V2: V1}
+
+        # iteration parameters
         self.halves = {V1: None, V2: None}
         self.cluster = None
         self.tree = False
@@ -241,3 +256,71 @@ class Edge(object):
 
     def __repr__(self):
         return "E" + str(self.qID)
+
+
+class minbidict(dict):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.inverse = {}
+        self.seclist = {}
+        self.minlist = []
+        self.min_ind = -1
+
+        for key, value in self.items():
+            self.inverse.setdefault(value, []).append(key)
+            self.seclist.__setitem__(key, True)
+            if self.minlist != []:
+                self.insert_value(value)
+            else:
+                self.minlist = [value]
+
+    def __setitem__(self, key, value):
+        if key in self:
+            if self[key] == self.minlist[-1]:
+                self.minlist.pop()
+            else:
+                print("Not minimal value selected")
+            self.inverse[self[key]].remove(key)
+            if self.inverse[self[key]] == []:
+                del self.inverse[self[key]]
+
+        self.insert_value(value)
+
+        super().__setitem__(key, value)
+        self.inverse.setdefault(value, []).append(key)
+
+    def __delitem__(self, key):
+        value = self[key]
+        if value == self.minlist[-1]:
+            self.minlist.pop()
+        else:
+            print("Not minimal value selected")
+
+        self.inverse.setdefault(self[key], []).remove(key)
+        if self[key] in self.inverse and not self.inverse[self[key]]:
+            del self.inverse[self[key]]
+        super().__delitem__(key)
+
+    def min_keys(self):
+
+
+        min_val = self.minlist[self.min_ind]
+        while min_val not in self.inverse:
+            self.minlist.pop(self.min_ind)
+            min_val = self.minlist[self.min_ind]
+
+        return self.inverse[min_val]
+
+    def insert_value(self, value):
+        if value <= self.minlist[-1]:
+            self.minlist.append(value)
+        elif value >= self.minlist[0]:
+            self.minlist.insert(0, value)
+        else:
+            ma = self.minlist[0]
+            mi = self.minlist[-1]
+            pos_ind = len(self.minlist) - 1
+
+            ind = pos_ind - round((value - mi + 1)/(ma - mi)*pos_ind) + 1
+            self.minlist.insert(ind, value)

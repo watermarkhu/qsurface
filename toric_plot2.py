@@ -7,7 +7,7 @@ class lattice_plot:
 
     def __init__(self, size, edge_data, stab_data):
 
-        self.plot_base = False
+        self.plot_base = True
         self.plot_error = True
         self.plot_syndrome = True
         self.plot_matching = True
@@ -38,6 +38,7 @@ class lattice_plot:
         # Initiate figure
         self.f = plt.figure(1, figsize=(10, 10))
         plt.ion()
+        plt.cla()
         plt.show()
         self.ax = self.f.gca()
 

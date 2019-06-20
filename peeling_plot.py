@@ -32,6 +32,7 @@ class toric_peeling_plot:
         ax.change_geometry(1, 2, 1)
 
         self.ax = figure.add_subplot(1, 2, 2)
+        self.ax.cla()
         self.ax.invert_yaxis()
         self.ax.set_aspect('equal')
 
@@ -167,7 +168,7 @@ class toric_peeling_plot:
 
 
     def draw_plot(self, txt):
-        
+
         plt.draw()
         if self.plotstep_click:
             self.waitforkeypress(txt)

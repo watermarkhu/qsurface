@@ -363,29 +363,22 @@ class toric:
         weighted_growth = True
 
         grow_cID = []
+        grow_size = []
+
+
+        for cID, parentcID in enumerate(self.G.cluster_index):
+            if cID == parentcID:
+                cluster = self.G.C[cID]
+
+                if cluster.parity % 2 == 1:
+                    grow_cID.append(cID)
+                    grow_size.append(cluster.size)
 
         if weighted_growth:
+            if grow_cID != []:
+                minsize = min(grow_size)
+                grow_cID = [cID for cID, size in zip(grow_cID, grow_size) if size == minsize]
 
-            valid_cID = []
-            valid_size = []
-
-            for cID, parentcID in enumerate(self.G.cluster_index):
-                if cID == parentcID:
-                    cluster = self.G.C[cID]
-
-                    if cluster.parity % 2 == 1:
-                        valid_cID.append(cID)
-                        valid_size.append(cluster.size)
-
-                if valid_cID != []:
-                    minsize = min(valid_size)
-                    grow_cID = [cID for cID, size in zip(valid_cID, valid_size) if size == minsize]
-        else:
-            for cID, parentcID in enumerate(self.G.cluster_index):
-                if cID == parentcID:
-                    cluster = self.G.C[cID]
-                    if cluster.parity % 2 == 1:
-                        grow_cID.append(cID)
 
         return grow_cID
 
@@ -484,19 +477,19 @@ class toric:
 
                             grow_cluster = self.G.C[self.G.cluster_index_tree(grow_cluster_cID)]
 
+                            cluster.E[edge.qID] = edge
+                            edge.cluster = cluster.cID
+                            base_vertex.points_to[grow_vertex] = edge
+                            grow_vertex.points_to[base_vertex] = edge
+
                             if grow_cluster is not cluster:
 
-                                cluster.E[edge.qID] = edge
-                                base_vertex.points_to[grow_vertex] = edge
-                                grow_vertex.points_to[base_vertex] = edge
-
-                                rem_bounds.append((edge, grow_cluster))
+                                rem_bounds.append((edge, cluster, grow_cluster))
 
                                 if cluster.size >= grow_cluster.size:
                                     merge_list.append((cID, grow_cluster.cID))
                                 else:
                                     merge_list.append((grow_cluster.cID, cID))
-
 
                     else:
                         '''
@@ -532,10 +525,10 @@ class toric:
                 '''
                 3.  Remove merged boundaries from merge actions of step 1
                 '''
-                for edge, grow_cluster in rem_bounds:
+                for edge, clusterA, clusterB in rem_bounds:
 
-                    cluster.rem_bound(edge)
-                    grow_cluster.rem_bound(edge)
+                    clusterA.rem_bound(edge)
+                    clusterB.rem_bound(edge)
 
                 '''
                 4.  Remove old boundaries and add new boundaries for fully grown edges

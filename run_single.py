@@ -10,11 +10,9 @@ import st
 
 
 
-def toric_2D_MWPM(size, pX, pZ, savefile=False, time_stamp=None, load_plot=False):
-    TL = tl.lattice(size, load_plot)
-    TL.init_data()
-    TL.init_plots()
-    TL.init_pauli(pX, pZ, savefile, time_stamp)
+def toric_2D_MWPM(size, pX, pZ, savefile=False, pauli_file=None, plot_load=False):
+    TL = tl.lattice(size, pauli_file, None, plot_load)
+    TL.init_pauli_errors(pX, pZ, savefile)
     TL.measure_stab()
     TL.get_matching_MWPM()
     logical_error = TL.logical_error()
@@ -22,12 +20,10 @@ def toric_2D_MWPM(size, pX, pZ, savefile=False, time_stamp=None, load_plot=False
     return correct
 
 
-def toric_2D_peeling(size, pE, pX=0, pZ=0, savefile=False, time_stamp=None, load_plot=False):
-    TL = tl.lattice(size, load_plot)
-    TL.init_data()
-    TL.init_plots()
-    TL.init_erasure(pE, savefile, time_stamp)
-    TL.init_pauli(pX, pZ, savefile, time_stamp)
+def toric_2D_peeling(size, pE, pX=0, pZ=0, savefile=False, erasure_file=None, pauli_file=None, plot_load=False):
+    TL = tl.lattice(size, pauli_file, erasure_file, plot_load)
+    TL.init_erasure_errors_region(pE, savefile)
+    TL.init_pauli_errors(pX, pZ, savefile)
     TL.measure_stab()
     TL.get_matching_peeling()
     logical_error = TL.logical_error()
@@ -35,11 +31,9 @@ def toric_2D_peeling(size, pE, pX=0, pZ=0, savefile=False, time_stamp=None, load
     return correct
 
 
-def planar_2D_MWPM(size, pX, pZ, savefile=False, time_stamp=None, load_plot=False):
-    PL = pl.lattice(size, load_plot)
-    PL.init_data()
-    PL.init_plots()
-    PL.init_pauli(pX, pZ, savefile, time_stamp)
+def planar_2D_MWPM(size, pX, pZ, savefile=False, pauli_file=None, plot_load=False):
+    PL = pl.lattice(size, pauli_file, None, plot_load)
+    PL.init_pauli_errors(pX, pZ, savefile)
     PL.measure_stab()
     PL.get_matching_MWPM()
     logical_error = PL.logical_error()

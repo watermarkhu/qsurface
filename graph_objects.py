@@ -20,10 +20,10 @@ class Graph(object):
         self.C = {}
         self.V = {}
         self.E = {}
-        self.stab_data = stab_data
-        self.er_loc = er_loc
-        self.qua_loc = qua_loc
+        self.wind = ("u", "d", "l", "r")
+
         self.cluster_index = []
+
 
     def __repr__(self):
 
@@ -58,12 +58,10 @@ class Graph(object):
             V1.neighbors['d'] = (V2, E)
             V2.neighbors['u'] = (V1, E)
 
-
-
-    def stab_add_neigbors(self, base_sID, cID):
+    def cluster_new_vertex(self, cID, vertex):
 
         '''
-        :param base_sID         ID number of the stab/vertex
+        :param vertex           vertex that is recently added to the cluster
         :param cID              ID number of the current cluster
 
         For a given sID vertex, this function finds the neighboring edges and vertices that are in the the currunt cluster. Any new vertex or edge will be added to the graph. If the newly found edge is part of the erasure, the edge and the corresponding vertex will be added to the cluster, otherwise it will be added to the boundary. If a vertex is an anyon, its property and the parity of the cluster will be updated accordingly.
@@ -71,31 +69,28 @@ class Graph(object):
 
         '''
 
-        new_stabs = []
+        cluster = self.C[cID]
+        new_vertices = []
 
-        for grow_sID, qID in zip(self.stab_data[base_sID][3], self.stab_data[base_sID][4]):
+        for wind in self.wind:
+            if wind in vertex.neighbors:
+                (new_vertex, new_edge) = vertex.neighbors[wind]
+                if new_edge.erasure:
+                    cluster.add_edge(vertex, new_vertex, new_edge)
+                    if new_vertex.sID not in cluster.V:
+                        cluster.add_vertex(new_vertex)
+                        new_vertices.append(new_vertex)
+                else:
+                    if new_edge.erasure:
+                        cluster.add_edge(vertex, new_vertex, new_edge)
+                        cluster.add_vertex(new_vertex)
+                        new_vertices += self.cluster_new_vertex(cID, new_vertex)
+                    else:
+                        cluster.add_bound(vertex, new_edge, new_vertex)
 
-            if grow_sID not in self.V:
-                anyon = True if grow_sID in self.qua_loc else False
 
-                (y, x) = self.stab_data[grow_sID][1:3]
-                self.add_vertex(grow_sID, y, x, anyon)
-                self.add_edge(qID, base_sID, grow_sID)
-            else:
-                if qID not in self.E:
-                    self.add_edge(qID, base_sID, grow_sID)
+        return new_vertices
 
-            if qID in self.er_loc:
-
-                self.C[cID].add_vertex(self.V[grow_sID])
-                self.C[cID].add_edge(self.V[base_sID], self.V[grow_sID], self.E[qID])
-
-                if grow_sID not in self.C[cID].V:
-                    new_stabs.append(grow_sID)
-            else:
-                self.C[cID].add_bound(self.V[base_sID], self.E[qID], self.V[grow_sID])
-
-        return(new_stabs)
 
     def merge_clusters(self, bcID, scID):
         '''Merges two clusters'''
@@ -118,6 +113,13 @@ class Graph(object):
             while cID != self.cluster_index[cID]:
                 cID = self.cluster_index[cID]
         return cID
+
+    def reset(self):
+        self.C = {}
+        for edge in self.E.values():
+            edge.reset()
+        for vertex in self.V.values():
+            vertex.reset()
 
 
 
@@ -159,7 +161,7 @@ class Cluster(object):
         '''Adds a vertex to a cluster. Also update cluster value of this vertex.'''
         if vertex.sID not in self.V:
             self.size += 1
-            if vertex.anyon:
+            if vertex.state:
                 self.parity += 1
         self.V[vertex.sID] = vertex
         vertex.cluster = self.cID
@@ -223,13 +225,20 @@ class Vertex(object):
         self.neighbors = {}
 
         # iteration parameters
-        self.anyon = False
+        self.state = False
         self.cluster = None
         self.points_to = {}
         self.tree = False
 
     def __repr__(self):
-        return "V" + str(self.sID)
+        type = "X" if self.sID[0] == 0 else "Z"
+        return "v" + type + str(self.sID[1:])
+
+    def reset(self):
+        self.state = False
+        self.cluster = None
+        self.points_to = {}
+        self.tree = False
 
 
 class Edge(object):
@@ -246,16 +255,35 @@ class Edge(object):
     def __init__(self, qID, V1, V2):
         # fixed parameters
         self.qID = qID
-        self.opposite = {V1: V2, V2: V1}
+        self.vertices = (V1, V2)
 
         # iteration parameters
+        self.state = False
+        self.erasure = False
         self.halves = {V1: None, V2: None}
         self.cluster = None
         self.tree = False
         self.peeled = False
+        self.matching = False
 
     def __repr__(self):
-        return "E" + str(self.qID)
+        if self.qID[0] == 0:
+            errortype = "X"
+            edgetype = "-" if self.qID[3] == 0 else "|"
+        else:
+            errortype = "Z"
+            edgetype = "|" if self.qID[3] == 0 else "-"
+        return "e" + errortype + edgetype + str(self.qID[1:3])
+
+    def reset(self):
+        self.state = False
+        self.erasure = False
+        self.halves[self.vertices[0]] = None
+        self.halves[self.vertices[1]] = None
+        self.cluster = None
+        self.tree = False
+        self.peeled = False
+        self.matching = False
 
 
 class minbidict(dict):

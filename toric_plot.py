@@ -1,351 +1,264 @@
 from matplotlib import pyplot as plt
-from PIL import Image,ImageDraw,ImageFont
-import os
-import copy
-import numpy as np
-import cv2
+from matplotlib.lines import Line2D
+import random
 
 
-class plotlattice:
-
-    def makebaseimage(self, input_size=13):
-
-        qubit_size = (input_size - input_size % 4) + 1
-        self.baseL = 2 * qubit_size + 2
-        self.vecL = int((qubit_size - 1) / 2 + 1)
-        self.erL = self.vecL - 2
-
-        gray = 150
-        w = 1
-
-        im = np.ones((self.baseL, self.baseL, 3), np.uint8) * 255
-        im = cv2.line(im, (self.vecL, 0), (self.vecL, qubit_size + 1), (gray, gray, gray), w)
-        im = cv2.line(im, (0, self.vecL), (qubit_size + 1, self.vecL), (gray, gray, gray), w)
-        im = cv2.circle(im, (self.vecL, qubit_size + self.vecL + 1), self.vecL - 1, (0, 0, 0), w)
-        im = cv2.circle(im, (qubit_size + self.vecL + 1, self.vecL), self.vecL - 1, (0, 0, 0), w)
-
-        self.base = im
-
-        p = qubit_size + 2
-        mid = qubit_size + self.vecL + 1
-        while p < self.baseL:
-            im[mid, p, :] = gray
-            im[p, mid, :] = gray
-            p += 2
-
-        half = int(self.erL / 2)
-        end = self.erL - 1
-
-        self.Xer = np.ones((self.erL, self.erL, 3), np.uint8) * 255
-        self.Xer = cv2.line(self.Xer, (0, 0), (end, end), (0, 0, 0), w)
-        self.Xer = cv2.line(self.Xer, (0, end), (end, 0), (0, 0, 0), w)
-
-        self.Zer = np.ones((self.erL, self.erL, 3), np.uint8) * 255
-        self.Zer = cv2.line(self.Zer, (0, 0), (end, 0), (0, 0, 0), w)
-        self.Zer = cv2.line(self.Zer, (0, end), (end, 0), (0, 0, 0), w)
-        self.Zer = cv2.line(self.Zer, (0, end), (end, end), (0, 0, 0), w)
-
-        self.Yer = np.ones((self.erL, self.erL, 3), np.uint8) * 255
-        self.Yer = cv2.line(self.Yer, (half, half), (half, end), (0, 0, 0), w)
-        self.Yer = cv2.line(self.Yer, (half, half), (0, 0), (0, 0, 0), w)
-        self.Yer = cv2.line(self.Yer, (half, half), (end, 0), (0, 0, 0), w)
-
-        self.Xerr = np.ones((self.erL, self.erL, 3), np.uint8) * 255
-        self.Xerr = cv2.line(self.Xerr, (0, 0), (end, end), (255, 0, 0), w)
-        self.Xerr = cv2.line(self.Xerr, (0, end), (end, 0), (255, 0, 0), w)
-
-        self.Zerr = np.ones((self.erL, self.erL, 3), np.uint8) * 255
-        self.Zerr = cv2.line(self.Zerr, (0, 0), (end, 0), (255, 0, 0), w)
-        self.Zerr = cv2.line(self.Zerr, (0, end), (end, 0), (255, 0, 0), w)
-        self.Zerr = cv2.line(self.Zerr, (0, end), (end, end), (255, 0, 0), w)
-
-        self.Yerr = np.ones((self.erL, self.erL, 3), np.uint8) * 255
-        self.Yerr = cv2.line(self.Yerr, (half, half), (half, end), (255, 0, 0), w)
-        self.Yerr = cv2.line(self.Yerr, (half, half), (0, 0), (255, 0, 0), w)
-        self.Yerr = cv2.line(self.Yerr, (half, half), (end, 0), (255, 0, 0), w)
+class lattice_plot:
 
 
-    def __init__(self,size = 10):
+    def __init__(self, size, graph):
 
-
-        self.base_image_size = 17
-        self.plot_indices = False
-        self.plot_lattice = True
+        self.plot_base = False
         self.plot_error = True
         self.plot_syndrome = True
         self.plot_matching = True
+        self.plot_correction = True
+        self.plot_result = True
         self.size = size
-        self.makebaseimage()
+        self.G = graph
 
-        self.latticeL = self.baseL*size
-        self.lattice = np.tile(self.base,[size,size,1])
-        self.l1 = int(((self.baseL-2)/2 - self.erL)/2 + 1)
-        self.l2 = int(self.baseL/2 + self.l1)
+        self.qsize = 0.5
+        self.qsize2 = 0.25
+        self.qsizeE = 0.7
+        self.lw = 3
+        self.slw = 2
 
-        if os.name == "windows":
-            self.fnt = ImageFont.truetype("arial.ttf", 10, encoding="unic")
-        elif os.name == "posix":
-            self.fnt = ImageFont.truetype("/usr/share/fonts/truetype/freefont/FreeSans.ttf")
-        else:
-            print("Error: unknown os")
-            return
+        # Define colors
+        self.cw = [1, 1, 1]
+        self.cl = [0.8, 0.8, 0.8]       # Line color
+        self.cc = [0.2, 0.2, 0.2]       # Qubit color
+        self.cx = [0.9, 0.3, 0.3]       # X error color
+        self.cz = [0.5, 0.5, 0.9]       # Z error color
+        self.cy = [0.9, 0.9, 0.5]       # Y error color
+        self.cX = [0.9, 0.7, 0.3]       # X quasiparticle color
+        self.cZ = [0.3, 0.9, 0.3]       # Z quasiparticle color
+        self.cE = [0.3, 0.5, 0.9]       # Erasure color
 
 
-        # if self.plot_lattice:
-            # plt.imshow(self.lattice)
-            # plt.show()
-
-        self.cl = [0.8, 0.8, 0.8]
-        self.cc = [0.2, 0.2, 0.2]
-        self.cx = [0.9, 0.3, 0.3]
-        self.cz = [0.3, 0.9, 0.3]
-        self.cy = [0.9, 0.9, 0.3]
-
-        self.f = plt.figure(1, figsize = (12, 12))
+        # Initiate figure
+        self.f = plt.figure(1, figsize=(10, 10))
         plt.ion()
+        plt.cla()
         plt.show()
+        plt.axis('off')
         self.ax = self.f.gca()
+
+        le_qubit = Line2D([0], [0], lw=0, marker='o', color='w', mec='k', mew=2, mfc='w', ms=10, label='Qubit')
+        le_xer = Line2D([0], [0], lw=0, marker='o', color='w', mec='k', mew=2, mfc=self.cx, ms=10, label='X-error')
+        le_zer = Line2D([0], [0], lw=0, marker='o', color='w', mec='k', mew=2, mfc=self.cz, ms=10, label='Y-error')
+        le_yer = Line2D([0], [0], lw=0, marker='o', color='w', mec='k', mew=2, mfc=self.cy, ms=10, label='Z-error')
+        le_err = Line2D([0], [0], lw=0, marker='$\u25CC$', color='w', mec=self.cE, mew=1, mfc='w', ms=12, label='Erasure')
+        le_ver = Line2D([0], [0], ls='-', lw=self.lw, color=self.cX, label='Vertex')
+        le_pla = Line2D([0], [0], ls='--', lw=self.lw, color=self.cZ, label='Plaquette')
+
+        self.lh = [le_qubit, le_xer, le_zer, le_yer, le_err, le_ver, le_pla]
+
+        self.ax.legend(handles=self.lh, bbox_to_anchor=(-0.15, 0.95), loc='upper left', ncol=1)
+
+
+    def waitforkeypress(self, str):
+        print(str, "Press any key to continue...")
+        keyboardClick = False
+        while not keyboardClick:
+            keyboardClick = plt.waitforbuttonpress(120)
+
+
+    def plot_lattice(self):
+        '''
+        Plots the toric lattice.
+        Which includes the vertices on the initial and secundary lattices, and two qubits per cell
+        '''
+
+        plt.sca(self.ax)
         self.ax.invert_yaxis()
         self.ax.set_aspect('equal')
 
-        for yb in range(size):
+        # Loop over all indices
+        for yb in range(self.size):
             y = yb * 4
-            for xb in range(size):
+            for xb in range(self.size):
                 x = xb * 4
 
+                # Plot primary lattice
+                plt.plot([x+0, x+1], [y+1, y+1], c=self.cl, lw=self.lw, ls='-')
+                plt.plot([x+1, x+2], [y+1, y+1], c=self.cl, lw=self.lw, ls='-')
+                plt.plot([x+1, x+1], [y+0, y+1], c=self.cl, lw=self.lw, ls='-')
+                plt.plot([x+1, x+1], [y+1, y+2], c=self.cl, lw=self.lw, ls='-')
 
-                plt.plot([x+0, x+1], [y+1, y+1], c = self.cl, lw = 2, ls = '-')
-                plt.plot([x+1, x+2], [y+1, y+1], c = self.cl, lw = 2, ls = '-')
-                plt.plot([x+1, x+1], [y+0, y+1], c = self.cl, lw = 2, ls = '-')
-                plt.plot([x+1, x+1], [y+1, y+2], c = self.cl, lw = 2, ls = '-')
+                # Plot secundary lattice
+                plt.plot([x+2, x+3], [y+3, y+3], c=self.cl, lw=self.lw, ls='--')
+                plt.plot([x+3, x+4], [y+3, y+3], c=self.cl, lw=self.lw, ls='--')
+                plt.plot([x+3, x+3], [y+2, y+3], c=self.cl, lw=self.lw, ls='--')
+                plt.plot([x+3, x+3], [y+3, y+4], c=self.cl, lw=self.lw, ls='--')
 
-                plt.plot([x+2, x+3], [y+3, y+3], c = self.cl, lw = 2, ls = '--')
-                plt.plot([x+3, x+4], [y+3, y+3], c = self.cl, lw = 2, ls = '--')
-                plt.plot([x+3, x+3], [y+2, y+3], c = self.cl, lw = 2, ls = '--')
-                plt.plot([x+3, x+3], [y+3, y+4], c = self.cl, lw = 2, ls = '--')
-
-                circlet = plt.Circle((x+3, y+1), 0.75, edgecolor = self.cc, fill = False, linewidth = 2)
-                circled = plt.Circle((x+1, y+3), 0.75, edgecolor = self.cc, fill = False, linewidth = 2)
+                # Plot qubits
+                circlet = plt.Circle((x+3, y+1), self.qsize, edgecolor=self.cc, fill=False, linewidth=self.lw)
+                circled = plt.Circle((x+1, y+3), self.qsize, edgecolor=self.cc, fill=False, linewidth=self.lw)
                 self.ax.add_artist(circlet)
                 self.ax.add_artist(circled)
 
-        if self.plot_lattice:
+        if self.plot_base:
             plt.draw()
-            input("Press anything to continue")
+            self.waitforkeypress("Lattice plotted.")
+
+    def plot_erasures(self):
+        '''
+        :param erasures         list of locations (TD, y, x) of the erased stab_qubits
+        plots an additional blue cicle around the qubits which has been erased
+        '''
+        plt.sca(self.ax)
+
+        for y in range(self.size):
+            for x in range(self.size):
+
+                if self.G.E[(0, y, x, 0)].erasure:
+                    circle = plt.Circle((x*4+3, y*4+1), self.qsizeE, edgecolor=self.cE, fill=False, linewidth=self.lw, linestyle=":")
+                    self.ax.add_artist(circle)
+                if self.G.E[(0, y, x, 1)].erasure:
+                    circle = plt.Circle((x*4+1, y*4+3), self.qsizeE, edgecolor=self.cE, fill=False, linewidth=self.lw, linestyle=":")
+                    self.ax.add_artist(circle)
 
 
-    def plot_errors(self, X_er_loc, Z_er_loc, Y_er_loc, plot = None):
+    def plot_errors(self, plot_qubits=False):
+        '''
+        :param arrays       array of qubit states
+        plots colored circles within the qubits if there is an error
+        '''
 
-        Xer = copy.copy(X_er_loc)
-        Yer = copy.copy(Y_er_loc)
-        Zer = copy.copy(Z_er_loc)
+        loc = [3, 1]
 
-        for Y_er in Yer:
-            del Xer[Xer.index(Y_er)]
-            del Zer[Zer.index(Y_er)]
+        for y in range(self.size):
+            for x in range(self.size):
+                for td in range(2):
+                    X_error = self.G.E[(0, y, x, td)].state
+                    Z_error = self.G.E[(1, y, x, td)].state
 
-        if plot == "matching":
-            Xlet = self.Xerr
-            Zlet = self.Zerr
-            Ylet = self.Yerr
-            base = 1
-        else:
-            Xlet = self.Xer
-            Zlet = self.Zer
-            Ylet = self.Yer
-            base = 0
+                    if X_error and not Z_error:
+                        circle = plt.Circle((x*4+loc[td], y*4+loc[1-td]), self.qsize, fill=True, facecolor=self.cx, edgecolor=self.cc, linewidth=self.lw)
+                        self.ax.add_artist(circle)
 
-        plt.figure(self.f.number)
+                    elif Z_error and not X_error:
+                        circle = plt.Circle((x*4+loc[td], y*4+loc[1-td]), self.qsize, fill=True, facecolor=self.cz, edgecolor=self.cc, linewidth=self.lw)
+                        self.ax.add_artist(circle)
 
-        for (Y,X,HV) in Xer:
-            if HV == 0:
-                Yb = Y*self.baseL+self.l1 + base
-                Xb = X*self.baseL+self.l2 + base
-                circle = plt.Circle((X*4+3, Y*4+1), 0.75,fill = True, facecolor = self.cx, edgecolor = self.cc, linewidth = 2)
-            else:
-                Yb = Y*self.baseL+self.l2 + base
-                Xb = X*self.baseL+self.l1 + base
-                circle = plt.Circle((X*4+1, Y*4+3), 0.75,fill = True, facecolor = self.cx, edgecolor = self.cc, linewidth = 2)
-            self.ax.add_artist(circle)
+                    elif X_error and Z_error:
+                        circle = plt.Circle((x*4+loc[td], y*4+loc[1-td]), self.qsize, fill=True, facecolor=self.cy, edgecolor=self.cc, linewidth=self.lw)
+                        self.ax.add_artist(circle)
 
-            self.lattice[Yb:(Yb+self.erL),Xb:(Xb+self.erL),:] = Xlet
-        for (Y,X,HV) in Zer:
-            if HV == 0:
-                Yb = Y*self.baseL+self.l1 + base
-                Xb = X*self.baseL+self.l2 + base
-                circle = plt.Circle((X*4+3, Y*4+1), 0.75,fill = True, facecolor = self.cz, edgecolor = self.cc, linewidth = 2)
+                    else:
+                        if plot_qubits:
+                            circle = plt.Circle((x*4+loc[td], y*4+loc[1-td]), self.qsize, fill=True, facecolor=[1, 1, 1], edgecolor=self.cc, linewidth=self.lw)
+                            self.ax.add_artist(circle)
 
-            else:
-                Yb = Y*self.baseL+self.l2 + base
-                Xb = X*self.baseL+self.l1 + base
-                circle = plt.Circle((X*4+1, Y*4+3), 0.75,fill = True, facecolor = self.cz, edgecolor = self.cc, linewidth = 2)
-            self.ax.add_artist(circle)
-
-            self.lattice[Yb:(Yb+self.erL),Xb:(Xb+self.erL),:] = Zlet
-        for Y,X,HV in Yer:
-            if HV == 0:
-                Yb = Y*self.baseL+self.l1 + base
-                Xb = X*self.baseL+self.l2 + base
-                circle = plt.Circle((X*4+3, Y*4+1), 0.75,fill = True, facecolor = self.cy, edgecolor = self.cc, linewidth = 2)
-
-            else:
-                Yb = Y*self.baseL+self.l2 + base
-                Xb = X*self.baseL+self.l1 + base
-                circle = plt.Circle((X*4+1, Y*4+3), 0.75,fill = True, facecolor = self.cy, edgecolor = self.cc, linewidth = 2)
-            self.ax.add_artist(circle)
-
-            self.lattice[Yb:(Yb+self.erL),Xb:(Xb+self.erL),:] = Ylet
-
-
-        if self.plot_error or plot:
-            # plt.imshow(self.lattice)
-            # plt.show()
+        if self.plot_error:
             plt.draw()
-            input("Press anything to continue")
+            self.waitforkeypress("Errors plotted.")
 
 
+    def plot_anyons(self):
+        '''
+        :param qua_loc      list of quasiparticle/anyon positions (y,x)
+        plots the vertices of the anyons on the lattice
+        '''
 
+        plt.sca(self.ax)
+        plotvar = [0, 2]
+        C = [self.cX, self.cZ]
+        LS = ['-', '--']
 
-
-
-    def plotXstrings(self,Stab,qua_loc,Body = [],save = True):
-        ##########################
-
-        base = [self.baseL - 2 * self.vecL + 1, 0]
-        vecl = [self.vecL - 1, self.vecL]
-        linel = [self.vecL * 2 - 1, self.vecL * 2 + 1]
-
-
-        for type in range(2):
-
-            lattice = copy.copy(self.lattice)
-
-
-            vertices = Stab[type,:,:]
-
-
-            # Plot strings (green) first
-
-            # Create horizontal and vertical lines
-            line = np.zeros([vecl[type]+1,3])
-            line[:,1] = 255
-
-            if len(Body) != 0:
-                # Loop over all stings
-                strings = Body[type, :, :]
-                Yloc,Xloc,Wloc = np.where(strings==0)
-                for Y,X,W in zip(Yloc,Xloc,Wloc):
-                    Yb = Y*self.baseL + base[type]
-                    Xb = X*self.baseL + base[type]
-                    if W == 0:    #West
-                        lattice[Yb+vecl[type], Xb:(Xb+vecl[type] + 1), :] = line
-                    elif W == 1:  #East
-                        lattice[Yb+vecl[type], (Xb+vecl[type]):(Xb+2*vecl[type] + 1), :] = line
-                    elif W == 2:  #North
-                        lattice[Yb:(Yb+vecl[type] + 1), Xb + vecl[type],:] = line
-                    else: #W == 3: South
-                        lattice[(Yb+vecl[type]):(Yb+vecl[type]*2 + 1), Xb + vecl[type], :] = line
-
-        #############################
-        # Plot the vertices over the stings
-
-            # Load vertice image
-            line = np.zeros([linel[type],3])
-            line[:,2] = 255
-
-            im = Image.new("RGBA", (self.latticeL,self.latticeL),(255,255,255,0))
-            d = ImageDraw.Draw(im)
-            d.fontmode = "1"
-
-            # Loop over all vertices
-            for i in range(len(qua_loc[type])):
-                Yb = qua_loc[type][i][0]*self.baseL + base[type]
-                Xb = qua_loc[type][i][1]*self.baseL + base[type]
-                lattice[Yb + vecl[type], Xb:Xb + linel[type], :] = line
-
-                lattice[Yb:Yb + linel[type], Xb + vecl[type], :] = line
-                if self.plot_indices:
-                    d.text((Xb + 5,Yb+1),str(i), font=self.fnt, fill=(0, 0, 0, 255))
-
-            imbase = Image.fromarray(lattice).convert("RGBA")
-            lattice = Image.alpha_composite(imbase,im)
-
-            if type == 0:
-                self.latticeX = copy.copy(lattice)
-            else:
-                self.latticeZ = copy.copy(lattice)
+        # Plot errors on primary and secondary lattice
+        for ertype, (p, color, ls) in enumerate(zip(plotvar, C, LS)):
+            for yb in range(self.size):
+                for xb in range(self.size):
+                    vertex = self.G.V[(ertype, yb, xb)]
+                    if vertex.state:
+                        y = yb * 4
+                        x = xb * 4
+                        if "l" in vertex.neighbors:
+                            plt.plot([x+0+p, x+1+p], [y+1+p, y+1+p], c=color, lw=self.lw, ls=ls)
+                        if "r" in vertex.neighbors:
+                            plt.plot([x+1+p, x+2+p], [y+1+p, y+1+p], c=color, lw=self.lw, ls=ls)
+                        if "u" in vertex.neighbors:
+                            plt.plot([x+1+p, x+1+p], [y+0+p, y+1+p], c=color, lw=self.lw, ls=ls)
+                        if "d" in vertex.neighbors:
+                            plt.plot([x+1+p, x+1+p], [y+1+p, y+2+p], c=color, lw=self.lw, ls=ls)
 
         if self.plot_syndrome:
-            f, (ax1, ax2) = plt.subplots(1, 2, sharey=True)
-            ax1.imshow(self.latticeX)
-            ax2.imshow(self.latticeZ)
-            ax1.set_title("X errors")
-            ax2.set_title("Z errors")
-            plt.show()
+            plt.draw()
+            self.waitforkeypress("Syndromes plotted.")
 
+    def plot_lines(self, matchings):
+        '''
+        :param results      list of matchings of anyon
+        plots strings between the two anyons of each match
+        '''
 
-    def drawlines(self,Results):
+        plt.sca(self.ax)
 
-        base = [self.baseL - 2 * self.vecL + 1, 0]
-        ex = [self.baseL - self.vecL, self.vecL]
+        P = [1, 3]
+        LS = ['-.', ':']
 
-        for type in range(2):
+        for type_matching, p, ls in zip(matchings, P, LS):
+            for v0, v1 in type_matching:
 
-            im = Image.new("RGBA", (self.latticeL, self.latticeL), (255, 255, 255, 0))
+                color = [random.random()*0.8 + 0.2 for _ in range(3)]
 
-            np.random.seed(1)
-            color = np.array(np.round(np.random.random([len(Results[type]),3])*255),dtype = int)
+                (_, topy, topx) = v0.sID
+                (_, boty, botx) = v1.sID
 
-            if type == 0:
-                imbase = self.latticeX
-            else:
-                imbase = self.latticeZ
+                plt.plot([topx*4 + p, botx*4 + p], [topy*4 + p, boty*4 + p], c=color, lw=self.slw, ls=ls)
+                circle1 = plt.Circle((topx*4 + p, topy*4 + p), 0.25, fill=True, facecolor=color)
+                circle2 = plt.Circle((botx*4 + p, boty*4 + p), 0.25, fill=True, facecolor=color)
+                self.ax.add_artist(circle1)
+                self.ax.add_artist(circle2)
 
-            for string in range(len(Results[type])):
-                c = color[string,:]
-                d = ImageDraw.Draw(im)
-                thiscolor1 = (c[0],c[1],c[2],150)
-
-                topx = Results[type][string][0][1]
-                topy = Results[type][string][0][0]
-                botx = Results[type][string][1][1]
-                boty = Results[type][string][1][0]
-                top = (topx*self.baseL+ex[type],topy*self.baseL+ex[type])
-                bot = (botx*self.baseL+ex[type],boty*self.baseL+ex[type])
-                d.line([top,bot],fill = thiscolor1, width = 1)
-
-                if self.plot_indices:
-                    d.fontmode = "1"
-                    thiscolor2 = (c[0], c[1], c[2], 255)
-                    midx = round((topx + botx)*self.baseL / 2 + base[type])
-                    midy = round((topy + boty)*self.baseL / 2 + base[type])
-                    d.text((midx,midy), str(string), font=self.fnt, fill=thiscolor2)
-
-            im = Image.alpha_composite(imbase,im)
-
-            er = int(round(self.vecL/4))
-            for string in range(len(Results[type])):
-                c = color[string,:]
-                d = ImageDraw.Draw(im)
-                thiscolor1 = (c[0],c[1],c[2],150)
-                topx = Results[type][string][0][1]
-                topy = Results[type][string][0][0]
-                botx = Results[type][string][1][1]
-                boty = Results[type][string][1][0]
-                top = [topx*self.baseL+ex[type],topy*self.baseL+ex[type]]
-                bot = [botx*self.baseL+ex[type],boty*self.baseL+ex[type]]
-                d.ellipse([top[0] - er, top[1] - er, top[0] + er, top[1] + er], fill=thiscolor1)
-                d.ellipse([bot[0] - er, bot[1] - er, bot[0] + er, bot[1] + er], fill=thiscolor1)
-
-            if type == 0:
-                self.latticeX = copy.copy(im)
-            else:
-                self.latticeZ = copy.copy(im)
 
         if self.plot_matching:
-            f, (ax1, ax2) = plt.subplots(1, 2, sharey=True)
-            ax1.imshow(self.latticeX)
-            ax2.imshow(self.latticeZ)
-            ax1.set_title("X errors")
-            ax2.set_title("Z errors")
-            plt.show()
+            plt.draw()
+            self.waitforkeypress("Matchings plotted.")
+
+    def plot_final(self):
+        '''
+        param: flips        qubits that have flipped in value (y,x)
+        param: arrays       data array of the (corrected) qubit states
+        plots the applied stabilizer measurements over the lattices
+        also, in the qubits that have flipped in value a smaller white circle is plotted
+
+        optionally, the axis is clear and the final state of the lattice is plotted
+        '''
+
+        plt.sca(self.ax)
+
+        loc = [3, 1]
+
+        for y in range(self.size):
+            for x in range(self.size):
+                for td in range(2):
+                    X_error = self.G.E[(0, y, x, td)].matching
+                    Z_error = self.G.E[(1, y, x, td)].matching
+
+                    if X_error and not Z_error:
+                        circle = plt.Circle((x*4+loc[td], y*4+loc[1-td]), self.qsize2, fill=True, facecolor=self.cw, edgecolor=self.cx, linewidth=self.lw)
+                        self.ax.add_artist(circle)
+
+                    elif Z_error and not X_error:
+                        circle = plt.Circle((x*4+loc[td], y*4+loc[1-td]), self.qsize2, fill=True, facecolor=self.cw, edgecolor=self.cz, linewidth=self.lw)
+                        self.ax.add_artist(circle)
+
+                    elif X_error and Z_error:
+                        circle = plt.Circle((x*4+loc[td], y*4+loc[1-td]), self.qsize2, fill=True, facecolor=self.cw, edgecolor=self.cy, linewidth=self.lw)
+                        self.ax.add_artist(circle)
+
+
+
+        if self.plot_correction:
+            plt.draw()
+            self.waitforkeypress("Corrections plotted.")
+
+        if self.plot_result:
+            plt.cla()
+            plt.axis('off')
+            self.ax.legend(handles=self.lh, bbox_to_anchor=(-0.15, 0.95), loc='upper left', ncol=1)
+            self.plot_lattice()
+            self.plot_errors()
+            print("Final lattice plotted. Press on the plot to continue")

@@ -11,70 +11,70 @@ import sys
 printval = 100
 
 
-def toric_2D_MWPM(size, pX, pZ, iters, savefile=False, time_stamp=None, load_plot=False):
-
-    TL0 = tl.lattice(size, False)
-    (edge_data, stab_data, log_data) = TL0.init_data()
+def toric_2D_MWPM(size, pX, pZ, iters, plot_load=False):
 
     N_succes = 0
     for i in range(iters):
         if i % printval == 0:
             print("Iteration " + str(i))
-        TL = tl.lattice(size, load_plot)
-        TL.load_data(edge_data, stab_data, log_data)
-        TL.init_plots()
-        TL.init_pauli(pX, pZ, savefile, time_stamp)
+        if i == 0:
+            TL = tl.lattice(size, None, None, plot_load)
+        else:
+            TL = tl.lattice(size, None, None, plot_load, graph=TL.G)
+
+        TL.init_pauli_errors(pX, pZ, False)
         TL.measure_stab()
         TL.get_matching_MWPM()
         logical_error = TL.logical_error()
+        TL.G.reset()
         if logical_error == [False, False, False, False]:
             N_succes += 1
     return N_succes
 
 
-def toric_2D_peeling(size, pE, pX, pZ, iters, savefile=False, time_stamp=None, load_plot=False):
+def toric_2D_peeling(size, pE, pX, pZ, iters, plot_load=False):
 
-    TL0 = tl.lattice(size, False)
-    (edge_data, stab_data, log_data) = TL0.init_data()
 
     N_succes = 0
     for i in range(iters):
         if i % printval == 0:
             print("Iteration " + str(i))
-        TL = tl.lattice(size, load_plot)
-        TL.load_data(edge_data, stab_data, log_data)
-        TL.init_plots()
-        TL.init_pauli(pX, pZ, savefile, time_stamp)
-        TL.init_erasure(pE, savefile, time_stamp)
+        if i == 0:
+            TL = tl.lattice(size, None, None, plot_load)
+        else:
+            TL = tl.lattice(size, None, None, plot_load, graph=TL.G)
+
+        TL.init_erasure_errors_region(pE, False)
+        TL.init_pauli_errors(pX, pZ, False)
         TL.measure_stab()
         TL.get_matching_peeling()
         logical_error = TL.logical_error()
+        TL.G.reset()
         if logical_error == [False, False, False, False]:
             N_succes += 1
     return N_succes
 
 
-def planar_2D_MWPM(size, pX, pZ, iters, savefile=False, time_stamp=None, load_plot=False):
-
-    PL0 = pl.lattice(size, False)
-    (edge_data, stab_data, log_data) = PL0.init_data()
+def planar_2D_MWPM(size, pX, pZ, iters, plot_load=False):
 
     N_succes = 0
     for i in range(iters):
         if i % printval == 0:
             print("Iteration " + str(i))
-        PL = pl.lattice(size, load_plot)
-        PL.load_data(edge_data, stab_data, log_data)
-        PL.init_plots()
-        PL.init_pauli(pX, pZ, savefile, time_stamp)
+        if i == 0:
+            PL = pl.lattice(size, None, None, plot_load)
+        else:
+            PL = pl.lattice(size, None, None, plot_load, graph=PL.G)
+
+        PL.init_pauli_errors(pX, pZ, False)
         PL.measure_stab()
         PL.get_matching_MWPM()
         logical_error = PL.logical_error()
+        PL.G.reset()
         if logical_error == [False, False]:
             N_succes += 1
     return N_succes
 
-a = [1, 2]
 # def toric_2D_nickerson(size, pX, pZ, iters):
 #
 #     N_succes = 0

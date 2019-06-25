@@ -15,12 +15,14 @@ class toric:
         '''
 
         self.size = lat.size
-        self.qua_loc = lat.qua_loc
-        self.er_loc = lat.er_loc
-        self.edge_data = lat.edge_data
-        self.stab_data = lat.stab_data
-        self.num_stab = lat.num_stab
-        self.num_qubit = lat.num_qubit
+        # self.qua_loc = lat.qua_loc
+        # self.er_loc = lat.er_loc
+        # self.edge_data = lat.edge_data
+        # self.vertex_data = lat.vertex_data
+        # self.num_vertex = lat.num_vertex
+        # self.num_qubit = lat.num_qubit
+
+        self.G = lat.G
 
         self.plot_load = lat.plot_load
         self.plotstep_grow = False
@@ -308,46 +310,24 @@ class toric:
 
         '''
 
-
-        self.G = G.Graph(self.stab_data, self.er_loc, self.qua_loc)
-
         cID = 0
 
-        for sID in self.qua_loc:
+        for vertex in self.G.V.values():
+            if vertex.state and vertex.cluster is None:
 
-
-            if sID not in self.G.V:
-                new_cluster = True
-                new_vertex = True
-
-            else:
-                new_vertex = False
-
-                if self.G.V[sID].cluster is None:
-                    new_cluster = True
-
-                else:
-                    new_cluster = False
-
-            if new_cluster:
                 self.G.add_cluster(cID)
 
-                if new_vertex:
-                    (y, x) = self.stab_data[sID][1:3]
-                    self.G.add_vertex(sID, y, x, True)
+                self.G.C[cID].add_vertex(vertex)
 
-                self.G.C[cID].add_vertex(self.G.V[sID])
+                round_new_vertices = self.G.cluster_new_vertex(cID, vertex)
 
-                NEW_stabs = self.G.stab_add_neigbors(sID, cID)
+                while not round_new_vertices == []:
+                    new_vertices = []
 
-                while not NEW_stabs == []:
-                    new_stabs = []
+                    for vertex in round_new_vertices:
+                        new_vertices += self.G.cluster_new_vertex(cID, vertex)
 
-                    for sID in NEW_stabs:
-                        new_stabs += self.G.stab_add_neigbors(sID, cID)
-
-                    NEW_stabs = new_stabs
-
+                    round_new_vertices = new_vertices
                 cID += 1
 
         self.G.cluster_index = [i for i in range(cID)]
@@ -509,7 +489,7 @@ class toric:
 
                             cluster.add_vertex(grow_vertex)
 
-                            new_bounds.append((edge, grow_vertex.sID))
+                            new_bounds.append((edge, grow_vertex))
 
                         else:
 
@@ -534,10 +514,10 @@ class toric:
                 4.  Remove old boundaries and add new boundaries for fully grown edges
                 '''
 
-                for edge, sID in new_bounds:
+                for edge, grow_vertex in new_bounds:
 
                     cluster.rem_bound(edge)
-                    self.G.stab_add_neigbors(sID, cID)
+                    self.G.cluster_new_vertex(cID, grow_vertex)
 
                 if self.plot_load and self.plotstep_grow:
                     self.pl.draw_plot("Cluster " + str(cID) + " grown.")
@@ -606,51 +586,47 @@ class toric:
 
         self.grown_clusters = [i for i, cID in enumerate(self.G.cluster_index) if i == cID]
 
-        rem_list = []
-
         for cID in self.grown_clusters:
 
             cluster = self.G.C[cID]
 
-            del cluster.B
+            first_vertex = list(cluster.V.values())[0]
 
-            first_stab = list(cluster.V.values())[0]
+            first_vertex.tree = True
 
-            first_stab.tree = True
+            new_vertices = [first_vertex]
 
-            new_stabs = [first_stab]
+            while new_vertices != []:
 
-            while new_stabs != []:
+                neighbor_vertices = []
 
-                neighbor_stabs = []
+                for vertex in new_vertices:
 
-                for stab in new_stabs:
+                    neighbors = [(V, E) for V, E in vertex.points_to.items() if E.qID in cluster.E and not E.tree]
 
-                    neighbors = [(V, E) for V, E in stab.points_to.items() if E.qID in cluster.E and not E.tree]
+                    for vertex, edge in neighbors:
 
-                    for V, E in neighbors:
+                        if vertex.tree:
 
-                        if V.tree:
-
-                            cluster.remove_edge(E)
-                            rem_list.append(E)
+                            cluster.remove_edge(edge)
+                            edge.peeled = True
 
                             if self.plot_load and self.plotstep_tree:
-                                self.pl.plot_edge_step(E, "remove")
+                                self.pl.plot_edge_step(edge, "remove")
 
                         else:
 
-                            V.tree = True
-                            E.tree = True
-                            neighbor_stabs.append(V)
+                            vertex.tree = True
+                            edge.tree = True
+                            neighbor_vertices.append(vertex)
 
                             if self.plot_load and self.plotstep_tree:
-                                self.pl.plot_edge_step(E, "tree")
+                                self.pl.plot_edge_step(edge, "tree")
 
-                new_stabs = neighbor_stabs
+                new_vertices = neighbor_vertices
 
         if self.plot_load and not self.plotstep_tree:
-            self.pl.plot_removed(rem_list, "Tree formed from graph.")
+            self.pl.plot_removed("Tree formed from graph.")
 
     def peel_trees(self):
         '''
@@ -675,51 +651,37 @@ class toric:
         for cID in self.grown_clusters:
 
             cluster = self.G.C[cID]
-            cluster.S = set()
 
-            for sID, stab in cluster.V.items():
+            for sID, vertex in cluster.V.items():
 
-                while len(stab.points_to) == 1:
+                while len(vertex.points_to) == 1:
 
-                    (new_stab, edge) = list(stab.points_to.items())[0]
+                    (new_vertex, edge) = list(vertex.points_to.items())[0]
 
                     cluster.remove_edge(edge)
 
-                    if stab.anyon:
-                        cluster.S.add(edge)
-                        stab.anyon = False
-                        new_stab.anyon = not new_stab.anyon
+                    if vertex.state:
+                        edge.matching = True
+                        vertex.state = False
+                        new_vertex.state = not new_vertex.state
 
                         if self.plot_load and self.plotstep_peel:
 
-                            self.pl.plot_strip_step_anyon(stab)
-                            self.pl.plot_strip_step_anyon(new_stab)
+                            self.pl.plot_strip_step_anyon(vertex)
+                            self.pl.plot_strip_step_anyon(new_vertex)
                             if self.plotstep_tree:
                                 self.pl.plot_edge_step(edge, "confirm")
                             else:
                                 self.pl.waitforkeypress("peel edge qID #", str(edge))
 
                     else:
-
+                        edge.peeled = True
                         if self.plot_load:
                             peel_list.append(edge)
                             if self.plotstep_peel:
                                 self.pl.plot_edge_step(edge, "peel")
 
-                    stab = new_stab
+                    vertex = new_vertex
 
         if self.plot_load and not self.plotstep_peel:
-            self.pl.plot_removed(peel_list, "Peeling completed.")
-
-    def return_matching(self):
-        '''
-        Returns the matching from the peeling algoritm as a list of qID numbers
-        '''
-
-        matching = []
-
-        for cID in self.grown_clusters:
-
-            matching += [edge.qID for edge in self.G.C[cID].S]
-
-        return matching
+            self.pl.plot_removed("Peeling completed.")

@@ -3,7 +3,7 @@ import sys
 import time
 import datetime
 import random
-import toric_plot2 as tp
+import toric_plot as tp
 import blossom5.pyMatch as pm
 import peeling as pel
 import graph_objects as GO
@@ -11,7 +11,7 @@ import graph_objects as GO
 
 class lattice:
 
-    def __init__(self, size=10, plot_load=True):
+    def __init__(self, size=10, pauli_file=None, erasure_file=None, plot_load=True, graph=None):
 
         '''
         :param size:
@@ -31,364 +31,362 @@ class lattice:
         self.array stores the qubit values and has dimension [XZ_error{0,1}, Top_down{0,1}, size, size]
         Qubit values are either 0 or 1, which is analogous to the -1, and 1 state, respectively
         '''
-        self.size = size
+
         self.plot_load = plot_load
-        self.time = time.time()
-
-        random.seed(self.time)
-        # random.seed(10)
-
-        # self.array = [[[[True for _ in range(self.size)] for _ in range(self.size)] for _ in range(2)] for _ in range(2)]
-
-        self.num_stab = self.size * self.size * 2
-        self.num_qubit = self.num_stab * 2
-        self.array = [True for _ in range(self.num_qubit)]
 
         if not os.path.exists("./errors/"):
             os.makedirs("./errors/")
 
+        # If no input file is given
+        if pauli_file is None and erasure_file is None:
+            self.size = size
+            self.time = time.time()
+            self.pauli_file, self.erasure_file = None, None
 
-    def init_data(self):
-        '''
-        Initializes a tuple (edge_data) which contains information of every qubit on lattice (primary and secundary)
+        # Read time seed, size from input files
+        else:
+            if pauli_file is not None:
+                filename = "./errors/" + pauli_file + ".txt"
+                try:
+                    self.pauli_file = open(filename, "r")
+                except FileNotFoundError:
+                    sys.exit("Error file not found")
+                firstlines = [next(self.pauli_file) for _ in range(4)]
+                self.time = float(firstlines[1][7:])
+                self.size = int(firstlines[2][4:])
+            if erasure_file is not None:
+                filename = "./errors/" + erasure_file + ".txt"
+                try:
+                    self.erasure_file = open(filename, "r")
+                except FileNotFoundError:
+                    sys.exit("Error file not found")
+                firstlines = [next(self.erasure_file) for _ in range(4)]
+                self.time = float(firstlines[1][7:])
+                self.size = int(firstlines[2][4:])
 
-        The qubits on the X and Z lattices are defined by the unit cell:
-            X:     Z:
-                    _
-            _|     |
+        random.seed(self.time)
 
-        Each qubit (depected by an edge) has 2 connected anyons and 6 neighbor qubits:
-        - for each qubit _, the neigbors are  _|_|_
-                                               | |
+        if graph is None:
 
-                                               _|_
-        - for each qubit |, the neighbors are  _|_
-                                                |
+            self.G = GO.Graph(None, None, None)
 
-        v1-v3 and v4-v6 are neighbors located at opposite sides of the qubit (loc A and loc B)
+            # Add vertices and edges to graph
+            for ertype in range(2):
+                for y in range(self.size):
+                    for x in range(self.size):
+                        self.G.add_vertex((ertype, y, x))
+            for ertype in range(2):
+                for y in range(self.size):
+                    for x in range(self.size):
+                        for td in range(2):
+                            qID = (ertype, y, x, td)
+                            if ertype == 0 and td == 0:
+                                VL_sID = (ertype, y, x)
+                                VR_sID = (ertype, y, (x + 1) % self.size)
+                                self.G.add_edge(qID, VL_sID, VR_sID, 'H')
+                            elif ertype == 1 and td == 1:
+                                VL_sID = (ertype, y, (x - 1) % self.size)
+                                VR_sID = (ertype, y, x)
+                                self.G.add_edge(qID, VL_sID, VR_sID, 'H')
+                            elif ertype == 0 and td == 1:
+                                VU_sID = (ertype, y, x)
+                                VD_sID = (ertype, (y + 1) % self.size, x)
+                                self.G.add_edge(qID, VU_sID, VD_sID, 'V')
+                            elif ertype == 1 and td == 0:
+                                VU_sID = (ertype, (y - 1) % self.size, x)
+                                VD_sID = (ertype, y, x)
+                                self.G.add_edge(qID, VU_sID, VD_sID, 'V')
+        else:
+            self.G = graph
 
-        The tuple stores the information in the following order:
-            0   error type (primary or secundary)
-            1   y location of unit cell
-            2   x location of unit cell
-            3   td, top or down qubit/edge in the unit cell
-            4   number of neighbor qubits in loc A
-            5   tuple of qID's of neighbors in loc A (qID0, qID1...)
-            6   number of neighbor qubits in loc B
-            7   tuple of qID's of neighbors in loc B (qID0, qID1...)
-            8   sID of anyon 1
-            9   sID of anyon 2
-        The y and x position of anyon 0 are within the same unit cell of the qubit, and are defined in 2 and 3 already
-        '''
-
-        qubit_list = []
-        stab_list = []
-
-        qubitlist = []
-
-        self.G = GO.Graph(None,None,None)
-
-        for ertype in range(2):
-            for y in range(self.size):
-                for x in range(self.size):
-                    stab_list.append([ertype, y, x])
-
-                    self.G.add_vertex((ertype, y, x))
-
-                    for td in range(2):
-                        qubit_list.append([ertype, y, x, td])
-
-                        qubitlist.append((ertype, y, x, td))
-
-        neighbor_list = []
-        qubit_stab_list = []
-
-
-        for (ertype, y, x, td) in qubitlist:
-            qID = (ertype, y, x, td)
-            if ertype == 0 and td == 0:
-                VL_sID = (ertype, y, x)
-                VR_sID = (ertype, y, (x + 1) % self.size)
-                self.G.add_edge(qID, VL_sID, VR_sID, 'H')
-            elif ertype == 1 and td == 1:
-                VL_sID = (ertype, y, (x - 1) % self.size)
-                VR_sID = (ertype, y, x)
-                self.G.add_edge(qID, VL_sID, VR_sID, 'H')
-            elif ertype == 0 and td == 1:
-                VU_sID = (ertype, y, x)
-                VD_sID = (ertype, (y + 1) % self.size, x)
-                self.G.add_edge(qID, VU_sID, VD_sID, 'V')
-            elif ertype == 1 and td == 0:
-                VU_sID = (ertype, (y - 1) % self.size, x)
-                VD_sID = (ertype, y, x)
-                self.G.add_edge(qID, VU_sID, VD_sID, 'V')
-
-
-
-
-
-        for (ertype, y, x, td) in qubit_list:
-
-            if ertype == 0:
-                v1 = qubit_list.index([0, y, x, 1 - td])
-                v2 = qubit_list.index([0, (y + 1) % self.size, x, 0])
-                v3 = qubit_list.index([0, y, (x + 1) % self.size, 1])
-                v4 = qubit_list.index([0, (y - 1 + td) % self.size, (x - td) % self.size, 0])
-                v5 = qubit_list.index([0, (y - 1 + td) % self.size, (x - td) % self.size, 1])
-                v6 = qubit_list.index([0, (y - 1 + 2*td) % self.size, (x + 1 - 2*td) % self.size, 1 - td])
-            else:
-                v1 = qubit_list.index([1, y, x, 1 - td])
-                v2 = qubit_list.index([1, y, (x - 1) % self.size, 0])
-                v3 = qubit_list.index([1, (y - 1) % self.size, x, 1])
-                v4 = qubit_list.index([1, (y + td) % self.size, (x + 1 - td) % self.size, 0])
-                v5 = qubit_list.index([1, (y + td) % self.size, (x + 1 - td) % self.size, 1])
-                v6 = qubit_list.index([1, (y - 1 + 2*td) % self.size, (x + 1 - 2*td) % self.size, 1 - td])
-
-            neighbor_list.append([3, (v1, v2, v3), 3, (v4, v5, v6)])
-
-            s1 = stab_list.index([ertype, y, x])
-            s2 = stab_list.index([ertype, (y + td + ertype - 1) % self.size, (x - td + ertype) % self.size])
-            qubit_stab_list.append([s1, s2])
-
-        edge_data = []
-
-        for (qubit, neighbor, stab) in zip(qubit_list, neighbor_list, qubit_stab_list):
-            edge_data.append(tuple(qubit + neighbor + stab))
-
-        self.edge_data = tuple(edge_data)
-
-        '''
-        Also, for each possible stabilizer, there are 4 or 3 (only planar) connected qubits
-            |
-          - o -
-            |
-        We call each of these qubis the North (qN), South (qS), East (qE) and West (qW) qubits, in that order
-        Store the connected qubits to a tuple in the following order:
-            0   error type (primary or secundary)
-            1   y location of unit cell
-            2   x location of unit cell
-            3   tuple of neighbor anyons (sN, sS, sE, sW)
-            4   tuple of connected qubit id (qN, qS, qE, qW)
-        '''
-
-        stab_qubit_list = []
-
-        for (ertype, y, x) in stab_list:
-
-            sN = stab_list.index([ertype, (y - 1) % self.size, x])
-            sS = stab_list.index([ertype, (y + 1) % self.size, x])
-            sE = stab_list.index([ertype, y, (x - 1) % self.size])
-            sW = stab_list.index([ertype, y, (x + 1) % self.size])
-
-            if ertype == 0:
-                qN = qubit_list.index([0, y, x, 0])
-                qS = qubit_list.index([0, (y + 1) % self.size, x, 0])
-                qE = qubit_list.index([0, y, x, 1])
-                qW = qubit_list.index([0, y, (x + 1) % self.size, 1])
-            if ertype == 1:
-                qN = qubit_list.index([1, (y - 1) % self.size, x, 1])
-                qS = qubit_list.index([1, y, x, 1])
-                qE = qubit_list.index([1, y, (x - 1) % self.size, 0])
-                qW = qubit_list.index([1, y, x, 0])
-
-            stab_qubit_list.append([(sN, sS, sE, sW), (qN, qS, qE, qW)])
-
-        stab_data = []
-
-        for (stab, qubit) in zip(stab_list, stab_qubit_list):
-            stab_data.append(tuple(stab + qubit))
-
-        self.stab_data = tuple(stab_data)
-
-        '''
-        Get edge qubits for the detection of logical errors
-        '''
-
-        lx0 = [2*q for q in range(self.size)]
-        lx1 = [1 + 2*q*self.size for q in range(self.size)]
-        lz0 = [self.num_stab + 2*(self.size - 1)*self.size + 1 + 2*q for q in range(self.size)]
-        lz1 = [self.num_stab + 2*(self.size - 1) + 2*q*self.size for q in range(self.size)]
-
-        self.log_data = (tuple(lx0), tuple(lx1), tuple(lz0), tuple(lz1))
-
-        # for i,a in enumerate(self.edge_data): print(i,a)
-        # for i,a in enumerate(self.stab_data): print(i,a)
-        # print(self.log_data)
-
-        return (self.edge_data, self.stab_data, self.log_data)
-
-    def load_data(self, edge_data, stab_data, log_data):
-        '''
-        loads the data structures initialezed in init_edge_data
-        '''
-        self.edge_data = edge_data
-        self.stab_data = stab_data
-        self.log_data = log_data
-
-    def init_plots(self):
-        # Initiate plot
+        # Plot the lattice
         if self.plot_load:
-            self.LP = tp.lattice_plot(self.size, self.edge_data, self.stab_data)
+            self.LP = tp.lattice_plot(self.size, self.G)
             self.LP.plot_lattice()
+
+    def init_erasure_errors_region(self, pE=0, savefile=False):
+        '''
+        :param pE           probability of an erasure error
+        :param savefile     toggle to save the errors to a file
+
+        Initializes an erasure error with probabilty pE, which will take form as a uniformly chosen pauli X and/or Z error. This function is the same as init_erasure_errors, except that for every erasure, its (6) neighbor edges are also initated as an erasure. The error rate is therefore higher than pE.
+        '''
+
+        if self.erasure_file is None:
+
+            # Loop over all qubits
+            for y in range(self.size):
+                for td in range(2):
+                    for x in range(self.size):
+
+                        # Save erasure state if pE > 0
+                        if pE != 0 and random.random() < pE:
+
+                            region = {(y, x, td)}
+
+                            vertices = self.G.E[(0, y, x, td)].vertices
+                            for vertex in vertices:
+                                for wind in self.G.wind:
+                                    (n_vertex, edge) = vertex.neighbors[wind]
+                                    (type, y, x, td) = edge.qID
+                                    region.add((y, x, td))
+
+                            for (y, x, td) in region:
+                                self.G.E[(0, y, x, td)].erasure = True
+                                self.G.E[(1, y, x, td)].erasure = True
+                                rand = random.random()
+                                if rand < 0.25:
+                                    self.G.E[(0, y, x, td)].state = not self.G.E[(0, y, x, td)].state
+                                elif rand >= 0.25 and rand < 0.5:
+                                    self.G.E[(1, y, x, td)].state = not self.G.E[(1, y, x, td)].state
+                                elif rand >= 0.5 and rand < 0.75:
+                                    self.G.E[(0, y, x, td)].state = not self.G.E[(0, y, x, td)].state
+                                    self.G.E[(1, y, x, td)].state = not self.G.E[(1, y, x, td)].state
+
+            if savefile:
+                st = datetime.datetime.fromtimestamp(self.time).strftime('%Y-%m-%d_%H-%M-%S')
+                st2 = datetime.datetime.fromtimestamp(self.time).strftime('%Y-%m-%d %H-%M-%S')
+                name = "./errors/" + st + "_erasure.txt"
+                f = open(name, "w")
+                f.write("Erasure error file created on " + st2 + "\n")
+                f.write("Seed = " + str(self.time) + "\n")
+                f.write("L = " + str(self.size) + "\n\n")
+                e_file = "pE = " + str(pE) + "\n"
+
+                for y in range(self.size):
+                    for td in range(2):
+                        if td == 0:
+                            e_file += "  "
+                        for x in range(self.size):
+                            if self.G.E[(0, y, x, td)].erasure:
+                                Xstate = self.G.E[(0, y, x, td)].state
+                                Zstate = self.G.E[(1, y, x, td)].state
+                                if not Xstate and not Zstate:
+                                    e_state = 1
+                                elif Xstate and not Zstate:
+                                    e_state = 2
+                                elif not Xstate and Zstate:
+                                    e_state = 3
+                                else:
+                                    e_state = 4
+                            else:
+                                e_state = 0
+                            e_file += str(e_state) + "   "
+                        e_file += "\n"
+                f.write(e_file + "\n")
+                f.close()
+
+        else:
+            self.read_erasure_errors()
+
+        if self.plot_load:
+            self.LP.plot_erasures()
+
+    def init_erasure_errors(self, pE=0, savefile=False):
+        '''
+        :param pE           probability of an erasure error
+        :param savefile     toggle to save the errors to a file
+
+        Initializes an erasure error with probabilty pE, which will take form as a uniformly chosen pauli X and/or Z error.
+        '''
+        if self.erasure_file is None:
+
+            # Write first lines of error file
+            if savefile:
+                st = datetime.datetime.fromtimestamp(self.time).strftime('%Y-%m-%d_%H-%M-%S')
+                st2 = datetime.datetime.fromtimestamp(self.time).strftime('%Y-%m-%d %H-%M-%S')
+                name = "./errors/" + st + "_erasure.txt"
+                f = open(name, "w")
+                f.write("Erasure error file created on " + st2 + "\n")
+                f.write("Seed = " + str(self.time) + "\n")
+                f.write("L = " + str(self.size) + "\n\n")
+                e_file = "pE = " + str(pE) + "\n"
+
+            # Loop over all qubits
+            for y in range(self.size):
+                for td in range(2):
+
+                    if savefile and td == 0:
+                        e_file += "  "
+
+                    for x in range(self.size):
+
+                        # Save erasure state if pE > 0
+                        if pE != 0 and random.random() < pE:
+
+                            self.G.E[(0, y, x, td)].erasure = True
+                            self.G.E[(1, y, x, td)].erasure = True
+
+                            # Apply random X or Z error on erasure
+                            rand = random.random()
+                            if rand < 0.25:
+                                self.G.E[(0, y, x, td)].state = not self.G.E[(0, y, x, td)].state
+                                e_state = 2
+                            elif rand >= 0.25 and rand < 0.5:
+                                self.G.E[(1, y, x, td)].state = not self.G.E[(1, y, x, td)].state
+                                e_state = 3
+                            elif rand >= 0.5 and rand < 0.75:
+                                self.G.E[(0, y, x, td)].state = not self.G.E[(0, y, x, td)].state
+                                self.G.E[(1, y, x, td)].state = not self.G.E[(1, y, x, td)].state
+                                e_state = 4
+                            else:
+                                e_state = 1
+                        else:
+                            e_state = 0
+
+                        if savefile:
+                            e_file += str(e_state) + "   "
+
+                    if savefile:
+                        e_file += "\n"
+
+            if savefile:
+                f.write(e_file + "\n")
+                f.close()
+        else:
+            self.read_erasure_errors()
+
+        if self.plot_load:
+            self.LP.plot_erasures()
+
+
+    def init_pauli_errors(self, pX=0, pZ=0, savefile=False):
+        '''
+        :param pX           probability of a Pauli X error
+        :param pZ           probability of a Pauli Z error
+        :param savefile     toggle to save the errors to a file
+
+        initates Pauli X and Z errors on the lattice based on the error rates
+        '''
+
+        if self.pauli_file is None:
+
+            # Write first lines of error file
+            if savefile:
+                st = datetime.datetime.fromtimestamp(self.time).strftime('%Y-%m-%d_%H-%M-%S')
+                st2 = datetime.datetime.fromtimestamp(self.time).strftime('%Y-%m-%d %H-%M-%S')
+                name = "./errors/" + st + "_pauli.txt"
+                f = open(name, "w")
+                f.write("Pauli error file created on " + st2 + "\n")
+                f.write("Seed = " + str(self.time) + "\n")
+                f.write("L = " + str(self.size) + "\n\n")
+                x_file = "pX = " + str(pX) + "\n"
+                z_file = "pZ = " + str(pZ) + "\n"
+
+            # Loop over all qubits
+            for y in range(self.size):
+                for td in range(2):
+                    if savefile and td == 0:
+                        x_file += "  "
+                        z_file += "  "
+
+                    for x in range(self.size):
+
+                        # Apply X error if chance > 0
+                        if pX != 0:
+                            if random.random() < pX:
+                                self.G.E[(0, y, x, td)].state = not self.G.E[(0, y, x, td)].state
+                                x_state = 1
+                            else:
+                                x_state = 0
+                        else:
+                            x_state = 0
+
+                        # Apply Z error if chance > 0
+                        if pZ != 0:
+                            if random.random() < pZ:
+                                self.G.E[(1, y, x, td)].state = not self.G.E[(1, y, x, td)].state
+                                z_state = 1
+                            else:
+                                z_state = 0
+                        else:
+                            z_state = 0
+
+                        if savefile:
+                            x_file += str(x_state) + "   "
+                            z_file += str(z_state) + "   "
+                    if savefile:
+                        x_file += "\n"
+                        z_file += "\n"
+            if savefile:
+                f.write(x_file + "\n")
+                f.write(z_file + "\n")
+                f.close()
+        else:
+            self.read_pauli_errors()
+
+        if self.plot_load:
+            self.LP.plot_erasures()
+            self.LP.plot_errors()
+
+
+    def read_erasure_errors(self):
+        '''
+        Reads the erasure errors from the erasure file.
+        '''
+
+        self.pE = float(next(self.erasure_file)[5:])
+
+        for linenum in range(self.size*2):
+            line = next(self.erasure_file)
+            y = linenum // 2
+            td = linenum % 2
+            for x in range(self.size):
+                if td == 0:
+                    state = int(line[2 + x*4])
+                else:
+                    state = int(line[x*4])
+                if state != 0:
+                    self.G.E[(0, y, x, td)].erasure = True
+                    self.G.E[(1, y, x, td)].erasure = True
+                    if state == 2:
+                        self.G.E[(0, y, x, td)].state = not self.G.E[(0, y, x, td)].state
+                    elif state == 3:
+                        self.G.E[(1, y, x, td)].state = not self.G.E[(1, y, x, td)].state
+                    elif state == 4:
+                        self.G.E[(0, y, x, td)].state = not self.G.E[(0, y, x, td)].state
+                        self.G.E[(1, y, x, td)].state = not self.G.E[(1, y, x, td)].state
+
+
+    def read_pauli_errors(self):
+        '''
+        Reads the pauli errors from the pauli file
+
+
+        '''
+        self.pX = float(next(self.pauli_file)[5:])
+
+        for linenum in range(self.size*2):
+            line = next(self.pauli_file)
+            y = linenum // 2
+            td = linenum % 2
+            for x in range(self.size):
+                if td == 0:
+                    state = int(line[2 + x*4])
+                else:
+                    state = int(line[x*4])
+                if state == 1:
+                    self.G.E[(0, y, x, td)].state = not self.G.E[(0, y, x, td)].state
+
+        line = next(self.pauli_file)
+        self.pZ = float(next(self.pauli_file)[5:])
+
+        for linenum in range(self.size*2):
+            line = next(self.pauli_file)
+            y = linenum // 2
+            td = linenum % 2
+            for x in range(self.size):
+                if td == 0:
+                    state = int(line[2 + x*4])
+                else:
+                    state = int(line[x*4])
+                if state == 1:
+                    self.G.E[(1, y, x, td)].state = not self.G.E[(1, y, x, td)].state
 
 
     '''
     Main functions
     '''
-
-    def print_errors(self, array, type, p):
-        '''
-        :param array        error list of size 2*L*L
-        :param type         string indicating the error type
-        :param p            the error probability of the current error type
-
-        Prints the given error array to an easy to read format, which can be altered by the user, and reused later.
-        '''
-
-        st = datetime.datetime.fromtimestamp(self.time).strftime('%Y-%m-%d_%H-%M-%S')
-        st2 = datetime.datetime.fromtimestamp(self.time).strftime('%Y-%m-%d %H-%M-%S')
-        name = "./errors/" + st + "_L_" + str(self.size) + "_" + type + ".txt"
-
-        f = open(name, "w")
-
-        f.write(type + " error file created on " + st2 + "\n")
-        f.write("Seed = " + str(self.time) + "\n")
-        f.write("P = " + str(p) + "\n")
-        f.write("L = " + str(self.size) + "\n\n")
-
-        for line in range(self.size):
-            f.write("  ")
-            for qubit in range(self.size):
-                f.write(str(int(array[line*self.size*2 + qubit*2])) + "   ")
-            f.write("\n")
-            for qubit in range(self.size):
-                f.write(str(int(array[line*self.size*2 + qubit*2 + 1])) + "   ")
-            f.write('\n')
-
-        f.close()
-
-    def read_errors(self, type, filetimestamp):
-        '''
-        :param ertype           string indicating the error type
-        :param filetimestamp    timestamp of error file: YYYY-MM-DD_hh_mm
-
-        Loads the error array given the filetimestamp
-        '''
-
-        filename = "./errors/" + filetimestamp + "_L_" + str(self.size) + "_" + type + ".txt"
-
-        try:
-            f = open(filename, "r")
-        except FileNotFoundError:
-            sys.exit("Error file not found")
-
-        array = []
-
-        for ln, line in enumerate(f.readlines()):
-            if ln > 4:
-                if ln % 2 == 1:
-                    l1 = []
-                    for char in range(self.size):
-                        l1.append(int(line[2 + char*4]))
-                else:
-                    for char in range(self.size):
-                        array.append(l1[char])
-                        array.append(int(line[char*4]))
-
-        return array
-
-    def init_erasure(self, pE=0.05, savefile=True, filetimestamp=None):
-
-        '''
-        :param pE:                      probability of erasure error
-        :param new_errors: if true:     new array is generated with errors; if false; previous array is used (txt file)
-        :param write_error: if true:    writes the generated array with pauli errors to txt files
-        :param array_file:              name for the txt file
-        '''
-
-        self.pE = pE
-
-        if filetimestamp is None:
-
-            # Generate erasure errors
-            erasures = [1 if random.random() < self.pE else 0 for _ in range(self.num_stab)]
-
-            # Increase error size, make blob
-            for id in [id for id, erasure in enumerate(erasures) if erasure == 1]:
-                for qA in self.edge_data[id][5]:
-                    erasures[qA] = 1
-                for qB in self.edge_data[id][7]:
-                    erasures[qB] = 1
-
-
-            # Uniform I, X, Y, Z
-            for id in [id for id, erasure in enumerate(erasures) if erasure == 1]:
-                rand = random.random()
-                if rand < 0.25:
-                    erasures[id] = 2
-                elif rand >= 0.25 and rand < 0.5:
-                    erasures[id] = 3
-                elif rand >= 0.5 and rand < 0.75:
-                    erasures[id] = 4
-
-            if savefile:
-                self.print_errors(erasures, "Erasure", pE)
-
-        else:
-            erasures = self.read_errors("Erasure", filetimestamp)
-
-        # if self.plot_load:   self.LP.plot_erasures(self.erasures)
-
-        self.er_loc = []
-        # Apply erasure errors to array
-        for id, erasure in enumerate(erasures):
-            if erasure != 0:
-                self.er_loc.append(id)
-                self.er_loc.append(id + self.num_stab)
-
-            if erasure in [2, 4]:
-                self.array[id] = not self.array[id]
-            if erasure in [3, 4]:
-                self.array[id + self.num_stab] = not self.array[id + self.num_stab]
-
-        self.er_loc = tuple(self.er_loc)
-
-
-
-    def init_pauli(self, pX=0.1, pZ=0.1, savefile=True, filetimestamp=None):
-
-        '''
-        :param pX:                      probability of X error
-        :param pZ:                      probability of Z error
-        :param new_errors: if true:     new array is generated with errors; if false; previous array is used (txt file)
-        :param write_error: if true:    writes the generated array with pauli errors to txt files
-        :param array_file:              name for the txt file
-        '''
-
-        self.pX = pX
-        self.pZ = pZ
-
-        if filetimestamp is None:
-            eX = [True if random.random() < self.pX else False for _ in range(self.num_stab)]
-            eZ = [True if random.random() < self.pZ else False for _ in range(self.num_stab)]
-            if savefile:
-                self.print_errors(eX, "Pauli-X", pX)
-                self.print_errors(eZ, "Pauli-Z", pZ)
-        else:
-            eX = self.read_errors("Pauli-X", filetimestamp)
-            eZ = self.read_errors("Pauli-Z", filetimestamp)
-
-        # Apply pauli errors to array
-        for id, iX in enumerate(eX):
-            if iX:
-                self.array[id] = not self.array[id]
-        for id, iZ in enumerate(eZ):
-            if iZ:
-                self.array[id + self.num_stab] = not self.array[id + self.num_stab]
-
-
-        if self.plot_load:
-            self.LP.plot_errors(self.array)
 
     def measure_stab(self):
         '''
@@ -398,20 +396,15 @@ class lattice:
             The 0 values are the quasiparticles
         '''
 
-        stab_measurement = [True for _ in range(self.num_stab)]
-
-        # Measure plaquettes and stars
-        for sID, stabilizer in enumerate(self.stab_data):
-
-            # Flip value of stabilizer measurement
-            for qID in stabilizer[4]:
-                if not self.array[qID]:
-                    stab_measurement[sID] = not stab_measurement[sID]
-
-        self.qua_loc = tuple([sID for sID, stab in enumerate(stab_measurement) if not stab])
+        directions = ["u", "d", "l", "r"]
+        for vertex in self.G.V.values():
+            for dir in directions:
+                if dir in vertex.neighbors:
+                    if vertex.neighbors[dir][1].state:
+                        vertex.state = not vertex.state
 
         if self.plot_load:
-            self.LP.plot_anyons(self.qua_loc)
+            self.LP.plot_anyons()
 
     def get_matching_peeling(self):
         '''
@@ -424,66 +417,61 @@ class lattice:
         PL.grow_clusters()
         PL.init_trees()
         PL.peel_trees()
-        matching = PL.return_matching()
 
-
-        for id in matching:
-
-            self.array[id] = not self.array[id]
+        for edge in self.G.E.values():
+            if edge.matching:
+                edge.state = not edge.state
 
         if self.plot_load:
-            self.LP.plot_final(matching, self.array)
+            self.LP.plot_final()
 
     def get_matching_MWPM(self):
         '''
         Uses the MWPM algorithm to get the matchings
         A list of combinations of all the anyons and their respective weights are feeded to the blossom5 algorithm
         '''
-
-        qua_loc = (tuple([qua for qua in self.qua_loc if qua < self.size**2]), tuple([qua for qua in self.qua_loc if qua >= self.size**2]))
-        N_qua = (len(qua_loc[0]), len(qua_loc[1]))
-
-        self.results = []
-        self.flips = []
+        all_matchings = []
 
         for ertype in range(2):
 
-            # edges given to MWPM algorithm [[v0, v1, distance],...]
+            anyons = []
+
+            for y in range(self.size):
+                for x in range(self.size):
+                    vertex = self.G.V[(ertype, y, x)]
+                    if vertex.state:
+                        anyons.append(vertex)
+
             edges = []
 
             # Get all possible strings - connections between the quasiparticles and their weights
-            for i0, v0 in enumerate(qua_loc[ertype][:-1]):
+            for i0, v0 in enumerate(anyons[:-1]):
 
-                (y0, x0) = self.stab_data[v0][1:3]
+                (_, y0, x0) = v0.sID
 
-                for i1, v1 in enumerate(qua_loc[ertype][i0 + 1:]):
+                for i1, v1 in enumerate(anyons[i0 + 1:]):
 
-                    (y1, x1) = self.stab_data[v1][1:3]
+                    (_, y1, x1) = v1.sID
                     wy = (y0 - y1) % (self.size)
                     wx = (x0 - x1) % (self.size)
                     weight = min([wy, self.size - wy]) + min([wx, self.size - wx])
                     edges.append([i0, i1 + i0 + 1, weight])
 
             # Apply BlossomV algorithm if there are quasiparticles
-            output = pm.getMatching(N_qua[ertype], edges) if N_qua[ertype] != 0 else []
+            output = pm.getMatching(len(anyons), edges) if anyons != [] else []
 
             # Save results to same format as self.syn_inf
-            matching_pairs = [[i, output[i]] for i in range(N_qua[ertype]) if output[i] > i]
+            matching_pairs = [[anyons[i0], anyons[i1]] for i0, i1 in enumerate(output) if i0 > i1]
+            all_matchings.append(matching_pairs)
 
             '''
             Finds the qubits that needs to be flipped in order to correct the errors
             '''
 
-            result = []
+            for v0, v1 in matching_pairs:
 
-            for pair in matching_pairs:
-
-                v0 = qua_loc[ertype][pair[0]]
-                v1 = qua_loc[ertype][pair[1]]
-                result.append((v0, v1))
-
-                (y0, x0) = self.stab_data[v0][1:3]
-                (y1, x1) = self.stab_data[v1][1:3]
+                (_, y0, x0) = v0.sID
+                (_, y1, x1) = v1.sID
 
                 # Get distance between endpoints, take modulo to find min distance
                 dy0 = (y0 - y1) % self.size
@@ -493,86 +481,47 @@ class lattice:
 
                 if dy0 < dy1:
                     dy = dy0
-                    yd = 0
+                    yd = 'u'
                 else:
                     dy = dy1
-                    yd = 1
+                    yd = 'd'
 
                 if dx0 < dx1:
                     dx = dx0
-                    xd = 3
+                    xd = 'r'
                 else:
                     dx = dx1
-                    xd = 2
+                    xd = 'l'
 
                 ynext = v0
                 for y in range(dy):
-                    self.flips.append(self.stab_data[ynext][4][yd])
-                    ynext = self.stab_data[ynext][3][yd]
+                    (ynext, edge) = ynext.neighbors[yd]
+                    edge.state = not edge.state
+                    edge.matching = not edge.matching
 
                 xnext = v1
                 for x in range(dx):
-                    self.flips.append(self.stab_data[xnext][4][xd])
-                    xnext = self.stab_data[xnext][3][xd]
-
-
-            self.results.append(result)
-
-        # Apply flips on qubits
-        for id in self.flips:
-            self.array[id] = not self.array[id]
-
+                    (xnext, edge) = xnext.neighbors[xd]
+                    edge.state = not edge.state
+                    edge.matching = not edge.matching
 
         if self.plot_load:
-            self.LP.plot_lines(self.results)
-        if self.plot_load:
-            self.LP.plot_final(self.flips, self.array)
+            self.LP.plot_lines(all_matchings)
+            self.LP.plot_final()
 
     def logical_error(self):
 
         # logical error in [Xvertical, Xhorizontal, Zvertical, Zhorizontal]
         logical_error = [False, False, False, False]
 
-        # Check number of flips around borders
-        for i, error in enumerate(self.log_data):
-            for qubit in error:
-                if self.array[qubit] == False:
-                    logical_error[i] = not logical_error[i]
+        for i in range(self.size):
+            if self.G.E[(0, i, 0, 0)]:
+                logical_error[0] = not logical_error[0]
+            if self.G.E[(0, 0, i, 1)]:
+                logical_error[1] = not logical_error[1]
+            if self.G.E[(0, i, 0, 1)]:
+                logical_error[2] = not logical_error[2]
+            if self.G.E[(0, 0, i, 0)]:
+                logical_error[3] = not logical_error[3]
 
         return logical_error
-
-
-    def print_array(self):
-        '''
-        used to print the qubit array at any moment
-        '''
-
-        Ername = ["X", "Z"]
-        for ertype in range(2):
-            for y in range(self.size):
-                line1 = "  "
-                line2 = ""
-                for x in range(self.size):
-                    str1 = "O" if self.array[ertype*self.num_stab + y*self.size*2 + x*2] else Ername[ertype]
-                    str2 = "O" if self.array[ertype*self.num_stab + y*self.size*2 + x*2 + 1] else Ername[ertype]
-                    line1 += str1 + "   "
-                    line2 += str2 + "   "
-                print(line1)
-                print(line2)
-            print("")
-
-    def print_LL2(self, LL2_array):
-        '''
-        print a LxLx2 array (stab, error) in a way that is nice to read
-        '''
-
-        base = 0
-        for ertype in range(2):
-            for y in range(self.size):
-                print([0 if x in [False, 0] else 1 for x in LL2_array[base: base + self.size]])
-                base += self.size
-
-
-'''
-Helper functions
-'''

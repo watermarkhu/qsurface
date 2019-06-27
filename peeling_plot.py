@@ -4,7 +4,7 @@ from matplotlib.lines import Line2D
 
 class toric_peeling_plot:
 
-    def __init__(self, lat, figure, plotstep_peel=False, plotstep_click=False):
+    def __init__(self, lat, figure, plotstep_click=False):
 
         self.size = lat.size
         # self.qua_loc = lat.qua_loc
@@ -26,7 +26,6 @@ class toric_peeling_plot:
         self.lw = 2
 
         self.step = 0.01
-        self.plotstep_peel = plotstep_peel
         self.plotstep_click = plotstep_click
 
         self.f = figure
@@ -52,7 +51,7 @@ class toric_peeling_plot:
 
 
     def waitforkeypress(self, str):
-        print(str, "Press any key to continue...")
+        print(str, "Press any key (on plot) to continue...")
         keyboardClick = False
         while not keyboardClick:
             keyboardClick = plt.waitforbuttonpress(120)
@@ -110,17 +109,55 @@ class toric_peeling_plot:
         self.waitforkeypress("Peeling lattice initiated.")
 
 
-    def add_edge(self, edge):
+    def plot_removed(self, str):
+        '''
+        :param rem_list         list of edges
+        plots the normal edge color over the edges that have been removed during the formation of the tree structure
+        '''
+
+        plt.sca(self.ax)
+
+        for edge in self.G.E.values():
+            if edge.peeled and not edge.matching:
+
+                (V0, V1) = edge.vertices
+                (type, yb, xb) = V0.sID
+                (type, yg, xg) = V1.sID
+
+                if type == 0:
+                    if yb == 0 and yg == self.size - 1:
+                        yb = self.size
+                    elif yb == self.size - 1 and yg == 0:
+                        yg = self.size
+                    if xb == 0 and xg == self.size - 1:
+                        xb = self.size
+                    elif xb == self.size - 1 and xg == 0:
+                        xg = self.size
+                    self.ax.plot([xb-.5, xg-.5], [yb-.5, yg-.5], c=[1, 1, 1], lw=self.lw, ls='-')
+                    self.ax.plot([xb-.5, xg-.5], [yb-.5, yg-.5], c=self.cl, lw=self.lw, ls='-')
+                else:
+                    if yb == 0 and yg == self.size - 1:
+                        yg = -1
+                    elif yb == self.size - 1 and yg == 0:
+                        yb = -1
+                    if xb == 0 and xg == self.size - 1:
+                        xg = -1
+                    elif xb == self.size - 1 and xg == 0:
+                        xb = -1
+                    self.ax.plot([xb, xg], [yb, yg], c=[1, 1, 1], lw=self.lw, ls='-')
+                    self.ax.plot([xb, xg], [yb, yg], c=self.cl, lw=self.lw, ls='--')
+
+        plt.draw()
+        self.waitforkeypress(str)
+
+
+    def add_edge(self, edge, vertex=None):
 
         plt.figure(self.f.number)
 
-        clusters = list(edge.halves.values())
-        vertices = list(edge.halves.keys())
-
-        if None in clusters:
-            growindex = clusters.index(None)
-            V0 = vertices[1 - growindex]
-            V1 = vertices[growindex]
+        if edge.cluster == 0:
+            V0 = vertex
+            V1 = edge.vertices[1 - edge.vertices.index(vertex)]
             (type, yb, xb) = V0.sID
             (type, yt, xt) = V1.sID
 
@@ -141,8 +178,8 @@ class toric_peeling_plot:
             trans = 0.3
         else:
 
-            V0 = vertices[0]
-            V1 = vertices[1]
+            V0 = edge.vertices[0]
+            V1 = edge.vertices[1]
             (type, yb, xb) = V0.sID
             (type, yg, xg) = V1.sID
 
@@ -181,48 +218,6 @@ class toric_peeling_plot:
             plt.pause(self.step)
 
 
-    def plot_removed(self, str):
-        '''
-        :param rem_list         list of edges
-        plots the normal edge color over the edges that have been removed during the formation of the tree structure
-        '''
-
-        plt.sca(self.ax)
-
-        for edge in self.G.E.values():
-            if edge.peeled:
-
-                (V0, V1) = list(edge.halves.keys())
-                (type, yb, xb) = V0.sID
-                (type, yg, xg) = V1.sID
-
-                if type == 0:
-                    if yb == 0 and yg == self.size - 1:
-                        yb = self.size
-                    elif yb == self.size - 1 and yg == 0:
-                        yg = self.size
-                    if xb == 0 and xg == self.size - 1:
-                        xb = self.size
-                    elif xb == self.size - 1 and xg == 0:
-                        xg = self.size
-                    self.ax.plot([xb-.5, xg-.5], [yb-.5, yg-.5], c=[1, 1, 1], lw=self.lw, ls='-')
-                    self.ax.plot([xb-.5, xg-.5], [yb-.5, yg-.5], c=self.cl, lw=self.lw, ls='-')
-                else:
-                    if yb == 0 and yg == self.size - 1:
-                        yg = -1
-                    elif yb == self.size - 1 and yg == 0:
-                        yb = -1
-                    if xb == 0 and xg == self.size - 1:
-                        xg = -1
-                    elif xb == self.size - 1 and xg == 0:
-                        xb = -1
-                    self.ax.plot([xb, xg], [yb, yg], c=[1, 1, 1], lw=self.lw, ls='-')
-                    self.ax.plot([xb, xg], [yb, yg], c=self.cl, lw=self.lw, ls='--')
-
-
-        plt.draw()
-        self.waitforkeypress(str)
-
     '''
     ________________________________________________________________________________
 
@@ -237,20 +232,26 @@ class toric_peeling_plot:
         2.  plots normal edge color
 
         '''
-        if type in ["remove", "peel"]:
+        if type == "remove":
             c1 = self.cl
             c2 = self.cl
-        elif type == "tree":
-            c1 = self.cX
-            c2 = self.cZ
+            text = "☒ remove"
         elif type == "confirm":
             c1 = self.cx
             c2 = self.cz
+            text = "☑ confirm"
+        elif type == "peel":
+            c1 = self.cl
+            c2 = self.cl
+            text = "☒ peeling"
+        elif type == "match":
+            c1 = self.cX
+            c2 = self.cZ
+            text = "☑ matching"
 
         plt.sca(self.ax)
 
-
-        (V0, V1) = list(edge.halves.keys())
+        (V0, V1) = edge.vertices
 
         (ertype, yb, xb) = V0.sID
         (ertype, yg, xg) = V1.sID
@@ -279,8 +280,9 @@ class toric_peeling_plot:
             self.ax.plot([xb, xg], [yb, yg], c='k', lw=self.lw, ls='--')
 
         plt.draw()
+
         if self.plotstep_click:
-            self.waitforkeypress(type + " edge " + str(edge))
+            self.waitforkeypress(text + " edge " + str(edge))
         else:
             plt.pause(self.step)
 

@@ -66,15 +66,18 @@ class lattice:
 
         random.seed(self.time)
 
+        # Create graph if none is given.
         if graph is None:
 
             self.G = GO.Graph(None, None, None)
 
-            # Add vertices and edges to graph
+            # Add vertices to graph
             for ertype in range(2):
                 for y in range(self.size):
                     for x in range(self.size):
                         self.G.add_vertex((ertype, y, x))
+
+            # Add edges to graph
             for ertype in range(2):
                 for y in range(self.size):
                     for x in range(self.size):
@@ -114,34 +117,31 @@ class lattice:
 
         if self.erasure_file is None:
 
-            # Loop over all qubits
-            for y in range(self.size):
-                for td in range(2):
-                    for x in range(self.size):
+            if pE != 0:
+                for y in range(self.size):                          # Loop over all qubits
+                    for td in range(2):
+                        for x in range(self.size):
+                            if random.random() < pE:
+                                region = {(y, x, td)}
 
-                        # Save erasure state if pE > 0
-                        if pE != 0 and random.random() < pE:
+                                vertices = self.G.E[(0, y, x, td)].vertices
+                                for vertex in vertices:
+                                    for wind in self.G.wind:
+                                        (n_vertex, edge) = vertex.neighbors[wind]
+                                        (type, y, x, td) = edge.qID
+                                        region.add((y, x, td))      # Get all qubits around erasure center, create region
 
-                            region = {(y, x, td)}
-
-                            vertices = self.G.E[(0, y, x, td)].vertices
-                            for vertex in vertices:
-                                for wind in self.G.wind:
-                                    (n_vertex, edge) = vertex.neighbors[wind]
-                                    (type, y, x, td) = edge.qID
-                                    region.add((y, x, td))
-
-                            for (y, x, td) in region:
-                                self.G.E[(0, y, x, td)].erasure = True
-                                self.G.E[(1, y, x, td)].erasure = True
-                                rand = random.random()
-                                if rand < 0.25:
-                                    self.G.E[(0, y, x, td)].state = not self.G.E[(0, y, x, td)].state
-                                elif rand >= 0.25 and rand < 0.5:
-                                    self.G.E[(1, y, x, td)].state = not self.G.E[(1, y, x, td)].state
-                                elif rand >= 0.5 and rand < 0.75:
-                                    self.G.E[(0, y, x, td)].state = not self.G.E[(0, y, x, td)].state
-                                    self.G.E[(1, y, x, td)].state = not self.G.E[(1, y, x, td)].state
+                                for (y, x, td) in region:           # Apply uniform Pauli errors on erasure region
+                                    self.G.E[(0, y, x, td)].erasure = True      # Set erasure state
+                                    self.G.E[(1, y, x, td)].erasure = True
+                                    rand = random.random()
+                                    if rand < 0.25:
+                                        self.G.E[(0, y, x, td)].state = not self.G.E[(0, y, x, td)].state
+                                    elif rand >= 0.25 and rand < 0.5:
+                                        self.G.E[(1, y, x, td)].state = not self.G.E[(1, y, x, td)].state
+                                    elif rand >= 0.5 and rand < 0.75:
+                                        self.G.E[(0, y, x, td)].state = not self.G.E[(0, y, x, td)].state
+                                        self.G.E[(1, y, x, td)].state = not self.G.E[(1, y, x, td)].state
 
             if savefile:
                 st = datetime.datetime.fromtimestamp(self.time).strftime('%Y-%m-%d_%H-%M-%S')
@@ -152,7 +152,6 @@ class lattice:
                 f.write("Seed = " + str(self.time) + "\n")
                 f.write("L = " + str(self.size) + "\n\n")
                 e_file = "pE = " + str(pE) + "\n"
-
                 for y in range(self.size):
                     for td in range(2):
                         if td == 0:
@@ -205,20 +204,15 @@ class lattice:
             # Loop over all qubits
             for y in range(self.size):
                 for td in range(2):
-
                     if savefile and td == 0:
                         e_file += "  "
+                    for x in range(self.size):                      # Loop over all qubits
+                        if random.random() < pE:
 
-                    for x in range(self.size):
-
-                        # Save erasure state if pE > 0
-                        if pE != 0 and random.random() < pE:
-
-                            self.G.E[(0, y, x, td)].erasure = True
+                            self.G.E[(0, y, x, td)].erasure = True  # Set erasure state
                             self.G.E[(1, y, x, td)].erasure = True
 
-                            # Apply random X or Z error on erasure
-                            rand = random.random()
+                            rand = random.random()                  # Apply random X or Z error on erasure
                             if rand < 0.25:
                                 self.G.E[(0, y, x, td)].state = not self.G.E[(0, y, x, td)].state
                                 e_state = 2
@@ -233,13 +227,10 @@ class lattice:
                                 e_state = 1
                         else:
                             e_state = 0
-
                         if savefile:
                             e_file += str(e_state) + "   "
-
                     if savefile:
                         e_file += "\n"
-
             if savefile:
                 f.write(e_file + "\n")
                 f.close()
@@ -248,7 +239,6 @@ class lattice:
 
         if self.plot_load:
             self.LP.plot_erasures()
-
 
     def init_pauli_errors(self, pX=0, pZ=0, savefile=False):
         '''
@@ -273,17 +263,14 @@ class lattice:
                 x_file = "pX = " + str(pX) + "\n"
                 z_file = "pZ = " + str(pZ) + "\n"
 
-            # Loop over all qubits
             for y in range(self.size):
                 for td in range(2):
                     if savefile and td == 0:
                         x_file += "  "
                         z_file += "  "
+                    for x in range(self.size):      # Loop over all qubits
 
-                    for x in range(self.size):
-
-                        # Apply X error if chance > 0
-                        if pX != 0:
+                        if pX != 0:                 # Apply X error if chance > 0
                             if random.random() < pX:
                                 self.G.E[(0, y, x, td)].state = not self.G.E[(0, y, x, td)].state
                                 x_state = 1
@@ -292,8 +279,7 @@ class lattice:
                         else:
                             x_state = 0
 
-                        # Apply Z error if chance > 0
-                        if pZ != 0:
+                        if pZ != 0:                 # Apply Z error if chance > 0
                             if random.random() < pZ:
                                 self.G.E[(1, y, x, td)].state = not self.G.E[(1, y, x, td)].state
                                 z_state = 1
@@ -319,12 +305,10 @@ class lattice:
             self.LP.plot_erasures()
             self.LP.plot_errors()
 
-
     def read_erasure_errors(self):
         '''
         Reads the erasure errors from the erasure file.
         '''
-
         self.pE = float(next(self.erasure_file)[5:])
 
         for linenum in range(self.size*2):
@@ -347,11 +331,9 @@ class lattice:
                         self.G.E[(0, y, x, td)].state = not self.G.E[(0, y, x, td)].state
                         self.G.E[(1, y, x, td)].state = not self.G.E[(1, y, x, td)].state
 
-
     def read_pauli_errors(self):
         '''
         Reads the pauli errors from the pauli file
-
 
         '''
         self.pX = float(next(self.pauli_file)[5:])
@@ -390,15 +372,11 @@ class lattice:
 
     def measure_stab(self):
         '''
-        self.stab is an array that stores the measurement outcomes for the stabilizer measurements
-            It has dimension [XZ{0,1}, size, size]
-            Measurements outcomes are either 0 or 1, analogous to -1 and 1 states
-            The 0 values are the quasiparticles
+        The measurement outcomes of the stabilizers, which are the vertices on the graph are saved to their corresponding vertex objects. We loop over all vertex objects and over their neighboring edge or qubit objects.
         '''
 
-        directions = ["u", "d", "l", "r"]
         for vertex in self.G.V.values():
-            for dir in directions:
+            for dir in self.G.wind:
                 if dir in vertex.neighbors:
                     if vertex.neighbors[dir][1].state:
                         vertex.state = not vertex.state
@@ -415,7 +393,6 @@ class lattice:
         PL = pel.toric(self)
         PL.find_clusters()
         PL.grow_clusters()
-        PL.init_trees()
         PL.peel_trees()
 
         for edge in self.G.E.values():
@@ -427,30 +404,23 @@ class lattice:
 
     def get_matching_MWPM(self):
         '''
-        Uses the MWPM algorithm to get the matchings
-        A list of combinations of all the anyons and their respective weights are feeded to the blossom5 algorithm
+        Uses the MWPM algorithm to get the matchings. A list of combinations of all the anyons and their respective weights are feeded to the blossom5 algorithm. To apply the matchings, we walk from each matching vertex to where their paths meet perpendicualarly, flipping the edges on the way over.
         '''
         all_matchings = []
 
         for ertype in range(2):
 
-            anyons = []
-
+            anyons = []                     # Get all anyons as MWPM algorithm requires
             for y in range(self.size):
                 for x in range(self.size):
                     vertex = self.G.V[(ertype, y, x)]
                     if vertex.state:
                         anyons.append(vertex)
 
-            edges = []
-
-            # Get all possible strings - connections between the quasiparticles and their weights
+            edges = []                      # Get all possible edges between the anyons and their weights
             for i0, v0 in enumerate(anyons[:-1]):
-
                 (_, y0, x0) = v0.sID
-
                 for i1, v1 in enumerate(anyons[i0 + 1:]):
-
                     (_, y1, x1) = v1.sID
                     wy = (y0 - y1) % (self.size)
                     wx = (x0 - x1) % (self.size)
@@ -459,33 +429,25 @@ class lattice:
 
             # Apply BlossomV algorithm if there are quasiparticles
             output = pm.getMatching(len(anyons), edges) if anyons != [] else []
-
-            # Save results to same format as self.syn_inf
             matching_pairs = [[anyons[i0], anyons[i1]] for i0, i1 in enumerate(output) if i0 > i1]
             all_matchings.append(matching_pairs)
 
-            '''
-            Finds the qubits that needs to be flipped in order to correct the errors
-            '''
-
-            for v0, v1 in matching_pairs:
+            for v0, v1 in matching_pairs:   # Apply the matchings to the graph
 
                 (_, y0, x0) = v0.sID
                 (_, y1, x1) = v1.sID
 
-                # Get distance between endpoints, take modulo to find min distance
-                dy0 = (y0 - y1) % self.size
+                dy0 = (y0 - y1) % self.size # Get distance between endpoints, take modulo to find min distance
                 dx0 = (x0 - x1) % self.size
                 dy1 = (y1 - y0) % self.size
                 dx1 = (x1 - x0) % self.size
 
-                if dy0 < dy1:
+                if dy0 < dy1:               # Find closest path and walking direction
                     dy = dy0
                     yd = 'u'
                 else:
                     dy = dy1
                     yd = 'd'
-
                 if dx0 < dx1:
                     dx = dx0
                     xd = 'r'
@@ -493,13 +455,13 @@ class lattice:
                     dx = dx1
                     xd = 'l'
 
-                ynext = v0
+                ynext = v0                  # walk vertically from v0
                 for y in range(dy):
                     (ynext, edge) = ynext.neighbors[yd]
                     edge.state = not edge.state
                     edge.matching = not edge.matching
 
-                xnext = v1
+                xnext = v1                  # walk horizontally from v1
                 for x in range(dx):
                     (xnext, edge) = xnext.neighbors[xd]
                     edge.state = not edge.state
@@ -511,17 +473,19 @@ class lattice:
 
     def logical_error(self):
 
-        # logical error in [Xvertical, Xhorizontal, Zvertical, Zhorizontal]
+        '''
+        Finds whether there are any logical errors on the lattice/graph. The logical error is returned as [Xvertical, Xhorizontal, Zvertical, Zhorizontal], where each item represents a homological Loop
+        '''
         logical_error = [False, False, False, False]
 
         for i in range(self.size):
-            if self.G.E[(0, i, 0, 0)]:
+            if self.G.E[(0, i, 0, 0)].state:
                 logical_error[0] = not logical_error[0]
-            if self.G.E[(0, 0, i, 1)]:
+            if self.G.E[(0, 0, i, 1)].state:
                 logical_error[1] = not logical_error[1]
-            if self.G.E[(0, i, 0, 1)]:
+            if self.G.E[(1, i, 0, 1)].state:
                 logical_error[2] = not logical_error[2]
-            if self.G.E[(0, 0, i, 0)]:
+            if self.G.E[(1, 0, i, 0)].state:
                 logical_error[3] = not logical_error[3]
 
         return logical_error

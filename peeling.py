@@ -3,9 +3,12 @@ import random
 
 
 class toric:
-    def __init__(self, lat):
+    def __init__(self, lat, random_order=1, random_traverse=1, intervention=1):
         '''
-        :param lat      lattice object from toric_lat.py
+        :param lat                  lattice object from toric_lat.py
+        :param random_order         Random order on cluster finding order
+        :param random_traverse      Random order on traversing direction of the tree
+        :param intervention         Intervention on merge during growth
 
         The graph objects, lattice size and plot toggle is taken from the lattice object.
         Some options can be toggled for stepwise plotting during the decoder operation. {plotstep_tree} toggles stepwise plotting during the cluster initialization, {potstep_grow} toggles stepwise plotting during cluster growth, and {plotstep_peel} toggles stepwise plotting during the peeling operation. {plotstep_click} toggles user interaction after each plot step. {print_steps} enables some extra information of the clusters and buckets during cluster growth.
@@ -15,17 +18,21 @@ class toric:
         self.size = lat.size
         self.plot_load = lat.plot_load
 
-        self.plotstep_tree = False
-        self.plotstep_grow = 1
-        self.plotstep_peel = False
-        self.plotstep_click = True
-        self.print_steps = 1
+        self.plotstep_tree = 0
+        self.plotstep_grow = 0
+        self.plotstep_peel = 0
+        self.plotstep_click = 1
+        self.print_steps = 0
 
         self.numbuckets = self.size - self.size % 2
         self.buckets = [[] for _ in range(self.numbuckets)]
         self.buckmax = [(i+1)**2 + (i+2)**2 for i in range(self.size//2)]
         self.wastebasket = []
         self.maxbucket = 0
+
+        self.random_order = random_order
+        self.random_traverse = random_traverse
+        self.intervention = intervention
 
         if self.plot_load:
             self.pl = tpplot(lat, lat.LP.f, self.plotstep_click)
@@ -53,7 +60,7 @@ class toric:
                 print(prestring + str(cluster), end="")
                 print(" with size: " + str(cluster.size), end="")
                 print(", parity: " + str(cluster.parity), end="")
-                print(", halfgrown: " + str(cluster.half_grown), end="")
+                print(", full edged: " + str(cluster.full_edged), end="")
                 if cluster.bucket is None:
                     print(", and bucket: " + str(cluster.bucket))
                 else:
@@ -75,8 +82,6 @@ class toric:
         The inputted cluster has undergone a size change, either due to cluster growth or during a cluster merge, in which case the new root cluster is inputted. We increase the appropiate bucket number of the cluster intil the fitting bucket has been reached. The cluster is then appended to that bucket.
         If the max bucket number has been reached. The cluster is appended to the wastebasket, which will never be selected for growth.
         '''
-
-
         if cluster.bucket is None:
             cluster.bucket = 2*int(-((1.5 - .25*(-4+8*cluster.size + 1)**(1/2))//1))
         else:
@@ -84,7 +89,7 @@ class toric:
                 if cluster.size >= self.buckmax[cluster.bucket//2]:
                     cluster.bucket = 2*int(-((1.5 - .25*(-4+8*cluster.size + 1)**(1/2))//1))
 
-        if cluster.half_grown:                      # Additional level added if currently in growth state 1
+        if not cluster.full_edged:                      # Additional level added if currently in growth state 1
             cluster.bucket += 1
 
         if cluster.bucket < self.numbuckets:
@@ -112,9 +117,9 @@ class toric:
         If the newly found edge is part of the erasure, the edge and the corresponding vertex will be added to the cluster, and the function is started again on the new vertex. Otherwise it will be added to the boundary.
         If a vertex is an anyon, its property and the parity of the cluster will be updated accordingly.
         '''
-        random_wind = True
 
-        if random_wind:                  # Randomnizes the direction of the neighbor search, otherwise many curls
+
+        if self.random_traverse:                  # Randomnizes the direction of the neighbor search, otherwise many curls
             random.sample(self.G.wind, 4)
 
         for wind in self.G.wind:
@@ -155,10 +160,11 @@ class toric:
     Main recursive functions
     '''
 
-    def grow_cluster(self, cluster, root_cluster):
+    def grow_cluster(self, cluster, root_cluster, full_edged, family_growth=True):
         '''
         :param cluster          the current cluster selected for growth
         :param root_cluster     the root cluster of the selected cluster
+        :param full_edged       determines the growth state of the initial root cluster
 
         Recursive function which first grows a cluster's children and then itself.
 
@@ -167,20 +173,28 @@ class toric:
         After growth, the cluster is placed into a new bucket using {cluster_place_bucket}. If a merge happens, the root cluster of the current cluster is made a child of the pendant root_cluster. And the pendant root cluster is placed in a new bucket instead.
         If a cluster has children, these clusters are grown first. The new boundaries from these child clusters are appended to the root_cluster. Such that a parent does not need to remember its children.
         '''
+
         root_level = True if cluster == root_cluster else False         # Check for root at beginning
         string = str(cluster) + " grown."
 
-        if cluster.childs != [] and self.print_steps:
-            print(cluster, "has children:", cluster.childs)
+        if cluster.foster != [] and self.print_steps:
+            print(cluster, "has fosters:", cluster.foster)
+        while cluster.foster != []:
+            foster_cluster = cluster.foster.pop()
+            self.grow_cluster(foster_cluster, root_cluster, full_edged, family_growth=False)
 
-        while cluster.childs != []:                 # First go through child clusters
-            child_cluster = cluster.childs.pop()
-            self.grow_cluster(child_cluster, root_cluster)
+        if family_growth:
+            if cluster.childs != [] and self.print_steps:
+                print(cluster, "has children:", cluster.childs)
+            while cluster.childs != []:                                 # First go through child clusters
+                child_cluster = cluster.childs.pop()
+                self.grow_cluster(child_cluster, root_cluster, full_edged)
 
         merge_cluster = None
 
-        if not cluster.half_grown:                   # 1.  First half step growth:
-            cluster.half_grown = True
+        if full_edged:                               # 1.  First half step growth:
+            if family_growth:
+                cluster.full_edged = False
             while cluster.full_bound != []:
                 root_cluster = self.cluster_index_tree(root_cluster)
                 (base_vertex, edge, grow_vertex) = cluster.full_bound.pop()
@@ -199,14 +213,22 @@ class toric:
                             string += " Merged with " + str(grrt_cluster) + "."
                             root_cluster.merge_with(grrt_cluster)
                             merge_cluster = grrt_cluster
+                            if self.plot_load:
+                                self.pl.add_edge(edge, base_vertex)
+                            if self.intervention and family_growth and grrt_cluster.parity % 2 == 0:
+                                grrt_cluster.foster.append(root_cluster)
+                                if self.print_steps:
+                                    print("self.intervention on merge.")
+                                break
                         else:
                             edge.cluster = 0
                             root_cluster.half_bound.append((base_vertex, edge, grow_vertex))
-                        if self.plot_load:
-                            self.pl.add_edge(edge, base_vertex)
+                            if self.plot_load:
+                                self.pl.add_edge(edge, base_vertex)
 
         else:                                       # 2.  Second half step growth:
-            cluster.half_grown = False
+            if family_growth:
+                cluster.full_edged = True
             while cluster.half_bound != []:
                 root_cluster = self.cluster_index_tree(root_cluster)
                 (base_vertex, edge, grow_vertex) = cluster.half_bound.pop()
@@ -227,6 +249,11 @@ class toric:
                         merge_cluster = grrt_cluster
                         if self.plot_load:
                             self.pl.add_edge(edge, base_vertex)
+                        if self.intervention and family_growth and grrt_cluster.parity % 2 == 0:
+                            grrt_cluster.foster.append(root_cluster)
+                            if self.print_steps:
+                                print("self.intervention on merge.")
+                            break
 
         if root_level:          # only at the root level will a cluster be placed in a new bucket
             if merge_cluster is None:
@@ -288,12 +315,10 @@ class toric:
         It loops over all vertices (randomly if toggled, which produces a different tree), and calls {cluster_new_vertex} to find all connected erasure qubits, and finds the boundary for growth step 1. Afterwards the cluster is placed in a bucket based in its size.
 
         '''
-        random_order = False
-
         cID = 0
 
         vertices = self.G.V.values()
-        if random_order:
+        if self.random_order:
             vertices = random.sample(set(vertices), len(vertices))
 
         for vertex in vertices:
@@ -315,8 +340,6 @@ class toric:
         Starting from the lowest bucket, clusters are popped from the list and grown with {grow_cluster}. Due to the nature of how clusters are appended to the buckets, a cluster needs to be checked for 1) root level 2) bucket level and 3) parity before it can be grown.
 
         '''
-
-
         if self.print_steps:
             self.print_graph_stop()
             if self.plot_load:
@@ -356,7 +379,7 @@ class toric:
                         if self.print_steps:
                             self.print_graph_stop([root_cluster], prestring="B: ")
 
-                        self.grow_cluster(root_cluster, root_cluster)
+                        self.grow_cluster(root_cluster, root_cluster, root_cluster.full_edged)
 
                         if self.print_steps:
                             print("")

@@ -76,7 +76,8 @@ class Cluster(object):
     parity      parity of this cluster based on the number of contained anyons
     parent      the parent cluster of this cluster
     childs      the children clusters of this cluster
-    half_grown  growth state of the cluster: 1 if False, 2 if True
+    foster      the foster clusters of this cluster, clusters not fully in full-grown or half-grown state
+    full_edged  growth state of the cluster: 1 if False, 2 if True
     full_bound  boundary for growth step 1
     half_bound  boundary for growth step 2
     bucket      the appropiate bucket number of this cluster
@@ -90,7 +91,8 @@ class Cluster(object):
         self.parity = 0
         self.parent = self
         self.childs = []
-        self.half_grown = False
+        self.foster = []
+        self.full_edged = True
         self.half_bound = []
         self.full_bound = []
         self.bucket = 0

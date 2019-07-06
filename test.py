@@ -2,10 +2,10 @@ import run_single
 import run_multiple
 import toric_lat as tl
 
-size = 8
-pX = 0.1
+size = 10
+pX = 0.14
 pZ = 0.0
-pE = 0.03
+pE = 0.0
 iters = 4
 
 plot_load = 1

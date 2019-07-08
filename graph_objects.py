@@ -126,7 +126,7 @@ class Cluster(object):
 class Vertex(object):
     '''
     Vertex object with parameters:
-    sID         ID number of vertex
+    sID         location of vertex (ertype, y, x)
     neighbors   dict of the neighobrs (in the graph) of this vertex with
                     Key:    wind
                     Value   (Vertex object, Edge object)
@@ -161,7 +161,7 @@ class Vertex(object):
 class Edge(object):
     '''
     Edge object with parameters:
-    qID         ID number of qubit/edge
+    qID         location of qubit/edge (ertype, y, x, td)
     vertices    tuple of the two conected vertices
     state       boolean indicating the state of the qubit
     cluster     Cluster object of which this edge is apart of

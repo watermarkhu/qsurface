@@ -20,8 +20,8 @@ class lattice_plot:
         self.qsize = 0.5
         self.qsize2 = 0.25
         self.qsizeE = 0.7
-        self.lw = 3
-        self.slw = 2
+        self.lw = 1.5
+        self.slw = 1
 
         self.stabs = {}
         self.qubits = {}
@@ -39,7 +39,7 @@ class lattice_plot:
 
 
         # Initiate figure
-        self.f = plt.figure(1, figsize=(10, 10))
+        self.f = plt.figure(1, figsize=(6, 6))
         plt.ion()
         plt.cla()
         plt.show()
@@ -101,9 +101,6 @@ class lattice_plot:
                 self.ax.add_artist(self.qubits[(yb, xb, 0)])
                 self.ax.add_artist(self.qubits[(yb, xb, 1)])
 
-        self.canvas.draw()
-        self.background = self.canvas.copy_from_bbox(self.ax.bbox)
-
         if self.plot_base:
             self.waitforkeypress("Lattice plotted.")
 
@@ -127,9 +124,6 @@ class lattice_plot:
                     qubit.set_linestyle(":")
                     self.ax.draw_artist(qubit)
 
-        self.canvas.draw()
-        self.background = self.canvas.copy_from_bbox(self.ax.bbox)
-
     def plot_errors(self, plot_qubits=False):
         '''
         :param arrays       array of qubit states
@@ -143,23 +137,28 @@ class lattice_plot:
                     X_error = self.G.E[(0, y, x, td)].state
                     Z_error = self.G.E[(1, y, x, td)].state
 
+                    qubit = self.qubits[(y, x, td)]
+
                     if X_error and not Z_error:
-                        qubit = self.qubits[(y, x, td)]
                         qubit.set_fill(True)
                         qubit.set_facecolor(self.cx)
                         self.ax.draw_artist(qubit)
 
                     elif Z_error and not X_error:
-                        qubit = self.qubits[(y, x, td)]
                         qubit.set_fill(True)
                         qubit.set_facecolor(self.cz)
                         self.ax.draw_artist(qubit)
 
                     elif X_error and Z_error:
-                        qubit = self.qubits[(y, x, td)]
                         qubit.set_fill(True)
                         qubit.set_facecolor(self.cy)
                         self.ax.draw_artist(qubit)
+
+                    else:
+                        if plot_qubits:
+                            qubit.set_fill(False)
+                            self.ax.draw_artist(qubit)
+
 
         if self.plot_error:
             self.canvas.blit(self.ax.bbox)
@@ -267,6 +266,16 @@ class lattice_plot:
             self.waitforkeypress("Corrections plotted.")
 
         if self.plot_result:
-            self.canvas.restore_region(self.background)
-            self.plot_errors()
+
+            for y in range(self.size):
+                for x in range(self.size):
+                    for td in range(2):
+                        X_error = self.G.E[(0, y, x, td)].matching
+                        Z_error = self.G.E[(1, y, x, td)].matching
+                        qubit = self.qubits[(y, x, td)]
+                        if X_error or Z_error:
+                            qubit.set_edgecolor(self.cc)
+                            self.ax.draw_artist(qubit)
+
+            self.plot_errors(plot_qubits=True)
             print("Final lattice plotted. Press on the plot to continue")

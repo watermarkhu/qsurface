@@ -5,8 +5,8 @@ import time
 
 save_result = True
 
-file_name = "Peeling_toric_only_pX_bucket"
-plot_name = "Peeling decoder toric lattice with only Pauli error - bucket growth"
+file_name = "Peeling_toric_only_pX_bucket_ncount"
+plot_name = "Peeling decoder toric lattice with only Pauli error - bucket, ncount"
 lattices = [8, 12, 16, 20]
 p = list(np.linspace(0.09, 0.11, 11))
 Num = 30000

@@ -36,6 +36,11 @@ class lattice:
 
         if not os.path.exists("./errors/"):
             os.makedirs("./errors/")
+        if not os.path.exists("./data/"):
+            os.makedirs("./data/")
+        if not os.path.exists("./figures/"):
+            os.makedirs("./figures/")
+
 
         # If no input file is given
         if pauli_file is None and erasure_file is None:

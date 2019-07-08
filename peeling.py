@@ -3,10 +3,10 @@ import random
 
 
 class toric:
-    def __init__(self, lat, random_order=1, random_traverse=1, intervention=1):
+    def __init__(self, lat, anyon_order="neighbor_count", random_traverse=1, intervention=0):
         '''
         :param lat                  lattice object from toric_lat.py
-        :param random_order         Random order on cluster finding order
+        :param anyon_order          Random order on cluster finding order: row_row, random or neighbor_count
         :param random_traverse      Random order on traversing direction of the tree
         :param intervention         Intervention on merge during growth
 
@@ -18,10 +18,10 @@ class toric:
         self.size = lat.size
         self.plot_load = lat.plot_load
 
-        self.plotstep_tree = 0
-        self.plotstep_grow = 0
-        self.plotstep_peel = 0
-        self.plotstep_click = 1
+        self.plotstep_tree = 1
+        self.plotstep_grow = 1
+        self.plotstep_peel = 1
+        self.plotstep_click = 0
         self.print_steps = 0
 
         self.numbuckets = self.size - self.size % 2
@@ -30,7 +30,7 @@ class toric:
         self.wastebasket = []
         self.maxbucket = 0
 
-        self.random_order = random_order
+        self.anyon_order = anyon_order
         self.random_traverse = random_traverse
         self.intervention = intervention
 
@@ -318,11 +318,27 @@ class toric:
         cID = 0
 
         vertices = self.G.V.values()
-        if self.random_order:
-            vertices = random.sample(set(vertices), len(vertices))
 
-        for vertex in vertices:
-            if vertex.state and vertex.cluster is None:
+        if self.anyon_order in ["row_row", ""]:
+            anyons = [vertex for vertex in vertices if vertex.state]
+        elif self.anyon_order == "random":
+            vertices = random.sample(set(vertices), len(vertices))
+            anyons = [vertex for vertex in vertices if vertex.state]
+        elif self.anyon_order == "neighbor_count":
+            count_lists = [[] for _ in range(len(self.G.wind) + 1)]
+            for vertex in vertices:
+                if vertex.state:
+                    count = 0
+                    for neighbor in [vertex.neighbors[wind][0] for wind in self.G.wind]:
+                        if neighbor.state:
+                            count += 1
+                    count_lists[count].append(vertex)
+            anyons = []
+            while count_lists != []:
+                anyons += count_lists.pop()
+
+        for vertex in anyons:
+            if vertex.cluster is None:
 
                 cluster = self.G.add_cluster(cID)
                 cluster.add_vertex(vertex)

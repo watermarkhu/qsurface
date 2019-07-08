@@ -3,7 +3,7 @@ from scipy.optimize import fsolve
 
 p = list(np.linspace(0.09, 0.11, 11))
 lat = [12, 16, 20]
-pre = "Peeling_toric_only_pX_bucket_Thres_L"
+pre = "Peeling_toric_only_pX_bucket_ncount_Thres_L"
 
 
 fits = []

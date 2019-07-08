@@ -2,8 +2,8 @@ import run_single
 import run_multiple
 import toric_lat as tl
 
-size = 10
-pX = 0.14
+size = 12
+pX = 0.1
 pZ = 0.0
 pE = 0.0
 iters = 4
@@ -14,6 +14,7 @@ filename = None #"2019-07-03_17-03-46"
 pauli_file = filename + "_pauli" if filename is not None else None
 erasure_file = filename + "_erasure" if filename is not None else None
 
+erasure_file
 
 
 # output = run_single.toric_2D_MWPM(size, pX, pZ, save_file, pauli_file, plot_load)

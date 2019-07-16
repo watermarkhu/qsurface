@@ -18,6 +18,8 @@ class toric_peeling_plot:
         self.cl = [0.2, 0.2, 0.2]       # Line color
         self.cx = [0.9, 0.3, 0.3]       # X error color
         self.cz = [0.5, 0.5, 0.9]       # Z error color
+        self.Cx = [0.5, 0.1, 0.1]
+        self.Cz = [0.1, 0.1, 0.5]
         self.cX = [0.9, 0.7, 0.3]
         self.cZ = [0.3, 0.9, 0.3]
 
@@ -182,11 +184,11 @@ class toric_peeling_plot:
         if edge.cluster == 0:
 
             halfedge = self.edges[(edge.qID, vertex.sID)][0]
-            halfedge.set_alpha(self.alpha)
+            halfedge.set_alpha(0.5)
             if edge.qID[0] == 0:
-                halfedge.set_color(self.cx)
+                halfedge.set_color(self.Cx)
             else:
-                halfedge.set_color(self.cz)
+                halfedge.set_color(self.Cz)
             self.ax.draw_artist(halfedge)
 
         else:
@@ -232,7 +234,7 @@ class toric_peeling_plot:
         if type == "remove":
             c1 = self.cl
             c2 = self.cl
-            text = "☒ remove"
+            text = "❌ remove"
             alpha = self.alpha
         elif type == "confirm":
             c1 = self.cx
@@ -242,7 +244,7 @@ class toric_peeling_plot:
         elif type == "peel":
             c1 = self.cl
             c2 = self.cl
-            text = "☒ peeling"
+            text = "❌ peeling"
             alpha = self.alpha
         elif type == "match":
             c1 = self.cX

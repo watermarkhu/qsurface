@@ -1,71 +1,50 @@
 import run_multiple
 from matplotlib import pyplot as plt
 import numpy as np
+import pandas as pd
+import datetime
 import time
 
 save_result = True
 
-file_name = "Peeling_toric_only_pX_bucket_ncount"
-plot_name = "Peeling decoder toric lattice with only Pauli error - bucket, ncount"
-lattices = [8, 12, 16, 20]
+file_name = "peeling_toric_pX_bucket_ao=rc_rt=off"
+plot_name = "Peeling decoder (toric) vs. Pauli X error rate (bucket, ao=rc, rt=off)"
+
+lattices = [8, 12, 16]
 p = list(np.linspace(0.09, 0.11, 11))
-Num = 30000
+Num = 20000
+plotn = 500
 
+### Code ###
 
+st = datetime.datetime.fromtimestamp(time.time()).strftime('%Y%m%d')[2:]
 thresholds = np.zeros((len(lattices), len(p)))
-computimes = np.zeros((len(lattices), len(p)))
-X = np.linspace(p[0], p[-1], 100)
+X = np.linspace(p[0], p[-1], plotn)
 f0 = plt.figure()
-f1 = plt.figure()
 
-for lati in range(len(lattices)):
-    for pi in range(len(p)):
+for i, lati in enumerate(lattices):
+    for j, pi in enumerate(p):
 
-            print("Calculating for L = ", str(lattices[lati]), "and p =", str(p[pi]))
-
-            t0 = time.time()
-
-            N_succes = run_multiple.toric_2D_peeling(lattices[lati], 0, p[pi], 0, Num, plot_load=False)
-
-            t1 = time.time()
-
-            thresholds[lati, pi] = N_succes / Num * 100
-            computimes[lati, pi] = t1 - t0
-
-    if save_result:
-        Name = "./data/" + file_name + "_Thres_L" + str(lattices[lati]) + "_N" + str(Num) + ".txt"
-        np.savetxt(Name, thresholds[lati, :])
+        print("Calculating for L = ", str(lati), "and p =", str(pi))
+        N_succes = run_multiple.toric_2D_peeling(lati, 0, pi, 0, Num, plot_load=False)
+        thresholds[i, j] = N_succes / Num * 100
 
     plt.figure(f0.number)
-    fit = np.polyfit(p, thresholds[lati, :], 2)
+    fit = np.polyfit(p, thresholds[i, :], 2)
     polyfit = np.poly1d(fit)
-    plt.plot([pi*100 for pi in p], thresholds[lati, :], '.', color='C'+str(lati), ms=10)
-    plt.plot(X*100, polyfit(X), '-', label=lattices[lati], color='C'+str(lati), lw=2, alpha=0.8)
+    plt.plot([q*100 for q in p], thresholds[i, :], '.', color='C'+str(i), ms=10)
+    plt.plot([x*100 for x in X], polyfit(X), '-', label=lati, color='C'+str(i), lw=2, alpha=0.8)
 
-    plt.figure(f1.number)
-    fit = np.polyfit(p, computimes[lati, :], 2)
-    polyfit = np.poly1d(fit)
-    plt.plot([pi*100 for pi in p], computimes[lati, :], '.', color='C'+str(lati), ms=10)
-    plt.plot(X*100, polyfit(X), '-', label=lattices[lati], color='C'+str(lati), lw=2, alpha=0.8)
-
-
-print(thresholds)
-print(computimes)
+data = pd.DataFrame(data=thresholds, index=lattices, columns=p)
+print(data)
 
 plt.figure(f0.number)
 plt.title(plot_name + " performance")
-plt.xlabel("p (%)")
-plt.ylabel("Decoding success rate (%)")
+plt.xlabel("probability of Pauli X error (%)")
+plt.ylabel("decoding success rate (%)")
 plt.legend()
-
-plt.figure(f1.number)
-plt.title(plot_name + " computation time")
-plt.xlabel("p (%)")
-plt.ylabel("Time (s)")
-plt.legend()
-plt.show()
-
 
 if save_result:
-    fname = "./figures/" + file_name + "_thres_N" + str(Num) + ".pdf"
+    data.to_csv("./data/" + st + "_" + file_name + "_N" + str(Num) + ".csv")
+    fname = "./figures/" + st + "_" + file_name + "_N" + str(Num) + ".pdf"
     f0.savefig(fname, transparent=True, format="pdf", bbox_inches="tight")

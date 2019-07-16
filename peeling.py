@@ -3,10 +3,10 @@ import random
 
 
 class toric:
-    def __init__(self, lat, anyon_order="neighbor_count", random_traverse=1, intervention=0):
+    def __init__(self, lat, anyon_order="rev_count", random_traverse=0, intervention=0):
         '''
         :param lat                  lattice object from toric_lat.py
-        :param anyon_order          Random order on cluster finding order: row_row, random or neighbor_count
+        :param anyon_order          Random order on cluster finding order: row_row, random, neighbor_count or rev_count
         :param random_traverse      Random order on traversing direction of the tree
         :param intervention         Intervention on merge during growth
 
@@ -336,6 +336,16 @@ class toric:
             anyons = []
             while count_lists != []:
                 anyons += count_lists.pop()
+        elif self.anyon_order == "rev_count":
+            count_lists = [[] for _ in range(len(self.G.wind) + 1)]
+            for vertex in vertices:
+                if vertex.state:
+                    count = 0
+                    for neighbor in [vertex.neighbors[wind][0] for wind in self.G.wind]:
+                        if neighbor.state:
+                            count += 1
+                    count_lists[count].append(vertex)
+            anyons = [item for sublist in count_lists for item in sublist]
 
         for vertex in anyons:
             if vertex.cluster is None:

@@ -1,5 +1,6 @@
 import toric_lat as tl
 import sys
+from tqdm import tqdm
 
 # sys.path.insert(0, '../fault_tolerance_simulations/')
 # # sys.path.insert(0, '../Code_Eduardo/')
@@ -35,9 +36,8 @@ def toric_2D_peeling(size, pE, pX, pZ, iters, plot_load=False):
 
 
     N_succes = 0
-    for i in range(iters):
-        if i % printval == 0:
-            print("Iteration " + str(i))
+
+    for i in tqdm(range(iters)):
         if i == 0:
             TL = tl.lattice(size, None, None, plot_load)
         else:

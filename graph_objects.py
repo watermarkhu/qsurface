@@ -24,8 +24,8 @@ class Graph(object):
     def __repr__(self):
 
         numC = 0
-        for i, cID in enumerate(self.cluster_index):
-            if i == cID:
+        for cluster in self.C.values():
+            if cluster.parent == cluster:
                 numC += 1
         return "Graph object with " + str(numC) + " Clusters, " + str(len(self.V)) + " Vertices and " + str(len(self.E)) + " Edges."
 

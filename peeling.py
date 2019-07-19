@@ -3,7 +3,7 @@ import random
 
 
 class toric:
-    def __init__(self, lat, anyon_order="rev_count", random_traverse=0, intervention=0):
+    def __init__(self, lat, anyon_order="neighbor_count", random_traverse=1, intervention=0):
         '''
         :param lat                  lattice object from toric_lat.py
         :param anyon_order          Random order on cluster finding order: row_row, random, neighbor_count or rev_count
@@ -18,9 +18,9 @@ class toric:
         self.size = lat.size
         self.plot_load = lat.plot_load
 
-        self.plotstep_tree = 1
-        self.plotstep_grow = 1
-        self.plotstep_peel = 1
+        self.plotstep_tree = 0
+        self.plotstep_grow = 0
+        self.plotstep_peel = 0
         self.plotstep_click = 0
         self.print_steps = 0
 
@@ -218,7 +218,7 @@ class toric:
                             if self.intervention and family_growth and grrt_cluster.parity % 2 == 0:
                                 grrt_cluster.foster.append(root_cluster)
                                 if self.print_steps:
-                                    print("self.intervention on merge.")
+                                    print("intervention on merge.")
                                 break
                         else:
                             edge.cluster = 0
@@ -252,7 +252,7 @@ class toric:
                         if self.intervention and family_growth and grrt_cluster.parity % 2 == 0:
                             grrt_cluster.foster.append(root_cluster)
                             if self.print_steps:
-                                print("self.intervention on merge.")
+                                print("intervention on merge.")
                             break
 
         if root_level:          # only at the root level will a cluster be placed in a new bucket
@@ -266,10 +266,11 @@ class toric:
         if self.print_steps and root_level:
             print_cluster = root_cluster if merge_cluster is None else merge_cluster
             self.print_graph_stop([print_cluster], prestring="A: ")
-            if self.plot_load:
+            if self.plot_load and self.plotstep_click:
                 self.pl.waitforkeypress()
             else:
-                input("Press any key to continue...")
+                if self.plotstep_click:
+                    input("Press any key to continue...")
 
     def peel_edge(self, cluster, vertex):
         '''
@@ -332,7 +333,10 @@ class toric:
                     for neighbor in [vertex.neighbors[wind][0] for wind in self.G.wind]:
                         if neighbor.state:
                             count += 1
+                    vertex.count = count
                     count_lists[count].append(vertex)
+                else:
+                    vertex.count = 0
             anyons = []
             while count_lists != []:
                 anyons += count_lists.pop()
@@ -344,7 +348,10 @@ class toric:
                     for neighbor in [vertex.neighbors[wind][0] for wind in self.G.wind]:
                         if neighbor.state:
                             count += 1
+                    vertex.count = count
                     count_lists[count].append(vertex)
+                else:
+                    vertex.count = 0
             anyons = [item for sublist in count_lists for item in sublist]
 
         for vertex in anyons:
@@ -424,15 +431,17 @@ class toric:
 
             if self.plot_load and not self.plotstep_grow:
                 self.pl.draw_plot("Growing bucket #" + str(grow_bucket) + "/" + str(self.maxbucket) + ".")
-                if self.print_steps:
+                if self.print_steps and self.plotstep_click:
                     input()
 
         if self.print_steps:
             self.print_graph_stop()
-            if self.plot_load:
+            if self.plot_load and self.plotstep_click:
                 self.pl.waitforkeypress()
             else:
-                input("Press any key to continue...")
+                if self.plotstep_click:
+                    input("Press any key to continue...")
+
 
 
     def peel_trees(self):

@@ -2,7 +2,7 @@ from matplotlib import pyplot as plt
 import numpy as np
 import pandas as pd
 
-file_name = "190625_peeling_toric_pX_vanilla_N30000"
+file_name = "190718_peeling_toric_pX_bucket_ao=nc_rt=on_N30000"
 plot_name = "Peeling decoder on toric lattice with Pauli X error (vanilla)"
 
 
@@ -28,4 +28,4 @@ plt.xlabel("probability Pauli X error (%)")
 plt.ylabel("Decoding success rate (%)")
 plt.show()
 fname = "./figures/" + file_name + ".pdf"
-f0.savefig(fname, transparent=True, format="pdf", bbox_inches="tight")
+# f0.savefig(fname, transparent=True, format="pdf", bbox_inches="tight")

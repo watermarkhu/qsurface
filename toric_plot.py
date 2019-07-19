@@ -39,7 +39,7 @@ class lattice_plot:
 
 
         # Initiate figure
-        self.f = plt.figure(1, figsize=(6, 6))
+        self.f = plt.figure(1, figsize=(10, 10))
         plt.ion()
         plt.cla()
         plt.show()

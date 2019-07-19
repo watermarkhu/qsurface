@@ -11,7 +11,7 @@ import graph_objects as GO
 
 class lattice:
 
-    def __init__(self, size=10, pauli_file=None, erasure_file=None, plot_load=True, graph=None):
+    def __init__(self, size=10, pauli_file=None, erasure_file=None, plot_load=False, graph=None, worker=None):
 
         '''
         :param size:
@@ -69,7 +69,10 @@ class lattice:
                 self.time = float(firstlines[1][7:])
                 self.size = int(firstlines[2][4:])
 
-        random.seed(self.time)
+        if worker is None:
+            random.seed(self.time)
+        else:
+            random.seed(float(str(worker) + str(self.time)))
 
         # Create graph if none is given.
         if graph is None:

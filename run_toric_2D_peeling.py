@@ -3,15 +3,15 @@ from tqdm import tqdm
 import multiprocessing as mp
 
 
-def single(size, pE=0, pX=0, pZ=0, savefile=False, erasure_file=None, pauli_file=None, plot_load=False, graph=None, worker=None):
+def single(size, pE=0, pX=0, pZ=0, savefile=False, erasure_file=None, pauli_file=None, plot_load=False, graph=None, worker=None, plot_size=6):
     '''
     Runs the peeling decoder for one iteration
     '''
 
     if graph is None:
-        TL = tl.lattice(size, pauli_file, erasure_file, plot_load, worker=worker)
+        TL = tl.lattice(size, pauli_file, erasure_file, plot_load, worker=worker, plot_size=plot_size)
     else:
-        TL = tl.lattice(size, pauli_file, erasure_file, plot_load, graph=graph, worker=worker)
+        TL = tl.lattice(size, pauli_file, erasure_file, plot_load, graph=graph, worker=worker, plot_size=plot_size)
     TL.init_erasure_errors_region(pE, savefile)
     TL.init_pauli_errors(pX, pZ, savefile)
     TL.measure_stab()
@@ -22,13 +22,13 @@ def single(size, pE=0, pX=0, pZ=0, savefile=False, erasure_file=None, pauli_file
     return correct
 
 
-def multiple(size, iters, pE=0, pX=0, pZ=0, plot_load=False, qres=None, worker=None):
+def multiple(size, iters, pE=0, pX=0, pZ=0, plot_load=False, qres=None, worker=None, plot_size=6):
     '''
     Runs the peeling decoder for a number of iterations. The graph is reused for speedup.
     '''
 
     TL = tl.lattice(size)
-    result = [single(size, pE, pX, pZ, plot_load=plot_load, graph=TL.G, worker=worker) for i in tqdm(range(iters))]
+    result = [single(size, pE, pX, pZ, plot_load=plot_load, graph=TL.G, worker=worker, plot_size=plot_size) for i in tqdm(range(iters))]
     N_succes = sum(result)
     if qres is not None:
         qres.put(N_succes)

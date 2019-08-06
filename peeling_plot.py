@@ -32,7 +32,7 @@ class toric_peeling_plot:
         self.plotstep_click = plotstep_click
 
         self.f = figure
-        figure.set_figwidth(20)
+        figure.set_figwidth(2*lat.plot_size)
         ax = figure.gca()
         ax.change_geometry(1, 2, 1)
 

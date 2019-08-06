@@ -2,8 +2,8 @@ from matplotlib import pyplot as plt
 import numpy as np
 import pandas as pd
 
-file_name = "190718_peeling_toric_pX_bucket_ao=nc_rt=on_N30000"
-plot_name = "Peeling decoder on toric lattice with Pauli X error (vanilla)"
+file_name = "190801_peeling_toric_pX_bucket_ao=rand_rt=on_N60000"
+plot_name = "Peeling decoder (toric) vs. Pauli X error rate (bucket, ao=rand, rt=on)"
 
 
 data = pd.read_csv("./data/" + file_name + ".csv", index_col=0)

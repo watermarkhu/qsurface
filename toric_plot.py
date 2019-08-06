@@ -6,14 +6,14 @@ import random
 class lattice_plot:
 
 
-    def __init__(self, size, graph):
+    def __init__(self, size, graph, plot_size=8):
 
-        self.plot_base = 1
-        self.plot_error = True
-        self.plot_syndrome = True
-        self.plot_matching = True
-        self.plot_correction = True
-        self.plot_result = True
+        self.plot_base = 0
+        self.plot_error = 1
+        self.plot_syndrome = 1
+        self.plot_matching = 1
+        self.plot_correction = 1
+        self.plot_result = 1
         self.size = size
         self.G = graph
 
@@ -39,7 +39,7 @@ class lattice_plot:
 
 
         # Initiate figure
-        self.f = plt.figure(1, figsize=(10, 10))
+        self.f = plt.figure(1, figsize=(plot_size, plot_size))
         plt.ion()
         plt.cla()
         plt.show()
@@ -101,6 +101,7 @@ class lattice_plot:
                 self.ax.add_artist(self.qubits[(yb, xb, 0)])
                 self.ax.add_artist(self.qubits[(yb, xb, 1)])
 
+        self.canvas.draw()
         if self.plot_base:
             self.waitforkeypress("Lattice plotted.")
 

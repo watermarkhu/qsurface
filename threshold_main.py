@@ -7,14 +7,16 @@ import time
 
 if __name__ == '__main__':
 
-    save_result = False
+    save_result = True
 
-    file_name = "peeling_toric_pX_bucket_ao=rc_rt=off"
-    plot_name = "Peeling decoder (toric) vs. Pauli X error rate (bucket, ao=rc, rt=off)"
+    folder = "../../../OneDrive - Delft University of Technology/MEP - thesis Mark/Simulations/"
 
-    lattices = [8, 12, 16, 20]
-    p = list(np.linspace(0.09, 0.11, 11))
-    Num = 30000
+    file_name = "peeling_toric_pX_bucket_ao=rand_rt=on"
+    plot_name = "Peeling decoder (toric) vs. Pauli X error rate (bucket, ao=rand, rt=on)"
+
+    lattices = [8, 12]
+    p = list(np.linspace(0.09, 0.11, 5))
+    Num = 100
     plotn = 500
 
     ### Code ###
@@ -29,7 +31,7 @@ if __name__ == '__main__':
         for j, pi in enumerate(p):
 
             print("Calculating for L = ", str(lati), "and p =", str(pi))
-            N_succes = multiprocess(lati, Num, 0, pi, 0)
+            N_succes = multiprocess(lati, Num, 0, pi, 0, processes=1)
             thresholds[i, j] = N_succes / Num * 100
 
         plt.figure(f0.number)
@@ -48,6 +50,6 @@ if __name__ == '__main__':
     plt.legend()
 
     if save_result:
-        data.to_csv("./data/" + st + "_" + file_name + "_N" + str(Num) + ".csv")
-        fname = "./figures/" + st + "_" + file_name + "_N" + str(Num) + ".pdf"
+        data.to_csv(folder + "data/" + st + "_" + file_name + "_N" + str(Num) + ".csv")
+        fname = folder + "./figures/" + st + "_" + file_name + "_N" + str(Num) + ".pdf"
         f0.savefig(fname, transparent=True, format="pdf", bbox_inches="tight")

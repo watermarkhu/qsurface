@@ -11,7 +11,7 @@ import graph_objects as GO
 
 class lattice:
 
-    def __init__(self, size=10, pauli_file=None, erasure_file=None, plot_load=False, graph=None, worker=None):
+    def __init__(self, size=10, pauli_file=None, erasure_file=None, plot_load=False, graph=None, worker=None, plot_size=8):
 
         '''
         :param size:
@@ -33,6 +33,7 @@ class lattice:
         '''
 
         self.plot_load = plot_load
+        self.plot_size = plot_size
 
         if not os.path.exists("./errors/"):
             os.makedirs("./errors/")
@@ -70,7 +71,8 @@ class lattice:
                 self.size = int(firstlines[2][4:])
 
         if worker is None:
-            random.seed(self.time)
+            # random.seed(self.time)
+            random.seed(time.time())
         else:
             random.seed(float(str(worker) + str(self.time)))
 
@@ -112,7 +114,7 @@ class lattice:
 
         # Plot the lattice
         if self.plot_load:
-            self.LP = tp.lattice_plot(self.size, self.G)
+            self.LP = tp.lattice_plot(self.size, self.G, self.plot_size)
             self.LP.plot_lattice()
 
     def init_erasure_errors_region(self, pE=0, savefile=False):

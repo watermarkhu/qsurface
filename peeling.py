@@ -3,7 +3,7 @@ import random
 
 
 class toric:
-    def __init__(self, lat, anyon_order="neighbor_count", random_traverse=1, intervention=0):
+    def __init__(self, lat, anyon_order="random", random_traverse=1, intervention=0):
         '''
         :param lat                  lattice object from toric_lat.py
         :param anyon_order          Random order on cluster finding order: row_row, random, neighbor_count or rev_count
@@ -17,9 +17,10 @@ class toric:
         self.G = lat.G
         self.size = lat.size
         self.plot_load = lat.plot_load
+        self.plot_size = lat.plot_size
 
-        self.plotstep_tree = 0
-        self.plotstep_grow = 0
+        self.plotstep_tree = 1
+        self.plotstep_grow = 1
         self.plotstep_peel = 0
         self.plotstep_click = 0
         self.print_steps = 0
@@ -118,11 +119,9 @@ class toric:
         If a vertex is an anyon, its property and the parity of the cluster will be updated accordingly.
         '''
 
+        traverse_wind = random.sample(self.G.wind, 4) if self.random_traverse else self.G.win
 
-        if self.random_traverse:                  # Randomnizes the direction of the neighbor search, otherwise many curls
-            random.sample(self.G.wind, 4)
-
-        for wind in self.G.wind:
+        for wind in traverse_wind:
             if wind in vertex.neighbors:
                 (new_vertex, new_edge) = vertex.neighbors[wind]
 
@@ -165,6 +164,7 @@ class toric:
         :param cluster          the current cluster selected for growth
         :param root_cluster     the root cluster of the selected cluster
         :param full_edged       determines the growth state of the initial root cluster
+        :family_growth          detemines whether growth happens on parent or child cluster
 
         Recursive function which first grows a cluster's children and then itself.
 
@@ -195,6 +195,10 @@ class toric:
         if full_edged:                               # 1.  First half step growth:
             if family_growth:
                 cluster.full_edged = False
+
+            if self.random_traverse:
+                cluster.full_bound.reverse()
+
             while cluster.full_bound != []:
                 root_cluster = self.cluster_index_tree(root_cluster)
                 (base_vertex, edge, grow_vertex) = cluster.full_bound.pop()
@@ -433,6 +437,9 @@ class toric:
                 self.pl.draw_plot("Growing bucket #" + str(grow_bucket) + "/" + str(self.maxbucket) + ".")
                 if self.print_steps and self.plotstep_click:
                     input()
+            elif self.plot_load:
+                print("Growing bucket #" + str(grow_bucket) + "/" + str(self.maxbucket) + ".")
+
 
         if self.print_steps:
             self.print_graph_stop()

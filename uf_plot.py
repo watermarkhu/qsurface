@@ -2,18 +2,11 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 
 
-class toric_peeling_plot:
+class toric:
 
-    def __init__(self, lat, figure, plotstep_click=False):
+    def __init__(self, graph, figure, plot_size=10, plotstep_click=False):
 
-        self.size = lat.size
-        # self.qua_loc = lat.qua_loc
-        # self.er_loc = lat.er_loc
-        # self.edge_data = lat.edge_data
-        # self.vertex_data = lat.vertex_data
-        # self.num_vertex = lat.num_vertex
-
-        self.G = lat.G
+        self.size = graph.size
 
         self.cl = [0.2, 0.2, 0.2]       # Line color
         self.cx = [0.9, 0.3, 0.3]       # X error color
@@ -25,14 +18,13 @@ class toric_peeling_plot:
 
         self.alpha = 0.3
 
-
         self.qsize = 0.1
         self.lw = 1
 
         self.plotstep_click = plotstep_click
 
         self.f = figure
-        figure.set_figwidth(2*lat.plot_size)
+        figure.set_figwidth(2*plot_size)
         ax = figure.gca()
         ax.change_geometry(1, 2, 1)
 
@@ -50,46 +42,21 @@ class toric_peeling_plot:
         self.edges = {}
         self.vertices = {}
 
+        # Initate legend
         le_xv = Line2D([0], [0], lw=0, marker='o', color='w', mew=0, mfc=self.cx, ms=10, label='X-vertex')
         le_zv = Line2D([0], [0], lw=0, marker='o', color='w', mew=0, mfc=self.cz, ms=10, label='Z-vertex')
         le_xe = Line2D([0], [0], ls='-', lw=self.lw, color=self.cx, label='X-edge')
         le_ze = Line2D([0], [0], ls='--', lw=self.lw, color=self.cz, label='Z-edge')
-
         self.ax.legend(handles=[le_xv, le_zv, le_xe, le_ze], bbox_to_anchor=(1.15, 0.95), loc='upper right', ncol=1)
 
-
-    def waitforkeypress(self, str=""):
-        if str != "":
-            str += " "
-        print(str + "Press any key (on plot) to continue...")
-        keyboardClick = False
-        while not keyboardClick:
-            keyboardClick = plt.waitforbuttonpress(120)
-
-    '''
-    ________________________________________________________________________________
-
-    main plot functions
-
-    '''
-
-
-    def plot_lattice(self):
-
-        '''
-        :param qua_loc          locations of the find_anyons (hv, y, x)
-        :param erasures         locations of the erasures (hv, y, x)
-        plots the edges and anyons/vertices of the peeling algorithm on a new lattice
-        the qubits are represented by the edges and anyons appear on the vertices
-
-        '''
+        # Initate plot
         C1 = [self.cx, self.cz]
         C2 = [self.cX, self.cZ]
         LS = ["-", "--"]
 
         plt.sca(self.ax)
 
-        for edge in self.G.E.values():
+        for edge in graph.E.values():
 
             (ertype, y, x, _) = edge.qID
             (_, y0, x0) = edge.vertices[0].sID
@@ -130,7 +97,7 @@ class toric_peeling_plot:
             self.edges[id0] = self.ax.plot([x0, xm], [y0, ym], c=color, lw=self.lw, ls=LS[ertype], alpha=alpha)
             self.edges[id1] = self.ax.plot([xm, x1], [ym, y1], c=color, lw=self.lw, ls=LS[ertype], alpha=alpha)
 
-        for vertex in self.G.V.values():
+        for vertex in graph.V.values():
 
             (ertype, y, x) = vertex.sID
             if ertype == 1:
@@ -150,8 +117,22 @@ class toric_peeling_plot:
         self.canvas.blit(self.ax.bbox)
         self.waitforkeypress("Peeling lattice initiated.")
 
+    def waitforkeypress(self, str=""):
+        if str != "":
+            str += " "
+        print(str + "Press any key (on plot) to continue...")
+        keyboardClick = False
+        while not keyboardClick:
+            keyboardClick = plt.waitforbuttonpress(120)
 
-    def plot_removed(self, str):
+    '''
+    ________________________________________________________________________________
+
+    main plot functions
+
+    '''
+
+    def plot_removed(self, graph, str):
         '''
         :param rem_list         list of edges
         plots the normal edge color over the edges that have been removed during the formation of the tree structure
@@ -159,7 +140,7 @@ class toric_peeling_plot:
 
         plt.sca(self.ax)
 
-        for edge in self.G.E.values():
+        for edge in graph.E.values():
             if edge.peeled and not edge.matching:
 
                 (V0, V1) = edge.vertices

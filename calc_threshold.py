@@ -4,11 +4,13 @@ import pandas as pd
 
 
 file_name = None
+folder = "../../../OneDrive - Delft University of Technology/MEP - thesis Mark/Simulations/"
 
 if file_name is None:
     file_name = input("Select data file: ")
 
-data = pd.read_csv("./data/" + file_name + ".csv", index_col=0)
+
+data = pd.read_csv(folder + "data/" + file_name + ".csv", index_col=0)
 thresholds = np.array(data)
 numlat = len(data.index.values)
 p = [float(k) for k in data.columns.values]

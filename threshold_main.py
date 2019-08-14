@@ -14,10 +14,10 @@ if __name__ == '__main__':
     file_name = "peeling_toric_pX_bucket_ao=rand_rt=on"
     plot_name = "Peeling decoder (toric) vs. Pauli X error rate (bucket, ao=rand, rt=on)"
 
-    lattices = [8, 12]
-    p = list(np.linspace(0.09, 0.11, 5))
-    Num = 100
-    plotn = 500
+    lattices = [8, 12, 16, 20, 24]
+    p = list(np.linspace(0.09, 0.11, 11))
+    Num = 50000
+    plotn = 1000
 
     ### Code ###
 
@@ -31,7 +31,7 @@ if __name__ == '__main__':
         for j, pi in enumerate(p):
 
             print("Calculating for L = ", str(lati), "and p =", str(pi))
-            N_succes = multiprocess(lati, Num, 0, pi, 0, processes=1)
+            N_succes = multiprocess(lati, Num, 0, pi, 0, processes=4)
             thresholds[i, j] = N_succes / Num * 100
 
         plt.figure(f0.number)

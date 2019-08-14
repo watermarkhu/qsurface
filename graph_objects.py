@@ -1,4 +1,4 @@
-class Graph(object):
++class iGraph(object):
     '''
     The graph in which the vertices, edges and clusters exist. Has the following parameters
 
@@ -15,7 +15,8 @@ class Graph(object):
 
     '''
 
-    def __init__(self, stab_data, er_loc, qua_loc):
+    def __init__(self, size):
+        self.size = size
         self.C = {}
         self.V = {}
         self.E = {}
@@ -29,24 +30,21 @@ class Graph(object):
                 numC += 1
         return "Graph object with " + str(numC) + " Clusters, " + str(len(self.V)) + " Vertices and " + str(len(self.E)) + " Edges."
 
-    def __len__(self):
-        return len(self.C)
-
     def add_cluster(self, cID):
         '''Adds a cluster with cluster ID number cID'''
-        self.C[cID] = Cluster(cID)
+        self.C[cID] = iCluster(cID)
         return self.C[cID]
 
     def add_vertex(self, sID):
         '''Adds a vertex with vertex ID number sID'''
-        self.V[sID] = Vertex(sID)
+        self.V[sID] = iVertex(sID)
         return self.V[sID]
 
     def add_edge(self, qID, sIDlu, sIDrd, orientation):
         '''Adds an edge with edge ID number qID with pointers to vertices. Also adds pointers to this edge on the vertices. '''
         V1 = self.V[sIDlu]
         V2 = self.V[sIDrd]
-        E = Edge(qID, V1, V2)
+        E = iEdge(qID, V1, V2)
         self.E[qID] = E
         if orientation == 'H':
             V1.neighbors['r'] = (V2, E)
@@ -67,8 +65,71 @@ class Graph(object):
         for vertex in self.V.values():
             vertex.reset()
 
+    def init_bucket(self):
+        self.numbuckets = self.size - self.size % 2
+        self.buckets = [[] for _ in range(self.numbuckets)]
+        self.buckmax = [(i+1)**2 + (i+2)**2 for i in range(self.size//2)]
+        self.wastebasket = []
+        self.maxbucket = 0
 
-class Cluster(object):
+    def cluster_place_bucket(self, cluster, merge=False):
+        '''
+        :param cluster      current cluster
+
+        The inputted cluster has undergone a size change, either due to cluster growth or during a cluster merge, in which case the new root cluster is inputted. We increase the appropiate bucket number of the cluster intil the fitting bucket has been reached. The cluster is then appended to that bucket.
+        If the max bucket number has been reached. The cluster is appended to the wastebasket, which will never be selected for growth.
+        '''
+        if cluster.bucket is None:
+            cluster.bucket = 2*int(-((1.5 - .25*(-4+8*cluster.size + 1)**(1/2))//1))
+        else:
+            if cluster.bucket < self.numbuckets:
+                if cluster.size >= self.buckmax[cluster.bucket//2]:
+                    cluster.bucket = 2*int(-((1.5 - .25*(-4+8*cluster.size + 1)**(1/2))//1))
+
+        if not cluster.full_edged:                      # Additional level added if currently in growth state 1
+            cluster.bucket += 1
+
+        if cluster.bucket < self.numbuckets:
+            if cluster.parity % 2 == 1:
+                self.buckets[cluster.bucket].append(cluster)
+                if cluster.bucket > self.maxbucket:
+                    self.maxbucket = cluster.bucket
+            else:
+                cluster.bucket = None
+        else:
+            self.wastebasket.append(cluster)
+
+    def print_graph_stop(self, clusters=None, prestring=""):
+        '''
+        :param clusters     either None or a list of clusters
+        :param prestring    string to print before evertything else
+
+        This function prints a cluster's size, parity, growth state and appropiate bucket number. If None is inputted, all clusters will be displayed.
+        '''
+
+        if clusters is None:
+            clusters = list(self.C.values())
+            print("\nShowing all clusters:")
+
+        for cluster in clusters:
+
+            if cluster.parent == cluster:
+                print(prestring + str(cluster), end="")
+                print(" with size: " + str(cluster.size), end="")
+                print(", parity: " + str(cluster.parity), end="")
+                print(", full edged: " + str(cluster.full_edged), end="")
+                if cluster.bucket is None:
+                    print(", and bucket: " + str(cluster.bucket))
+                else:
+                    if cluster.bucket < self.numbuckets:
+                        print(", and bucket: " + str(cluster.bucket))
+                    else:
+                        print(", and bucket: wastebasket")
+            else:
+                print(str(cluster), "is merged with", str(cluster.parent))
+
+
+class iCluster(object):
     '''
     Cluster obejct with parameters:
     cID         ID number of cluster
@@ -115,15 +176,8 @@ class Cluster(object):
         '''Add an edge to the boundary of the cluster after growth step 2'''
         self.full_bound.append((base_vertex, edge, grow_vertex))
 
-    def merge_with(self, cluster):
-        '''Updates this clusters attributes with anothers attributes'''
-        self.parent = cluster
-        cluster.childs.append(self)
-        cluster.size += self.size
-        cluster.parity += self.parity
 
-
-class Vertex(object):
+class iVertex(object):
     '''
     Vertex object with parameters:
     sID         location of vertex (ertype, y, x)
@@ -158,7 +212,7 @@ class Vertex(object):
         self.tree = False
 
 
-class Edge(object):
+class iEdge(object):
     '''
     Edge object with parameters:
     qID         location of qubit/edge (ertype, y, x, td)
@@ -199,3 +253,39 @@ class Edge(object):
         self.cluster = None
         self.peeled = False
         self.matching = False
+
+
+def init_toric_graph(size):
+
+    graph = iGraph(size)
+
+    # Add vertices to graph
+    for ertype in range(2):
+        for y in range(size):
+            for x in range(size):
+                graph.add_vertex((ertype, y, x))
+
+    # Add edges to graph
+    for ertype in range(2):
+        for y in range(size):
+            for x in range(size):
+                for td in range(2):
+                    qID = (ertype, y, x, td)
+                    if ertype == 0 and td == 0:
+                        VL_sID = (ertype, y, x)
+                        VR_sID = (ertype, y, (x + 1) % size)
+                        graph.add_edge(qID, VL_sID, VR_sID, 'H')
+                    elif ertype == 1 and td == 1:
+                        VL_sID = (ertype, y, (x - 1) % size)
+                        VR_sID = (ertype, y, x)
+                        graph.add_edge(qID, VL_sID, VR_sID, 'H')
+                    elif ertype == 0 and td == 1:
+                        VU_sID = (ertype, y, x)
+                        VD_sID = (ertype, (y + 1) % size, x)
+                        graph.add_edge(qID, VU_sID, VD_sID, 'V')
+                    elif ertype == 1 and td == 0:
+                        VU_sID = (ertype, (y - 1) % size, x)
+                        VD_sID = (ertype, y, x)
+                        graph.add_edge(qID, VU_sID, VD_sID, 'V')
+
+    return graph

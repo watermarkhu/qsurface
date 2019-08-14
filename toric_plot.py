@@ -6,7 +6,7 @@ import random
 class lattice_plot:
 
 
-    def __init__(self, size, graph, plot_size=8):
+    def __init__(self, graph, plot_size=8):
 
         self.plot_base = 0
         self.plot_error = 1
@@ -14,7 +14,7 @@ class lattice_plot:
         self.plot_matching = 1
         self.plot_correction = 1
         self.plot_result = 1
-        self.size = size
+        self.size = graph.size
         self.G = graph
 
         self.qsize = 0.5
@@ -49,6 +49,7 @@ class lattice_plot:
         self.ax.invert_yaxis()
         self.ax.set_aspect('equal')
 
+        # Initate legend
         le_qubit = Line2D([0], [0], lw=0, marker='o', color='w', mec='k', mew=2, mfc='w', ms=10, label='Qubit')
         le_xer = Line2D([0], [0], lw=0, marker='o', color='w', mec='k', mew=2, mfc=self.cx, ms=10, label='X-error')
         le_zer = Line2D([0], [0], lw=0, marker='o', color='w', mec='k', mew=2, mfc=self.cz, ms=10, label='Y-error')
@@ -56,27 +57,10 @@ class lattice_plot:
         le_err = Line2D([0], [0], lw=0, marker='$\u25CC$', color='w', mec=self.cE, mew=1, mfc='w', ms=12, label='Erasure')
         le_ver = Line2D([0], [0], ls='-', lw=self.lw, color=self.cX, label='Vertex')
         le_pla = Line2D([0], [0], ls='--', lw=self.lw, color=self.cZ, label='Plaquette')
-
         self.lh = [le_qubit, le_xer, le_zer, le_yer, le_err, le_ver, le_pla]
-
         self.ax.legend(handles=self.lh, bbox_to_anchor=(-0.15, 0.95), loc='upper left', ncol=1)
 
-
-    def waitforkeypress(self, str):
-        print(str, "Press any key to continue...")
-        keyboardClick = False
-        while not keyboardClick:
-            keyboardClick = plt.waitforbuttonpress(120)
-
-
-    def plot_lattice(self):
-        '''
-        Plots the toric lattice.
-        Which includes the vertices on the initial and secundary lattices, and two qubits per cell
-        '''
-
-        plt.sca(self.ax)
-
+        # Plot empty lattice
         # Loop over all indices
         for yb in range(self.size):
             y = yb * 4
@@ -104,6 +88,14 @@ class lattice_plot:
         self.canvas.draw()
         if self.plot_base:
             self.waitforkeypress("Lattice plotted.")
+
+
+    def waitforkeypress(self, str):
+        print(str, "Press any key to continue...")
+        keyboardClick = False
+        while not keyboardClick:
+            keyboardClick = plt.waitforbuttonpress(120)
+
 
     def plot_erasures(self):
         '''
@@ -213,19 +205,20 @@ class lattice_plot:
         P = [1, 3]
         LS = ['-.', ':']
 
-        for type_matching, p, ls in zip(matchings, P, LS):
-            for v0, v1 in type_matching:
+        for v0, v1 in matchings:
 
-                color = [random.random()*0.8 + 0.2 for _ in range(3)]
+            color = [random.random()*0.8 + 0.2 for _ in range(3)]
 
-                (_, topy, topx) = v0.sID
-                (_, boty, botx) = v1.sID
+            (_, topy, topx) = v0.sID
+            (type, boty, botx) = v1.sID
 
-                plt.plot([topx*4 + p, botx*4 + p], [topy*4 + p, boty*4 + p], c=color, lw=self.slw, ls=ls)
-                circle1 = plt.Circle((topx*4 + p, topy*4 + p), 0.25, fill=True, facecolor=color)
-                circle2 = plt.Circle((botx*4 + p, boty*4 + p), 0.25, fill=True, facecolor=color)
-                self.ax.add_artist(circle1)
-                self.ax.add_artist(circle2)
+            p, ls = P[type], LS[type]
+
+            plt.plot([topx*4 + p, botx*4 + p], [topy*4 + p, boty*4 + p], c=color, lw=self.slw, ls=ls)
+            circle1 = plt.Circle((topx*4 + p, topy*4 + p), 0.25, fill=True, facecolor=color)
+            circle2 = plt.Circle((botx*4 + p, boty*4 + p), 0.25, fill=True, facecolor=color)
+            self.ax.add_artist(circle1)
+            self.ax.add_artist(circle2)
 
 
         if self.plot_matching:

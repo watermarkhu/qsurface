@@ -6,7 +6,7 @@ import random
 class lattice_plot:
 
 
-    def __init__(self, graph, plot_size=8):
+    def __init__(self, graph, plot_size=8, line_width=1.5):
 
         self.plot_base = 0
         self.plot_error = 1
@@ -20,7 +20,7 @@ class lattice_plot:
         self.qsize = 0.5
         self.qsize2 = 0.25
         self.qsizeE = 0.7
-        self.lw = 1.5
+        self.lw = line_width
         self.slw = 1
 
         self.stabs = {}

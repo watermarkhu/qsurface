@@ -9,7 +9,7 @@ import blossom5.pyMatch as pm
 
 class errors:
 
-    def __init__(self, graph, toric_plot=None, worker=None, plot_size=8):
+    def __init__(self, graph, toric_plot=None, worker=None):
 
         '''
         :param size:
@@ -29,16 +29,16 @@ class errors:
         self.array stores the qubit values and has dimension [XZ_error{0,1}, Top_down{0,1}, size, size]
         Qubit values are either 0 or 1, which is analogous to the -1, and 1 state, respectively
         '''
+        self.time = time.time()
         self.graph = graph
         self.toric_plot = toric_plot
-        self.plot_size = plot_size
 
         if not os.path.exists("./errors/"):
             os.makedirs("./errors/")
 
         if worker is None:
             # random.seed(self.time)        # if random seed need even when loading errors
-            random.seed(time.time())        # load seed from file
+            random.seed(self.time)        # load seed from file
         else:
             random.seed(float(str(worker) + str(self.time)))    # makes sure that each worker has different seeds
 

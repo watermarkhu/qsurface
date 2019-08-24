@@ -1,6 +1,5 @@
 import random
 
-
 # Helper functions
 
 def find_cluster_root(cluster):
@@ -49,9 +48,9 @@ def cluster_new_vertex(graph, cluster, vertex, random_traverse=True, uf_plot=Non
             (new_vertex, new_edge) = vertex.neighbors[wind]
 
             if new_edge.erasure:
-                if new_edge.cluster is None and not new_edge.peeled:    # if edge not already traversed
+                if new_edge.support == 0 and not new_edge.peeled:    # if edge not already traversed
                     if new_vertex.cluster is None:                      # if no cycle detected
-                        cluster.add_edge(new_edge)
+                        new_edge.cluster = cluster
                         cluster.add_vertex(new_vertex)
                         if uf_plot is not None and plot_step:
                             uf_plot.plot_edge_step(new_edge, "confirm")
@@ -63,6 +62,64 @@ def cluster_new_vertex(graph, cluster, vertex, random_traverse=True, uf_plot=Non
             else:
                 if new_vertex.cluster is not cluster:                   # Make sure new bound does not lead to self
                     cluster.add_full_bound(vertex, new_edge, new_vertex)
+
+
+def cluster_place_bucket(graph, cluster, merge=False):
+    '''
+    :param cluster      current cluster
+
+    The inputted cluster has undergone a size change, either due to cluster growth or during a cluster merge, in which case the new root cluster is inputted. We increase the appropiate bucket number of the cluster intil the fitting bucket has been reached. The cluster is then appended to that bucket.
+    If the max bucket number has been reached. The cluster is appended to the wastebasket, which will never be selected for growth.
+    '''
+
+    def place_bucket(size, method):
+        '''
+        :param size         size of the cluster to be placed
+
+        Method A places the cluster in buckets as: [1-4] [5-12] [13-24]...
+        Method B places the cluster in buckets as: [1] [4-5] [6-13] ....
+
+        '''
+        if method == "A":
+            return int(2*((2*size-1)**(1/2) - 1)//2)
+        elif method == "B":
+            if size == 1:
+                return 0
+            else:
+                return int(2*(((2*size-3)**(1/2) - 1)//2 + 1))
+
+    if graph.bucket_method in ["A", "B"]:
+
+        if cluster.bucket is None:
+            cluster.bucket = place_bucket(cluster.size, graph.bucket_method)
+        elif cluster.bucket < graph.numbuckets and cluster.size >= graph.buckmax[cluster.bucket//2]:
+            cluster.bucket = place_bucket(cluster.size, graph.bucket_method)
+
+        if not cluster.full_edged:                      # Additional level added if currently in growth state 1
+            cluster.bucket += 1
+
+        if cluster.bucket < graph.numbuckets:
+            if cluster.parity % 2 == 1:
+                graph.buckets[cluster.bucket].append(cluster)
+                if cluster.bucket > graph.maxbucket:
+                    graph.maxbucket = cluster.bucket
+            else:
+                cluster.bucket = None
+        else:
+            graph.wastebasket.append(cluster)
+
+    elif graph.bucket_method == "C":
+
+        cluster.bucket = cluster.size - 1
+        if not cluster.full_edged:                      # Additional level added if currently in growth state 1
+            cluster.bucket += 1
+
+        if cluster.parity % 2 == 1 and cluster.bucket < graph.numbuckets:
+            graph.buckets[cluster.bucket].append(cluster)
+            if cluster.bucket > graph.maxbucket:
+                graph.maxbucket = cluster.bucket
+        else:
+            cluster.bucket = None
 
 
 # Main functions
@@ -119,12 +176,14 @@ def find_clusters(graph, anyon_order="random", uf_plot=None, plot_step=False):
 
             cluster = graph.add_cluster(cID)
             cluster.add_vertex(vertex)
-            cluster_new_vertex(graph, cluster, vertex)
-            graph.cluster_place_bucket(cluster)
+            cluster_new_vertex(graph, cluster, vertex, uf_plot=uf_plot, plot_step=plot_step)
+            cluster_place_bucket(graph, cluster)
             cID += 1
 
     if uf_plot is not None and not plot_step:
-        uf_plot.plot_removed(graph, "Clusters initiated")
+        uf_plot.plot_removed(graph, "Clusters initiated.")
+    elif uf_plot is not None:
+        uf_plot.waitforkeypress("Clusters initiated.")
 
 
 def grow_bucket(graph, uf_plot=None, plot_step=False, print_steps=False, step_click=False, intervention=False):
@@ -177,18 +236,17 @@ def grow_bucket(graph, uf_plot=None, plot_step=False, print_steps=False, step_cl
             grow_cluster = grow_vertex.cluster
             grrt_cluster = find_cluster_root(grow_cluster)
             if grrt_cluster is None:
+                edge.support += 1
                 if full_edged:
-                    edge.cluster = 0                # 0 value to indicate half-grown status
                     root_cluster.half_bound.append((base_vertex, edge, grow_vertex))
                 else:
-                    edge.cluster = root_cluster
                     root_cluster.add_vertex(grow_vertex)
                     cluster_new_vertex(graph, root_cluster, grow_vertex)
                 uf_plot.add_edge(edge, base_vertex) if plot else None
             else:
                 if grrt_cluster is not root_cluster:
-                    if full_edged and edge.cluster == 0 or not full_edged:
-                        edge.cluster = grrt_cluster
+                    edge.support += 1
+                    if full_edged and edge.support == 2 or not full_edged:
                         string += " Merged with " + str(grrt_cluster) + "."
                         union_clusters(grrt_cluster, root_cluster)
                         merge_cluster = grrt_cluster
@@ -198,15 +256,14 @@ def grow_bucket(graph, uf_plot=None, plot_step=False, print_steps=False, step_cl
                             print("intervention on merge.") if print_steps else None
                             break
                     elif full_edged:
-                        edge.cluster = 0
                         root_cluster.half_bound.append((base_vertex, edge, grow_vertex))
                         uf_plot.add_edge(edge, base_vertex) if plot else None
 
         if root_level:          # only at the root level will a cluster be placed in a new bucket
             if merge_cluster is None:
-                graph.cluster_place_bucket(root_cluster)
+                cluster_place_bucket(graph, root_cluster)
             else:
-                graph.cluster_place_bucket(merge_cluster, merge=True)
+                cluster_place_bucket(graph, merge_cluster, merge=True)
 
         uf_plot.draw_plot(string) if plot and plot_step else None
         if print_steps and root_level:
@@ -223,50 +280,52 @@ def grow_bucket(graph, uf_plot=None, plot_step=False, print_steps=False, step_cl
         graph.print_graph_stop()
         uf_plot.waitforkeypress() if plot else input("Press any key to continue...")
 
-    for grow_bucket in range(graph.size):
+    for bucket_i, bucket in enumerate(graph.buckets):
 
-        if grow_bucket > graph.maxbucket:                                # Break from upper buckets if top bucket has been reached.
+        if bucket == []:
+            continue
+
+        if bucket_i > graph.maxbucket:                                # Break from upper buckets if top bucket has been reached.
             if uf_plot is not None or print_steps:
                 txt = "Max bucket number reached."
                 uf_plot.waitforkeypress(txt) if plot else input(txt + " Press any key to continue...\n")
             break
 
         if print_steps:
-            print("\n############################ GROW ############################")
-            print("Growing bucket", grow_bucket, "of", graph.maxbucket, ":", graph.buckets[grow_bucket])
-            print("All buckets:", graph.buckets, graph.wastebasket)
+            print("############################ GROW ############################")
+            print("Growing bucket", bucket_i, "of", graph.maxbucket, ":", bucket)
+            print("Remaining buckets:", graph.buckets[bucket_i+1:graph.maxbucket+1], graph.wastebasket)
             uf_plot.waitforkeypress() if plot else input("Press any key to continue...\n")
 
-        while graph.buckets[grow_bucket] != []:                          # Loop over all clusters in the current bucket
-            cluster = graph.buckets[grow_bucket].pop()
+        while bucket != []:                          # Loop over all clusters in the current bucket
+            cluster = bucket.pop()
             root_cluster = find_cluster_root(cluster)
-            if root_cluster is cluster:                                 # Check that cluster is at root. Otherwise merged onto another
-                if root_cluster.bucket == grow_bucket:                  # Check that cluster is not already in a higher bucket
-                    graph.print_graph_stop([root_cluster], prestring="B: ") if print_steps else None
-                    grow(graph, root_cluster, root_cluster, root_cluster.full_edged, uf_plot, plot_step, print_steps, step_click, intervention)
-                    print("") if print_steps else None
-                else:
-                    if print_steps:
-                        if root_cluster.bucket is None:
-                            print(root_cluster, "is even.\n")
-                        else:
-                            if root_cluster.bucket > graph.maxbucket:
-                                print(root_cluster, "is already in the wastebasket\n")
-                            else:
-                                print(root_cluster, "is already in another bucket.\n")
+            # if root_cluster is cluster:                                 # Check that cluster is at root
+            if root_cluster.bucket == bucket_i:                  # Check that cluster is not already in a higher bucket
+                graph.print_graph_stop([root_cluster], prestring="B: ") if print_steps else None
+                grow(graph, root_cluster, root_cluster, root_cluster.full_edged, uf_plot, plot_step, print_steps, step_click, intervention)
+                print("") if print_steps else None
             else:
-                print(cluster, "is not at root level (" + str(root_cluster) + ").\n") if print_steps else None
+                if print_steps:
+                    if root_cluster.bucket is None:
+                        print(root_cluster, "is even.\n")
+                    else:
+                        if root_cluster.bucket > graph.maxbucket:
+                            print(root_cluster, "is already in the wastebasket\n")
+                        else:
+                            print(root_cluster, "is already in another bucket.\n")
+            # else:
+            #     print(cluster, "is not at root level (" + str(root_cluster) + ").\n") if print_steps else None
         if plot and not plot_step:
-            uf_plot.draw_plot("Growing bucket #" + str(grow_bucket) + "/" + str(graph.maxbucket) + ".")
-            input() if print_steps and plot_step else None
-        elif plot:
-            print("Growing bucket #" + str(grow_bucket) + "/" + str(graph.maxbucket) + ".")
-    if print_steps:
-        graph.print_graph_stop()
-        if plot and plot_step:
-            uf_plot.waitforkeypress()
+            txt = "" if print_steps else "Growing bucket #" + str(bucket_i) + "/" + str(graph.maxbucket) + "."
+            uf_plot.draw_plot(txt)
+    if plot:
+        if print_steps:
+            graph.print_graph_stop()
+        if plot_step:
+            input("Clusters grown. Press any key to continue...")
         else:
-            input("Press any key to continue...") if plot_step else None
+            uf_plot.waitforkeypress("Clusters grown.")
 
 
 def peel_trees(graph, uf_plot=None, plot_step=False):
@@ -288,8 +347,8 @@ def peel_trees(graph, uf_plot=None, plot_step=False):
         num_connect = 0
         for wind in graph.wind:
             (NV, NE) = vertex.neighbors[wind]
-            if NE.cluster != 0:
-                new_cluster = find_cluster_root(NE.cluster)
+            if NE.support == 2:
+                new_cluster = find_cluster_root(NV.cluster)
                 if new_cluster is cluster and not NE.peeled:
                     num_connect += 1
                     edge, new_vertex = NE, NV

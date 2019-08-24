@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-
+from scipy import optimize
 
 
 file_name = None
@@ -14,6 +14,20 @@ data = pd.read_csv(folder + "data/" + file_name + ".csv", index_col=0)
 thresholds = np.array(data)
 numlat = len(data.index.values)
 p = [float(k) for k in data.columns.values]
+L = [float(k) for k in data.index.values]
+
+# def make_fit(L):
+#     fitfunc = lambda p, px: p[1] + p[2]*(px - p[0])*L**(1/p[5]) + p[3]*((px - p[0])*L**(1/p[5]))**2 + p[4]*L**(-1/p[6])
+#     errfunc = lambda p, px, psucc: fitfunc(p, px) - psucc
+#     return
+#
+# p0 = [0.1, 0, 0, 0, 0.165, 1.461, 0.71]
+#
+# for i, l in enumerate(L):
+#     fit = make_fit(l)
+#     p0, succes = optimize.leastsq(fit, p0[:], args=(p, thresholds[i]), maxfev=10000)
+# p0
+
 
 
 fits = []

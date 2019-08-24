@@ -1,5 +1,5 @@
 from matplotlib import pyplot as plt
-from run_toric_2D_peeling import multiple, multiprocess
+from run_toric_2D_uf import multiprocess
 import numpy as np
 import pandas as pd
 import datetime
@@ -7,16 +7,16 @@ import time
 
 if __name__ == '__main__':
 
-    save_result = True
+    save_result = 0
 
     folder = "../../../OneDrive - Delft University of Technology/MEP - thesis Mark/Simulations/"
 
-    file_name = "peeling_toric_pX_bucket_ao=rand_rt=on"
-    plot_name = "Peeling decoder (toric) vs. Pauli X error rate (bucket, ao=rand, rt=on)"
+    file_name = "peeling_toric_pX_bucketC_ao=rand_rt=on"
+    plot_name = "Peeling decoder (toric) vs. Pauli X error rate (bucket_C, ao=rand, rt=on)"
 
-    lattices = [8, 12, 16, 20, 24]
+    lattices = [8]
     p = list(np.linspace(0.09, 0.11, 11))
-    Num = 50000
+    Num = 10000
     plotn = 1000
 
     ### Code ###

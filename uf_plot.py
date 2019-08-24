@@ -4,7 +4,7 @@ from matplotlib.lines import Line2D
 
 class toric:
 
-    def __init__(self, graph, figure, plot_size=10, plotstep_click=False):
+    def __init__(self, graph, figure, plot_size=10, line_width=1.5, plotstep_click=False):
 
         self.size = graph.size
 
@@ -19,7 +19,7 @@ class toric:
         self.alpha = 0.3
 
         self.qsize = 0.1
-        self.lw = 1
+        self.lw = line_width
 
         self.plotstep_click = plotstep_click
 
@@ -58,25 +58,28 @@ class toric:
 
         for edge in graph.E.values():
 
-            (ertype, y, x, _) = edge.qID
-            (_, y0, x0) = edge.vertices[0].sID
-            (_, y1, x1) = edge.vertices[1].sID
+            (ertype, y0, x0, type) = edge.qID
 
             if ertype == 0:
-                if y == self.size - 1:
+
+                (y1, x1) = (y0, (x0 + 1) % self.size) if type == 0 else ((y0 + 1) % self.size, x0)
+
+                if y0 == self.size - 1:
                     y0 = self.size if y0 == 0 else y0
                     y1 = self.size if y1 == 0 else y1
-                if x == self.size - 1:
+                if x0 == self.size - 1:
                     x0 = self.size if x0 == 0 else x0
                     x1 = self.size if x1 == 0 else x1
             else:
-                if y == 0:
+                (y1, x1) = (y0, (x0 - 1) % self.size) if type == 1 else ((y0 - 1) % self.size, x0)
+
+                if y0 == 0:
                     y0 = -.5 if y0 == self.size - 1 else y0 + .5
                     y1 = -.5 if y1 == self.size - 1 else y1 + .5
                 else:
                     y0 += .5
                     y1 += .5
-                if x == 0:
+                if x0 == 0:
                     x0 = -.5 if x0 == self.size - 1 else x0 + .5
                     x1 = -.5 if x1 == self.size - 1 else x1 + .5
                 else:
@@ -92,8 +95,8 @@ class toric:
 
             xm = (x0 + x1)/2
             ym = (y0 + y1)/2
-            id0 = (edge.qID, edge.vertices[0].sID)
-            id1 = (edge.qID, edge.vertices[1].sID)
+            id0 = (edge.qID, 0)
+            id1 = (edge.qID, 1)
             self.edges[id0] = self.ax.plot([x0, xm], [y0, ym], c=color, lw=self.lw, ls=LS[ertype], alpha=alpha)
             self.edges[id1] = self.ax.plot([xm, x1], [ym, y1], c=color, lw=self.lw, ls=LS[ertype], alpha=alpha)
 
@@ -143,10 +146,9 @@ class toric:
         for edge in graph.E.values():
             if edge.peeled and not edge.matching:
 
-                (V0, V1) = edge.vertices
 
-                edge0 = self.edges[(edge.qID, V0.sID)][0]
-                edge1 = self.edges[(edge.qID, V1.sID)][0]
+                edge0 = self.edges[(edge.qID, 0)][0]
+                edge1 = self.edges[(edge.qID, 1)][0]
                 edge0.set_color(self.cl)
                 edge1.set_color(self.cl)
                 edge0.set_alpha(self.alpha)
@@ -162,9 +164,13 @@ class toric:
 
         plt.figure(self.f.number)
 
-        if edge.cluster == 0:
+        if edge.support == 1:
 
-            halfedge = self.edges[(edge.qID, vertex.sID)][0]
+            (_, ye, xe, _) = edge.qID
+            (_, yv, xv) = vertex.sID
+            id = 0 if (ye == yv and xe == xv) else 1
+
+            halfedge = self.edges[(edge.qID, id)][0]
             halfedge.set_alpha(0.5)
             if edge.qID[0] == 0:
                 halfedge.set_color(self.Cx)
@@ -173,11 +179,8 @@ class toric:
             self.ax.draw_artist(halfedge)
 
         else:
-
-            (V0, V1) = edge.vertices
-
-            edge0 = self.edges[(edge.qID, V0.sID)][0]
-            edge1 = self.edges[(edge.qID, V1.sID)][0]
+            edge0 = self.edges[(edge.qID, 0)][0]
+            edge1 = self.edges[(edge.qID, 1)][0]
             edge0.set_alpha(1)
             edge1.set_alpha(1)
             if edge.qID[0] == 0:
@@ -235,21 +238,14 @@ class toric:
 
         plt.sca(self.ax)
 
-        (V0, V1) = edge.vertices
-
-        (V0, V1) = edge.vertices
-
-        edge0 = self.edges[(edge.qID, V0.sID)][0]
-        edge1 = self.edges[(edge.qID, V1.sID)][0]
+        edge0 = self.edges[(edge.qID, 0)][0]
+        edge1 = self.edges[(edge.qID, 1)][0]
         edge0.set_alpha(1)
         edge1.set_alpha(1)
         edge0.set_color('k')
         edge1.set_color('k')
         self.ax.draw_artist(edge0)
         self.ax.draw_artist(edge1)
-
-        (ertype, yb, xb) = V0.sID
-        (ertype, yg, xg) = V1.sID
 
         self.canvas.blit(self.ax.bbox)
 
@@ -258,7 +254,6 @@ class toric:
             self.waitforkeypress(line)
         else:
             print(line)
-
 
         edge0.set_alpha(alpha)
         edge1.set_alpha(alpha)

@@ -13,8 +13,7 @@ def single(size, pE=0, pX=0, pZ=0, savefile=False, erasure_file=None, pauli_file
     # Initialize lattice
     if graph is None:
         graph = go.init_toric_graph(size)
-    if plot_load:
-        toric_plot = tp.lattice_plot(graph, plot_size)
+    toric_plot = tp.lattice_plot(graph, plot_size) if plot_load else None
 
     # Initialize errors
     TE = tc.errors(graph, toric_plot=toric_plot, worker=worker, plot_size=plot_size)

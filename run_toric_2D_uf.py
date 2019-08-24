@@ -7,7 +7,7 @@ from tqdm import tqdm
 import multiprocessing as mp
 
 
-def single(size, pE=0, pX=0, pZ=0, savefile=False, erasure_file=None, pauli_file=None, plot_load=False, graph=None, worker=None, plot_size=6):
+def single(size, pE=0, pX=0, pZ=0, savefile=False, erasure_file=None, pauli_file=None, plot_load=False, graph=None, worker=None):
     '''
     Runs the peeling decoder for one iteration
     '''
@@ -15,11 +15,11 @@ def single(size, pE=0, pX=0, pZ=0, savefile=False, erasure_file=None, pauli_file
     # Initialize lattice
     if graph is None:
         graph = go.init_toric_graph(size)
-    if plot_load:
-        toric_plot = tp.lattice_plot(graph, plot_size)
+
+    toric_plot = tp.lattice_plot(graph, plot_size=8, line_width=2) if plot_load else None
 
     # Initialize errors
-    TE = tc.errors(graph, toric_plot=toric_plot, worker=worker, plot_size=plot_size)
+    TE = tc.errors(graph, toric_plot=toric_plot, worker=worker)
     TE.init_erasure_region(pE, savefile, erasure_file)
     TE.init_pauli(pX, pZ, savefile, pauli_file)
 
@@ -27,10 +27,10 @@ def single(size, pE=0, pX=0, pZ=0, savefile=False, erasure_file=None, pauli_file
     tc.measure_stab(graph, toric_plot)
 
     # Peeling decoder
-    if plot_load:
-        uf_plot = up.toric(graph, toric_plot.f, plot_size, plotstep_click=False)
-    graph.init_bucket()
-    uf.find_clusters(graph, anyon_order="random", uf_plot=uf_plot, plot_step=0)
+    uf_plot = up.toric(graph, toric_plot.f, plot_size=8, line_width=1.5, plotstep_click=False) if plot_load else None
+
+    graph.init_bucket(method="C")
+    uf.find_clusters(graph, uf_plot=uf_plot, plot_step=0, anyon_order="random")
     uf.grow_bucket(graph, uf_plot=uf_plot, plot_step=0, print_steps=0, step_click=0, intervention=0)
     uf.peel_trees(graph, uf_plot=uf_plot, plot_step=0)
 
@@ -44,12 +44,12 @@ def single(size, pE=0, pX=0, pZ=0, savefile=False, erasure_file=None, pauli_file
     return correct
 
 
-def multiple(size, iters, pE=0, pX=0, pZ=0, plot_load=False, qres=None, worker=None, plot_size=6):
+def multiple(size, iters, pE=0, pX=0, pZ=0, plot_load=False, qres=None, worker=None):
     '''
     Runs the peeling decoder for a number of iterations. The graph is reused for speedup.
     '''
     graph = go.init_toric_graph(size)
-    result = [single(size, pE, pX, pZ, plot_load=plot_load, graph=graph, worker=worker, plot_size=plot_size) for i in tqdm(range(iters))]
+    result = [single(size, pE, pX, pZ, plot_load=plot_load, graph=graph, worker=worker) for i in tqdm(range(iters))]
     N_succes = sum(result)
     if qres is not None:
         qres.put(N_succes)

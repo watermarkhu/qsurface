@@ -1,4 +1,4 @@
-+class iGraph(object):
+class iGraph(object):
     '''
     The graph in which the vertices, edges and clusters exist. Has the following parameters
 
@@ -42,9 +42,10 @@
 
     def add_edge(self, qID, sIDlu, sIDrd, orientation):
         '''Adds an edge with edge ID number qID with pointers to vertices. Also adds pointers to this edge on the vertices. '''
+
         V1 = self.V[sIDlu]
         V2 = self.V[sIDrd]
-        E = iEdge(qID, V1, V2)
+        E = iEdge(qID)
         self.E[qID] = E
         if orientation == 'H':
             V1.neighbors['r'] = (V2, E)
@@ -65,39 +66,19 @@
         for vertex in self.V.values():
             vertex.reset()
 
-    def init_bucket(self):
-        self.numbuckets = self.size - self.size % 2
+    def init_bucket(self, method="B"):
+
+        self.bucket_method = method
+        if method in ["A", "B"]:
+            self.numbuckets = self.size - self.size % 2
+            self.buckmax = [(i+1)**2 + (i+2)**2 for i in range(self.size//2)]
+        elif method == "C":
+            self.numbuckets = self.size*(self.size//2-1)*2
+
         self.buckets = [[] for _ in range(self.numbuckets)]
-        self.buckmax = [(i+1)**2 + (i+2)**2 for i in range(self.size//2)]
         self.wastebasket = []
         self.maxbucket = 0
 
-    def cluster_place_bucket(self, cluster, merge=False):
-        '''
-        :param cluster      current cluster
-
-        The inputted cluster has undergone a size change, either due to cluster growth or during a cluster merge, in which case the new root cluster is inputted. We increase the appropiate bucket number of the cluster intil the fitting bucket has been reached. The cluster is then appended to that bucket.
-        If the max bucket number has been reached. The cluster is appended to the wastebasket, which will never be selected for growth.
-        '''
-        if cluster.bucket is None:
-            cluster.bucket = 2*int(-((1.5 - .25*(-4+8*cluster.size + 1)**(1/2))//1))
-        else:
-            if cluster.bucket < self.numbuckets:
-                if cluster.size >= self.buckmax[cluster.bucket//2]:
-                    cluster.bucket = 2*int(-((1.5 - .25*(-4+8*cluster.size + 1)**(1/2))//1))
-
-        if not cluster.full_edged:                      # Additional level added if currently in growth state 1
-            cluster.bucket += 1
-
-        if cluster.bucket < self.numbuckets:
-            if cluster.parity % 2 == 1:
-                self.buckets[cluster.bucket].append(cluster)
-                if cluster.bucket > self.maxbucket:
-                    self.maxbucket = cluster.bucket
-            else:
-                cluster.bucket = None
-        else:
-            self.wastebasket.append(cluster)
 
     def print_graph_stop(self, clusters=None, prestring=""):
         '''
@@ -168,10 +149,6 @@ class iCluster(object):
             self.parity += 1
         vertex.cluster = self
 
-    def add_edge(self, edge):
-        '''Adds both sides of an edge to a cluster'''
-        edge.cluster = self
-
     def add_full_bound(self, base_vertex, edge, grow_vertex):
         '''Add an edge to the boundary of the cluster after growth step 2'''
         self.full_bound.append((base_vertex, edge, grow_vertex))
@@ -223,17 +200,16 @@ class iEdge(object):
     matching    boolean indicating whether this edge is apart of the matching
     '''
 
-    def __init__(self, qID, V1, V2):
+    def __init__(self, qID):
         # fixed parameters
         self.qID = qID
-        self.vertices = (V1, V2)
 
         # iteration parameters
-        self.state = False
-        self.erasure = False
-        self.cluster = None
-        self.peeled = False
-        self.matching = False
+        self.state = 0
+        self.erasure = 0
+        self.support = 0
+        self.peeled = 0
+        self.matching = 0
 
     def __repr__(self):
         if self.qID[0] == 0:
@@ -248,11 +224,11 @@ class iEdge(object):
         '''
         Changes all iteration paramters to their initial value
         '''
-        self.state = False
-        self.erasure = False
-        self.cluster = None
-        self.peeled = False
-        self.matching = False
+        self.state = 0
+        self.erasure = 0
+        self.support = 0
+        self.peeled = 0
+        self.matching = 0
 
 
 def init_toric_graph(size):

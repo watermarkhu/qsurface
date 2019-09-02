@@ -71,105 +71,34 @@ def cluster_place_bucket(graph, cluster, merge=False):
     The inputted cluster has undergone a size change, either due to cluster growth or during a cluster merge, in which case the new root cluster is inputted. We increase the appropiate bucket number of the cluster intil the fitting bucket has been reached. The cluster is then appended to that bucket.
     If the max bucket number has been reached. The cluster is appended to the wastebasket, which will never be selected for growth.
     '''
+    cluster.bucket = cluster.size - 1
+    if not cluster.full_edged:                      # Additional level added if currently in growth state 1
+        cluster.bucket += 1
 
-    def place_bucket(size, method):
-        '''
-        :param size         size of the cluster to be placed
-
-        Method A places the cluster in buckets as: [1-4] [5-12] [13-24]...
-        Method B places the cluster in buckets as: [1] [4-5] [6-13] ....
-
-        '''
-        if method == "A":
-            return int(2*((2*size-1)**(1/2) - 1)//2)
-        elif method == "B":
-            if size == 1:
-                return 0
-            else:
-                return int(2*(((2*size-3)**(1/2) - 1)//2 + 1))
-
-    if graph.bucket_method in ["A", "B"]:
-
-        if cluster.bucket is None:
-            cluster.bucket = place_bucket(cluster.size, graph.bucket_method)
-        elif cluster.bucket < graph.numbuckets and cluster.size >= graph.buckmax[cluster.bucket//2]:
-            cluster.bucket = place_bucket(cluster.size, graph.bucket_method)
-
-        if not cluster.full_edged:                      # Additional level added if currently in growth state 1
-            cluster.bucket += 1
-
-        if cluster.bucket < graph.numbuckets:
-            if cluster.parity % 2 == 1:
-                graph.buckets[cluster.bucket].append(cluster)
-                if cluster.bucket > graph.maxbucket:
-                    graph.maxbucket = cluster.bucket
-            else:
-                cluster.bucket = None
-        else:
-            graph.wastebasket.append(cluster)
-
-    elif graph.bucket_method == "C":
-
-        cluster.bucket = cluster.size - 1
-        if not cluster.full_edged:                      # Additional level added if currently in growth state 1
-            cluster.bucket += 1
-
-        if cluster.parity % 2 == 1 and cluster.bucket < graph.numbuckets:
-            graph.buckets[cluster.bucket].append(cluster)
-            if cluster.bucket > graph.maxbucket:
-                graph.maxbucket = cluster.bucket
-        else:
-            cluster.bucket = None
+    if cluster.parity % 2 == 1 and cluster.bucket < graph.numbuckets:
+        graph.buckets[cluster.bucket].append(cluster)
+        if cluster.bucket > graph.maxbucket:
+            graph.maxbucket = cluster.bucket
+    else:
+        cluster.bucket = None
 
 
 # Main functions
 
-def find_clusters(graph, anyon_order="random", uf_plot=None, plot_step=False):
+def find_clusters(graph, uf_plot=None, plot_step=False):
     '''
     Given a set of erased qubits/edges on a lattice, this functions finds all edges that are connected and sorts them in separate clusters. A single anyon can also be its own cluster.
     It loops over all vertices (randomly if toggled, which produces a different tree), and calls {cluster_new_vertex} to find all connected erasure qubits, and finds the boundary for growth step 1. Afterwards the cluster is placed in a bucket based in its size.
 
     '''
     cID = 0
-
     vertices = graph.V.values()
 
-    if anyon_order in ["row_row", ""]:
-        anyons = [vertex for vertex in vertices if vertex.state]
-
-    elif anyon_order == "random":
+    # Random order: Doesn't matter when pE == 0
+    if False:
         vertices = random.sample(set(vertices), len(vertices))
-        anyons = [vertex for vertex in vertices if vertex.state]
 
-    elif anyon_order == "neighbor_count":
-        count_lists = [[] for _ in range(len(graph.wind) + 1)]
-        for vertex in vertices:
-            if vertex.state:
-                count = 0
-                for neighbor in [vertex.neighbors[wind][0] for wind in graph.wind]:
-                    if neighbor.state:
-                        count += 1
-                vertex.count = count
-                count_lists[count].append(vertex)
-            else:
-                vertex.count = 0
-        anyons = []
-        while count_lists != []:
-            anyons += count_lists.pop()
-    elif anyon_order == "rev_count":\
-
-        count_lists = [[] for _ in range(len(graph.wind) + 1)]
-        for vertex in vertices:
-            if vertex.state:
-                count = 0
-                for neighbor in [vertex.neighbors[wind][0] for wind in graph.wind]:
-                    if neighbor.state:
-                        count += 1
-                vertex.count = count
-                count_lists[count].append(vertex)
-            else:
-                vertex.count = 0
-        anyons = [item for sublist in count_lists for item in sublist]
+    anyons = [vertex for vertex in vertices if vertex.state]
 
     for vertex in anyons:
         if vertex.cluster is None:
@@ -186,14 +115,14 @@ def find_clusters(graph, anyon_order="random", uf_plot=None, plot_step=False):
         uf_plot.waitforkeypress("Clusters initiated.")
 
 
-def grow_bucket(graph, uf_plot=None, plot_step=False, print_steps=False, step_click=False, intervention=False):
+def grow_bucket(graph, uf_plot=None, plot_step=False, step_click=False):
 
     '''
     Grows the clusters, and merges them until there are no uneven clusters left.
     Starting from the lowest bucket, clusters are popped from the list and grown with {grow_cluster}. Due to the nature of how clusters are appended to the buckets, a cluster needs to be checked for 1) root level 2) bucket level and 3) parity before it can be grown.
 
     '''
-    def grow(graph, cluster, root_cluster, full_edged, uf_plot, plot_step, print_steps, step_click, intervention, family_growth=True):
+    def grow(graph, cluster, root_cluster, full_edged, uf_plot, plot_step, step_click, family_growth=True):
         '''
         :param cluster          the current cluster selected for growth
         :param root_cluster     the root cluster of the selected cluster
@@ -211,18 +140,10 @@ def grow_bucket(graph, uf_plot=None, plot_step=False, print_steps=False, step_cl
         root_level = True if cluster == root_cluster else False         # Check for root at beginning
         string = str(cluster) + " grown."
 
-
-        print(cluster, "has fosters:", cluster.foster) if cluster.foster != [] and print_steps else None
-        while cluster.foster != []:
-            foster_cluster = cluster.foster.pop()
-            grow(graph, foster_cluster, root_cluster, full_edged, uf_plot, plot_step, print_steps, step_click, intervention, False)
-
         if family_growth:
-
-            print(cluster, "has children:", cluster.childs) if cluster.childs != [] and print_steps else None
             while cluster.childs != []:                                 # First go through child clusters
                 child_cluster = cluster.childs.pop()
-                grow(graph, child_cluster, root_cluster, full_edged, uf_plot, plot_step, print_steps, step_click, intervention)
+                grow(graph, child_cluster, root_cluster, full_edged, uf_plot, plot_step, step_click)
 
         merge_cluster = None
 
@@ -251,10 +172,6 @@ def grow_bucket(graph, uf_plot=None, plot_step=False, print_steps=False, step_cl
                         union_clusters(grrt_cluster, root_cluster)
                         merge_cluster = grrt_cluster
                         uf_plot.add_edge(edge, base_vertex) if plot else None
-                        if intervention and family_growth and grrt_cluster.parity % 2 == 0:
-                            grrt_cluster.foster.append(root_cluster)
-                            print("intervention on merge.") if print_steps else None
-                            break
                     elif full_edged:
                         root_cluster.half_bound.append((base_vertex, edge, grow_vertex))
                         uf_plot.add_edge(edge, base_vertex) if plot else None
@@ -266,19 +183,8 @@ def grow_bucket(graph, uf_plot=None, plot_step=False, print_steps=False, step_cl
                 cluster_place_bucket(graph, merge_cluster, merge=True)
 
         uf_plot.draw_plot(string) if plot and plot_step else None
-        if print_steps and root_level:
-            print_cluster = root_cluster if merge_cluster is None else merge_cluster
-            graph.print_graph_stop([print_cluster], prestring="A: ")
-            if plot and step_click:
-                uf_plot.waitforkeypress()
-            else:
-                input("Press any key to continue...") if step_click else None
 
     plot = True if uf_plot is not None else False
-
-    if print_steps:
-        graph.print_graph_stop()
-        uf_plot.waitforkeypress() if plot else input("Press any key to continue...")
 
     for bucket_i, bucket in enumerate(graph.buckets):
 
@@ -286,42 +192,21 @@ def grow_bucket(graph, uf_plot=None, plot_step=False, print_steps=False, step_cl
             continue
 
         if bucket_i > graph.maxbucket:                                # Break from upper buckets if top bucket has been reached.
-            if uf_plot is not None or print_steps:
+            if uf_plot is not None:
                 txt = "Max bucket number reached."
                 uf_plot.waitforkeypress(txt) if plot else input(txt + " Press any key to continue...\n")
             break
-
-        if print_steps:
-            print("############################ GROW ############################")
-            print("Growing bucket", bucket_i, "of", graph.maxbucket, ":", bucket)
-            print("Remaining buckets:", graph.buckets[bucket_i+1:graph.maxbucket+1], graph.wastebasket)
-            uf_plot.waitforkeypress() if plot else input("Press any key to continue...\n")
 
         while bucket != []:                          # Loop over all clusters in the current bucket
             cluster = bucket.pop()
             root_cluster = find_cluster_root(cluster)
             # if root_cluster is cluster:                                 # Check that cluster is at root
             if root_cluster.bucket == bucket_i:                  # Check that cluster is not already in a higher bucket
-                graph.print_graph_stop([root_cluster], prestring="B: ") if print_steps else None
-                grow(graph, root_cluster, root_cluster, root_cluster.full_edged, uf_plot, plot_step, print_steps, step_click, intervention)
-                print("") if print_steps else None
-            else:
-                if print_steps:
-                    if root_cluster.bucket is None:
-                        print(root_cluster, "is even.\n")
-                    else:
-                        if root_cluster.bucket > graph.maxbucket:
-                            print(root_cluster, "is already in the wastebasket\n")
-                        else:
-                            print(root_cluster, "is already in another bucket.\n")
-            # else:
-            #     print(cluster, "is not at root level (" + str(root_cluster) + ").\n") if print_steps else None
+                grow(graph, root_cluster, root_cluster, root_cluster.full_edged, uf_plot, plot_step, step_click)
         if plot and not plot_step:
-            txt = "" if print_steps else "Growing bucket #" + str(bucket_i) + "/" + str(graph.maxbucket) + "."
+            txt = "Growing bucket #" + str(bucket_i) + "/" + str(graph.maxbucket) + "."
             uf_plot.draw_plot(txt)
     if plot:
-        if print_steps:
-            graph.print_graph_stop()
         if plot_step:
             input("Clusters grown. Press any key to continue...")
         else:

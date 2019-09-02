@@ -1,11 +1,12 @@
 import graph_objects as go
 import toric_code as tc
+import error_generator as eg
 import toric_plot as tp
 from tqdm import tqdm
 import multiprocessing as mp
 
 
-def single(size, pE=0, pX=0, pZ=0, savefile=False, erasure_file=None, pauli_file=None, plot_load=False, graph=None, worker=None, plot_size=6):
+def single(size, pE=0, pX=0, pZ=0, savefile=False, erasure_file=None, pauli_file=None, plot_load=False, graph=None, worker=None):
     '''
     Runs the peeling decoder for one iteration
     '''
@@ -13,18 +14,19 @@ def single(size, pE=0, pX=0, pZ=0, savefile=False, erasure_file=None, pauli_file
     # Initialize lattice
     if graph is None:
         graph = go.init_toric_graph(size)
-    toric_plot = tp.lattice_plot(graph, plot_size) if plot_load else None
+    toric_plot = tp.lattice_plot(graph, plot_size=8, line_width=2) if plot_load else None
 
     # Initialize errors
-    TE = tc.errors(graph, toric_plot=toric_plot, worker=worker, plot_size=plot_size)
-    TE.init_erasure_region(pE, savefile, erasure_file)
-    TE.init_pauli(pX, pZ, savefile, pauli_file)
+    toric_errors = eg.toric(graph, toric_plot=toric_plot, worker=worker)
+    toric_errors.init_erasure_region(pE, savefile, erasure_file)
+    toric_errors.init_pauli(pX, pZ, savefile, pauli_file)
 
     # Measure stabiliziers
     tc.measure_stab(graph, toric_plot)
 
     # MWPM decoder
     matching = tc.get_matching_mwpm(graph)
+    # matching = tc.get_matching_blossom5(graph):
 
     # Apply matching
     tc.apply_matching_mwpm(graph, matching, toric_plot)
@@ -36,12 +38,12 @@ def single(size, pE=0, pX=0, pZ=0, savefile=False, erasure_file=None, pauli_file
     return correct
 
 
-def multiple(size, iters, pE=0, pX=0, pZ=0, plot_load=False, qres=None, worker=None, plot_size=6):
+def multiple(size, iters, pE=0, pX=0, pZ=0, plot_load=False, qres=None, worker=None):
     '''
     Runs the peeling decoder for a number of iterations. The graph is reused for speedup.
     '''
     graph = go.init_toric_graph(size)
-    result = [single(size, pE, pX, pZ, plot_load=plot_load, graph=graph, worker=worker, plot_size=plot_size) for i in tqdm(range(iters))]
+    result = [single(size, pE, pX, pZ, plot_load=plot_load, graph=graph, worker=worker) for i in tqdm(range(iters))]
     N_succes = sum(result)
     if qres is not None:
         qres.put(N_succes)

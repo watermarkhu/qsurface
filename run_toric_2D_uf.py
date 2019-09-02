@@ -1,5 +1,6 @@
 import graph_objects as go
 import toric_code as tc
+import error_generator as eg
 import toric_plot as tp
 import unionfind as uf
 import uf_plot as up
@@ -19,9 +20,9 @@ def single(size, pE=0, pX=0, pZ=0, savefile=False, erasure_file=None, pauli_file
     toric_plot = tp.lattice_plot(graph, plot_size=8, line_width=2) if plot_load else None
 
     # Initialize errors
-    TE = tc.errors(graph, toric_plot=toric_plot, worker=worker)
-    TE.init_erasure_region(pE, savefile, erasure_file)
-    TE.init_pauli(pX, pZ, savefile, pauli_file)
+    toric_errors = eg.toric(graph, toric_plot=toric_plot, worker=worker)
+    toric_errors.init_erasure_region(pE, savefile, erasure_file)
+    toric_errors.init_pauli(pX, pZ, savefile, pauli_file)
 
     # Measure stabiliziers
     tc.measure_stab(graph, toric_plot)
@@ -30,8 +31,8 @@ def single(size, pE=0, pX=0, pZ=0, savefile=False, erasure_file=None, pauli_file
     uf_plot = up.toric(graph, toric_plot.f, plot_size=8, line_width=1.5, plotstep_click=False) if plot_load else None
 
     graph.init_bucket(method="C")
-    uf.find_clusters(graph, uf_plot=uf_plot, plot_step=0, anyon_order="random")
-    uf.grow_bucket(graph, uf_plot=uf_plot, plot_step=0, print_steps=0, step_click=0, intervention=0)
+    uf.find_clusters(graph, uf_plot=uf_plot, plot_step=0)
+    uf.grow_bucket(graph, uf_plot=uf_plot, plot_step=0, step_click=0)
     uf.peel_trees(graph, uf_plot=uf_plot, plot_step=0)
 
     # Apply matching

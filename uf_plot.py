@@ -178,6 +178,11 @@ class toric:
                 halfedge.set_color(self.Cz)
             self.ax.draw_artist(halfedge)
 
+            halfedge = self.edges[(edge.qID, 1 - id)][0]
+            halfedge.set_alpha(self.alpha)
+            halfedge.set_color(self.cl)
+            self.ax.draw_artist(halfedge)
+
         else:
             edge0 = self.edges[(edge.qID, 0)][0]
             edge1 = self.edges[(edge.qID, 1)][0]

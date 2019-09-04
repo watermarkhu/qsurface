@@ -2,6 +2,25 @@
 import networkx as nx
 import blossom5.pyMatch as pm
 
+'''
+:param size:
+:param plot_load:
+
+ We define the unit cell, which contains two qubits, a star operator and plaquette operator.
+
+    |       |
+- Star  -  Q_0 -     also top (T) qubit
+    |       |
+-  Q_1  - Plaq  -    also down (D) qubit
+    |       |
+
+By doing so, we can define arrays the star and plaquette operators, where their index value define their position
+  on the qubit lattice. For the qubit array, there is an extra dimension to store the two qubits per unit cell.
+
+self.array stores the qubit values and has dimension [XZ_error{0,1}, Top_down{0,1}, size, size]
+Qubit values are either 0 or 1, which is analogous to the -1, and 1 state, respectively
+'''
+
 
 def measure_stab(graph, toric_plot=None):
     '''

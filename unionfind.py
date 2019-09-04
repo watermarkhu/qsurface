@@ -24,9 +24,9 @@ def union_clusters(parent, child):
     Merges two clusters by updating the parent/child relationship and updating the attributes
     '''
     child.parent = parent
-    parent.childs.append(child)
     parent.size += child.size
     parent.parity += child.parity
+    parent.new_bound.extend(child.new_bound)
 
 
 def cluster_new_vertex(graph, cluster, vertex, random_traverse=True, uf_plot=None, plot_step=False):
@@ -50,7 +50,7 @@ def cluster_new_vertex(graph, cluster, vertex, random_traverse=True, uf_plot=Non
             if new_edge.erasure:
                 if new_edge.support == 0 and not new_edge.peeled:    # if edge not already traversed
                     if new_vertex.cluster is None:                      # if no cycle detected
-                        new_edge.cluster = cluster
+                        new_edge.support = 2
                         cluster.add_vertex(new_vertex)
                         if uf_plot is not None and plot_step:
                             uf_plot.plot_edge_step(new_edge, "confirm")
@@ -61,19 +61,17 @@ def cluster_new_vertex(graph, cluster, vertex, random_traverse=True, uf_plot=Non
                             uf_plot.plot_edge_step(new_edge, "remove")
             else:
                 if new_vertex.cluster is not cluster:                   # Make sure new bound does not lead to self
-                    cluster.add_full_bound(vertex, new_edge, new_vertex)
+                    cluster.new_bound.append((vertex, new_edge, new_vertex))
 
 
-def cluster_place_bucket(graph, cluster, merge=False):
+def cluster_place_bucket(graph, cluster, extra=0):
     '''
     :param cluster      current cluster
 
     The inputted cluster has undergone a size change, either due to cluster growth or during a cluster merge, in which case the new root cluster is inputted. We increase the appropiate bucket number of the cluster intil the fitting bucket has been reached. The cluster is then appended to that bucket.
     If the max bucket number has been reached. The cluster is appended to the wastebasket, which will never be selected for growth.
     '''
-    cluster.bucket = cluster.size - 1
-    if not cluster.full_edged:                      # Additional level added if currently in growth state 1
-        cluster.bucket += 1
+    cluster.bucket = cluster.size - 1 + cluster.support
 
     if cluster.parity % 2 == 1 and cluster.bucket < graph.numbuckets:
         graph.buckets[cluster.bucket].append(cluster)
@@ -85,24 +83,29 @@ def cluster_place_bucket(graph, cluster, merge=False):
 
 # Main functions
 
+
 def find_clusters(graph, uf_plot=None, plot_step=False):
     '''
     Given a set of erased qubits/edges on a lattice, this functions finds all edges that are connected and sorts them in separate clusters. A single anyon can also be its own cluster.
     It loops over all vertices (randomly if toggled, which produces a different tree), and calls {cluster_new_vertex} to find all connected erasure qubits, and finds the boundary for growth step 1. Afterwards the cluster is placed in a bucket based in its size.
 
     '''
+
+    # init bucket
+    graph.numbuckets = graph.size*(graph.size//2-1)*2
+    graph.buckets = [[] for _ in range(graph.numbuckets)]
+    graph.wastebasket = []
+    graph.maxbucket = 0
+
+
     cID = 0
     vertices = graph.V.values()
-
-    # Random order: Doesn't matter when pE == 0
-    if False:
-        vertices = random.sample(set(vertices), len(vertices))
+    vertices = random.sample(set(vertices), len(vertices)) # Random order: Doesn't matter when pE == 0
 
     anyons = [vertex for vertex in vertices if vertex.state]
 
     for vertex in anyons:
         if vertex.cluster is None:
-
             cluster = graph.add_cluster(cID)
             cluster.add_vertex(vertex)
             cluster_new_vertex(graph, cluster, vertex, uf_plot=uf_plot, plot_step=plot_step)
@@ -115,105 +118,76 @@ def find_clusters(graph, uf_plot=None, plot_step=False):
         uf_plot.waitforkeypress("Clusters initiated.")
 
 
-def grow_bucket(graph, uf_plot=None, plot_step=False, step_click=False):
+def grow_clusters(graph, uf_plot=None, plot_step=False):
 
     '''
     Grows the clusters, and merges them until there are no uneven clusters left.
     Starting from the lowest bucket, clusters are popped from the list and grown with {grow_cluster}. Due to the nature of how clusters are appended to the buckets, a cluster needs to be checked for 1) root level 2) bucket level and 3) parity before it can be grown.
 
     '''
-    def grow(graph, cluster, root_cluster, full_edged, uf_plot, plot_step, step_click, family_growth=True):
-        '''
-        :param cluster          the current cluster selected for growth
-        :param root_cluster     the root cluster of the selected cluster
-        :param full_edged       determines the growth state of the initial root cluster
-        :family_growth          detemines whether growth happens on parent or child cluster
-
-        Recursive function which first grows a cluster's children and then itself.
-
-        There are two distinct growth steps. 1) first half step from a given vertex, the cluster size does not increase, no new edges or vertices are added to the cluster, except for during a merge. 2) second half step in which a new vertex is reached, and the edge is added to the cluster.
-        During the inital {find_clusters} function, the initial boundary, which contains edges ready for growth step 1, are added to {full_bound}. {half_bound} which contains the boundary edges for growth step 2, is yet empty. From here, clusters from even buckets go into growth step 1 on edges from {full_bound}, and clusters from uneven buckets go into growth step 2 on edges from "half_bound". New boundary edges are added to the other boundary list.
-        After growth, the cluster is placed into a new bucket using {cluster_place_bucket}. If a merge happens, the root cluster of the current cluster is made a child of the pendant root_cluster. And the pendant root cluster is placed in a new bucket instead.
-        If a cluster has children, these clusters are grown first. The new boundaries from these child clusters are appended to the root_cluster. Such that a parent does not need to remember its children.
-        '''
-        plot = True if uf_plot is not None else False
-        root_level = True if cluster == root_cluster else False         # Check for root at beginning
-        string = str(cluster) + " grown."
-
-        if family_growth:
-            while cluster.childs != []:                                 # First go through child clusters
-                child_cluster = cluster.childs.pop()
-                grow(graph, child_cluster, root_cluster, full_edged, uf_plot, plot_step, step_click)
-
-        merge_cluster = None
-
-        if family_growth:
-            cluster.full_edged = not full_edged
-        cluster.full_bound.reverse() if full_edged else None
-        bound = cluster.full_bound if full_edged else cluster.half_bound
-        while bound != []:
-            root_cluster = find_cluster_root(root_cluster)
-            (base_vertex, edge, grow_vertex) = bound.pop()
-            grow_cluster = grow_vertex.cluster
-            grrt_cluster = find_cluster_root(grow_cluster)
-            if grrt_cluster is None:
-                edge.support += 1
-                if full_edged:
-                    root_cluster.half_bound.append((base_vertex, edge, grow_vertex))
-                else:
-                    root_cluster.add_vertex(grow_vertex)
-                    cluster_new_vertex(graph, root_cluster, grow_vertex)
-                uf_plot.add_edge(edge, base_vertex) if plot else None
-            else:
-                if grrt_cluster is not root_cluster:
-                    edge.support += 1
-                    if full_edged and edge.support == 2 or not full_edged:
-                        string += " Merged with " + str(grrt_cluster) + "."
-                        union_clusters(grrt_cluster, root_cluster)
-                        merge_cluster = grrt_cluster
-                        uf_plot.add_edge(edge, base_vertex) if plot else None
-                    elif full_edged:
-                        root_cluster.half_bound.append((base_vertex, edge, grow_vertex))
-                        uf_plot.add_edge(edge, base_vertex) if plot else None
-
-        if root_level:          # only at the root level will a cluster be placed in a new bucket
-            if merge_cluster is None:
-                cluster_place_bucket(graph, root_cluster)
-            else:
-                cluster_place_bucket(graph, merge_cluster, merge=True)
-
-        uf_plot.draw_plot(string) if plot and plot_step else None
 
     plot = True if uf_plot is not None else False
 
     for bucket_i, bucket in enumerate(graph.buckets):
 
-        if bucket == []:
-            continue
-
-        if bucket_i > graph.maxbucket:                                # Break from upper buckets if top bucket has been reached.
+        if bucket_i > graph.maxbucket:                  # Break from upper buckets if top bucket has been reached.
             if uf_plot is not None:
                 txt = "Max bucket number reached."
                 uf_plot.waitforkeypress(txt) if plot else input(txt + " Press any key to continue...\n")
             break
 
-        while bucket != []:                          # Loop over all clusters in the current bucket
+        if bucket == []:                                # no need to check empty bucket
+            continue
+
+        txt = "Growing bucket #" + str(bucket_i) + "/" + str(graph.maxbucket) + "."
+        if plot and plot_step:
+            print(txt)
+
+        Fusion = []        # Initiate Fusion list
+
+        for cluster in bucket:                          # Loop over all clusters in the current bucket
+            cluster = find_cluster_root(cluster)
+            if cluster.bucket == bucket_i and cluster.new_bound != []:  # Check that cluster is not already in a higher bucket and whether this bucket has new boundaries. If not, this cluster is already grown
+
+                cluster.boundary = cluster.new_bound    # Set boudary
+                cluster.new_bound = []
+                cluster.support = 1 - cluster.support   # Grow cluster support for bucket placement
+                for vertex, new_edge, new_vertex in cluster.boundary:   # Grow boundaries by half-edge
+                    if new_edge.support != 2:
+                        new_edge.support += 1
+                        if new_edge.support == 2:       # Apped to fusion list of edge fully grown
+                            Fusion.append((vertex, new_edge, new_vertex))
+                        else:                           # Half grown edges are added immediately to new boundary
+                            cluster.new_bound.append((vertex, new_edge, new_vertex))
+                        uf_plot.add_edge(new_edge, vertex) if plot else None
+                uf_plot.draw_plot(str(cluster) + " grown.") if plot and plot_step else None
+
+        for base_vertex, edge, grow_vertex in Fusion:
+            base_cluster = find_cluster_root(base_vertex.cluster)
+            grow_cluster = find_cluster_root(grow_vertex.cluster)
+            if grow_cluster is None:                    # Fully grown edge. New vertex is on the old boundary. Find new boundary on vertex
+                base_cluster.add_vertex(grow_vertex)
+                cluster_new_vertex(graph, base_cluster, grow_vertex)
+            elif grow_cluster is base_cluster:          # Edge grown on itself. This cluster is already connected. Cut half-edge
+                edge.support -= 1
+                uf_plot.add_edge(edge, base_vertex) if plot else None
+            else:                                       # Clusters merge by weighted union
+                if grow_cluster.size < base_cluster.size:
+                    base_cluster, grow_cluster = grow_cluster, base_cluster
+                union_clusters(grow_cluster, base_cluster)
+
+        uf_plot.draw_plot("Clusters merged") if plot and plot_step else None
+
+        while bucket != []:             # Put clusters in new buckets. Some will be added double, but will be skipped by the new_boundary check
             cluster = bucket.pop()
-            root_cluster = find_cluster_root(cluster)
-            # if root_cluster is cluster:                                 # Check that cluster is at root
-            if root_cluster.bucket == bucket_i:                  # Check that cluster is not already in a higher bucket
-                grow(graph, root_cluster, root_cluster, root_cluster.full_edged, uf_plot, plot_step, step_click)
+            cluster = find_cluster_root(cluster)
+            cluster_place_bucket(graph, cluster)
+
         if plot and not plot_step:
-            txt = "Growing bucket #" + str(bucket_i) + "/" + str(graph.maxbucket) + "."
             uf_plot.draw_plot(txt)
-    if plot:
-        if plot_step:
-            input("Clusters grown. Press any key to continue...")
-        else:
-            uf_plot.waitforkeypress("Clusters grown.")
 
 
-def peel_trees(graph, uf_plot=None, plot_step=False):
+def peel_clusters(graph, uf_plot=None, plot_step=False):
     '''
     Loops overal all vertices to find pendant vertices which are selected from peeling using {peel_edge}
 

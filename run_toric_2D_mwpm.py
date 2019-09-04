@@ -1,6 +1,6 @@
 import graph_objects as go
 import toric_code as tc
-import error_generator as eg
+import toric_error as te
 import toric_plot as tp
 from tqdm import tqdm
 import multiprocessing as mp
@@ -17,9 +17,8 @@ def single(size, pE=0, pX=0, pZ=0, savefile=False, erasure_file=None, pauli_file
     toric_plot = tp.lattice_plot(graph, plot_size=8, line_width=2) if plot_load else None
 
     # Initialize errors
-    toric_errors = eg.toric(graph, toric_plot=toric_plot, worker=worker)
-    toric_errors.init_erasure_region(pE, savefile, erasure_file)
-    toric_errors.init_pauli(pX, pZ, savefile, pauli_file)
+    te.init_erasure_region(graph, pE, savefile, erasure_file, toric_plot=toric_plot, worker=worker)
+    te.init_pauli(graph, pX, pZ, savefile, pauli_file, toric_plot=toric_plot, worker=worker)
 
     # Measure stabiliziers
     tc.measure_stab(graph, toric_plot)

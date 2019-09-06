@@ -23,10 +23,15 @@ def union_clusters(parent, child):
 
     Merges two clusters by updating the parent/child relationship and updating the attributes
     '''
+    mimick_object_reverse = True
+
     child.parent = parent
     parent.size += child.size
     parent.parity += child.parity
+    if parent.support == 0 and mimick_object_reverse:
+        child.newbound.reverse()
     parent.new_bound.extend(child.new_bound)
+
 
 
 def cluster_new_vertex(graph, cluster, vertex, random_traverse=True, uf_plot=None, plot_step=False):
@@ -150,6 +155,7 @@ def grow_clusters(graph, uf_plot=None, plot_step=False):
             if cluster.bucket == bucket_i and cluster.new_bound != []:  # Check that cluster is not already in a higher bucket and whether this bucket has new boundaries. If not, this cluster is already grown
 
                 cluster.boundary = cluster.new_bound    # Set boudary
+                cluster.boundary.reverse() if cluster.support == 1 else None
                 cluster.new_bound = []
                 cluster.support = 1 - cluster.support   # Grow cluster support for bucket placement
                 for vertex, new_edge, new_vertex in cluster.boundary:   # Grow boundaries by half-edge

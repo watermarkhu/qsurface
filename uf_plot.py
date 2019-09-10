@@ -146,7 +146,6 @@ class toric:
         for edge in graph.E.values():
             if edge.peeled and not edge.matching:
 
-
                 edge0 = self.edges[(edge.qID, 0)][0]
                 edge1 = self.edges[(edge.qID, 1)][0]
                 edge0.set_color(self.cl)

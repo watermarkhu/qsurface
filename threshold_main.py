@@ -3,7 +3,9 @@ from run_toric_2D_uf import multiprocess, multiple
 from scipy import optimize
 import numpy as np
 import pandas as pd
+import git
 import os
+
 
 if __name__ == '__main__':
 
@@ -21,7 +23,10 @@ if __name__ == '__main__':
     plotn = 1000
 
     # Code #
-    file_path = folder + "data/" + file_name + ".csv"
+
+    r = git.Repo()
+    hash = r.git.rev_parse(r.head, short=True)
+    file_path = folder + "data/" + hash + "_" + file_name + ".csv"
     if os.path.exists(file_path):
         data = pd.read_csv(file_path, header=0)
         data = data.set_index(["L", "p"])
@@ -141,5 +146,5 @@ if __name__ == '__main__':
 
     if save_result:
         data.to_csv(file_path)
-        fname = folder + "./figures/" + file_name + ".pdf"
+        fname = folder + "./figures/" + hash + "_" + file_name + ".pdf"
         f0.savefig(fname, transparent=True, format="pdf", bbox_inches="tight")

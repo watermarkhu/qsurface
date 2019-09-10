@@ -2,7 +2,7 @@ import graph_objects as go
 import toric_code as tc
 import toric_error as te
 import toric_plot as tp
-import unionfind as uf
+import unionfind_tree_full as uf
 import uf_plot as up
 import os
 from tqdm import tqdm
@@ -13,6 +13,7 @@ def single(size, pE=0, pX=0, pZ=0, savefile=0, erasure_file=None, pauli_file=Non
     '''
     Runs the peeling decoder for one iteration
     '''
+
     if not os.path.exists("./errors/"):
         os.makedirs("./errors/")
     if not os.path.exists("./figures/"):
@@ -35,9 +36,9 @@ def single(size, pE=0, pX=0, pZ=0, savefile=0, erasure_file=None, pauli_file=Non
     tc.measure_stab(graph, toric_plot)
 
     # Peeling decoder
-    uf_plot = up.toric(graph, toric_plot.f, plot_size=8, line_width=1.5, plotstep_click=0) if plot_load else None
-    uf.find_clusters(graph, uf_plot=uf_plot, plot_step=0)
-    uf.grow_clusters(graph, uf_plot=uf_plot, plot_step=0)
+    uf_plot = up.toric(graph, toric_plot.f, plot_size=8, line_width=1.5, plotstep_click=1) if plot_load else None
+    uf.find_clusters(graph, uf_plot=uf_plot, plot_step=1)
+    uf.grow_clusters(graph, uf_plot=uf_plot, plot_step=1)
     uf.peel_clusters(graph, uf_plot=uf_plot, plot_step=0)
 
     # Apply matching

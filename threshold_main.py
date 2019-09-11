@@ -9,15 +9,17 @@ import os
 
 if __name__ == '__main__':
 
-    print_data = 0
-    save_result = 0
+    folder = "../../../OneDrive - Delft University of Technology/MEP - thesis Mark/Simulations/"
+
+    just_plot = 0
+    print_data = 1
+    save_result = 1
     data_select = None
     modified_ansatz = 0
-    folder = "../../../OneDrive - Delft University of Technology/MEP - thesis Mark/Simulations/"
-    file_name = "uf_toric_pX_list_bucket_rand_rbound"
+    file_name = "uf_toric_pX_bucket_list"
     plot_name = file_name
 
-    lattices = []
+    lattices = [12, 16, 20, 24, 28, 32]
     p = list(np.round(np.linspace(0.09, 0.11, 11), 6))
     Num = 50000
     plotn = 1000
@@ -26,7 +28,7 @@ if __name__ == '__main__':
 
     r = git.Repo()
     hash = r.git.rev_parse(r.head, short=True)
-    file_path = folder + "data/" + hash + "_" + file_name + ".csv"
+    file_path = folder + "data/" + file_name + ".csv" if just_plot else folder + "data/" + hash + "_" + file_name + ".csv"
     if os.path.exists(file_path):
         data = pd.read_csv(file_path, header=0)
         data = data.set_index(["L", "p"])
@@ -38,22 +40,23 @@ if __name__ == '__main__':
     cols = ["N", "succes"]
 
     # Simulate and save results to file
-    for i, lati in enumerate(lattices):
-        for pi in p:
+    if not just_plot:
+        for i, lati in enumerate(lattices):
+            for pi in p:
 
-            print("Calculating for L = ", str(lati), "and p =", str(pi))
-            N_succes = multiprocess(lati, Num, 0, pi, 0, processes=4)
-            # N_succes = multiple(lati, Num, 0, pi, 0)
+                print("Calculating for L = ", str(lati), "and p =", str(pi))
+                N_succes = multiprocess(lati, Num, 0, pi, 0, processes=4)
+                # N_succes = multiple(lati, Num, 0, pi, 0)
 
-            if any([(lati, pi) == a for a in indices]):
-                data.loc[(lati, pi), "N"] += Num
-                data.loc[(lati, pi), "succes"] += N_succes
-            else:
-                data.loc[(lati, pi), cols] = pd.Series([Num, N_succes]).values
-                data = data.sort_index()
+                if any([(lati, pi) == a for a in indices]):
+                    data.loc[(lati, round(pi, 6)), "N"] += Num
+                    data.loc[(lati, round(pi, 6)), "succes"] += N_succes
+                else:
+                    data.loc[(lati, round(pi, 6)), cols] = pd.Series([Num, N_succes]).values
+                    data = data.sort_index()
 
-            if save_result:
-                data.to_csv(file_path)
+                if save_result:
+                    data.to_csv(file_path)
 
     print(data.to_string()) if print_data else None
 

@@ -72,7 +72,7 @@ def cluster_place_bucket(graph, cluster):
     The inputted cluster has undergone a size change, either due to cluster growth or during a cluster merge, in which case the new root cluster is inputted. We increase the appropiate bucket number of the cluster intil the fitting bucket has been reached. The cluster is then appended to that bucket.
     If the max bucket number has been reached. The cluster is appended to the wastebasket, which will never be selected for growth.
     '''
-    cluster.bucket = cluster.size - 1 + cluster.support
+    cluster.bucket = 2*(cluster.size - 1) + cluster.support
 
     if cluster.parity % 2 == 1 and cluster.bucket < graph.numbuckets:
         graph.buckets[cluster.bucket].append(cluster)
@@ -151,7 +151,7 @@ def grow_clusters(graph, uf_plot=None, plot_step=0):
 
         # cluster.boundary[0].reverse() if support == 0 else None
         while cluster.boundary[support] != []:
-            root_cluster = find_cluster_root(root_cluster)
+            root_cluster = find_cluster_root(cluster)
             (base_vertex, edge, grow_vertex) = cluster.boundary[support].pop()
             grow_cluster = grow_vertex.cluster
             grrt_cluster = find_cluster_root(grow_cluster)
@@ -190,14 +190,20 @@ def grow_clusters(graph, uf_plot=None, plot_step=0):
 
     for bucket_i, bucket in enumerate(graph.buckets):
 
-        if bucket == []:
-            continue
-
         if bucket_i > graph.maxbucket:                                # Break from upper buckets if top bucket has been reached.
             if uf_plot is not None:
                 txt = "Max bucket number reached."
                 uf_plot.waitforkeypress(txt) if plot else input(txt + " Press any key to continue...\n")
             break
+
+        if bucket == []:
+            continue
+
+        if True:
+            print("############################ GROW ############################")
+            print("Growing bucket", bucket_i, "of", graph.maxbucket, ":", bucket)
+            print("Remaining buckets:", graph.buckets[bucket_i+1:graph.maxbucket+1], graph.wastebasket)
+            uf_plot.waitforkeypress() if plot else input("Press any key to continue...\n")
 
         while bucket != []:                          # Loop over all clusters in the current bucket\
             cluster = bucket.pop()

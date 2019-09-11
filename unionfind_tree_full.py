@@ -119,7 +119,7 @@ def cluster_place_bucket(graph, cluster):
     #             graph.maxbucket = cluster.bucket
     #     else:
     #         cluster.bucket = None
-    cluster.bucket = cluster.size - 1 + cluster.support
+    cluster.bucket = 2*(cluster.size - 1) + cluster.support
 
     if cluster.parity % 2 == 1 and cluster.bucket < graph.numbuckets:
         graph.buckets[cluster.bucket].append(cluster)
@@ -244,7 +244,7 @@ def grow_clusters(graph, uf_plot=None, plot_step=0, print_steps=1, intervention=
 
         # cluster.boundary[0].reverse() if support == 0 else None
         while cluster.boundary[support] != []:
-            root_cluster = find_cluster_root(root_cluster)
+            root_cluster = find_cluster_root(cluster)
             (base_vertex, edge, grow_vertex) = cluster.boundary[support].pop()
             grow_cluster = grow_vertex.cluster
             grrt_cluster = find_cluster_root(grow_cluster)
@@ -296,14 +296,14 @@ def grow_clusters(graph, uf_plot=None, plot_step=0, print_steps=1, intervention=
 
     for bucket_i, bucket in enumerate(graph.buckets):
 
-        if bucket == []:
-            continue
-
         if bucket_i > graph.maxbucket:                                # Break from upper buckets if top bucket has been reached.
             if uf_plot is not None or print_steps:
                 txt = "Max bucket number reached."
                 uf_plot.waitforkeypress(txt) if plot else input(txt + " Press any key to continue...\n")
             break
+
+        if bucket == []:
+            continue
 
         if print_steps:
             print("############################ GROW ############################")

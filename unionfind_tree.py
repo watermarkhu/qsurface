@@ -65,14 +65,14 @@ def cluster_new_vertex(graph, cluster, vertex, random_traverse=1, uf_plot=None, 
                     cluster.boundary[0].append((vertex, new_edge, new_vertex))
 
 
-def cluster_place_bucket(graph, cluster):
+def cluster_place_bucket(graph, cluster, vcomb=0):
     '''
     :param cluster      current cluster
 
     The inputted cluster has undergone a size change, either due to cluster growth or during a cluster merge, in which case the new root cluster is inputted. We increase the appropiate bucket number of the cluster intil the fitting bucket has been reached. The cluster is then appended to that bucket.
     If the max bucket number has been reached. The cluster is appended to the wastebasket, which will never be selected for growth.
     '''
-    cluster.bucket = 2*(cluster.size - 1) + cluster.support
+    cluster.bucket = cluster.size - 1 + cluster.support if vcomb else 2*(cluster.size - 1) + cluster.support
 
     if cluster.parity % 2 == 1 and cluster.bucket < graph.numbuckets:
         graph.buckets[cluster.bucket].append(cluster)
@@ -84,7 +84,7 @@ def cluster_place_bucket(graph, cluster):
 
 # Main functions
 
-def find_clusters(graph, uf_plot=None, plot_step=0, random_order=1):
+def find_clusters(graph, uf_plot=None, plot_step=0, random_order=1, vcomb=0):
     '''
     Given a set of erased qubits/edges on a lattice, this functions finds all edges that are connected and sorts them in separate clusters. A single anyon can also be its own cluster.
     It loops over all vertices (randomly if toggled, which produces a different tree), and calls {cluster_new_vertex} to find all connected erasure qubits, and finds the boundary for growth step 1. Afterwards the cluster is placed in a bucket based in its size.
@@ -111,7 +111,7 @@ def find_clusters(graph, uf_plot=None, plot_step=0, random_order=1):
             cluster = graph.add_cluster(cID)
             cluster.add_vertex(vertex)
             cluster_new_vertex(graph, cluster, vertex, uf_plot=uf_plot, plot_step=plot_step)
-            cluster_place_bucket(graph, cluster)
+            cluster_place_bucket(graph, cluster, vcomb)
             cID += 1
 
     if uf_plot is not None and not plot_step:
@@ -120,14 +120,14 @@ def find_clusters(graph, uf_plot=None, plot_step=0, random_order=1):
         uf_plot.waitforkeypress("Clusters initiated.")
 
 
-def grow_clusters(graph, uf_plot=None, plot_step=0):
+def grow_clusters(graph, uf_plot=None, plot_step=0, vcomb=0):
 
     '''
     Grows the clusters, and merges them until there are no uneven clusters left.
     Starting from the lowest bucket, clusters are popped from the list and grown with {grow_cluster}. Due to the nature of how clusters are appended to the buckets, a cluster needs to be checked for 1) root level 2) bucket level and 3) parity before it can be grown.
 
     '''
-    def grow(graph, cluster, root_cluster, support, uf_plot, plot_step):
+    def grow(cluster, root_cluster, support):
         '''
         :param cluster          the current cluster selected for growth
         :param root_cluster     the root cluster of the selected cluster
@@ -147,7 +147,7 @@ def grow_clusters(graph, uf_plot=None, plot_step=0):
 
         while cluster.childs[0] != []:                                 # First go through child clusters
             child_cluster = cluster.childs[0].pop()
-            grow(graph, child_cluster, root_cluster, support, uf_plot, plot_step)
+            grow(child_cluster, root_cluster, support)
 
         # cluster.boundary[0].reverse() if support == 0 else None
         while cluster.boundary[support] != []:
@@ -180,9 +180,9 @@ def grow_clusters(graph, uf_plot=None, plot_step=0):
 
         if root_level:          # only at the root level will a cluster be placed in a new bucket
             if merge_cluster is None:
-                cluster_place_bucket(graph, root_cluster)
+                cluster_place_bucket(graph, root_cluster, vcomb)
             else:
-                cluster_place_bucket(graph, merge_cluster)
+                cluster_place_bucket(graph, merge_cluster, vcomb)
 
         uf_plot.draw_plot(string) if plot and plot_step else None
 
@@ -199,7 +199,7 @@ def grow_clusters(graph, uf_plot=None, plot_step=0):
         if bucket == []:
             continue
 
-        if True:
+        if False:
             print("############################ GROW ############################")
             print("Growing bucket", bucket_i, "of", graph.maxbucket, ":", bucket)
             print("Remaining buckets:", graph.buckets[bucket_i+1:graph.maxbucket+1], graph.wastebasket)
@@ -210,7 +210,7 @@ def grow_clusters(graph, uf_plot=None, plot_step=0):
             root_cluster = find_cluster_root(cluster)
             # if root_cluster is cluster:                                 # Check that cluster is at root
             if root_cluster.bucket == bucket_i:                  # Check that cluster is not already in a higher bucket
-                grow(graph, root_cluster, root_cluster, root_cluster.support, uf_plot, plot_step)
+                grow(root_cluster, root_cluster, root_cluster.support)
         if plot and not plot_step:
             txt = "Growing bucket #" + str(bucket_i) + "/" + str(graph.maxbucket) + "."
             uf_plot.draw_plot(txt)
@@ -224,7 +224,7 @@ def peel_clusters(graph, uf_plot=None, plot_step=0):
 
     '''
 
-    def peel_edge(graph, cluster, vertex, uf_plot, plot_step):
+    def peel_edge(cluster, vertex):
         '''
         :param cluster          current active cluster
         :param vertex           pendant vertex of the edge to be peeled
@@ -256,11 +256,11 @@ def peel_clusters(graph, uf_plot=None, plot_step=0):
                     uf_plot.plot_strip_step_anyon(new_vertex)
             else:
                 uf_plot.plot_edge_step(edge, "peel") if plot else None
-            peel_edge(graph, cluster, new_vertex, uf_plot, plot_step)
+            peel_edge(cluster, new_vertex)
 
     for vertex in graph.V.values():
         if vertex.cluster is not None:
             cluster = find_cluster_root(vertex.cluster)
-            peel_edge(graph, cluster, vertex, uf_plot, plot_step)
+            peel_edge(cluster, vertex)
 
     uf_plot.plot_removed(graph, "Peeling completed.") if uf_plot is not None and not plot_step else None

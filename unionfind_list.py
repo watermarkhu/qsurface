@@ -139,7 +139,7 @@ def grow_clusters(graph, uf_plot=None, plot_step=0):
         if bucket == []:                                # no need to check empty bucket
             continue
 
-        if True:
+        if False:
             print("############################ GROW ############################")
             print("Growing bucket", bucket_i, "of", graph.maxbucket, ":", bucket)
             print("Remaining buckets:", graph.buckets[bucket_i+1:graph.maxbucket+1], graph.wastebasket)

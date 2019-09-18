@@ -82,8 +82,11 @@ def multiple(ini, comp_id, iters, size, p, worker=None):
     for ubuck_win, vcomb_win, _ in results:
         if ubuck_win != vcomb_win:
             counter[1] += 1
-        counter[2] += ubuck_win
-        counter[3] += vcomb_win
+        if ubuck_win and not vcomb_win:
+            counter[2] += 1
+        if not ubuck_win and vcomb_win:
+            counter[3] += 1
+
     cur.execute("UPDATE cases SET tot_sims = {}, diff_sims = {}, ubuck_wins = {}, vcomb_wins = {} WHERE lattice = {} and p = {}".format(*counter, size, p))
 
     cur.close()
@@ -128,7 +131,7 @@ if __name__ == '__main__':
         add_new_comp(cur, comp_id, cputype)
 
     running = True
-    while running:
+    while True:
 
         # Choose case
         cur.execute("SELECT lattice,p FROM cases_open_free")
@@ -144,7 +147,7 @@ if __name__ == '__main__':
 
         # Set computer active case and simulate
         cur.execute("UPDATE computers SET active_lattice = {}, active_p = {} WHERE comp_id = '{}'".format(lattice, p, comp_id))
-        multiprocess(ini, comp_id, iters_per_round, lattice, p, 2)
+        multiprocess(ini, comp_id, iters_per_round, lattice, p)
 
         # Check if keep running
         cur.execute("SELECT active_lattice, active_p FROM computers WHERE comp_id = '{}'".format(comp_id))

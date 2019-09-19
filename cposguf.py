@@ -6,8 +6,10 @@ import multiprocessing as mp
 from progiter import ProgIter
 import psycopg2 as pgs
 from psycopg2 import extras as pgse
+from configparser import ConfigParser
 import random
 import cpuinfo
+
 
 
 def add_new_sim(cursor, comp_id, lattice, p, ubuck, vcomb, array):
@@ -18,6 +20,19 @@ def add_new_sim(cursor, comp_id, lattice, p, ubuck, vcomb, array):
 def add_new_comp(cursor, id, cputype):
     query = "INSERT INTO computers (comp_id, cpu_type) VALUES ('" + id + "', '" + cputype + "');"
     cursor.execute(query)
+
+
+def read_config(path):
+    cp = ConfigParser()
+    cp.read(path)
+    sql_config = {}
+    comp_id = cp.get('config', 'comp_id')
+    num_process = cp.getint('config', 'num_process')
+    iters = cp.getint('config', 'iters')
+    names = ['host', 'port', 'database', 'user', 'password', 'sslmode', 'sslrootcert', 'sslcert', 'sslkey']
+    for name in names:
+        sql_config[name] = cp.get('sql_database', name)
+    return comp_id, num_process, iters, sql_config
 
 
 def output_error_array(graph):
@@ -69,11 +84,12 @@ def multiple(ini, comp_id, iters, size, p, worker=None):
     # Simulate
     graph = go.init_toric_graph(size)
     results = [single(graph) for _ in ProgIter(range(iters))]
+    diff_res = [result for result in results if result[0] != result [1]]
 
     # Insert simulation into database
     query = "INSERT INTO simulations (lattice, p, comp_id, created_on, ubuck_solved, vcomb_solved, error_data) VALUES %s "
     template = "(" + str(size) + ", " + str(p) + ", '" + str(comp_id) + "', current_timestamp, %s, %s, %s)"
-    pgse.execute_values(cur, query, results, template)
+    pgse.execute_values(cur, query, diff_res, template)
 
     # Update cases counters
     cur.execute("SELECT tot_sims, diff_sims, ubuck_wins, vcomb_wins FROM cases WHERE lattice = {} AND p = {}".format(size, p))
@@ -114,12 +130,9 @@ def multiprocess(ini, comp_id, iters, size, p, processes=None):
 
 if __name__ == '__main__':
 
-    # ini = {'host': 'localhost', 'database': 'test_cposguf', 'user': 'postgres', 'password': 'Both9{famous{Settle'}
-    ini = {'host': '34.77.14.37', 'port': '5432', 'database': 'cposguf', 'user': 'postgres', 'password': 'K5tm97HiKthh2ey7'}
-    iters_per_round = 10000
-    comp_id = "surface_book"
+    comp_id, num_process, iters, sql_config = read_config("./cposguf.ini")
 
-    con = pgs.connect(**ini)
+    con = pgs.connect(**sql_config)
     con.set_session(autocommit=True)
     cur = con.cursor()
 
@@ -147,7 +160,10 @@ if __name__ == '__main__':
 
         # Set computer active case and simulate
         cur.execute("UPDATE computers SET active_lattice = {}, active_p = {} WHERE comp_id = '{}'".format(lattice, p, comp_id))
-        multiprocess(ini, comp_id, iters_per_round, lattice, p)
+        if num_process == 1:
+            multiple(sql_config, comp_id, iters, lattice, p)
+        else:
+            multiprocess(sql_config, comp_id, iters, lattice, p, num_process)
 
         # Check if keep running
         cur.execute("SELECT active_lattice, active_p FROM computers WHERE comp_id = '{}'".format(comp_id))

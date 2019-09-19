@@ -1,6 +1,7 @@
 *.pyc
 *.xml
 *.xml
+*.ini
 *.o
 *.so
 __pycache__/

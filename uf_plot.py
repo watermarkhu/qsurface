@@ -4,7 +4,7 @@ from matplotlib.lines import Line2D
 
 class toric:
 
-    def __init__(self, graph, figure, plot_size=10, line_width=1.5, plotstep_click=False):
+    def __init__(self, graph, figure, axn=2, plot_size=10, line_width=1.5, plotstep_click=False):
 
         self.size = graph.size
 
@@ -20,23 +20,28 @@ class toric:
 
         self.qsize = 0.1
         self.lw = line_width
-
         self.plotstep_click = plotstep_click
-
         self.f = figure
-        figure.set_figwidth(2*plot_size)
-        ax = figure.gca()
-        ax.change_geometry(1, 2, 1)
 
-        self.ax = figure.add_subplot(1, 2, 2)
-        self.ax.cla()
+        axes = figure.get_axes()
+        numx = len(axes)
+
+        if axn > numx:
+            for i, ax in enumerate(axes):
+                ax.change_geometry(1, numx + 1, i + 1)
+            self.ax = figure.add_subplot(1, axn, axn)
+            figure.set_figwidth((numx + 1)*plot_size)
+        else:
+            self.ax = axes[axn - 1]
+            self.ax.cla()
+
         self.ax.invert_yaxis()
         self.ax.set_aspect('equal')
+        self.ax.axis('off')
 
         plt.ion()
         plt.show()
-        plt.axis('off')
-        self.ax = self.f.gca()
+
         self.canvas = self.f.canvas
 
         self.edges = {}

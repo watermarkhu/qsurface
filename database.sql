@@ -16,7 +16,7 @@ CREATE TABLE cases (
 
 CREATE TABLE computers (
   comp_id varchar(16) PRIMARY KEY,
-  cpu_type varchar(32),
+  cpu_type varchar(64),
   active_lattice integer,
   active_p numeric(6,6),
   CONSTRAINT computer_case_id_fkey FOREIGN KEY (active_lattice, active_p)

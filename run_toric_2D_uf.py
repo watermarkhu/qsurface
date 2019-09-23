@@ -5,7 +5,7 @@ import toric_plot as tp
 import unionfind_list as uf
 import uf_plot as up
 import os
-from tqdm import tqdm
+from progiter import ProgIter
 import multiprocessing as mp
 
 
@@ -56,7 +56,7 @@ def multiple(size, iters, pE=0, pX=0, pZ=0, plot_load=0, qres=None, worker=None)
     Runs the peeling decoder for a number of iterations. The graph is reused for speedup.
     '''
     graph = go.init_toric_graph(size)
-    result = [single(size, pE, pX, pZ, plot_load=plot_load, graph=graph, worker=worker) for i in tqdm(range(iters))]
+    result = [single(size, pE, pX, pZ, plot_load=plot_load, graph=graph, worker=worker) for i in ProgIter(range(iters))]
     N_succes = sum(result)
     if qres is not None:
         qres.put(N_succes)

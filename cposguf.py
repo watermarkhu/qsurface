@@ -8,6 +8,7 @@ import psycopg2 as pgs
 from psycopg2 import extras as pgse
 from configparser import ConfigParser
 import random
+import time
 import cpuinfo
 
 
@@ -47,7 +48,7 @@ def output_error_array(graph):
 
 def input_error_array(graph, array):
     for y, x, td in list(map(list, zip(*array))):
-        graph.E[(0, y, x, td)].state = 1
+        graph.E[(0, int(y), int(x), int(td))].state = 1
 
 
 def multiple(ini, comp_id, iters, size, p, worker=None):
@@ -117,14 +118,18 @@ def multiprocess(ini, comp_id, iters, size, p, processes=None):
     process_iters = iters//processes
     rest_iters = iters - process_iters*processes
     workers = []
+
     for i in range(processes-1):
         workers.append(mp.Process(target=multiple, args=(ini, comp_id, process_iters, size, p, i)))
     workers.append(mp.Process(target=multiple, args=(ini, comp_id, process_iters + rest_iters, size, p, processes - 1)))
+
 
     for worker in workers:
         worker.start()
     print("Started", processes, "workers.")
     for worker in workers:
+        while worker.is_alive():
+            time.sleep(1)
         worker.join()
 
 

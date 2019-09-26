@@ -1,181 +1,69 @@
-import psycopg2 as pgs
-from cposguf import read_config
+from cposguf_run import sql_connection, fetch_query
 from collections import defaultdict
 from matplotlib import pyplot as plt
 from matplotlib.lines import Line2D
-
-# L = [12 + 4*i for i in range(9)] + [None]
-P = [i/1000 for i in [90 + i for i in range(21)]]
-# P = [0.11]
-L = [None]
-type = None      # ubuck or vcomb or None
-limit = None
-minl, maxl = 2, 10
-plotnum = 25
-
-def principal(cluster, L):
-
-    midy, midx = cluster[0][0], cluster[0][1]
-    for vi, (y, x, _) in enumerate(cluster):
-        mirrors = [(y, x), (y - L, x), (y, x - L), (y - L, x - L)]
-        distances = [((midy - y)**2 + (midx - x)**2)**1/2 for (y, x) in mirrors]
-        min_yx = mirrors[distances.index(min(distances))]
-        cluster[vi][0], cluster[vi][1] = min_yx[0], min_yx[1]
-        midy, midx = (vi*midy + min_yx[0])/(vi+1), (vi*midx + min_yx[1])/(vi+1)
-    # Get min coordinates
-    miny, minx = cluster[0][0], cluster[0][1]
-    for (y, x, _) in cluster:
-        miny = y if y < miny else miny
-        minx = x if x < minx else minx
-    # Return to principal by subtraction
-    for vi in range(len(cluster)):
-        cluster[vi][0] -= miny
-        cluster[vi][1] -= minx
-    return cluster
+from cposguf_run import input_error_array
+from cposguf_plotcompare import plot_both
+import cposguf_cluster_actions as cca
+import graph_objects as go
+import toric_code as tc
+import unionfind_tree as uf
 
 
-def tupleit(t):
-    return tuple(map(tupleit, t)) if isinstance(t, (tuple, list)) else t
 
 
-def max_dim(cluster):
-    maxy, maxx =  cluster[0][0], cluster[0][1]
-    for (y, x, _) in cluster:
-        maxy = y if y > maxy else maxy
-        maxx = x if x > maxx else maxx
-    avgm = (maxy**2 + maxx**2)**(1/2)
-    return (maxx, avgm)
+def get_clusters_from_graph(graph, matching=False):
+    '''
+    returns a tuple of tuples of all the clusters currently in the graph, based on the parent of the qubits
+    '''
+    clusters = defaultdict(list)
+    for qubit in [graph.E[(0, y, x, td)] for y in range(graph.size) for x in range(graph.size) for td in range(2)]:
+        if qubit.cluster is not None:
+            if matching and not qubit.matching:
+                continue
+            cluster = uf.find_cluster_root(qubit.cluster)
+            clusters[cluster.cID].append(qubit.qID[1:])
+    return cca.tupleit(list(clusters.values()))
 
 
-def rotate(cluster, width):
-    new_cluster = []
-    for (y, x, td) in cluster:
-        if x == width and td == 0:
-            vertex = (width, y, 1)
+def get_states_from_graph(graph):
+    '''
+    Returns the qubits in the graph that have value 1
+    '''
+    return [(y, x, td) for y in range(graph.size) for x in range(graph.size) for td in range(2) if graph.E[(0, y, x, td)].state]
+
+
+def get_count(clusters, cluster_data, size, type):
+    '''
+    returns a defaultdict of lists of clusters countaining the tuples of the qubits
+    '''
+    clusters = cca.listit(clusters)
+
+    # Return to principal cluster
+    for i, cluster in enumerate(clusters):
+        clusters[i] = cca.principal(cluster, ydim=size, xdim=size)
+    for cluster in clusters:
+        augs, cmid = [], []
+        for rot_i in range(4):
+            dim = cca.max_dim(cluster)
+            augs.append(cluster)
+            cmid.append(dim[1])
+            if cluster in cluster_data:
+                cluster_data[cluster][type] += 1
+                break
+            mcluster = cca.mirror(cluster, dim[0])
+            mdim = cca.max_dim(mcluster)
+            augs.append(mcluster)
+            cmid.append(mdim[1])
+            if mcluster in cluster_data:
+                cluster_data[mcluster][type] += 1
+                break
+            cluster = cca.rotate(cluster, dim[0])
         else:
-            vertex = (width + td - 1- x, y, 1 - td)
-        new_cluster.append(vertex)
-    return tuple(sorted(new_cluster))
+            tupcluster = augs[cmid.index(min(cmid))]
+            cluster_data[tupcluster] = [0, 1] if type else [1, 0]
 
-
-def mirror(cluster, width):
-    new_cluster = []
-    for (y, x, td) in cluster:
-        if x == width and td == 0:
-            vertex = (y, width, 0)
-        else:
-            vertex = (y, width + td - 1 - x, td)
-        new_cluster.append(vertex)
-    return tuple(sorted(new_cluster))
-
-
-def fetch_count(p, L, type, limit, minl, maxl, maxfetch=100000):
-
-    query = "SELECT lattice, p, vcomb_solved, error_data FROM simulations "
-    if L is not None:
-        if isinstance(L, int):
-            query += "WHERE lattice = " + str(L)
-        elif isinstance(L, list):
-            query += "WHERE lattice IN " + str(L)
-        if p is not None or type is not None:
-            query += " AND "
-    if p is not None:
-        if L is None:
-            query += "WHERE "
-        if isinstance(p, float):
-            query += "p = " + str(p)
-        elif isinstance(p, list):
-            query += "p IN " + str(p)
-        if type is not None:
-            query += " AND "
-    if type is not None:
-        if L is None and p is None:
-            query += "WHERE "
-        if type == "ubuck":
-            query += "ubuck_solved = TRUE "
-        elif type == "vcomb":
-            query += "vcomb_solved = TRUE "
-    if limit is not None:
-        query += "LIMIT {}".format(limit)
-
-    comp_id, num_process, iters, sql_config = read_config("./cposguf.ini")
-    con = pgs.connect(**sql_config)
-    con.set_session(autocommit=True)
-    cur = con.cursor()
-    print("Executing query...")
-    cur.execute(query)
-
-    cluster_data, type_count = {}, [0, 0]
-    sims = [cur.fetchone()]
-
-    while sims != [None]:
-
-        print("Fetching data... (be patient)")
-        sims += cur.fetchmany(maxfetch)
-
-        print("Counting clusters...")
-        for lattice, p, type, array in sims:
-            # Get clusters from array data
-            clusters, vertices, cnum = defaultdict(list), {}, 0
-            for y, x, td in zip(array[0], array[1], array[2]):
-                v = (int(y), int(x), int(td))
-
-                neighbors = [(v[0]-1, v[1]+1, 1)] if v[2] == 0 else [(v[0], v[1], 0)]
-                neighbors += [(v[0]-1, v[1], 1), (v[0], v[1]-1, 0)]
-
-                nomerged = True
-                for n in neighbors:
-                    if n in vertices:
-                        if nomerged:
-                            cluster = vertices[n]
-                            vertices[v] = cluster
-                            clusters[cluster].append(list(v))
-                            nomerged = False
-                        else:
-                            cluster = vertices[v]
-                            merging = vertices[n]
-                            for mv in clusters[merging]:
-                                vertices[tuple(mv)] = cluster
-                            clusters[cluster].extend(clusters[merging])
-                            clusters.pop(merging)
-                            break
-                if nomerged:
-                    vertices[v] = cnum
-                    clusters[cnum].append(list(v))
-                    cnum += 1
-            # Remove single clusters
-            clusters = [cluster for cluster in clusters.values() if len(cluster) >= minl and len(cluster) <= maxl]
-            # Return to principal cluster
-            for ci, cluster in enumerate(clusters):
-                clusters[ci] = principal(cluster, lattice)
-            # Find augmentation of cluster in dict
-            for cluster in tupleit(clusters):
-                augs, cmid = [], []
-                for rot_i in range(4):
-                    dim = max_dim(cluster)
-                    augs.append(cluster)
-                    cmid.append(dim[1])
-                    if cluster in cluster_data:
-                        cluster_data[cluster][type] += 1
-                        break
-                    mcluster = mirror(cluster, dim[0])
-                    mdim = max_dim(mcluster)
-                    augs.append(mcluster)
-                    cmid.append(mdim[1])
-                    if mcluster in cluster_data:
-                        cluster_data[mcluster][type] += 1
-                        break
-                    cluster = rotate(cluster, dim[0])
-                else:
-                    cluster = augs[cmid.index(min(cmid))]
-                    cluster_data[cluster] = [0, 1] if type else [1, 0]
-            type_count[type] += 1
-        sims = [cur.fetchone()]
-    else:
-        cur.close()
-        con.close()
-
-    return sorted(cluster_data.items(), key=lambda kv: sum(kv[1]), reverse=True), type_count
+    return cluster_data
 
 
 def plot_clusters(data, type_count, plotnum, extra=5):
@@ -195,17 +83,8 @@ def plot_clusters(data, type_count, plotnum, extra=5):
 
     for plot_i, (cluster, _) in enumerate(data[:plotnum]):
         ax = plt.subplot(grid[plot_i//plotcols, plot_i%plotcols])
-        ax = plt.gca()
-        ax.invert_yaxis()
-        ax.set_aspect('equal')
-        ax.axis('off')
         ax.set_title(str(plot_i))
-        for y in range(maxy + 1):
-            for x in range(maxx + 1):
-                a = 0.9 if (y, x, 0) in cluster else 0.1
-                ax.plot([x, x + 1], [y, y], alpha=a, color='C{}'.format(plot_i%10), lw=4)
-                a = 0.9 if (y, x, 1) in cluster else 0.1
-                ax.plot([x, x], [y, y + 1], alpha=a, color='C{}'.format(plot_i%10), lw=4)
+        cca.plot_cluster(cluster, maxy, maxx, ax=ax, color='C{}'.format(plot_i%10))
 
     ax_count1 = plt.subplot(grid[plotrows:,:2])
     ax_count2 = plt.subplot(grid[plotrows:,2:])
@@ -238,14 +117,63 @@ def plot_clusters(data, type_count, plotnum, extra=5):
     return fig
 
 
-for l, p in [(l, p) for l in L for p in P]:
+def analyze_sim1(query, minl, maxl, maxfetch=10000):
+    con, cur = sql_connection()
+
+    print("Executing query... (be patient)")
+    print("SQL:", query)
+
+    cur.execute(query)
+
+    cluster_data, type_count = {}, [0, 0]
+    sims = [cur.fetchone()]
+
+    while sims != [None]:
+        print("Fetching data... (" + str(maxfetch) + " rows)")
+        sims += cur.fetchmany(maxfetch)
+
+        print("Counting clusters...")
+        for lattice, p, type, array in sims:
+
+            # Get clusters from array data
+            clusters = cca.get_clusters_from_list(zip(array[0], array[1], array[2]), lattice)
+
+            # Remove single clusters
+            clusters = [cluster for cluster in clusters.values() if len(cluster) >= minl and len(cluster) <= maxl]
+
+            cluster_data = get_count(clusters, cluster_data, lattice, type)
+
+            type_count[type] += 1
+
+
+        sims = [cur.fetchone()]
+    else:
+        cur.close()
+        con.close()
+
+    return sorted(cluster_data.items(), key=lambda kv: sum(kv[1]), reverse=True), type_count
+
+
+L = [20 + 4*i for i in range(6)]
+P = [i/1000 for i in [90 + i for i in range(21)]]
+
+combi = list(zip(L, [None]*len(L))) + list(zip([None]*len(P), P)) + [(None, None)]
+
+limit = None
+minl, maxl = 2, 10
+plotnum = 25
+
+for l, p in combi:
     print("Now doing L = {}, p {}".format(l,p))
 
-    clusters, count = fetch_count(p, l, type, limit, minl, maxl)
+    query = fetch_query("lattice, p, vcomb_solved, error_data", p, l, limit=limit)
+    clusters, count = analyze_sim1(query, minl, maxl)
     fig = plot_clusters(clusters, count, plotnum)
 
     folder = "../../../OneDrive - Delft University of Technology/MEP - thesis Mark/Simulations/cposguf_sim1/"
-    file_name = "cposguf_sim1_L-None_p-{0:.3f}".format(p)
+    file_name = "cposguf_sim1_L-"
+    file_name += 'None_p-' if L is None else "{0:d}_p-".format(l)
+    file_name += 'None' if p is None else "{0:.3f}".format(p)
     fname = folder + "figures/" + file_name + ".pdf"
     fig.savefig(fname, transparent=True, format="pdf", bbox_inches="tight")
     plt.close(fig)
@@ -254,3 +182,113 @@ for l, p in [(l, p) for l in L for p in P]:
     for line in clusters:
         f.write(str(line) + "\n")
     f.close()
+
+
+def analyze_sim2_A(sims):
+
+    lattice, p, type, array = sims[3]
+
+    graph = go.init_toric_graph(lattice)
+    graph_v = go.init_toric_graph(lattice)
+    # plot_both(graph, graph_v, array)
+
+
+    input_error_array(graph, array)
+    tc.measure_stab(graph)
+    initial_state = get_states_from_graph(graph)
+    uf.find_clusters(graph)
+    uf.grow_clusters(graph)
+    uf.peel_clusters(graph)
+    ups = get_clusters_from_graph(graph, matching=1)
+    tc.apply_matching_peeling(graph)
+    ufs = get_states_from_graph(graph)
+
+
+    graph.reset()
+
+    input_error_array(graph, array)
+    tc.measure_stab(graph)
+    uf.find_clusters(graph, vcomb=1)
+    uf.grow_clusters(graph, vcomb=1)
+    uf.peel_clusters(graph)
+    vps = get_clusters_from_graph(graph, matching=1)
+    tc.apply_matching_peeling(graph)
+    vfs = get_states_from_graph(graph)
+
+    graph.reset()
+
+    efs, cfs = (ufs, vfs) if type else (vfs, ufs)
+
+    e_dict_clusters = cca.get_clusters_from_list(efs, lattice)
+    logical_vertices = cca.get_logical_cluster(e_dict_clusters, lattice)
+
+    peel_union = set(cca.flatten(ups)) | set(cca.flatten(vps))
+    peel_dict = cca.get_clusters_from_list(list(peel_union), lattice)
+
+    involved_vertices = set(ufs) | set(vfs)
+
+    for cluster in peel_dict.values():
+        for qubit in cluster:
+            if qubit in involved_vertices:
+                involved_vertices = involved_vertices | set(cluster)
+                break
+
+    involved_errors = set(initial_state) & (set(involved_vertices))
+
+    plt.figure(3)
+
+    ax = plt.subplot(3,3,1)
+    ax.set_title("UBUCK end state (UES)")
+    cca.plot_cluster(vfs, lattice-1, lattice-1, ax=ax)
+
+    ax = plt.subplot(3,3,2)
+    ax.set_title("VCOMB end state (VES)")
+    cca.plot_cluster(ufs, lattice-1, lattice-1, ax=ax)
+
+    ax = plt.subplot(3,3,3)
+    ax.set_title("Errors")
+    cca.plot_cluster(initial_state, lattice-1, lattice-1, ax=ax)
+
+    ax = plt.subplot(3,3,4)
+    ax.set_title("UBUCK matching (UM)")
+    cca.plot_cluster(cca.flatten(ups), lattice-1, lattice-1, ax=ax)
+
+    ax = plt.subplot(3,3,5)
+    ax.set_title("VCOMB matching (VM)")
+    cca.plot_cluster(cca.flatten(vps), lattice-1, lattice-1, ax=ax)
+
+    ax = plt.subplot(3,3,6)
+    ax.set_title("UM $\cup$ VM")
+    cca.plot_cluster(peel_union , lattice-1, lattice-1, ax=ax)
+
+    ax = plt.subplot(3,3,7)
+    ax.set_title("Logical qubits")
+    cca.plot_cluster(logical_vertices, lattice-1, lattice-1, ax=ax)
+
+    ax = plt.subplot(3,3,8)
+    ax.set_title("Involved qubits")
+    cca.plot_cluster(involved_vertices, lattice-1, lattice-1, ax=ax)
+
+    ax = plt.subplot(3,3,9)
+    ax.set_title("Involved errors")
+    cca.plot_cluster(involved_errors, lattice-1, lattice-1, ax=ax)
+
+    plt.draw()
+
+    graph_v = go.init_toric_graph(lattice)
+    plot_both(graph, graph_v, list(map(list, zip(*involved_errors))))
+
+
+# p = 0.1
+# l = 12
+#
+# con, cur = sql_connection()
+# extra = "analysis_A = FALSE "
+# query = fetch_query("lattice, p, vcomb_solved, error_data", p, l, extra=extra)
+# cur.execute(query)
+# sims = cur.fetchall()
+#
+# cur.close()
+# con.close()
+#
+# analyze_sim2_A(sims)

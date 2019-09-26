@@ -1,7 +1,7 @@
 # import run_toric_2D_uf as rt2u
 # # import run_toric_2D_mwpm as rt2m
 # import time
-#
+
 #
 # if __name__ == '__main__':
 #
@@ -26,3 +26,9 @@
 #
 #     print("time taken =", time.time()-t0)
 #     print("p = " + str(output/iters*100) + "%")
+
+from matplotlib import pyplot as plt
+
+plt.figure()
+plt.show()
+plt.close()

@@ -51,7 +51,7 @@ def cluster_new_vertex(graph, cluster, vertex, random_traverse=1, uf_plot=None, 
             if new_edge.erasure:
                 if new_edge.support == 0 and not new_edge.peeled:    # if edge not already traversed
                     if new_vertex.cluster is None:                      # if no cycle detected
-                        new_edge.support = 2
+                        new_edge.support, new_edge.cluster = 2, cluster
                         cluster.add_vertex(new_vertex)
                         if uf_plot is not None and plot_step:
                             uf_plot.plot_edge_step(new_edge, "confirm")
@@ -84,7 +84,7 @@ def cluster_place_bucket(graph, cluster, vcomb=0):
 
 # Main functions
 
-def find_clusters(graph, uf_plot=None, plot_step=0, random_order=1, vcomb=0):
+def find_clusters(graph, uf_plot=None, plot_step=0, random_order=0, random_traverse=0, vcomb=0):
     '''
     Given a set of erased qubits/edges on a lattice, this functions finds all edges that are connected and sorts them in separate clusters. A single anyon can also be its own cluster.
     It loops over all vertices (randomly if toggled, which produces a different tree), and calls {cluster_new_vertex} to find all connected erasure qubits, and finds the boundary for growth step 1. Afterwards the cluster is placed in a bucket based in its size.
@@ -110,7 +110,7 @@ def find_clusters(graph, uf_plot=None, plot_step=0, random_order=1, vcomb=0):
 
             cluster = graph.add_cluster(cID)
             cluster.add_vertex(vertex)
-            cluster_new_vertex(graph, cluster, vertex, uf_plot=uf_plot, plot_step=plot_step)
+            cluster_new_vertex(graph, cluster, vertex, random_traverse=random_traverse, uf_plot=uf_plot, plot_step=plot_step)
             cluster_place_bucket(graph, cluster, vcomb)
             cID += 1
 
@@ -120,7 +120,7 @@ def find_clusters(graph, uf_plot=None, plot_step=0, random_order=1, vcomb=0):
         uf_plot.waitforkeypress("Clusters initiated.")
 
 
-def grow_clusters(graph, uf_plot=None, plot_step=0, vcomb=0):
+def grow_clusters(graph, uf_plot=None, plot_step=0, vcomb=0, random_traverse=0):
 
     '''
     Grows the clusters, and merges them until there are no uneven clusters left.
@@ -159,7 +159,8 @@ def grow_clusters(graph, uf_plot=None, plot_step=0, vcomb=0):
                 edge.support += 1
                 if support:
                     root_cluster.add_vertex(grow_vertex)
-                    cluster_new_vertex(graph, root_cluster, grow_vertex)
+                    edge.cluster = root_cluster
+                    cluster_new_vertex(graph, root_cluster, grow_vertex, random_traverse=random_traverse)
                 else:
                     root_cluster.boundary[1].append((base_vertex, edge, grow_vertex))
                 uf_plot.add_edge(edge, base_vertex) if plot else None
@@ -167,6 +168,7 @@ def grow_clusters(graph, uf_plot=None, plot_step=0, vcomb=0):
                 edge.support += 1
                 if not support and edge.support == 2 or support:
                     string += " Merged with " + str(grrt_cluster) + "."
+                    edge.cluster = grrt_cluster
                     union_clusters(grrt_cluster, root_cluster)
                     merge_cluster = grrt_cluster
                     uf_plot.add_edge(edge, base_vertex) if plot else None

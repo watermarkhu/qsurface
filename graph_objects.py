@@ -184,6 +184,7 @@ class iEdge(object):
         self.qID = qID
 
         # iteration parameters
+        self.cluster = None
         self.state = 0
         self.erasure = 0
         self.support = 0

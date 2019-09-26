@@ -39,7 +39,7 @@ class lattice_plot:
 
 
         # Initiate figure
-        self.f = plt.figure(1, figsize=(plot_size, plot_size))
+        self.f = plt.figure(figsize=(plot_size, plot_size))
         plt.ion()
         plt.cla()
         plt.show()
@@ -58,7 +58,10 @@ class lattice_plot:
         le_ver = Line2D([0], [0], ls='-', lw=self.lw, color=self.cX, label='Vertex')
         le_pla = Line2D([0], [0], ls='--', lw=self.lw, color=self.cZ, label='Plaquette')
         self.lh = [le_qubit, le_xer, le_zer, le_yer, le_err, le_ver, le_pla]
-        self.ax.legend(handles=self.lh, bbox_to_anchor=(-0.15, 0.95), loc='upper left', ncol=1)
+
+
+        legend = plt.legend(handles=self.lh, bbox_to_anchor=(-0.15, 0.95), loc='upper left', ncol=1)
+        self.ax.add_artist(legend)
 
         # Plot empty lattice
         # Loop over all indices

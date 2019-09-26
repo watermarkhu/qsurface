@@ -1,5 +1,5 @@
 import psycopg2 as pgs
-from cposguf import read_config
+from cposguf_run import read_config
 
 comp_id, num_process, iters, sql_config = read_config("./cposguf.ini")
 con = pgs.connect(**sql_config)
@@ -7,7 +7,9 @@ con.set_session(autocommit=True)
 cur = con.cursor()
 
 L = [8 + 4*i for i in range(8)]
-P = [i/1000 for i in [90 + i for i in range(11)]]
+P = [i/1000 for i in [101 + i for i in range(10)]]
+P
+
 LP = [(l, p) for l in L for p in P]
 
 for (l, p) in LP:

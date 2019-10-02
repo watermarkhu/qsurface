@@ -10,8 +10,6 @@ import toric_code as tc
 import unionfind_tree as uf
 
 
-
-
 def get_clusters_from_graph(graph, matching=False):
     '''
     returns a tuple of tuples of all the clusters currently in the graph, based on the parent of the qubits
@@ -155,12 +153,12 @@ def analyze_sim1(query, minl, maxl, maxfetch=10000):
 
 
 L = [20 + 4*i for i in range(6)]
-P = [i/1000 for i in [90 + i for i in range(21)]]
+P = [i/1000 for i in [103 + i for i in range(8)]]
 
-combi = list(zip(L, [None]*len(L))) + list(zip([None]*len(P), P)) + [(None, None)]
-
+combi = list(zip([None]*len(P), P))
+combi
 limit = None
-minl, maxl = 2, 10
+minl, maxl = 2, 7
 plotnum = 25
 
 for l, p in combi:
@@ -172,13 +170,14 @@ for l, p in combi:
 
     folder = "../../../OneDrive - Delft University of Technology/MEP - thesis Mark/Simulations/cposguf_sim1/"
     file_name = "cposguf_sim1_L-"
-    file_name += 'None_p-' if L is None else "{0:d}_p-".format(l)
+    file_name += 'None_p-' if l is None else "{0:d}_p-".format(l)
     file_name += 'None' if p is None else "{0:.3f}".format(p)
     fname = folder + "figures/" + file_name + ".pdf"
     fig.savefig(fname, transparent=True, format="pdf", bbox_inches="tight")
     plt.close(fig)
 
     f=open(folder + "data/" + file_name + ".txt", 'w')
+    f.write("Count: " + str(count))
     for line in clusters:
         f.write(str(line) + "\n")
     f.close()
@@ -190,8 +189,7 @@ def analyze_sim2_A(sims):
 
     graph = go.init_toric_graph(lattice)
     graph_v = go.init_toric_graph(lattice)
-    # plot_both(graph, graph_v, array)
-
+    plot_both(graph, graph_v, array)
 
     input_error_array(graph, array)
     tc.measure_stab(graph)
@@ -274,6 +272,7 @@ def analyze_sim2_A(sims):
     cca.plot_cluster(involved_errors, lattice-1, lattice-1, ax=ax)
 
     plt.draw()
+    plt.show()
 
     graph_v = go.init_toric_graph(lattice)
     plot_both(graph, graph_v, list(map(list, zip(*involved_errors))))

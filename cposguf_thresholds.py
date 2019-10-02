@@ -9,8 +9,14 @@ data = cur.fetchall()
 cur.close()
 con.close()
 
-fitL, fitp, fitN, ufitt, vfitt = map(list, zip(*data))
-fitp = [float(p) for p in fitp]
+fitL, fitp, fitN, ufitt, vfitt = [], [], [], [], []
+for L, p, N, ut, vt in data:
+    if N != 0:
+        fitL.append(L)
+        fitp.append(float(p))
+        fitN.append(N)
+        ufitt.append(ut)
+        vfitt.append(vt)
 
-uf0, uf1 = plot_thresholds(fitL, fitp, fitN, ufitt, plot_name="ubuck")
-vf0, vf1 = plot_thresholds(fitL, fitp, fitN, vfitt, plot_name="vcomb")
+uf0, uf1 = plot_thresholds(fitL, fitp, fitN, ufitt, plot_name="ubuck", modified_ansatz=0, data_select="even")
+vf0, vf1 = plot_thresholds(fitL, fitp, fitN, vfitt, plot_name="vcomb", modified_ansatz=0, data_select="even")

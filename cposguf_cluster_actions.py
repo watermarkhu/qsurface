@@ -11,10 +11,22 @@ def flatten(list):
     return [item for sublist in list for item in sublist]
 
 
-def plot_cluster(cluster, maxy, maxx, ax=None, color='k'):
+def plot_cluster(cluster, maxy=None, maxx=None, ax=None, color='k'):
     '''
     plots a cluster along a lattice with dim [maxy, maxx]
     '''
+    if maxy is None or maxx is None:
+        if maxy is None:
+            maxy, doy = 0, True
+        else:
+            doy = False
+        if maxx is None:
+            maxx, dox = 0, True
+        else:
+            dox = False
+        for y, x, _ in cluster:
+            maxy = y if doy and y > maxy else maxy
+            maxx = x if dox and x > maxx else maxx
     if ax is None:
         plt.figure()
         ax = plt.gca()

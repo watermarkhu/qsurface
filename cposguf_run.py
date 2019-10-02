@@ -28,6 +28,7 @@ def sql_connection(ini_path=None, get_data=False):
 
     data = read_config("./cposguf.ini") if ini_path is None else read_config(ini_path)
     con = pgs.connect(**data[3])
+    print("connected to", data[3]["host"], "database:", data[3]["database"])
     con.set_session(autocommit=True)
     cur = con.cursor()
     if get_data:

@@ -49,7 +49,7 @@ def plot_thresholds(fitL, fitp, fitN, fitt, plot_name=None, data_select=None, mo
     par_guess = [g_T, g_A, g_B, g_C, g_D, gnu, gmu]
     bound = [(T_m, A_m, B_m, C_m, D_m, num, mum), (T_M, A_M, B_M, C_M, D_M, nuM, muM)]
 
-    par, pcov = optimize.curve_fit(fit_func, (fitp, fitL), [t/N for t, N in zip(fitt, fitN)], par_guess, bounds=bound, sigma=[n/max(fitN) for n in fitN])
+    par, pcov = optimize.curve_fit(fit_func, (fitp, fitL), [t/N for t, N in zip(fitt, fitN)], par_guess, bounds=bound, sigma=[max(fitN)/n for n in fitN])
     perr = np.sqrt(np.diag(pcov))
     print("Least squared fitting on dataset results:")
     print("Threshold =", par[0], "+-", perr[0])

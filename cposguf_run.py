@@ -11,7 +11,7 @@ import cpuinfo
 import time
 
 
-def read_config(path):
+def read_config(path="./cposguf.ini"):
     cp = ConfigParser()
     cp.read(path)
     sql_config = {}
@@ -26,7 +26,7 @@ def read_config(path):
 
 def sql_connection(ini_path=None, get_data=False):
 
-    data = read_config("./cposguf.ini") if ini_path is None else read_config(ini_path)
+    data = read_config() if ini_path is None else read_config(ini_path)
     con = pgs.connect(**data[3])
     print("connected to", data[3]["host"], "database:", data[3]["database"])
     con.set_session(autocommit=True)
@@ -102,6 +102,7 @@ def fetch_query(selection, p=None, L=None, type=None, limit=None, extra=None):
     if limit is not None:
         query += "LIMIT {}".format(limit)
 
+    print("SQL query:", query)
     return query
 
 
@@ -116,8 +117,8 @@ def multiple(comp_id, iters, size, p, worker=None):
         uf.peel_clusters(graph)
         tc.apply_matching_peeling(graph)
         logical_error = tc.logical_error(graph)
-        graph.reset()
         ubuck_win = True if logical_error == [False, False, False, False] else False
+        graph.reset()
 
         input_error_array(graph, array)                     # Simulate for vertical combined method
         tc.measure_stab(graph)
@@ -126,8 +127,8 @@ def multiple(comp_id, iters, size, p, worker=None):
         uf.peel_clusters(graph)
         tc.apply_matching_peeling(graph)
         logical_error = tc.logical_error(graph)
-        graph.reset()
         vcomb_win = True if logical_error == [False, False, False, False] else False
+        graph.reset()
 
         return (ubuck_win, vcomb_win, array)
 

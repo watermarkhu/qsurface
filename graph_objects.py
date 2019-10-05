@@ -66,17 +66,17 @@ class iGraph(object):
         for vertex in self.V.values():
             vertex.reset()
 
-    def print_graph_stop(self, clusters=None, prestring=""):
+    def print_graph_stop(self, clusters=None, prestring="", printmerged=1):
         '''
         :param clusters     either None or a list of clusters
         :param prestring    string to print before evertything else
 
         This function prints a cluster's size, parity, growth state and appropiate bucket number. If None is inputted, all clusters will be displayed.
         '''
-
+        printend = 0
         if clusters is None:
-            clusters = list(self.C.values())
-            print("\nShowing all clusters:")
+            clusters, printend = list(self.C.values()), 0
+            print("Showing all clusters:")
 
         for cluster in clusters:
 
@@ -92,9 +92,10 @@ class iGraph(object):
                         print(", and bucket: " + str(cluster.bucket))
                     else:
                         print(", and bucket: wastebasket")
-            else:
+            elif printmerged:
                 print(str(cluster), "is merged with", str(cluster.parent))
-
+        if printend:
+            print("")
 
 class iCluster(object):
     '''
@@ -204,6 +205,7 @@ class iEdge(object):
         '''
         Changes all iteration paramters to their initial value
         '''
+        self.cluster = None
         self.state = 0
         self.erasure = 0
         self.support = 0

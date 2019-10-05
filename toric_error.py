@@ -1,11 +1,16 @@
-import os
 import sys
 import time
 import datetime
 import random
 
+def init_random_seed(timestamp=None, worker=0, iteration=0):
+    if timestamp is None: timestamp = time.time()
+    seed = float(str(timestamp) + str(worker) + str(iteration))
+    random.seed(seed)
+    return seed
 
-def init_erasure_region(graph, pE=0, savefile=0, use_timestamp=0, erasure_file=None, toric_plot=None, worker=None):
+
+def init_erasure_region(graph, pE=0, savefile=0, timestamp=None, erasure_file=None, toric_plot=None, worker=None):
     '''
     :param pE           probability of an erasure error
     :param savefile     toggle to save the errors to a file
@@ -14,9 +19,6 @@ def init_erasure_region(graph, pE=0, savefile=0, use_timestamp=0, erasure_file=N
     '''
 
     if erasure_file is None:
-        timestamp = time.time()
-        random.seed(timestamp) if worker is None else random.seed(float(str(worker) + str(timestamp)))    # makes sure that each worker has different seeds
-
         if pE != 0:
             for y0 in range(graph.size):                          # Loop over all qubits
                 for td in range(2):
@@ -46,12 +48,14 @@ def init_erasure_region(graph, pE=0, savefile=0, use_timestamp=0, erasure_file=N
                                     graph.E[(1, y, x, td)].state = not graph.E[(1, y, x, td)].state
 
         if savefile:
-            st = datetime.datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d_%H-%M-%S')
-            st2 = datetime.datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H-%M-%S')
-            name = "./errors/" + st + "_erasure.txt" if use_timestamp else "./errors/erasure.txt"
+            if timestamp is not None:
+                st = datetime.datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d_%H-%M-%S')
+                name = "./errors/" + st + "_erasure.txt"
+            else:
+                name = "./errors/erasure.txt"
+            st2 = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H-%M-%S')
             f = open(name, "w")
             f.write("Erasure error file created on " + st2 + "\n")
-            f.write("Seed = " + str(timestamp) + "\n")
             f.write("L = " + str(graph.size) + "\n\n")
             e_file = "pE = " + str(pE) + "\n"
             for y in range(graph.size):
@@ -84,7 +88,7 @@ def init_erasure_region(graph, pE=0, savefile=0, use_timestamp=0, erasure_file=N
         toric_plot.plot_erasures()
 
 
-def init_erasure(graph, pE=0, savefile=0, use_timestamp=0, erasure_file=None, toric_plot=None, worker=None):
+def init_erasure(graph, pE=0, savefile=0, timestamp=None, erasure_file=None, toric_plot=None, worker=None):
     '''
     :param pE           probability of an erasure error
     :param savefile     toggle to save the errors to a file
@@ -92,17 +96,16 @@ def init_erasure(graph, pE=0, savefile=0, use_timestamp=0, erasure_file=None, to
     Initializes an erasure error with probabilty pE, which will take form as a uniformly chosen pauli X and/or Z error.
     '''
     if erasure_file is None:
-        timestamp = time.time()
-        random.seed(timestamp) if worker is None else random.seed(float(str(worker) + str(timestamp)))
-
         # Write first lines of error file
         if savefile:
-            st = datetime.datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d_%H-%M-%S')
-            st2 = datetime.datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H-%M-%S')
-            name = "./errors/" + st + "_erasure.txt" if use_timestamp else "./errors/erasure.txt"
+            if timestamp is not None:
+                st = datetime.datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d_%H-%M-%S')
+                name = "./errors/" + st + "_erasure.txt"
+            else:
+                name = "./errors/erasure.txt"
+            st2 = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H-%M-%S')
             f = open(name, "w")
             f.write("Erasure error file created on " + st2 + "\n")
-            f.write("Seed = " + str(timestamp) + "\n")
             f.write("L = " + str(graph.size) + "\n\n")
             e_file = "pE = " + str(pE) + "\n"
 
@@ -140,14 +143,13 @@ def init_erasure(graph, pE=0, savefile=0, use_timestamp=0, erasure_file=None, to
             f.write(e_file + "\n")
             f.close()
     else:
-        timestamp, _ = read_erasure(graph, erasure_file)
-        random.seed(timestamp) if worker is None else random.seed(float(str(worker) + str(timestamp)))
+        read_erasure(graph, erasure_file)
 
     if toric_plot is not None:
         toric_plot.plot_erasures()
 
 
-def init_pauli(graph, pX=0, pZ=0, savefile=0, use_timestamp=0, pauli_file=None, toric_plot=None, worker=None):
+def init_pauli(graph, pX=0, pZ=0, savefile=0, timestamp=None, pauli_file=None, toric_plot=None, worker=None):
     '''
     :param pX           probability of a Pauli X error
     :param pZ           probability of a Pauli Z error
@@ -156,17 +158,16 @@ def init_pauli(graph, pX=0, pZ=0, savefile=0, use_timestamp=0, pauli_file=None, 
     initates Pauli X and Z errors on the lattice based on the error rates
     '''
     if pauli_file is None:
-        timestamp = time.time()
-        random.seed(timestamp) if worker is None else random.seed(float(str(worker) + str(timestamp)))
-
         # Write first lines of error file
         if savefile:
-            st = datetime.datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d_%H-%M-%S')
-            st2 = datetime.datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d %H-%M-%S')
-            name = "./errors/" + st + "_pauli.txt" if use_timestamp else "./errors/pauli.txt"
+            if timestamp is not None:
+                st = datetime.datetime.fromtimestamp(timestamp).strftime('%Y-%m-%d_%H-%M-%S')
+                name = "./errors/" + st + "_erasure.txt"
+            else:
+                name = "./errors/erasure.txt"
+            st2 = datetime.datetime.fromtimestamp(time.time()).strftime('%Y-%m-%d %H-%M-%S')
             f = open(name, "w")
             f.write("Pauli error file created on " + st2 + "\n")
-            f.write("Seed = " + str(timestamp) + "\n")
             f.write("L = " + str(graph.size) + "\n\n")
             x_file = "pX = " + str(pX) + "\n"
             z_file = "pZ = " + str(pZ) + "\n"
@@ -207,8 +208,7 @@ def init_pauli(graph, pX=0, pZ=0, savefile=0, use_timestamp=0, pauli_file=None, 
             f.write(z_file + "\n")
             f.close()
     else:
-        timestamp, _, _ = read_pauli(graph, pauli_file)
-        random.seed(timestamp) if worker is None else random.seed(float(str(worker) + str(timestamp)))
+        read_pauli(graph, pauli_file)
 
     if toric_plot is not None:
         toric_plot.plot_errors()
@@ -223,9 +223,8 @@ def read_erasure(graph, erasure_file):
         erasure_errors = open(filename, "r")
     except FileNotFoundError:
         sys.exit("Error file not found")
-    firstlines = [next(erasure_errors) for _ in range(4)]
-    timestamp = float(firstlines[1][7:])
-    graph.size = int(firstlines[2][4:])
+    firstlines = [next(erasure_errors) for _ in range(3)]
+    graph.size = int(firstlines[1][4:])
     pE = float(next(erasure_errors)[5:])
 
     for linenum in range(graph.size*2):
@@ -247,7 +246,7 @@ def read_erasure(graph, erasure_file):
                 elif state == 4:
                     graph.E[(0, y, x, td)].state = not graph.E[(0, y, x, td)].state
                     graph.E[(1, y, x, td)].state = not graph.E[(1, y, x, td)].state
-    return timestamp, pE
+    return pE
 
 
 def read_pauli(graph, pauli_file):
@@ -261,9 +260,8 @@ def read_pauli(graph, pauli_file):
         pauli_errors = open(filename, "r")
     except FileNotFoundError:
         sys.exit("Error file not found")
-    firstlines = [next(pauli_errors) for _ in range(4)]
-    timestamp = float(firstlines[1][7:])
-    graph.size = int(firstlines[2][4:])
+    firstlines = [next(pauli_errors) for _ in range(3)]
+    graph.size = int(firstlines[1][4:])
     pX = float(next(pauli_errors)[5:])
 
     for linenum in range(graph.size*2):
@@ -293,4 +291,4 @@ def read_pauli(graph, pauli_file):
             if state == 1:
                 graph.E[(1, y, x, td)].state = not graph.E[(1, y, x, td)].state
 
-    return timestamp, pX, pZ
+    return pX, pZ

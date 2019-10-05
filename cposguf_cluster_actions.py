@@ -54,12 +54,12 @@ def get_neighbor(y, x, td, L):
         return [(y, (x+1)%L, 1), ((y-1)%L, x, 1), (y, (x+1)%L, 0), (y, (x-1)%L, 0), ((y-1)%L, (x+1)%L, 1), (y, x, 1)]
 
 
-def get_clusters_from_list(list_of_vertices, size):
+def get_clusters_from_list(list_of_qubits, size):
     '''
     Returns a dict of clusters, with values lists of connected vertices from a list of vertices
     '''
     clusters, vertices, cnum = defaultdict(list), {}, 0
-    for y, x, td in list_of_vertices:
+    for y, x, td in list_of_qubits:
         y, x, td = int(y), int(x), int(td)
         v = (y, x, td)
 

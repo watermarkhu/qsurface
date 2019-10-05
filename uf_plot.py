@@ -128,7 +128,7 @@ class toric:
     def waitforkeypress(self, str=""):
         if str != "":
             str += " "
-        print(str + "Press any key (on plot) to continue...")
+        print(str + "Press any key (on plot) to continue...\n")
         keyboardClick = False
         while not keyboardClick:
             keyboardClick = plt.waitforbuttonpress(120)
@@ -201,12 +201,13 @@ class toric:
             self.ax.draw_artist(edge0)
             self.ax.draw_artist(edge1)
 
-    def draw_plot(self, txt):
+    def draw_plot(self, txt=None):
 
         self.canvas.blit(self.ax.bbox)
+
         if self.plotstep_click:
             self.waitforkeypress(txt)
-        else:
+        elif txt is not None:
             print(txt)
 
 

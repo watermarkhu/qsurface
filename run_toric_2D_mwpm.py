@@ -6,7 +6,7 @@ from tqdm import tqdm
 import multiprocessing as mp
 
 
-def single(size, pE=0, pX=0, pZ=0, savefile=False, erasure_file=None, pauli_file=None, plot_load=False, graph=None, worker=None):
+def single(size, pE=0, pX=0, pZ=0, savefile=False, erasure_file=None, pauli_file=None, plot_load=False, graph=None, worker=None, iter=0):
     '''
     Runs the peeling decoder for one iteration
     '''
@@ -17,6 +17,7 @@ def single(size, pE=0, pX=0, pZ=0, savefile=False, erasure_file=None, pauli_file
     toric_plot = tp.lattice_plot(graph, plot_size=8, line_width=2) if plot_load else None
 
     # Initialize errors
+    te.init_random_seed(worker=worker, iteration=iter)
     te.init_erasure_region(graph, pE, savefile, erasure_file, toric_plot=toric_plot, worker=worker)
     te.init_pauli(graph, pX, pZ, savefile, pauli_file, toric_plot=toric_plot, worker=worker)
 
@@ -42,7 +43,7 @@ def multiple(size, iters, pE=0, pX=0, pZ=0, plot_load=False, qres=None, worker=N
     Runs the peeling decoder for a number of iterations. The graph is reused for speedup.
     '''
     graph = go.init_toric_graph(size)
-    result = [single(size, pE, pX, pZ, plot_load=plot_load, graph=graph, worker=worker) for i in tqdm(range(iters))]
+    result = [single(size, pE, pX, pZ, plot_load=plot_load, graph=graph, worker=worker, iter=i) for i in tqdm(range(iters))]
     N_succes = sum(result)
     if qres is not None:
         qres.put(N_succes)

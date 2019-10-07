@@ -9,7 +9,7 @@ from progiter import ProgIter
 import multiprocessing as mp
 
 
-def single(size, pE=0, pX=0, pZ=0, savefile=0, erasure_file=None, pauli_file=None, plot_load=False, graph=None, worker=None, iter=0, settings=None):
+def single(size, pE=0, pX=0, pZ=0, savefile=0, erasure_file=None, pauli_file=None, plot_load=False, graph=None, worker=0, iter=0, settings=None):
     '''
     Runs the peeling decoder for one iteration
     '''
@@ -43,8 +43,8 @@ def single(size, pE=0, pX=0, pZ=0, savefile=0, erasure_file=None, pauli_file=Non
 
     # Peeling decoder
     uf_plot = up.toric(graph, toric_plot.f, plot_size=8, line_width=1.5, plotstep_click=1) if plot_load else None
-    uf.find_clusters(graph, uf_plot=uf_plot, plot_step=0, random_order=0, random_traverse=rt, vcomb=vc)
-    uf.grow_clusters(graph, uf_plot=uf_plot, plot_step=0)
+    uf.find_clusters(graph, uf_plot=uf_plot, plot_step=0, random_order=ro, random_traverse=rt, vcomb=vc)
+    uf.grow_clusters(graph, uf_plot=uf_plot, plot_step=0, random_traverse=rt, vcomb=vc)
     uf.peel_clusters(graph, uf_plot=uf_plot, plot_step=0)
 
     # Apply matching
@@ -97,4 +97,7 @@ def multiprocess(size, iters, pE=0, pX=0, pZ=0, processes=None, settings=None):
         worker.join()
 
     results = [qres.get() for worker in workers]
-    return sum(results)
+
+    N_succes = sum(results)
+
+    return N_succes

@@ -96,15 +96,15 @@ def plot_thresholds(fitL, fitp, fitN, fitt, plot_name=None, data_select=None, mo
 
 if __name__ == '__main__':
 
-    folder = "../../../OneDrive - Delft University of Technology/MEP - thesis Mark/Simulations/"
+    folder = "../thresholds/"
 
     just_plot = 0
     print_data = 1
     save_result = 1
     data_select = None
     modified_ansatz = 0
-    # file_name = "uf_toric_pX_bucket_"
-    # plot_name = file_name
+    file_name = "uf_toric_pX_bucket_MOPgrowth_Npeel"
+    plot_name = file_name
 
     lattices = [12, 16, 20, 24, 28, 32]
     p = list(np.round(np.linspace(0.09, 0.11, 11), 21))
@@ -113,57 +113,50 @@ if __name__ == '__main__':
     r = git.Repo()
     hash = r.git.rev_parse(r.head, short=True)
 
-    settinglist = [{"ro": 0, "rt": 0, "vc": 0}, {"ro": 0, "rt": 0, "vc": 1}, {"ro": 0, "rt": 1, "vc": 0}, {"ro": 0, "rt": 1, "vc": 1}]
-    names = ["list_" + i for i in ["ro0_rt0_ubuck", "ro0_rt0_vcomb", "ro0_rt1_ubuck", "ro0_rt1_vcomb"]]
+    settings = {"ro": 0, "rt": 0, "vc": 0}
 
-    for settings, name in zip(settinglist, names):
+    file_path = folder + "data/" + file_name + ".csv" if just_plot else folder + "data/" + hash + "_" + file_name + ".csv"
+    if os.path.exists(file_path):
+        data = pd.read_csv(file_path, header=0)
+        data = data.set_index(["L", "p"])
+    else:
+        index = pd.MultiIndex.from_product([lattices, p], names=["L", "p"])
+        data = pd.DataFrame(np.zeros((len(lattices)*len(p), 2)), index=index, columns=["N", "succes"])
 
-        print("Doing:", name)
+    indices = data.index.values
+    cols = ["N", "succes"]
 
-        file_name = "uf_toric_pX_bucket_" + name
+    # Simulate and save results to file
+    if not just_plot:
+        for i, lati in enumerate(lattices):
+            for pi in p:
 
-        file_path = folder + "data/" + file_name + ".csv" if just_plot else folder + "data/" + hash + "_" + file_name + ".csv"
-        if os.path.exists(file_path):
-            data = pd.read_csv(file_path, header=0)
-            data = data.set_index(["L", "p"])
-        else:
-            index = pd.MultiIndex.from_product([lattices, p], names=["L", "p"])
-            data = pd.DataFrame(np.zeros((len(lattices)*len(p), 2)), index=index, columns=["N", "succes"])
+                print("Calculating for L = ", str(lati), "and p =", str(pi))
+                N_succes = multiprocess(lati, Num, 0, pi, 0, processes=4, settings=settings)
+                # N_succes = multiple(lati, Num, 0, pi, 0)
 
-        indices = data.index.values
-        cols = ["N", "succes"]
+                if any([(lati, pi) == a for a in indices]):
+                    data.loc[(lati, round(pi, 6)), "N"] += Num
+                    data.loc[(lati, round(pi, 6)), "succes"] += N_succes
+                else:
+                    data.loc[(lati, round(pi, 6)), cols] = pd.Series([Num, N_succes]).values
+                    data = data.sort_index()
 
-        # Simulate and save results to file
-        if not just_plot:
-            for i, lati in enumerate(lattices):
-                for pi in p:
+                if save_result:
+                    data.to_csv(file_path)
 
-                    print("Calculating for L = ", str(lati), "and p =", str(pi))
-                    N_succes = multiprocess(lati, Num, 0, pi, 0, processes=4, settings=settings)
-                    # N_succes = multiple(lati, Num, 0, pi, 0)
+    print(data.to_string()) if print_data else None
 
-                    if any([(lati, pi) == a for a in indices]):
-                        data.loc[(lati, round(pi, 6)), "N"] += Num
-                        data.loc[(lati, round(pi, 6)), "succes"] += N_succes
-                    else:
-                        data.loc[(lati, round(pi, 6)), cols] = pd.Series([Num, N_succes]).values
-                        data = data.sort_index()
+    # Select data
 
-                    if save_result:
-                        data.to_csv(file_path)
+    fitL = data.index.get_level_values('L')
+    fitp = data.index.get_level_values('p')
+    fitN = data.loc[:, "N"].values
+    fitt = data.loc[:, "succes"].values
 
-        print(data.to_string()) if print_data else None
+    f0, f1 = plot_thresholds(fitL, fitp, fitN, fitt, plot_name=file_name)
 
-        # Select data
-
-        fitL = data.index.get_level_values('L')
-        fitp = data.index.get_level_values('p')
-        fitN = data.loc[:, "N"].values
-        fitt = data.loc[:, "succes"].values
-
-        f0, f1 = plot_thresholds(fitL, fitp, fitN, fitt, plot_name=file_name)
-
-        if save_result:
-            data.to_csv(file_path)
-            fname = folder + "./figures/" + hash + "_" + file_name + ".pdf"
-            f0.savefig(fname, transparent=True, format="pdf", bbox_inches="tight")
+    if save_result:
+        data.to_csv(file_path)
+        fname = folder + "./figures/" + hash + "_" + file_name + ".pdf"
+        f0.savefig(fname, transparent=True, format="pdf", bbox_inches="tight")

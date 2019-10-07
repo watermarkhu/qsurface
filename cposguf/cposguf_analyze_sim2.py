@@ -30,8 +30,8 @@ def get_states_from_graph(graph):
 def analyze_sim2_A(lattice, array):
 
     graph = go.init_toric_graph(lattice)
-    graph_v = go.init_toric_graph(lattice)
-    plot_both(graph, graph_v, array)
+    # graph_v = go.init_toric_graph(lattice)
+    # plot_both(graph, graph_v, array)
 
     input_error_array(graph, array)
     tc.measure_stab(graph)
@@ -150,8 +150,8 @@ p = None
 l = 12
 extra = None
 
-con, cur = sql_connection("../cposguf.ini")
-query = fetch_query("lattice, p, vcomb_solved, error_data", p, l, extra=extra, limit=1)
+con, cur = sql_connection("../cposguflocal.ini")
+query = fetch_query("lattice, p, vcomb_solved, error_data", p, l, extra=extra, limit=None)
 cur.execute(query)
 sims = cur.fetchall()
 
@@ -169,5 +169,5 @@ for lattice, p, type, array in sims:
         vs += 1
         if vl < ul: vc += 1
 
-print("UBUCK win: ubuck has les active qubits in {0:d}/{1:d} = {2:3.3f}%".format(uc, us, uc/us*100))
-print("VCOMB win: vcomb has les active qubits in {0:d}/{1:d} = {2:3.3f}%".format(vc, vs, vc/vs*100))
+print("UBUCK win: ubuck has less qubits in matching: {0:d}/{1:d} = {2:3.3f}%".format(uc, us, uc/us*100))
+print("VCOMB win: vcomb has less qubits in matching: {0:d}/{1:d} = {2:3.3f}%".format(vc, vs, vc/vs*100))

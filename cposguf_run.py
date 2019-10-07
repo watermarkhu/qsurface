@@ -11,7 +11,7 @@ import cpuinfo
 import time
 
 
-def read_config(path="./cposguf.ini"):
+def read_config(path="./cposguflocal.ini"):
     cp = ConfigParser()
     cp.read(path)
     sql_config = {}

@@ -1,42 +1,7 @@
 import random
-from unionfind import cluster_new_vertex, cluster_place_bucket, find_cluster_root, union_clusters, peel_clusters
-
+from unionfind import cluster_new_vertex, cluster_place_bucket, find_cluster_root, union_clusters, find_clusters, peel_clusters
 
 # Main functions
-
-def find_clusters(graph, uf_plot=None, plot_step=0, random_order=0, random_traverse=0, vcomb=0):
-    '''
-    Given a set of erased qubits/edges on a lattice, this functions finds all edges that are connected and sorts them in separate clusters. A single anyon can also be its own cluster.
-    It loops over all vertices (randomly if toggled, which produces a different tree), and calls {cluster_new_vertex} to find all connected erasure qubits, and finds the boundary for growth step 1. Afterwards the cluster is placed in a bucket based in its size.
-
-    '''
-    graph.numbuckets = graph.size*(graph.size//2-1)*2
-    graph.buckets = [[] for _ in range(graph.numbuckets)]
-    graph.wastebasket = []
-    graph.maxbucket = 0
-
-    cID = 0
-    vertices = graph.V.values()
-
-    # Random order: Doesn't matter when pE == 0
-    if random_order:
-        vertices = random.sample(set(vertices), len(vertices))
-
-    anyons = [vertex for vertex in vertices if vertex.state]
-
-    for vertex in anyons:
-        if vertex.cluster is None:
-            cluster = graph.add_cluster(cID)
-            cluster.add_vertex(vertex)
-            cluster_new_vertex(graph, cluster, vertex, random_traverse=random_traverse, uf_plot=uf_plot, plot_step=plot_step)
-            cluster_place_bucket(graph, cluster, vcomb)
-            cID += 1
-
-    if uf_plot is not None and not plot_step:
-        uf_plot.plot_removed(graph, "Clusters initiated.")
-    elif uf_plot is not None:
-        uf_plot.waitforkeypress("Clusters initiated.")
-
 
 def grow(graph, cluster, root_cluster, support, uf_plot=None, plot_step=0, random_traverse=0, vcomb=0):
     '''

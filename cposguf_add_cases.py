@@ -1,18 +1,13 @@
-import psycopg2 as pgs
-from cposguf_run import read_config
+from cposguf_run import sql_connection
 
-comp_id, num_process, iters, sql_config = read_config("./cposguf.ini")
-con = pgs.connect(**sql_config)
-con.set_session(autocommit=True)
-cur = con.cursor()
+con, cur = sql_connection()
 
-L = [8 + 4*i for i in range(8)]
-P = [i/1000 for i in [101 + i for i in range(10)]]
-P
+L = [8 + 4*i for i in range(10)]
+P = [i/1000 for i in [90 + i for i in range(21)]]
 
 LP = [(l, p) for l in L for p in P]
 
 for (l, p) in LP:
-    cur.execute("INSERT INTO cases (lattice, p, target_tot_sims, target_ubuck_wins, target_vcomb_wins, tot_sims, ubuck_sims, vcomb_sims, ubuck_wins, vcomb_wins) VALUES ({}, {}, 1000000, 50000, 50000, 0, 0, 0, 0, 0)".format(l, p))
+    cur.execute("INSERT INTO cases (lattice, p, target_tot_sims, target_tree_wins, target_list_wins, tot_sims, tree_sims, list_sims, tree_wins, list_wins) VALUES ({}, {}, 1000000, 200000, 200000, 0, 0, 0, 0, 0)".format(l, p))
 cur.close()
 con.close()

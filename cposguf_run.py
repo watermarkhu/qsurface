@@ -1,7 +1,9 @@
 import graph_objects as go
 import toric_code as tc
 import toric_error as te
-import unionfind_tree as uf
+import unionfind as uf
+import unionfind_list as ufl
+import unionfind_tree as uft
 import multiprocessing as mp
 from progiter import ProgIter
 import psycopg2 as pgs
@@ -11,14 +13,14 @@ import cpuinfo
 import time
 
 
-def read_config(path="./cposguflocal.ini"):
+def read_config(path="./cposguf.ini"):
     cp = ConfigParser()
     cp.read(path)
     sql_config = {}
     comp_id = cp.get('config', 'comp_id')
     num_process = cp.getint('config', 'num_process')
     iters = cp.getint('config', 'iters')
-    names = ['host', 'port', 'database', 'user', 'password', 'sslmode', 'sslrootcert', 'sslcert', 'sslkey']
+    names = ['host', 'port', 'database', 'user', 'password']
     for name in names:
         sql_config[name] = cp.get('sql_database', name)
     return comp_id, num_process, iters, sql_config
@@ -28,18 +30,12 @@ def sql_connection(ini_path=None, get_data=False):
 
     data = read_config() if ini_path is None else read_config(ini_path)
     con = pgs.connect(**data[3])
-    print("connected to", data[3]["host"], "database:", data[3]["database"])
     con.set_session(autocommit=True)
     cur = con.cursor()
     if get_data:
         return con, cur, data
     else:
         return con, cur
-
-
-def add_new_sim(cursor, comp_id, lattice, p, ubuck, vcomb, array):
-    query = "INSERT INTO simulations (lattice, p, comp_id, created_on, ubuck_solved, vcomb_solved, error_data) VALUES ({0}, {1}, '{2}', current_timestamp, {3}, {4}, ARRAY{5});".format(lattice, p, comp_id, ubuck, vcomb, array)
-    cursor.execute(query)
 
 
 def add_new_comp(cursor, id, cputype):
@@ -85,10 +81,10 @@ def fetch_query(selection, p=None, L=None, type=None, limit=None, extra=None):
     if type is not None:
         if L is None and p is None:
             query += "WHERE "
-        if type == "ubuck":
-            query += "ubuck_solved = TRUE "
-        elif type == "vcomb":
-            query += "vcomb_solved = TRUE "
+        if type == "tree":
+            query += "ftree_tlist = FALSE "
+        elif type == "list":
+            query += "ftree_tlist = TRUE "
         if extra is not None:
             query += "AND "
 
@@ -106,60 +102,66 @@ def fetch_query(selection, p=None, L=None, type=None, limit=None, extra=None):
     return query
 
 
-def multiple(comp_id, iters, size, p, worker=None):
+def multiple(comp_id, iters, size, p, worker=0):
+    def single(graph, iter):
 
-    def single(graph):
-        te.init_pauli(graph, pX=p, worker=worker)           # Simulate for unique bucket method
-        array = output_error_array(graph)
+        seed = te.init_random_seed(worker=worker, iteration=iter)
+
+        te.init_pauli(graph, pX=p)
         tc.measure_stab(graph)
         uf.find_clusters(graph)
-        uf.grow_clusters(graph)
+        uft.grow_clusters(graph)
         uf.peel_clusters(graph)
         tc.apply_matching_peeling(graph)
         logical_error = tc.logical_error(graph)
-        ubuck_win = True if logical_error == [False, False, False, False] else False
+        tree_solved = True if logical_error == [False, False, False, False] else False
         graph.reset()
 
-        input_error_array(graph, array)                     # Simulate for vertical combined method
+        te.apply_random_seed(seed)
+        te.init_pauli(graph, pX=p)
         tc.measure_stab(graph)
-        uf.find_clusters(graph, vcomb=1)
-        uf.grow_clusters(graph, vcomb=1)
+        uf.find_clusters(graph)
+        ufl.grow_clusters(graph)
         uf.peel_clusters(graph)
         tc.apply_matching_peeling(graph)
         logical_error = tc.logical_error(graph)
-        vcomb_win = True if logical_error == [False, False, False, False] else False
+        list_solved = True if logical_error == [False, False, False, False] else False
         graph.reset()
 
-        return (ubuck_win, vcomb_win, array)
+        tree_solved, list_solved
+
+        return (tree_solved, list_solved, seed)
 
     # Open SQL connection
     con, cur = sql_connection()
 
     # Simulate
     graph = go.init_toric_graph(size)
-    results = [single(graph) for _ in ProgIter(range(iters))]
-    diff_res = [result for result in results if result[0] != result [1]]
+    results = [single(graph, iter) for iter in ProgIter(range(iters))]
+    diff_res = [result[1:] for result in results if result[0] != result [1]]
 
     # Insert simulation into database
-    query = "INSERT INTO simulations (lattice, p, comp_id, created_on, ubuck_solved, vcomb_solved, error_data) VALUES %s "
-    template = "(" + str(size) + ", " + str(p) + ", '" + str(comp_id) + "', current_timestamp, %s, %s, %s)"
+    query = "INSERT INTO simulations (lattice, p, comp_id, created_on, ftree_tlist, seed) VALUES %s "
+    template = "({}, {}, '{}', current_timestamp, %s, %s)".format(str(size), str(p), str(comp_id))
     pgse.execute_values(cur, query, diff_res, template)
 
+
+
     # Update cases counters
-    cur.execute("SELECT tot_sims, ubuck_sims, vcomb_sims, ubuck_wins, vcomb_wins FROM cases WHERE lattice = {} AND p = {}".format(size, p))
+    cur.execute("SELECT tot_sims, tree_sims, list_sims, tree_wins, list_wins FROM cases WHERE lattice = {} AND p = {}".format(size, p))
     counter = list(cur.fetchone())
     counter[0] += iters
-    for ubuck_sim, vcomb_sim, _ in results:
-        if ubuck_sim:
+    for tree_solved, list_solved, _ in results:
+        if tree_solved:
             counter[1] += 1
-            if not vcomb_sim:
+            if not list_solved:
                 counter[3] += 1
-        if vcomb_sim:
+        if list_solved:
             counter[2] += 1
-            if not ubuck_sim:
+            if not tree_solved:
                 counter[4] += 1
 
-    cur.execute("UPDATE cases SET tot_sims = {}, ubuck_sims = {}, vcomb_sims = {}, ubuck_wins = {}, vcomb_wins = {} WHERE lattice = {} and p = {}".format(*counter, size, p))
+    cur.execute("UPDATE cases SET tot_sims = {}, tree_sims = {}, list_sims = {}, tree_wins = {}, list_wins = {} WHERE lattice = {} and p = {}".format(*counter, size, p))
 
     cur.close()
     con.close()
@@ -184,7 +186,8 @@ def multiprocess(comp_id, iters, size, p, processes=None):
     print("Started", processes, "workers.")
     for worker in workers:
         while worker.is_alive():
-            time.sleep(1)
+            time.sleep(2)
+            print("Waiting for join...")
         worker.join()
 
 
@@ -210,7 +213,6 @@ if __name__ == '__main__':
             if lowest == None:
                 exit()
         lattice, deci_p = lowest
-
         p = float(deci_p)
         print("Selected lattice = {}, p = {}".format(lattice, p))
 

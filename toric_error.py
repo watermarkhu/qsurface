@@ -9,8 +9,12 @@ def init_random_seed(timestamp=None, worker=0, iteration=0):
     random.seed(seed)
     return seed
 
+def apply_random_seed(seed=None):
+    if seed is None: seed = init_random_seed()
+    random.seed(seed)
 
-def init_erasure_region(graph, pE=0, savefile=0, timestamp=None, erasure_file=None, toric_plot=None, worker=None):
+
+def init_erasure_region(graph, pE=0, savefile=0, timestamp=None, erasure_file=None, toric_plot=None):
     '''
     :param pE           probability of an erasure error
     :param savefile     toggle to save the errors to a file
@@ -82,13 +86,12 @@ def init_erasure_region(graph, pE=0, savefile=0, timestamp=None, erasure_file=No
             f.close()
     else:
         timestamp, _ = read_erasure(graph, erasure_file)
-        random.seed(timestamp) if worker is None else random.seed(float(str(worker) + str(timestamp)))
 
     if toric_plot is not None:
         toric_plot.plot_erasures()
 
 
-def init_erasure(graph, pE=0, savefile=0, timestamp=None, erasure_file=None, toric_plot=None, worker=None):
+def init_erasure(graph, pE=0, savefile=0, timestamp=None, erasure_file=None, toric_plot=None):
     '''
     :param pE           probability of an erasure error
     :param savefile     toggle to save the errors to a file
@@ -149,7 +152,7 @@ def init_erasure(graph, pE=0, savefile=0, timestamp=None, erasure_file=None, tor
         toric_plot.plot_erasures()
 
 
-def init_pauli(graph, pX=0, pZ=0, savefile=0, timestamp=None, pauli_file=None, toric_plot=None, worker=None):
+def init_pauli(graph, pX=0, pZ=0, savefile=0, timestamp=None, pauli_file=None, toric_plot=None):
     '''
     :param pX           probability of a Pauli X error
     :param pZ           probability of a Pauli Z error

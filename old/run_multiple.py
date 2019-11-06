@@ -4,6 +4,7 @@ from tqdm import tqdm
 from run_single import toric_2D_peeling
 import multiprocessing as mp
 import copy
+
 # sys.path.insert(0, '../fault_tolerance_simulations/')
 # # sys.path.insert(0, '../Code_Eduardo/')
 # #
@@ -42,15 +43,10 @@ def m_toric_2D_peeling(size, pE, pX, pZ, iters, processes=1, plot_load=False):
 
     print(graphs)
 
-
-
-
     # pool = mp.Pool(processes=4)
     # results = [pool.apply_async(toric_2D_peeling, args=(size, pE, pX, pZ,)) for _ in tqdm(range(iters))]
     # output = [p.get() for p in results]
     # return sum(output)
-
-
 
     # N_succes = 0
 

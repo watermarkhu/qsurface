@@ -1,4 +1,5 @@
 import sys
+
 sys.path.append("../")
 from matplotlib import pyplot as plt
 from cposguf_run import input_error_array, sql_connection, fetch_query
@@ -11,7 +12,12 @@ import unionfind_tree as uf
 
 def get_grown_from_graph(graph):
     qubits_grown, qubits_matching = [], []
-    for qubit in [graph.E[(0, y, x, td)] for y in range(graph.size) for x in range(graph.size) for td in range(2)]:
+    for qubit in [
+        graph.E[(0, y, x, td)]
+        for y in range(graph.size)
+        for x in range(graph.size)
+        for td in range(2)
+    ]:
         if qubit.support == 2:
             qubits_grown.append(qubit.qID[1:])
             if qubit.matching:
@@ -20,11 +26,16 @@ def get_grown_from_graph(graph):
 
 
 def get_states_from_graph(graph):
-    '''
+    """
     Returns the qubits in the graph that have value 1
-    '''
-    return [(y, x, td) for y in range(graph.size) for x in range(graph.size) for td in range(2) if graph.E[(0, y, x, td)].state]
-
+    """
+    return [
+        (y, x, td)
+        for y in range(graph.size)
+        for x in range(graph.size)
+        for td in range(2)
+        if graph.E[(0, y, x, td)].state
+    ]
 
 
 def analyze_sim2_A(lattice, array):
@@ -43,7 +54,6 @@ def analyze_sim2_A(lattice, array):
     # tc.apply_matching_peeling(graph)
     # ufs = get_states_from_graph(graph)
 
-
     graph.reset()
 
     input_error_array(graph, array)
@@ -54,7 +64,6 @@ def analyze_sim2_A(lattice, array):
     vgs, vps = get_grown_from_graph(graph)
     # tc.apply_matching_peeling(graph)
     # vfs = get_states_from_graph(graph)
-
 
     graph.reset()
 
@@ -146,12 +155,15 @@ def analyze_sim2_A(lattice, array):
     # plot_both(graph, graph_v, list(map(list, zip(*involved_errors))))
     return len(ups), len(vps)
 
+
 p = None
 l = 12
 extra = None
 
 con, cur = sql_connection("../cposguflocal.ini")
-query = fetch_query("lattice, p, vcomb_solved, error_data", p, l, extra=extra, limit=None)
+query = fetch_query(
+    "lattice, p, vcomb_solved, error_data", p, l, extra=extra, limit=None
+)
 cur.execute(query)
 sims = cur.fetchall()
 
@@ -162,12 +174,22 @@ uc, us, vc, vs = 0, 0, 0, 0
 for lattice, p, type, array in sims:
     ul, vl = analyze_sim2_A(lattice, array)
     analyze_sim2_A(lattice, array)
-    if type == 0: #UBUCK
+    if type == 0:  # UBUCK
         us += 1
-        if ul < vl: uc += 1
-    elif type == 1: # VCOMB
+        if ul < vl:
+            uc += 1
+    elif type == 1:  # VCOMB
         vs += 1
-        if vl < ul: vc += 1
+        if vl < ul:
+            vc += 1
 
-print("UBUCK win: ubuck has less qubits in matching: {0:d}/{1:d} = {2:3.3f}%".format(uc, us, uc/us*100))
-print("VCOMB win: vcomb has less qubits in matching: {0:d}/{1:d} = {2:3.3f}%".format(vc, vs, vc/vs*100))
+print(
+    "UBUCK win: ubuck has less qubits in matching: {0:d}/{1:d} = {2:3.3f}%".format(
+        uc, us, uc / us * 100
+    )
+)
+print(
+    "VCOMB win: vcomb has less qubits in matching: {0:d}/{1:d} = {2:3.3f}%".format(
+        vc, vs, vc / vs * 100
+    )
+)

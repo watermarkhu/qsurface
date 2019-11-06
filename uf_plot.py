@@ -3,14 +3,15 @@ from matplotlib.lines import Line2D
 
 
 class toric:
-
-    def __init__(self, graph, figure, axn=2, plot_size=10, line_width=1.5, plotstep_click=False):
+    def __init__(
+        self, graph, figure, axn=2, plot_size=10, line_width=1.5, plotstep_click=False
+    ):
 
         self.size = graph.size
 
-        self.cl = [0.2, 0.2, 0.2]       # Line color
-        self.cx = [0.9, 0.3, 0.3]       # X error color
-        self.cz = [0.5, 0.5, 0.9]       # Z error color
+        self.cl = [0.2, 0.2, 0.2]  # Line color
+        self.cx = [0.9, 0.3, 0.3]  # X error color
+        self.cz = [0.5, 0.5, 0.9]  # Z error color
         self.Cx = [0.5, 0.1, 0.1]
         self.Cz = [0.1, 0.1, 0.5]
         self.cX = [0.9, 0.7, 0.3]
@@ -30,14 +31,14 @@ class toric:
             for i, ax in enumerate(axes):
                 ax.change_geometry(1, numx + 1, i + 1)
             self.ax = figure.add_subplot(1, axn, axn)
-            figure.set_figwidth((numx + 1)*plot_size)
+            figure.set_figwidth((numx + 1) * plot_size)
         else:
             self.ax = axes[axn - 1]
             self.ax.cla()
 
         self.ax.invert_yaxis()
-        self.ax.set_aspect('equal')
-        self.ax.axis('off')
+        self.ax.set_aspect("equal")
+        self.ax.axis("off")
 
         plt.ion()
         plt.show()
@@ -48,11 +49,36 @@ class toric:
         self.vertices = {}
 
         # Initate legend
-        le_xv = Line2D([0], [0], lw=0, marker='o', color='w', mew=0, mfc=self.cx, ms=10, label='X-vertex')
-        le_zv = Line2D([0], [0], lw=0, marker='o', color='w', mew=0, mfc=self.cz, ms=10, label='Z-vertex')
-        le_xe = Line2D([0], [0], ls='-', lw=self.lw, color=self.cx, label='X-edge')
-        le_ze = Line2D([0], [0], ls='--', lw=self.lw, color=self.cz, label='Z-edge')
-        self.ax.legend(handles=[le_xv, le_zv, le_xe, le_ze], bbox_to_anchor=(1.15, 0.95), loc='upper right', ncol=1)
+        le_xv = Line2D(
+            [0],
+            [0],
+            lw=0,
+            marker="o",
+            color="w",
+            mew=0,
+            mfc=self.cx,
+            ms=10,
+            label="X-vertex",
+        )
+        le_zv = Line2D(
+            [0],
+            [0],
+            lw=0,
+            marker="o",
+            color="w",
+            mew=0,
+            mfc=self.cz,
+            ms=10,
+            label="Z-vertex",
+        )
+        le_xe = Line2D([0], [0], ls="-", lw=self.lw, color=self.cx, label="X-edge")
+        le_ze = Line2D([0], [0], ls="--", lw=self.lw, color=self.cz, label="Z-edge")
+        self.ax.legend(
+            handles=[le_xv, le_zv, le_xe, le_ze],
+            bbox_to_anchor=(1.15, 0.95),
+            loc="upper right",
+            ncol=1,
+        )
 
         # Initate plot
         C1 = [self.cx, self.cz]
@@ -67,7 +93,11 @@ class toric:
 
             if ertype == 0:
 
-                (y1, x1) = (y0, (x0 + 1) % self.size) if type == 0 else ((y0 + 1) % self.size, x0)
+                (y1, x1) = (
+                    (y0, (x0 + 1) % self.size)
+                    if type == 0
+                    else ((y0 + 1) % self.size, x0)
+                )
 
                 if y0 == self.size - 1:
                     y0 = self.size if y0 == 0 else y0
@@ -76,20 +106,24 @@ class toric:
                     x0 = self.size if x0 == 0 else x0
                     x1 = self.size if x1 == 0 else x1
             else:
-                (y1, x1) = (y0, (x0 - 1) % self.size) if type == 1 else ((y0 - 1) % self.size, x0)
+                (y1, x1) = (
+                    (y0, (x0 - 1) % self.size)
+                    if type == 1
+                    else ((y0 - 1) % self.size, x0)
+                )
 
                 if y0 == 0:
-                    y0 = -.5 if y0 == self.size - 1 else y0 + .5
-                    y1 = -.5 if y1 == self.size - 1 else y1 + .5
+                    y0 = -0.5 if y0 == self.size - 1 else y0 + 0.5
+                    y1 = -0.5 if y1 == self.size - 1 else y1 + 0.5
                 else:
-                    y0 += .5
-                    y1 += .5
+                    y0 += 0.5
+                    y1 += 0.5
                 if x0 == 0:
-                    x0 = -.5 if x0 == self.size - 1 else x0 + .5
-                    x1 = -.5 if x1 == self.size - 1 else x1 + .5
+                    x0 = -0.5 if x0 == self.size - 1 else x0 + 0.5
+                    x1 = -0.5 if x1 == self.size - 1 else x1 + 0.5
                 else:
-                    x0 += .5
-                    x1 += .5
+                    x0 += 0.5
+                    x1 += 0.5
 
             if edge.erasure:
                 color = C1[ertype]
@@ -98,19 +132,23 @@ class toric:
                 color = self.cl
                 alpha = self.alpha
 
-            xm = (x0 + x1)/2
-            ym = (y0 + y1)/2
+            xm = (x0 + x1) / 2
+            ym = (y0 + y1) / 2
             id0 = (edge.qID, 0)
             id1 = (edge.qID, 1)
-            self.edges[id0] = self.ax.plot([x0, xm], [y0, ym], c=color, lw=self.lw, ls=LS[ertype], alpha=alpha)
-            self.edges[id1] = self.ax.plot([xm, x1], [ym, y1], c=color, lw=self.lw, ls=LS[ertype], alpha=alpha)
+            self.edges[id0] = self.ax.plot(
+                [x0, xm], [y0, ym], c=color, lw=self.lw, ls=LS[ertype], alpha=alpha
+            )
+            self.edges[id1] = self.ax.plot(
+                [xm, x1], [ym, y1], c=color, lw=self.lw, ls=LS[ertype], alpha=alpha
+            )
 
         for vertex in graph.V.values():
 
             (ertype, y, x) = vertex.sID
             if ertype == 1:
-                y += .5
-                x += .5
+                y += 0.5
+                x += 0.5
 
             if vertex.state:
                 fill = True
@@ -119,7 +157,14 @@ class toric:
                 fill = False
                 lw = 0
 
-            self.vertices[vertex.sID] = plt.Circle((x, y), self.qsize, facecolor=C2[ertype], linewidth=lw, edgecolor=C1[ertype], fill=fill)
+            self.vertices[vertex.sID] = plt.Circle(
+                (x, y),
+                self.qsize,
+                facecolor=C2[ertype],
+                linewidth=lw,
+                edgecolor=C1[ertype],
+                fill=fill,
+            )
             self.ax.add_artist(self.vertices[vertex.sID])
 
         self.canvas.blit(self.ax.bbox)
@@ -133,18 +178,18 @@ class toric:
         while not keyboardClick:
             keyboardClick = plt.waitforbuttonpress(120)
 
-    '''
+    """
     ________________________________________________________________________________
 
     main plot functions
 
-    '''
+    """
 
     def plot_removed(self, graph, str):
-        '''
+        """
         :param rem_list         list of edges
         plots the normal edge color over the edges that have been removed during the formation of the tree structure
-        '''
+        """
 
         plt.sca(self.ax)
 
@@ -162,7 +207,6 @@ class toric:
 
         self.canvas.blit(self.ax.bbox)
         self.waitforkeypress(str)
-
 
     def add_edge(self, edge, vertex):
 
@@ -210,21 +254,20 @@ class toric:
         elif txt is not None:
             print(txt)
 
-
-    '''
+    """
     ________________________________________________________________________________
 
     stepwise plot functions
 
-    '''
+    """
 
     def plot_edge_step(self, edge, type):
-        '''
+        """
         plots an edge that is to be removed from the plot
         1.  plots black edge as indication
         2.  plots normal edge color
 
-        '''
+        """
         if type == "remove":
             c1 = self.cl
             c2 = self.cl
@@ -252,8 +295,8 @@ class toric:
         edge1 = self.edges[(edge.qID, 1)][0]
         edge0.set_alpha(1)
         edge1.set_alpha(1)
-        edge0.set_color('k')
-        edge1.set_color('k')
+        edge0.set_color("k")
+        edge1.set_color("k")
         self.ax.draw_artist(edge0)
         self.ax.draw_artist(edge1)
 
@@ -277,10 +320,10 @@ class toric:
         self.ax.draw_artist(edge1)
 
     def plot_strip_step_anyon(self, vertex):
-        '''
+        """
         plot function for the flips of the anyons
         plots the anyon in white (removal) or normal error edge color (addition)
-        '''
+        """
 
         type, y, x = vertex.sID
 

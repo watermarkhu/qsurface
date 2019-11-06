@@ -4,79 +4,81 @@ import os
 import time
 
 
+def getMatching_fast(numNodes, nodes1, nodes2, weights):
 
-def getMatching_fast(numNodes,nodes1, nodes2, weights):
-	
-	numEdges=len(nodes1);
+    numEdges = len(nodes1)
 
-	PMlib=ctypes.CDLL("%s/PMlib.so"%"/".join((os.path.realpath(__file__)).split("/")[:-1]))
+    PMlib = ctypes.CDLL(
+        "%s/PMlib.so" % "/".join((os.path.realpath(__file__)).split("/")[:-1])
+    )
 
-	PMlib.pyMatching.argtypes = [ctypes.c_int,ctypes.c_int,ctypes.POINTER(ctypes.c_int),ctypes.POINTER(ctypes.c_int),ctypes.POINTER(ctypes.c_int)]
+    PMlib.pyMatching.argtypes = [
+        ctypes.c_int,
+        ctypes.c_int,
+        ctypes.POINTER(ctypes.c_int),
+        ctypes.POINTER(ctypes.c_int),
+        ctypes.POINTER(ctypes.c_int),
+    ]
 
+    PMlib.pyMatching.restype = ndpointer(dtype=ctypes.c_int, shape=(numNodes,))
 
-	PMlib.pyMatching.restype = ndpointer(dtype=ctypes.c_int, shape=(numNodes,))
+    # initialize ctypes array and fill with edge data
+    n1 = (ctypes.c_int * numEdges)()
+    n2 = (ctypes.c_int * numEdges)()
+    w = (ctypes.c_int * numEdges)()
 
-# initialize ctypes array and fill with edge data
-	n1=(ctypes.c_int*numEdges)();
-	n2=(ctypes.c_int*numEdges)();
-	w=(ctypes.c_int*numEdges)();
+    for i in range(numEdges):
+        n1[i], n2[i], w[i] = nodes1[i], nodes2[i], weights[i]
 
-	for i in range(numEdges):
-		n1[i],n2[i],w[i]=nodes1[i],nodes2[i],weights[i]
+    result = PMlib.pyMatching(ctypes.c_int(numNodes), ctypes.c_int(numEdges), n1, n2, w)
 
-	result=PMlib.pyMatching(ctypes.c_int(numNodes),ctypes.c_int(numEdges),n1,n2,w)
-
-	return result
-
-
-
-
-
-
-def getMatching(numNodes,graphArray):
-	
-	mtime0 = time.time()
-
-	numEdges=len(graphArray);
-	
-	
-
-	PMlib=ctypes.CDLL("%s/PMlib.so"%"/".join((os.path.realpath(__file__)).split("/")[:-1]))
-
-	PMlib.pyMatching.argtypes = [ctypes.c_int,ctypes.c_int,ctypes.POINTER(ctypes.c_int),ctypes.POINTER(ctypes.c_int),ctypes.POINTER(ctypes.c_int)]
+    return result
 
 
-	PMlib.pyMatching.restype = ndpointer(dtype=ctypes.c_int, shape=(numNodes,))
+def getMatching(numNodes, graphArray):
 
-# initialize ctypes array and fill with edge data
-	nodes1=(ctypes.c_int*numEdges)();
-	nodes2=(ctypes.c_int*numEdges)();
-	weights=(ctypes.c_int*numEdges)();
+    mtime0 = time.time()
 
-	#c_int_array = ctypes.c_int*numEdges
-	
-#	nodes1 = c_int_array(*[graphArray[i][0] for i in range(numEdges)])
+    numEdges = len(graphArray)
 
+    PMlib = ctypes.CDLL(
+        "%s/PMlib.so" % "/".join((os.path.realpath(__file__)).split("/")[:-1])
+    )
 
-	for i in range(numEdges):
-		nodes1[i]=graphArray[i][0]
-		nodes2[i]=graphArray[i][1]
-		weights[i]=graphArray[i][2]
+    PMlib.pyMatching.argtypes = [
+        ctypes.c_int,
+        ctypes.c_int,
+        ctypes.POINTER(ctypes.c_int),
+        ctypes.POINTER(ctypes.c_int),
+        ctypes.POINTER(ctypes.c_int),
+    ]
 
-	
+    PMlib.pyMatching.restype = ndpointer(dtype=ctypes.c_int, shape=(numNodes,))
 
-#	mtime1 = time.time()
-#	print "matching overhead = ", mtime1-mtime0
+    # initialize ctypes array and fill with edge data
+    nodes1 = (ctypes.c_int * numEdges)()
+    nodes2 = (ctypes.c_int * numEdges)()
+    weights = (ctypes.c_int * numEdges)()
 
-	result=PMlib.pyMatching(ctypes.c_int(numNodes),ctypes.c_int(numEdges),nodes1,nodes2,weights)
+    # c_int_array = ctypes.c_int*numEdges
 
-#	mtime2 = time.time()
-#	print "matching time = ",mtime2 - mtime1
-	return result
+    # 	nodes1 = c_int_array(*[graphArray[i][0] for i in range(numEdges)])
 
+    for i in range(numEdges):
+        nodes1[i] = graphArray[i][0]
+        nodes2[i] = graphArray[i][1]
+        weights[i] = graphArray[i][2]
 
+    # 	mtime1 = time.time()
+    # 	print "matching overhead = ", mtime1-mtime0
 
+    result = PMlib.pyMatching(
+        ctypes.c_int(numNodes), ctypes.c_int(numEdges), nodes1, nodes2, weights
+    )
 
+    # 	mtime2 = time.time()
+    # 	print "matching time = ",mtime2 - mtime1
+    return result
 
 
 # pyInterface.o
@@ -93,9 +95,9 @@ def getMatching(numNodes,graphArray):
 # GEOM/GPMinit.o
 # GEOM/GPMinterface.o
 # GEOM/GPMkdtree.o
-# GEOM/GPMmain.o 
+# GEOM/GPMmain.o
 
-#compile all these files as: 
+# compile all these files as:
 
 # g++ -c -fPIC filename.cpp -lrt
 

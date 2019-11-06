@@ -9,15 +9,28 @@ from progiter import ProgIter
 import multiprocessing as mp
 
 
-def single(size, pE=0, pX=0, pZ=0, savefile=0, erasure_file=None, pauli_file=None, plot_load=False, graph=None, worker=0, iter=0, settings=None):
-    '''
+def single(
+    size,
+    pE=0,
+    pX=0,
+    pZ=0,
+    savefile=0,
+    erasure_file=None,
+    pauli_file=None,
+    plot_load=False,
+    graph=None,
+    worker=0,
+    iter=0,
+    settings=None,
+):
+    """
     Runs the peeling decoder for one iteration
-    '''
+    """
 
     if settings is None:
         ro, rt, vc = 0, 0, 0
     else:
-        ro, rt, vc = settings["ro"], settings["rt"], settings['vc']
+        ro, rt, vc = settings["ro"], settings["rt"], settings["vc"]
 
     if not os.path.exists("./errors/"):
         os.makedirs("./errors/")
@@ -28,22 +41,50 @@ def single(size, pE=0, pX=0, pZ=0, savefile=0, erasure_file=None, pauli_file=Non
     if graph is None:
         graph = go.init_toric_graph(size)
 
-    toric_plot = tp.lattice_plot(graph, plot_size=8, line_width=2) if plot_load else None
+    toric_plot = (
+        tp.lattice_plot(graph, plot_size=8, line_width=2) if plot_load else None
+    )
 
     # Initialize errors
     te.init_random_seed(worker=worker, iteration=iter)
     if pE != 0:
-        te.init_erasure_region(graph, pE, savefile, erasure_file=erasure_file, toric_plot=toric_plot, worker=worker)
+        te.init_erasure_region(
+            graph,
+            pE,
+            savefile,
+            erasure_file=erasure_file,
+            toric_plot=toric_plot,
+            worker=worker,
+        )
         # te.init_erasure(graph, pE, savefile, erasure_file, toric_plot=toric_plot, worker=worker)
 
-    te.init_pauli(graph, pX, pZ, savefile, pauli_file=pauli_file, toric_plot=toric_plot, worker=worker)
+    te.init_pauli(
+        graph,
+        pX,
+        pZ,
+        savefile,
+        pauli_file=pauli_file,
+        toric_plot=toric_plot,
+        worker=worker,
+    )
 
     # Measure stabiliziers
     tc.measure_stab(graph, toric_plot)
 
     # Peeling decoder
-    uf_plot = up.toric(graph, toric_plot.f, plot_size=8, line_width=1.5, plotstep_click=1) if plot_load else None
-    uf.find_clusters(graph, uf_plot=uf_plot, plot_step=0, random_order=ro, random_traverse=rt, vcomb=vc)
+    uf_plot = (
+        up.toric(graph, toric_plot.f, plot_size=8, line_width=1.5, plotstep_click=1)
+        if plot_load
+        else None
+    )
+    uf.find_clusters(
+        graph,
+        uf_plot=uf_plot,
+        plot_step=0,
+        random_order=ro,
+        random_traverse=rt,
+        vcomb=vc,
+    )
     uf.grow_clusters(graph, uf_plot=uf_plot, plot_step=0, random_traverse=rt, vcomb=vc)
     uf.peel_clusters(graph, uf_plot=uf_plot, plot_step=0)
 
@@ -57,12 +98,19 @@ def single(size, pE=0, pX=0, pZ=0, savefile=0, erasure_file=None, pauli_file=Non
     return correct
 
 
-def multiple(size, iters, pE=0, pX=0, pZ=0, plot_load=0, qres=None, worker=None, settings=None):
-    '''
+def multiple(
+    size, iters, pE=0, pX=0, pZ=0, plot_load=0, qres=None, worker=None, settings=None
+):
+    """
     Runs the peeling decoder for a number of iterations. The graph is reused for speedup.
-    '''
+    """
     graph = go.init_toric_graph(size)
-    result = [single(size, pE, pX, pZ, plot_load=plot_load, graph=graph, worker=worker, iter=i) for i in ProgIter(range(iters))]
+    result = [
+        single(
+            size, pE, pX, pZ, plot_load=plot_load, graph=graph, worker=worker, iter=i
+        )
+        for i in ProgIter(range(iters))
+    ]
     N_succes = sum(result)
     if qres is not None:
         qres.put(N_succes)
@@ -71,23 +119,43 @@ def multiple(size, iters, pE=0, pX=0, pZ=0, plot_load=0, qres=None, worker=None,
 
 
 def multiprocess(size, iters, pE=0, pX=0, pZ=0, processes=None, settings=None):
-    '''
+    """
     Runs the peeling decoder for a number of iterations, split over a number of processes
-    '''
+    """
 
     if processes is None:
         processes = mp.cpu_count()
 
     # Calculate iterations for ieach child process
-    process_iters = iters//processes
-    rest_iters = iters - process_iters*processes
+    process_iters = iters // processes
+    rest_iters = iters - process_iters * processes
 
     # Initiate processes
     qres = mp.Queue()
     workers = []
-    for i in range(processes-1):
-        workers.append(mp.Process(target=multiple, args=(size, process_iters, pE, pX, pZ, False, qres, i, settings)))
-    workers.append(mp.Process(target=multiple, args=(size, process_iters + rest_iters, pE, pX, pZ, False, qres, processes - 1, settings)))
+    for i in range(processes - 1):
+        workers.append(
+            mp.Process(
+                target=multiple,
+                args=(size, process_iters, pE, pX, pZ, False, qres, i, settings),
+            )
+        )
+    workers.append(
+        mp.Process(
+            target=multiple,
+            args=(
+                size,
+                process_iters + rest_iters,
+                pE,
+                pX,
+                pZ,
+                False,
+                qres,
+                processes - 1,
+                settings,
+            ),
+        )
+    )
 
     # Start and join processes
     for worker in workers:

@@ -1,9 +1,9 @@
 import matplotlib.pyplot as plt
 from progiter import ProgIter as pg
 
-sizes = 40**2
-boundary = [(0,0)]
-cluster = [(0,0)]
+sizes = 40 ** 2
+boundary = [(0, 0)]
+cluster = [(0, 0)]
 threshold_sizes = [5]
 
 
@@ -19,7 +19,7 @@ def get_new_v(cluster, boundary, manhattan_dis):
             dis = abs(newv[0]) + abs(newv[1])
             if newv not in cluster:
                 if dis == manhattan_dis:
-                    source_vertices.append((y,x))
+                    source_vertices.append((y, x))
                     new_vertices.append(newv)
                 if newv not in new_neighbors:
                     new_neighbors.add(newv)
@@ -32,7 +32,10 @@ def get_new_v(cluster, boundary, manhattan_dis):
             newv_extraneighborcount = 0
             for dy, dx in neighbors:
                 extra_neighbor = (newv[0] + dy, newv[1] + dx)
-                if extra_neighbor not in boundary and extra_neighbor not in new_neighbors:
+                if (
+                    extra_neighbor not in boundary
+                    and extra_neighbor not in new_neighbors
+                ):
                     newv_extraneighborcount += 1
 
             grow_sizes.append(len(cluster) + num_neighbors + newv_extraneighborcount)
@@ -60,7 +63,8 @@ for i in pg(range(1, sizes)):
     result = None
     while result is None:
         result = get_new_v(cluster, boundary, manhattan_dis)
-        if result is None: manhattan_dis += 1
+        if result is None:
+            manhattan_dis += 1
     newv, news, rembound = result
     boundary.append(newv)
     cluster.append(newv)
@@ -69,7 +73,7 @@ for i in pg(range(1, sizes)):
         boundary.remove(remv)
 
 threshold_sizes
-diff = [j-i for i, j in zip(threshold_sizes[:-1], threshold_sizes[1:])]
+diff = [j - i for i, j in zip(threshold_sizes[:-1], threshold_sizes[1:])]
 
 p = []
 k = 0
@@ -85,7 +89,7 @@ print(threshold_sizes[:50])
 print(diff[:50])
 print(p)
 for t in range(20):
-    print((t-1)//4 + 1 + ((t-1) % 4 + 2)%5//4)
+    print((t - 1) // 4 + 1 + ((t - 1) % 4 + 2) % 5 // 4)
 
 # sump = [sum(p[:i+1]) for i in range(len(p))]
 # print(sump)
@@ -94,33 +98,44 @@ for t in range(20):
 
 
 S = 4
-K = int(-7/4 + (49/16 + (S-8)/2)**(1/2))//1
+K = int(-7 / 4 + (49 / 16 + (S - 8) / 2) ** (1 / 2)) // 1
 
-PG = 2*K**2 + 3*K + 1
+PG = 2 * K ** 2 + 3 * K + 1
 PG
+
+
 def mop_growth_HG(size):
     if size == 1:
         return 5
     else:
-        K = (-3/4 + (9/16 + (size-2)/2)**(1/2))//1
-        PG = 6 + 2*K**2 + 7*K
-        id = (size - 2) - 2*K**2 - 3*K
-        if id < K + 1: CG = 2
-        elif id >= K + 1 and id < 2*(K+1): CG = 3
-        elif id >= 2*(K+1) and id < 3*(K+1) + 1: CG = 4
-        else: CG = 5
+        K = (-3 / 4 + (9 / 16 + (size - 2) / 2) ** (1 / 2)) // 1
+        PG = 6 + 2 * K ** 2 + 7 * K
+        id = (size - 2) - 2 * K ** 2 - 3 * K
+        if id < K + 1:
+            CG = 2
+        elif id >= K + 1 and id < 2 * (K + 1):
+            CG = 3
+        elif id >= 2 * (K + 1) and id < 3 * (K + 1) + 1:
+            CG = 4
+        else:
+            CG = 5
         return int(PG + id + CG)
 
 
 S = 47
-id = S - mop_growth_HG(PG+1)
+id = S - mop_growth_HG(PG + 1)
 id
 
-if id < K + 1: CG = id
-if id >= K + 1 and id < 2*(K+1) + 1: CG = id - 1
-if id >= 2*(K+1) + 1 and id < 3*(K+1) + 3: CG = id - 2
-if id >= 3*(K+1) + 3 and id < 4*(K+1) + 4: CG = id - 3
-if id >= 4*(K+1) + 4: id - 4
+if id < K + 1:
+    CG = id
+if id >= K + 1 and id < 2 * (K + 1) + 1:
+    CG = id - 1
+if id >= 2 * (K + 1) + 1 and id < 3 * (K + 1) + 3:
+    CG = id - 2
+if id >= 3 * (K + 1) + 3 and id < 4 * (K + 1) + 4:
+    CG = id - 3
+if id >= 4 * (K + 1) + 4:
+    id - 4
 
 CG
 
@@ -131,8 +146,8 @@ for y, x in cluster:
     else:
         plt.plot(x, y, ".", color="k", ms=2)
 ax = plt.gca()
-ax.set_aspect('equal')
+ax.set_aspect("equal")
 
-with open('your_file.txt', 'w') as f:
+with open("your_file.txt", "w") as f:
     for item in threshold_sizes:
         f.write("{0:d}\n".format(item))

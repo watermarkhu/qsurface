@@ -1,6 +1,7 @@
 import os
 
-def blossom(numNode,edges):
+
+def blossom(numNode, edges):
 
     cwd = os.getcwd()
     numGraph = len(edges)
@@ -23,7 +24,7 @@ def blossom(numNode,edges):
     result = []
     for line in lines[:]:
         split = line.split(" ")
-        result.append([int(split[0]),int(split[1])])
+        result.append([int(split[0]), int(split[1])])
     result = result[1:]
 
     # delete files

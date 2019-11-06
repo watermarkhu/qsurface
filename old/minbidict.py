@@ -1,5 +1,4 @@
 class minbidict(dict):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.inverse = {}
@@ -44,7 +43,6 @@ class minbidict(dict):
 
     def min_keys(self):
 
-
         min_val = self.minlist[self.min_ind]
         while min_val not in self.inverse:
             self.minlist.pop(self.min_ind)
@@ -52,7 +50,7 @@ class minbidict(dict):
 
         return self.inverse[min_val]
 
-        5//2
+        5 // 2
 
     def insert_value(self, value):
         if value <= self.minlist[-1]:
@@ -64,5 +62,5 @@ class minbidict(dict):
             mi = self.minlist[-1]
             pos_ind = len(self.minlist) - 1
 
-            ind = pos_ind - round((value - mi + 1)/(ma - mi)*pos_ind) + 1
+            ind = pos_ind - round((value - mi + 1) / (ma - mi) * pos_ind) + 1
             self.minlist.insert(ind, value)

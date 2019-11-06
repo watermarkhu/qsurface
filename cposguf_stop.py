@@ -14,9 +14,15 @@ pprint.pprint(computers)
 
 output = input("Select # computer to stop (type 'all' to stop all): ")
 
+
 def stop_comp(cur, comp_id):
-    cur.execute("UPDATE computers SET active_lattice = NULL, active_p = NULL WHERE comp_id = '{}'".format(comp_id))
+    cur.execute(
+        "UPDATE computers SET active_lattice = NULL, active_p = NULL WHERE comp_id = '{}'".format(
+            comp_id
+        )
+    )
     print(comp_id, "will stop after the current iteration.")
+
 
 if output == "all":
     for computer in computers.values():

@@ -19,7 +19,17 @@ import sys
 #     return correct
 
 
-def toric_2D_peeling(size, pE, pX=0, pZ=0, savefile=False, erasure_file=None, pauli_file=None, plot_load=False, graph=None):
+def toric_2D_peeling(
+    size,
+    pE,
+    pX=0,
+    pZ=0,
+    savefile=False,
+    erasure_file=None,
+    pauli_file=None,
+    plot_load=False,
+    graph=None,
+):
     if graph is None:
         TL = tl.lattice(size, pauli_file, erasure_file, plot_load)
     else:

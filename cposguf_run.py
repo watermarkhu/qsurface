@@ -17,12 +17,12 @@ def read_config(path="./cposguf.ini"):
     cp = ConfigParser()
     cp.read(path)
     sql_config = {}
-    comp_id = cp.get('config', 'comp_id')
-    num_process = cp.getint('config', 'num_process')
-    iters = cp.getint('config', 'iters')
-    names = ['host', 'port', 'database', 'user', 'password']
+    comp_id = cp.get("config", "comp_id")
+    num_process = cp.getint("config", "num_process")
+    iters = cp.getint("config", "iters")
+    names = ["host", "port", "database", "user", "password"]
     for name in names:
-        sql_config[name] = cp.get('sql_database', name)
+        sql_config[name] = cp.get("sql_database", name)
     return comp_id, num_process, iters, sql_config
 
 
@@ -39,7 +39,13 @@ def sql_connection(ini_path=None, get_data=False):
 
 
 def add_new_comp(cursor, id, cputype):
-    query = "INSERT INTO computers (comp_id, cpu_type) VALUES ('" + id + "', '" + cputype + "');"
+    query = (
+        "INSERT INTO computers (comp_id, cpu_type) VALUES ('"
+        + id
+        + "', '"
+        + cputype
+        + "');"
+    )
     cursor.execute(query)
 
 
@@ -58,14 +64,14 @@ def input_error_array(graph, array):
         graph.E[(0, int(y), int(x), int(td))].state = 1
 
 
-def fetch_query(selection, p=None, L=None, type=None, limit=None, extra=None):
+def fetch_query(selection, L=None, p=None, limit=None, extra=None):
     query = "SELECT {} FROM simulations ".format(selection)
     if L is not None:
         if isinstance(L, int):
             query += "WHERE lattice = " + str(L) + " "
         elif isinstance(L, list):
             query += "WHERE lattice IN " + str(L) + " "
-        if any([p is not None, type is not None, extra is not None]):
+        if any([p is not None, extra is not None]):
             query += "AND "
 
     if p is not None:
@@ -75,21 +81,11 @@ def fetch_query(selection, p=None, L=None, type=None, limit=None, extra=None):
             query += "p = " + str(p) + " "
         elif isinstance(p, list):
             query += "p IN " + str(p) + " "
-        if type is not None or extra is not None:
-            query += "AND "
-
-    if type is not None:
-        if L is None and p is None:
-            query += "WHERE "
-        if type == "tree":
-            query += "ftree_tlist = FALSE "
-        elif type == "list":
-            query += "ftree_tlist = TRUE "
         if extra is not None:
             query += "AND "
 
     if extra is not None:
-        if all([L is None, p is None, type is None]):
+        if all([L is None, p is None]):
             query += "WHERE "
         query += extra
         if extra[-1] != " ":
@@ -138,17 +134,21 @@ def multiple(comp_id, iters, size, p, worker=0):
     # Simulate
     graph = go.init_toric_graph(size)
     results = [single(graph, iter) for iter in ProgIter(range(iters))]
-    diff_res = [result[1:] for result in results if result[0] != result [1]]
+    diff_res = [result[1:] for result in results if result[0] != result[1]]
 
     # Insert simulation into database
     query = "INSERT INTO simulations (lattice, p, comp_id, created_on, ftree_tlist, seed) VALUES %s "
-    template = "({}, {}, '{}', current_timestamp, %s, %s)".format(str(size), str(p), str(comp_id))
+    template = "({}, {}, '{}', current_timestamp, %s, %s)".format(
+        str(size), str(p), str(comp_id)
+    )
     pgse.execute_values(cur, query, diff_res, template)
 
-
-
     # Update cases counters
-    cur.execute("SELECT tot_sims, tree_sims, list_sims, tree_wins, list_wins FROM cases WHERE lattice = {} AND p = {}".format(size, p))
+    cur.execute(
+        "SELECT tot_sims, tree_sims, list_sims, tree_wins, list_wins FROM cases WHERE lattice = {} AND p = {}".format(
+            size, p
+        )
+    )
     counter = list(cur.fetchone())
     counter[0] += iters
     for tree_solved, list_solved, _ in results:
@@ -161,7 +161,11 @@ def multiple(comp_id, iters, size, p, worker=0):
             if not tree_solved:
                 counter[4] += 1
 
-    cur.execute("UPDATE cases SET tot_sims = {}, tree_sims = {}, list_sims = {}, tree_wins = {}, list_wins = {} WHERE lattice = {} and p = {}".format(*counter, size, p))
+    cur.execute(
+        "UPDATE cases SET tot_sims = {}, tree_sims = {}, list_sims = {}, tree_wins = {}, list_wins = {} WHERE lattice = {} and p = {}".format(
+            *counter, size, p
+        )
+    )
 
     cur.close()
     con.close()
@@ -172,14 +176,20 @@ def multiprocess(comp_id, iters, size, p, processes=None):
     if processes is None:
         processes = mp.cpu_count()
 
-    process_iters = iters//processes
-    rest_iters = iters - process_iters*processes
+    process_iters = iters // processes
+    rest_iters = iters - process_iters * processes
     workers = []
 
-    for i in range(processes-1):
-        workers.append(mp.Process(target=multiple, args=(comp_id, process_iters, size, p, i)))
-    workers.append(mp.Process(target=multiple, args=(comp_id, process_iters + rest_iters, size, p, processes - 1)))
-
+    for i in range(processes - 1):
+        workers.append(
+            mp.Process(target=multiple, args=(comp_id, process_iters, size, p, i))
+        )
+    workers.append(
+        mp.Process(
+            target=multiple,
+            args=(comp_id, process_iters + rest_iters, size, p, processes - 1),
+        )
+    )
 
     for worker in workers:
         worker.start()
@@ -191,7 +201,7 @@ def multiprocess(comp_id, iters, size, p, processes=None):
         worker.join()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     con, cur, (comp_id, num_process, iters, sql_config) = sql_connection(get_data=1)
 
@@ -199,7 +209,7 @@ if __name__ == '__main__':
     cur.execute("SELECT comp_id FROM computers")
     computers = cur.fetchall()
     if comp_id not in [c[0] for c in computers]:
-        cputype = cpuinfo.get_cpu_info()['brand']
+        cputype = cpuinfo.get_cpu_info()["brand"]
         add_new_comp(cur, comp_id, cputype)
 
     running = True
@@ -217,14 +227,22 @@ if __name__ == '__main__':
         print("Selected lattice = {}, p = {}".format(lattice, p))
 
         # Set computer active case and simulate
-        cur.execute("UPDATE computers SET active_lattice = {}, active_p = {} WHERE comp_id = '{}'".format(lattice, p, comp_id))
+        cur.execute(
+            "UPDATE computers SET active_lattice = {}, active_p = {} WHERE comp_id = '{}'".format(
+                lattice, p, comp_id
+            )
+        )
         if num_process == 1:
             multiple(comp_id, iters, lattice, p)
         else:
             multiprocess(comp_id, iters, lattice, p, num_process)
 
         # Check if keep running
-        cur.execute("SELECT active_lattice, active_p FROM computers WHERE comp_id = '{}'".format(comp_id))
+        cur.execute(
+            "SELECT active_lattice, active_p FROM computers WHERE comp_id = '{}'".format(
+                comp_id
+            )
+        )
         if cur.fetchone() == (None, None):
             print("Stopped by user by database null entry")
             break

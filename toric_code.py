@@ -1,8 +1,7 @@
-
 import networkx as nx
 import blossom5.pyMatch as pm
 
-'''
+"""
 :param size:
 :param plot_load:
 
@@ -19,13 +18,13 @@ By doing so, we can define arrays the star and plaquette operators, where their 
 
 self.array stores the qubit values and has dimension [XZ_error{0,1}, Top_down{0,1}, size, size]
 Qubit values are either 0 or 1, which is analogous to the -1, and 1 state, respectively
-'''
+"""
 
 
 def measure_stab(graph, toric_plot=None):
-    '''
+    """
     The measurement outcomes of the stabilizers, which are the vertices on the graph are saved to their corresponding vertex objects. We loop over all vertex objects and over their neighboring edge or qubit objects.
-    '''
+    """
 
     for vertex in graph.V.values():
         for dir in graph.wind:
@@ -38,9 +37,9 @@ def measure_stab(graph, toric_plot=None):
 
 
 def get_matching_mwpm(graph):
-    '''
+    """
     Uses the MWPM algorithm to get the matchings. A list of combinations of all the anyons and their respective weights are feeded to the blossom5 algorithm. To apply the matchings, we walk from each matching vertex to where their paths meet perpendicualarly, flipping the edges on the way over.
-    '''
+    """
 
     nxgraph = nx.Graph()
 
@@ -48,7 +47,7 @@ def get_matching_mwpm(graph):
     num = 0
 
     for ertype in range(2):
-        anyons = []                     # Get all anyons as MWPM algorithm requires
+        anyons = []  # Get all anyons as MWPM algorithm requires
         for y in range(graph.size):
             for x in range(graph.size):
                 vertex = graph.V[(ertype, y, x)]
@@ -58,7 +57,7 @@ def get_matching_mwpm(graph):
 
         for i0, v0 in enumerate(anyons[:-1]):
             (_, y0, x0) = v0.sID
-            for i1, v1 in enumerate(anyons[i0 + 1:]):
+            for i1, v1 in enumerate(anyons[i0 + 1 :]):
                 (_, y1, x1) = v1.sID
                 wy = (y0 - y1) % (graph.size)
                 wx = (x0 - x1) % (graph.size)
@@ -72,17 +71,17 @@ def get_matching_mwpm(graph):
 
 
 def get_matching_blossom5(graph):
-    '''
+    """
     Uses the BlossomV algorithm to get the matchings. A list of combinations of all the anyons and their respective weights are feeded to the blossom5 algorithm. To apply the matchings, we walk from each matching vertex to where their paths meet perpendicualarly, flipping the edges on the way over.
-    '''
+    """
 
-    edges = []                      # Get all possible edges between the anyons and their weights
+    edges = []  # Get all possible edges between the anyons and their weights
 
     all_anyons = []
     num = 0
 
     for ertype in range(2):
-        anyons = []                     # Get all anyons as MWPM algorithm requires
+        anyons = []  # Get all anyons as MWPM algorithm requires
         for y in range(graph.size):
             for x in range(graph.size):
                 vertex = graph.V[(ertype, y, x)]
@@ -92,7 +91,7 @@ def get_matching_blossom5(graph):
 
         for i0, v0 in enumerate(anyons[:-1]):
             (_, y0, x0) = v0.sID
-            for i1, v1 in enumerate(anyons[i0 + 1:]):
+            for i1, v1 in enumerate(anyons[i0 + 1 :]):
                 (_, y1, x1) = v1.sID
                 wy = (y0 - y1) % (graph.size)
                 wx = (x0 - x1) % (graph.size)
@@ -107,36 +106,38 @@ def get_matching_blossom5(graph):
 
 def apply_matching_mwpm(graph, matching_pairs, toric_plot=None):
 
-    for v0, v1 in matching_pairs:   # Apply the matchings to the graph
+    for v0, v1 in matching_pairs:  # Apply the matchings to the graph
 
         (_, y0, x0) = v0.sID
         (_, y1, x1) = v1.sID
 
-        dy0 = (y0 - y1) % graph.size  # Get distance between endpoints, take modulo to find min distance
+        dy0 = (
+            y0 - y1
+        ) % graph.size  # Get distance between endpoints, take modulo to find min distance
         dx0 = (x0 - x1) % graph.size
         dy1 = (y1 - y0) % graph.size
         dx1 = (x1 - x0) % graph.size
 
-        if dy0 < dy1:               # Find closest path and walking direction
+        if dy0 < dy1:  # Find closest path and walking direction
             dy = dy0
-            yd = 'u'
+            yd = "u"
         else:
             dy = dy1
-            yd = 'd'
+            yd = "d"
         if dx0 < dx1:
             dx = dx0
-            xd = 'r'
+            xd = "r"
         else:
             dx = dx1
-            xd = 'l'
+            xd = "l"
 
-        ynext = v0                  # walk vertically from v0
+        ynext = v0  # walk vertically from v0
         for y in range(dy):
             (ynext, edge) = ynext.neighbors[yd]
             edge.state = not edge.state
             edge.matching = not edge.matching
 
-        xnext = v1                  # walk horizontally from v1
+        xnext = v1  # walk horizontally from v1
         for x in range(dx):
             (xnext, edge) = xnext.neighbors[xd]
             edge.state = not edge.state
@@ -148,10 +149,10 @@ def apply_matching_mwpm(graph, matching_pairs, toric_plot=None):
 
 
 def apply_matching_peeling(graph, toric_plot=None):
-    '''
+    """
     Uses the Peeling algorithm to get the matchings
     Optionally, edge_data can be inputted here, which is useful in multiple iteration simulations
-    '''
+    """
     for edge in graph.E.values():
         if edge.matching:
             edge.state = not edge.state
@@ -162,9 +163,9 @@ def apply_matching_peeling(graph, toric_plot=None):
 
 def logical_error(graph):
 
-    '''
+    """
     Finds whether there are any logical errors on the lattice/graph. The logical error is returned as [Xvertical, Xhorizontal, Zvertical, Zhorizontal], where each item represents a homological Loop
-    '''
+    """
     logical_error = [False, False, False, False]
 
     for i in range(graph.size):

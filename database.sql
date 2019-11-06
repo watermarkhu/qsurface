@@ -31,7 +31,10 @@ CREATE TABLE simulations (
   comp_id varchar(16) NOT NULL,
   created_on timestamp NOT NULL,
   ftree_tlist boolean NOT NULL,
-  seed float NOT NULL,
+  seed numeric(24,0) NOT NULL,
+  analysis1 boolean NOT NULL DEFAULT False,
+  analysis2 boolean NOT NULL DEFAULT False,
+  analysis3 boolean NOT NULL DEFAULT False,
   CONSTRAINT simulations_case_id_fkey FOREIGN KEY (lattice, p)
     REFERENCES cases (lattice, p) MATCH SIMPLE
     ON UPDATE NO ACTION ON DELETE NO ACTION,
@@ -48,8 +51,8 @@ CREATE VIEW cases_open AS
     FROM cases
     WHERE tot_sims::numeric/target_tot_sims < 1 AND
         tree_wins::numeric/target_tree_wins < 1 AND
-        list_wins::numeric/target_list_wins < 1;
-    ORDER BY lattice, p
+        list_wins::numeric/target_list_wins < 1
+    ORDER BY lattice, p;
 
 CREATE VIEW cases_open_free AS
     SELECT c.lattice, c.p,

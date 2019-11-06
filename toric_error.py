@@ -2,19 +2,21 @@ import sys
 import time
 import datetime
 import random
+from decimal import Decimal as dec
 
 
 def init_random_seed(timestamp=None, worker=0, iteration=0):
     if timestamp is None:
         timestamp = time.time()
-    seed = float(str(timestamp) + str(worker) + str(iteration))
-    random.seed(seed)
+    seed = "{:.0f}".format(timestamp*10**7) + str(worker) + str(iteration)
+    random.seed(dec(seed))
     return seed
-
 
 def apply_random_seed(seed=None):
     if seed is None:
         seed = init_random_seed()
+    if type(seed) is not dec:
+        seed = dec(seed)
     random.seed(seed)
 
 

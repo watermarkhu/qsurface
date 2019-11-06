@@ -7,7 +7,6 @@ import unionfind_tree as uft
 import multiprocessing as mp
 from progiter import ProgIter
 import psycopg2 as pgs
-from psycopg2 import extras as pgse
 from configparser import ConfigParser
 import cpuinfo
 import time
@@ -137,11 +136,11 @@ def multiple(comp_id, iters, size, p, worker=0):
     diff_res = [result[1:] for result in results if result[0] != result[1]]
 
     # Insert simulation into database
-    query = "INSERT INTO simulations (lattice, p, comp_id, created_on, ftree_tlist, seed) VALUES %s "
-    template = "({}, {}, '{}', current_timestamp, %s, %s)".format(
+    query = "INSERT INTO simulations (lattice, p, comp_id, created_on, ftree_tlist, seed) VALUES ({}, {}, '{}', current_timestamp, %s, %s)".format(
         str(size), str(p), str(comp_id)
     )
-    pgse.execute_values(cur, query, diff_res, template)
+
+    cur.executemany(query, diff_res)
 
     # Update cases counters
     cur.execute(
@@ -197,7 +196,7 @@ def multiprocess(comp_id, iters, size, p, processes=None):
     for worker in workers:
         while worker.is_alive():
             time.sleep(2)
-            print("Waiting for join...")
+            # print("Waiting for join...")
         worker.join()
 
 

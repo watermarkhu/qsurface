@@ -9,7 +9,7 @@ LP = [(l, p) for l in L for p in P]
 
 for (l, p) in LP:
     cur.execute(
-        "INSERT INTO cases (lattice, p, target_tot_sims, target_tree_wins, target_list_wins, tot_sims, tree_sims, list_sims, tree_wins, list_wins) VALUES ({}, {}, 1000000, 200000, 200000, 0, 0, 0, 0, 0)".format(
+        "INSERT INTO cases (lattice, p, target_tot_sims, target_tree_wins, target_list_wins, tot_sims, tree_sims, list_sims, tree_wins, list_wins) VALUES ({}, {}, 1000000, 20000, 20000, 0, 0, 0, 0, 0)".format(
             l, p
         )
     )

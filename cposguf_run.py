@@ -220,6 +220,9 @@ if __name__ == "__main__":
             cur.execute("SELECT lattice, p FROM cases_open ORDER BY progress LIMIT 1")
             lowest = cur.fetchone()
             if lowest == None:
+                cur.execute(
+                    f"UPDATE computers SET active_lattice = null, active_p = null WHERE comp_id = '{comp_id}'"
+                    )
                 exit()
         lattice, deci_p = lowest
         p = float(deci_p)

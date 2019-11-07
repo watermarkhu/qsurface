@@ -4,8 +4,11 @@
 *.ini
 *.o
 *.so
+*.pkl
 __pycache__/
 errors/
 figures/
 data/
 blossom5/*.txt
+logs/
+anim/

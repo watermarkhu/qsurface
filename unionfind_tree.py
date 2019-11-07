@@ -1,11 +1,9 @@
-import random
+import printing as pr
 from unionfind import (
     cluster_new_vertex,
     cluster_place_bucket,
     find_cluster_root,
     union_clusters,
-    find_clusters,
-    peel_clusters,
 )
 
 # Main functions
@@ -117,10 +115,8 @@ def grow_clusters(graph, uf_plot=None, plot_step=0, random_traverse=0, vcomb=0):
             bucket_i > graph.maxbucket
         ):  # Break from upper buckets if top bucket has been reached.
             if uf_plot is not None:
-                txt = "Max bucket number reached."
-                uf_plot.waitforkeypress(txt) if plot else input(
-                    txt + " Press any key to continue...\n"
-                )
+                pr.printlog("Max bucket number reached.")
+                uf_plot.waitforkeypress() if plot else input()
             break
 
         if bucket == []:
@@ -147,7 +143,8 @@ def grow_clusters(graph, uf_plot=None, plot_step=0, random_traverse=0, vcomb=0):
                 "Growing bucket #" + str(bucket_i) + "/" + str(graph.maxbucket) + "."
             )
     if plot:
-        uf_plot.waitforkeypress("Clusters grown.")
+        pr.printlog("Clusters grown.")
+        uf_plot.waitforkeypress()
 
 
 def grow_full(
@@ -172,7 +169,7 @@ def grow_full(
     merge_cluster = None
 
     if cluster.childs[1] != [] and print_steps:
-        print(cluster, "has fosters:", cluster.childs[1])
+        pr.printlog(f"{cluster} has fosters: {cluster.childs[1]}")
 
     while cluster.childs[1] != []:
         foster_cluster = cluster.childs[1].pop()
@@ -192,7 +189,7 @@ def grow_full(
 
     if family_growth:
         if cluster.childs[0] != [] and print_steps:
-            print(cluster, "has children:", cluster.childs[0])
+            pr.printlog(f"{cluster} has children: {cluster.childs[0]}")
         while cluster.childs[0] != []:  # First go through child clusters
             child_cluster = cluster.childs[0].pop()
             grow_full(
@@ -242,7 +239,7 @@ def grow_full(
                 if intervention and family_growth and grrt_cluster.parity % 2 == 0:
                     grrt_cluster.childs[1].append(root_cluster)
                     if print_steps:
-                        print("intervention on merge.")
+                        pr.printlog("intervention on merge.")
                     break
             elif not support:
                 root_cluster.boundary[1].append((base_vertex, edge, grow_vertex))
@@ -264,9 +261,9 @@ def grow_full(
         uf_plot.draw_plot(string)
     if print_steps and root_level:
         if not plot:
-            print(string)
+            pr.printlog(string)
         print_cluster = root_cluster if merge_cluster is None else merge_cluster
-        graph.print_graph_stop([print_cluster], prestring="A: ")
+        pr.print_graph(graph, [print_cluster], prestring="A: ", poststring="")
         if plot and plot_step:
             uf_plot.waitforkeypress()
 
@@ -284,7 +281,7 @@ def grow_clusters_full(
     plot = True if uf_plot is not None else False
 
     if print_steps:
-        graph.print_graph_stop()
+        pr.print_graph(graph)
         uf_plot.waitforkeypress() if plot else input("Press any key to continue...")
 
     for bucket_i, bucket in enumerate(graph.buckets):
@@ -293,22 +290,16 @@ def grow_clusters_full(
             bucket_i > graph.maxbucket
         ):  # Break from upper buckets if top bucket has been reached.
             if uf_plot is not None or print_steps:
-                txt = "Max bucket number reached."
-                uf_plot.waitforkeypress(txt) if plot else input(
-                    txt + " Press any key to continue...\n"
-                )
+                pr.printlog("Max bucket number reached.")
+                uf_plot.waitforkeypress() if plot else input()
             break
 
         if bucket == []:
             continue
 
         if print_steps:
-            print("############################ GROW ############################")
-            print("Growing bucket", bucket_i, "of", graph.maxbucket, ":", bucket)
-            print(
-                "Remaining buckets:",
-                graph.buckets[bucket_i + 1 : graph.maxbucket + 1],
-                graph.wastebasket,
+            pr.printlog(
+                "\n############################ GROW ############################" + f"\nGrowing bucket {bucket_i} of {graph.maxbucket}: {bucket}" + f"\nRemaining buckets: {graph.buckets[bucket_i + 1 : graph.maxbucket + 1]}, {graph.wastebasket}\n"
             )
             uf_plot.waitforkeypress() if plot else input(
                 "Press any key to continue...\n"
@@ -322,7 +313,7 @@ def grow_clusters_full(
                 root_cluster.bucket == bucket_i
             ):  # Check that cluster is not already in a higher bucket
                 if print_steps:
-                    graph.print_graph_stop([root_cluster], prestring="B: ")
+                    pr.print_graph(graph, [root_cluster], prestring="B: ")
                 grow_full(
                     graph,
                     root_cluster,
@@ -339,15 +330,15 @@ def grow_clusters_full(
             else:
                 if print_steps:
                     if root_cluster.bucket is None:
-                        print(root_cluster, "is even.\n")
+                        pr.printlog(f"{root_cluster} is even.\n")
                     else:
                         if root_cluster.bucket > graph.maxbucket:
-                            print(root_cluster, "is already in the wastebasket\n")
+                            pr.printlog(f"{root_cluster} is already in the wastebasket\n")
                         else:
-                            print(root_cluster, "is already in another bucket.\n")
+                            pr.printlog(f"{root_cluster} is already in another bucket.\n")
 
         if print_steps:
-            graph.print_graph_stop(printmerged=0)
+            pr.print_graph(graph, printmerged=0)
 
         if plot and not plot_step:
             txt = (
@@ -362,6 +353,7 @@ def grow_clusters_full(
             uf_plot.draw_plot(txt)
     if plot:
         if print_steps:
-            graph.print_graph_stop()
+            pr.print_graph(graph)
         if plot_step:
-            uf_plot.waitforkeypress("Clusters grown.")
+            pr.printlog("Clusters grown.")
+            uf_plot.waitforkeypress()

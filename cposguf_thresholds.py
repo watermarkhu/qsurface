@@ -19,8 +19,8 @@ for L, p, N, t1, t2 in data:
         fitt2.append(t2)
 
 uf0, uf1 = plot_thresholds(
-    fitL, fitp, fitN, fitt1, plot_name="tree", modified_ansatz=1, data_select="even"
+    fitL, fitp, fitN, fitt1, plot_name="tree", modified_ansatz=0, data_select="even"
 )
 vf0, vf1 = plot_thresholds(
-    fitL, fitp, fitN, fitt2, plot_name="list", modified_ansatz=1, data_select="even"
+    fitL, fitp, fitN, fitt2, plot_name="list", modified_ansatz=0, data_select="even"
 )

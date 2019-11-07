@@ -1,13 +1,14 @@
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
-
+import printing as pr
 
 class toric:
     def __init__(
-        self, graph, figure, axn=2, plot_size=10, line_width=1.5, plotstep_click=False
+        self, graph, figure, axn=2, plot_size=10, line_width=1.5, plotstep_click=False, camera=None
     ):
 
         self.size = graph.size
+        self.camera = camera
 
         self.cl = [0.2, 0.2, 0.2]  # Line color
         self.cx = [0.9, 0.3, 0.3]  # X error color
@@ -38,8 +39,12 @@ class toric:
 
         self.ax.invert_yaxis()
         self.ax.set_aspect("equal")
-        self.ax.axis("off")
-
+        self.ax.set_yticklabels([])
+        self.ax.set_xticklabels([])
+        for spine in self.ax.spines.values():
+            spine.set_visible(False)
+        self.ax.get_xaxis().set_ticks([])
+        self.ax.get_yaxis().set_ticks([])
         plt.ion()
         plt.show()
 
@@ -75,7 +80,7 @@ class toric:
         le_ze = Line2D([0], [0], ls="--", lw=self.lw, color=self.cz, label="Z-edge")
         self.ax.legend(
             handles=[le_xv, le_zv, le_xe, le_ze],
-            bbox_to_anchor=(1.15, 0.95),
+            bbox_to_anchor=(1.35, 0.95),
             loc="upper right",
             ncol=1,
         )
@@ -168,15 +173,14 @@ class toric:
             self.ax.add_artist(self.vertices[vertex.sID])
 
         self.canvas.blit(self.ax.bbox)
-        self.waitforkeypress("Peeling lattice initiated.")
+        pr.printlog("Peeling lattice initiated.")
+        self.waitforkeypress()
 
-    def waitforkeypress(self, str=""):
-        if str != "":
-            str += " "
-        print(str + "Press any key (on plot) to continue...\n")
+    def waitforkeypress(self):
         keyboardClick = False
         while not keyboardClick:
             keyboardClick = plt.waitforbuttonpress(120)
+        if self.camera is not None: self.camera.snap()
 
     """
     ________________________________________________________________________________
@@ -185,7 +189,7 @@ class toric:
 
     """
 
-    def plot_removed(self, graph, str):
+    def plot_removed(self, graph, string):
         """
         :param rem_list         list of edges
         plots the normal edge color over the edges that have been removed during the formation of the tree structure
@@ -206,7 +210,8 @@ class toric:
                 self.ax.draw_artist(edge1)
 
         self.canvas.blit(self.ax.bbox)
-        self.waitforkeypress(str)
+        pr.printlog(string)
+        self.waitforkeypress()
 
     def add_edge(self, edge, vertex):
 
@@ -246,13 +251,11 @@ class toric:
             self.ax.draw_artist(edge1)
 
     def draw_plot(self, txt=None):
-
+        if txt is not None:
+            self.ax.set_xlabel(txt)
+            pr.printlog(txt)
         self.canvas.blit(self.ax.bbox)
-
-        if self.plotstep_click:
-            self.waitforkeypress(txt)
-        elif txt is not None:
-            print(txt)
+        if self.plotstep_click: self.waitforkeypress()
 
     """
     ________________________________________________________________________________
@@ -303,10 +306,8 @@ class toric:
         self.canvas.blit(self.ax.bbox)
 
         line = text + " edge " + str(edge)
-        if self.plotstep_click:
-            self.waitforkeypress(line)
-        else:
-            print(line)
+        pr.printlog(line)
+        if self.plotstep_click: self.waitforkeypress()
 
         edge0.set_alpha(alpha)
         edge1.set_alpha(alpha)

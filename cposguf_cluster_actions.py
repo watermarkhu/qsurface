@@ -298,20 +298,22 @@ def get_count(clusters, cluster_data, size, type):
             dim = max_dim(cluster)
             augs.append(cluster)
             cmid.append(dim[1])
-            if cluster in cluster_data:
-                cluster_data[cluster][type] += 1
+            fcluster = frozenset(cluster)
+            if fcluster in cluster_data:
+                cluster_data[fcluster][type] += 1
                 break
             mcluster = mirror(cluster, dim[0])
             mdim = max_dim(mcluster)
             augs.append(mcluster)
             cmid.append(mdim[1])
-            if mcluster in cluster_data:
-                cluster_data[mcluster][type] += 1
+            fmcluster = frozenset(mcluster)
+            if fmcluster in cluster_data:
+                cluster_data[fmcluster][type] += 1
                 break
             cluster = rotate(cluster, dim[0])
         else:
-            tupcluster = augs[cmid.index(min(cmid))]
-            cluster_data[tupcluster][type] += 1
+            ftupcluster = frozenset(augs[cmid.index(min(cmid))])
+            cluster_data[ftupcluster][type] += 1
 
     return cluster_data
 
@@ -331,19 +333,21 @@ def get_count2(clusters, cluster_data, size, n, type):
             dim = max_dim(cluster)
             augs.append(cluster)
             cmid.append(dim[1])
-            if cluster in cluster_data:
-                cluster_data[cluster][(size, n)][type] += 1
+            fcluster = frozenset(cluster)
+            if fcluster in cluster_data:
+                cluster_data[fcluster][(size, n)][type] += 1
                 break
             mcluster = mirror(cluster, dim[0])
             mdim = max_dim(mcluster)
             augs.append(mcluster)
             cmid.append(mdim[1])
-            if mcluster in cluster_data:
-                cluster_data[mcluster][(size, n)][type] += 1
+            fmcluster = frozenset(mcluster)
+            if fmcluster in cluster_data:
+                cluster_data[fmcluster][(size, n)][type] += 1
                 break
             cluster = rotate(cluster, dim[0])
         else:
-            tupcluster = augs[cmid.index(min(cmid))]
-            cluster_data[tupcluster][(size, n)][type] += 1
+            ftupcluster = frozenset(augs[cmid.index(min(cmid))])
+            cluster_data[ftupcluster][(size, n)][type] += 1
 
     return cluster_data

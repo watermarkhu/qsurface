@@ -112,7 +112,7 @@ class lattice_plot:
         self.lh = [le_qubit, le_xer, le_zer, le_yer, le_err, le_ver, le_pla]
 
         legend = plt.legend(
-            handles=self.lh, bbox_to_anchor=(-0.15, 0.95), loc="upper left", ncol=1
+            handles=self.lh, bbox_to_anchor=(-0.35, 0.95), loc="upper left", ncol=1
         )
         self.ax.add_artist(legend)
 

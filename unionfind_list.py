@@ -8,6 +8,7 @@ from unionfind import (
     peel_clusters,
 )
 
+
 # Main functions
 
 
@@ -87,6 +88,7 @@ def grow_clusters(
                     str(cluster) + " grown."
                 ) if plot and plot_step else None
 
+        if print_steps: mstr = {}
         for base_vertex, edge, grow_vertex in fusion:
             base_cluster = find_cluster_root(base_vertex.cluster)
             grow_cluster = find_cluster_root(grow_vertex.cluster)
@@ -105,8 +107,19 @@ def grow_clusters(
             else:  # Clusters merge by weighted union
                 if grow_cluster.size < base_cluster.size:  # apply weighted union
                     base_cluster, grow_cluster = grow_cluster, base_cluster
+                if print_steps:  # Keep track of which clusters are merged into one
+                    if base_cluster.cID not in mstr:
+                        mstr[base_cluster.cID] = graph.print_graph_stop([base_cluster], return_string=True)
+                    if grow_cluster.cID not in mstr:
+                        mstr[grow_cluster.cID] = graph.print_graph_stop([grow_cluster], return_string=True)
+                    mstr[grow_cluster.cID] += "\n" + mstr[base_cluster.cID]
+                    mstr.pop(base_cluster.cID)
                 union_clusters(grow_cluster, base_cluster)
                 grow_cluster.boundary[0].extend(base_cluster.boundary[0])
+
+        if print_steps:
+            for cID, string in mstr.items():
+                print("B:\n" + string + "A:\n" + graph.print_graph_stop([graph.C[cID]], return_string=True))
 
         uf_plot.draw_plot("Clusters merged") if plot and plot_step else None
 

@@ -2,8 +2,6 @@ import graph_objects as go
 import toric_code as tc
 import toric_error as te
 import unionfind as uf
-import unionfind_list as ufl
-import unionfind_tree as uft
 import multiprocessing as mp
 from progiter import ProgIter
 import psycopg2 as pgs
@@ -104,9 +102,11 @@ def multiple(comp_id, iters, size, p, worker=0):
 
         te.init_pauli(graph, pX=p)
         tc.measure_stab(graph)
-        uf.find_clusters(graph)
-        uft.grow_clusters(graph)
-        uf.peel_clusters(graph)
+
+        uff = uf.cluster_farmer(graph)
+        uff.find_clusters()
+        uff.grow_clusters(method="tree")
+        uff.peel_clusters()
         tc.apply_matching_peeling(graph)
         logical_error = tc.logical_error(graph)
         tree_solved = True if logical_error == [False, False, False, False] else False
@@ -115,9 +115,10 @@ def multiple(comp_id, iters, size, p, worker=0):
         te.apply_random_seed(seed)
         te.init_pauli(graph, pX=p)
         tc.measure_stab(graph)
-        uf.find_clusters(graph)
-        ufl.grow_clusters(graph)
-        uf.peel_clusters(graph)
+        uff = uf.cluster_farmer(graph)
+        uff.find_clusters()
+        uff.grow_clusters(method="list")
+        uff.peel_clusters()
         tc.apply_matching_peeling(graph)
         logical_error = tc.logical_error(graph)
         list_solved = True if logical_error == [False, False, False, False] else False

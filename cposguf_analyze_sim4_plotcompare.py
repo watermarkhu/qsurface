@@ -4,8 +4,6 @@ import toric_code as tc
 import toric_error as te
 import toric_plot as tp
 import unionfind as uf
-import unionfind_list as ufl
-import unionfind_tree as uft
 import uf_plot as up
 import logging
 import printing as pr
@@ -15,13 +13,12 @@ from matplotlib.lines import Line2D
 
 
 def grow_clusters(
-    graph_t,
+    uft,
     uf_plot_t,
-    graph_l,
+    ufl,
     uf_plot_l,
-    plot_step=0,
+    plot_growth=0,
     print_steps=0,
-    random_traverse=0,
 ):
 
     """
@@ -29,6 +26,7 @@ def grow_clusters(
     Starting from the lowest bucket, clusters are popped from the list and grown with {grow_cluster}. Due to the nature of how clusters are appended to the buckets, a cluster needs to be checked for 1) root level 2) bucket level and 3) parity before it can be grown.
 
     """
+
 
     for bucket_i, (bucket_t, bucket_l) in enumerate(
         zip(graph_t.buckets, graph_l.buckets)
@@ -46,33 +44,7 @@ def grow_clusters(
             )
             uf_plot_t.waitforkeypress()
 
-        while bucket_t != []:  # Loop over all clusters in the current bucket\
-            cluster = bucket_t.pop()
-            root_cluster = uf.find_cluster_root(cluster)
-            if root_cluster.bucket == bucket_i:
-                if print_steps:
-                    pr.print_graph(graph_t, [root_cluster], prestring="B: ")
-                uft.grow_full(
-                    graph_t,
-                    root_cluster,
-                    root_cluster,
-                    root_cluster.support,
-                    uf_plot_t,
-                    plot_step,
-                    print_steps,
-                    0,
-                    random_traverse,
-                    vcomb=0,
-                )
-            else:
-                if print_steps:
-                    if root_cluster.bucket is None:
-                        pr.printlog(f"{root_cluster} is even.\n")
-                    else:
-                        if root_cluster.bucket > graph_t.maxbucket:
-                            pr.printlog(f"{root_cluster} is already in the wastebasket\n")
-                        else:
-                            pr.printlog(f"{root_cluster} is already in another bucket.\n")
+        uft.tree_grow_bucket(bucket_t, bucket_i)
 
         uf_plot_t.ax.set_xlabel("")
         if print_steps:
@@ -84,93 +56,14 @@ def grow_clusters(
             )
             uf_plot_l.waitforkeypress()
 
-        fusion = []  # Initiate Fusion list
-        place = []
-
-        for cluster in bucket_l:  # Loop over all clusters in the current bucket
-            cluster = uf.find_cluster_root(cluster)
-
-            if (
-                cluster.bucket == bucket_i
-            ):  # Check that cluster is not already in a higher bucket
-                place.append(cluster)
-
-                cluster.boundary[1], cluster.boundary[0] = (
-                    cluster.boundary[0],
-                    [],
-                )  # Set boudary
-                cluster.support = (
-                    1 - cluster.support
-                )  # Grow cluster support for bucket placement
-                for vertex, new_edge, new_vertex in cluster.boundary[
-                    1
-                ]:  # Grow boundaries by half-edge
-                    if new_edge.support != 2:
-                        new_edge.support += 1
-                        if (
-                            new_edge.support == 2
-                        ):  # Apped to fusion list of edge fully grown
-                            fusion.append((vertex, new_edge, new_vertex))
-                        else:  # Half grown edges are added immediately to new boundary
-                            cluster.boundary[0].append((vertex, new_edge, new_vertex))
-                        uf_plot_l.add_edge(new_edge, vertex)
-                if plot_step: uf_plot_l.draw_plot(str(cluster) + " grown.")
-
-        if print_steps: mstr = {}
-        for base_vertex, edge, grow_vertex in fusion:
-            base_cluster = uf.find_cluster_root(base_vertex.cluster)
-            grow_cluster = uf.find_cluster_root(grow_vertex.cluster)
-            if (
-                grow_cluster is None
-            ):  # Fully grown edge. New vertex is on the old boundary. Find new boundary on vertex
-                base_cluster.add_vertex(grow_vertex)
-                uf.cluster_new_vertex(
-                    graph_l, base_cluster, grow_vertex, random_traverse=random_traverse
-                )
-            elif (
-                grow_cluster is base_cluster
-            ):  # Edge grown on itself. This cluster is already connected. Cut half-edge
-                edge.support -= 1
-                uf_plot_l.add_edge(edge, base_vertex)
-            else:  # Clusters merge by weighted union
-                if grow_cluster.size < base_cluster.size:  # apply weighted union
-                    base_cluster, grow_cluster = grow_cluster, base_cluster
-                if print_steps:  # Keep track of which clusters are merged into one
-                    if base_cluster.cID not in mstr:
-                        mstr[base_cluster.cID] = pr.print_graph(graph_l, [base_cluster], return_string=True)
-                    if grow_cluster.cID not in mstr:
-                        mstr[grow_cluster.cID] = pr.print_graph(graph_l, [grow_cluster], return_string=True)
-                    mstr[grow_cluster.cID] += "\n" + mstr[base_cluster.cID]
-                    mstr.pop(base_cluster.cID)
-                uf.union_clusters(grow_cluster, base_cluster)
-                grow_cluster.boundary[0].extend(base_cluster.boundary[0])
-        if print_steps:
-            pr.printlog("")
-            for cID, string in mstr.items():
-                pr.printlog(f"B:\n{string}\nA:\n{pr.print_graph(graph_l, [graph_l.C[cID]], return_string=True)}\n")
-
-        uf_plot_l.draw_plot("Clusters merged") if plot_step else None
-
-        # Put clusters in new buckets. Some will be added double, but will be skipped by the new_boundary check
-        for cluster in place:
-            cluster = uf.find_cluster_root(cluster)
-            uf.cluster_place_bucket(graph_l, cluster, vcomb=0)
+        ufl.list_grow_bucket(bucket_l, bucket_i)
 
         if print_steps:
             pr.print_graph(graph_l, printmerged=0)
-
         uf_plot_l.ax.set_xlabel("")
 
-        if not plot_step:
-            txt = (
-                ""
-                if print_steps
-                else "Growing bucket #"
-                + str(bucket_i)
-                + "/"
-                + str(max([graph_t.maxbucket, graph_l.maxbucket]))
-                + "."
-            )
+        if not plot_growth and not print_steps:
+            txt = "" if print_steps else f"Growing bucket #{bucket_i}/{max([graph_t.maxbucket, graph_l.maxbucket])}"
             uf_plot_t.draw_plot(txt)
             uf_plot_l.draw_plot()
 
@@ -261,20 +154,23 @@ def plot_both(graph_t, graph_l, seed, p, saveanim=None):
     axes[2].set_title("list peeling lattice")
     if saveanim is not None: camera.snap()
 
-    uf.find_clusters(graph_t, uf_plot=uf_plot_t, plot_step=0, vcomb=0)
-    uf.find_clusters(graph_l, uf_plot=uf_plot_l, plot_step=0, vcomb=1)
+    uft = uf.cluster_farmer(graph_t, uf_plot_t, plot_growth=0, print_steps=1)
+    ufl = uf.cluster_farmer(graph_l, uf_plot_l, plot_growth=0, print_steps=1)
+
+    uft.find_clusters(plot_step=0)
+    ufl.find_clusters(plot_step=0)
 
     grow_clusters(
-        graph_t,
+        uft,
         uf_plot_t,
-        graph_l,
+        ufl,
         uf_plot_l,
-        plot_step=0,
+        plot_growth=0,
         print_steps=1
     )
 
-    uf.peel_clusters(graph_t, uf_plot=uf_plot_t, plot_step=0)
-    uf.peel_clusters(graph_l, uf_plot=uf_plot_l, plot_step=0)
+    uft.peel_clusters(plot_step=0)
+    ufl.peel_clusters(plot_step=0)
 
     plot_final(toric_plot, graph_t, graph_l)
     if saveanim is not None:

@@ -7,7 +7,7 @@ from matplotlib import pyplot as plt
 import scipy.stats as stats
 from scipy.optimize import curve_fit
 import numpy as np
-import pickle
+import pickling as pk
 import os
 
 
@@ -37,15 +37,6 @@ def clusters1_3(): # All possible clusters between and including size 1 and 3
 def d0(): return [0,0]
 def d1(): return [[0,0], [0,0]]
 def d2(): return dd(d1)
-
-
-def load_obj(name ):
-    with open(f"/data/{name}.pkl", "rb") as f:
-        return pickle.load(f)
-
-def save_obj(obj, name):    # Save object to a pickled file
-    with open(f"/data/{name}.pkl", "wb") as f:
-        pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)
 
 def get_count(clusters, clist, size):
     """
@@ -87,7 +78,7 @@ def get_count(clusters, clist, size):
 
 if os.path.exists(file + ".pkl"):           # Load data_base if pickled file exists
     print("loading data " + file)
-    data = load_obj(file)
+    data = pk.load_obj(file)
     data_p, data_n = data["data_p"], data["data_n"]
     countp, countn = data["countp"], data["countn"]
 else:                                       # Initate database
@@ -200,4 +191,4 @@ for lattice in L:
             "countp": countp,
             "countn": countn
         }
-        save_obj(data, file)
+        pk.save_obj(data, file)

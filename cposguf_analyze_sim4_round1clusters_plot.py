@@ -4,18 +4,11 @@ import cposguf_cluster_actions as cca
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 import matplotlib as mpl
+import pickling as pk
 import os
 import numpy as np
 mpl.rcParams["savefig.directory"] = os.chdir(os.getcwd())
 
-
-def load_obj(name ):
-    with open(f"/data/{name}.pkl", "rb") as f:
-        return pickle.load(f)
-
-def save_obj(obj, name):    # Save object to a pickled file
-    with open(f"/data/{name}.pkl", "wb") as f:
-        pickle.dump(obj, f, pickle.HIGHEST_PROTOCOL)
 
 def clear_ax(i, n, name=""):
     ax = plt.gca()
@@ -36,7 +29,7 @@ def d1(): return [[0,0], [0,0]]
 def d2(): return dd(d1)
 
 
-data = load_obj("sim4_r1c_data_gauss12_44")
+data = pk.load_obj("sim4_r1c_data_gauss12_44")
 lrange = [8, 12, 16, 20, 24, 28, 32, 36, 40, 44]
 prange = [(90 + i)/1000 for i in range(21)]
 plotn = [0 + i for i in range(8)]
@@ -77,7 +70,7 @@ for i, cnum in enumerate(plotn):
 ax = plt.subplot(grid[1:, :])
 
 clms = np.zeros((2,len(plotn)))
-clmt = np.zeros((len(lrange), len(prange), len(plotn)))
+clmt = dd(list)
 
 for j, l in enumerate(lrange):
     for k, p in enumerate(prange):
@@ -88,7 +81,7 @@ for j, l in enumerate(lrange):
             (mu0, va0), (mu1, va1) = sdp[cnum][1][(l, p)]
             clms[0][i] = (oc*omu + nc0*mu0/no0 + nc1*mu1/no1)/(oc+nc0+nc1)
             clms[1][i] = (oc*(omu**2 + ova) + nc0*(mu0**2 + va0)/no0**2 + nc1*(mu1**2 + va1)/no1**2)/(oc + nc0 + nc1) - clms[0][i]**2
-            clmt[j, k, i] = (nc0*mu0/no0 + nc1*mu1/no1)/(nc0+nc1)
+            clmt[(l, p)].append((nc0*mu0/no0 + nc1*mu1/no1)/(nc0+nc1))
         oc += nc0 + nc1
 
 ax.set_title("Normalized averaged occurance rate of R1-clusters")
@@ -100,7 +93,7 @@ plt.show()
 
 ################################
 
-rtmt = np.zeros((len(lrange), len(prange), len(plotn)))
+rtmt = dd(list)
 fig = plt.figure()
 grid = plt.GridSpec(len(plotn), 10, wspace=0.8, hspace=0.5)
 
@@ -132,7 +125,7 @@ for i, cnum in enumerate(plotn):
             prange2.append(p*100)
             pratio.append(mt/ml)
             pavgc.append((nt + nl)/2)
-            rtmt[j, k, i] = mt/ml
+            rtmt[(l, p)].append(mt/ml)
 
         nrange = sorted([n for _,n in snp[cnum][1].keys()])
         nratio, nrange2, navgc = [], [], []
@@ -171,7 +164,7 @@ tldata = {
     "norm_avg_occ_p": clmt
     }
 
-save_obj(tldata, "sim4_tldata")
+pk.save_obj(tldata, "sim4_tldata")
 
 
 # fig = cca.plot_clusters(clusters, count, plotnum)

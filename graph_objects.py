@@ -74,6 +74,13 @@ class iGraph(object):
         for vertex in self.V.values():
             vertex.reset()
 
+    def grow_reset(self):
+        self.C = {}
+        for edge in self.E.values():
+            edge.grow_reset()
+        for vertex in self.V.values():
+            vertex.grow_reset()
+
 
 class iCluster(object):
     """
@@ -146,6 +153,9 @@ class iVertex(object):
         self.cluster = None
         self.tree = False
 
+    def grow_reset(self):
+        self.cluster = None
+        self.tree = None
 
 class iEdge(object):
     """
@@ -198,6 +208,11 @@ class iEdge(object):
         self.support = 0
         self.peeled = 0
         self.matching = 0
+
+    def grow_reset(self):
+        self.cluster = None
+        self.support = 0
+        self.peeled = 0
 
 
 def init_toric_graph(size):

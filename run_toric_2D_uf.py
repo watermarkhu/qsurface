@@ -2,7 +2,7 @@ import graph_objects as go
 import toric_code as tc
 import toric_error as te
 import toric_plot as tp
-import unionfind_tree as uf
+import unionfind as uf
 import uf_plot as up
 import os
 from progiter import ProgIter
@@ -45,6 +45,7 @@ def single(
         tp.lattice_plot(graph, plot_size=8, line_width=2) if plot_load else None
     )
 
+
     # Initialize errors
     te.init_random_seed(worker=worker, iteration=iter)
     if pE != 0:
@@ -53,8 +54,7 @@ def single(
             pE,
             savefile,
             erasure_file=erasure_file,
-            toric_plot=toric_plot,
-            worker=worker,
+            toric_plot=toric_plot
         )
         # te.init_erasure(graph, pE, savefile, erasure_file, toric_plot=toric_plot, worker=worker)
 
@@ -65,7 +65,6 @@ def single(
         savefile,
         pauli_file=pauli_file,
         toric_plot=toric_plot,
-        worker=worker,
     )
 
     # Measure stabiliziers
@@ -77,16 +76,20 @@ def single(
         if plot_load
         else None
     )
-    uf.find_clusters(
+
+
+    ufg = uf.cluster_farmer(
         graph,
-        uf_plot=uf_plot,
-        plot_step=0,
-        random_order=ro,
-        random_traverse=rt,
-        vcomb=vc,
+        uf_plot,
+        plot_growth=0,
+        print_steps=0,
+        random_traverse=ro,
+        intervention=rt,
+        vcomb=0
     )
-    uf.grow_clusters(graph, uf_plot=uf_plot, plot_step=0, random_traverse=rt, vcomb=vc)
-    uf.peel_clusters(graph, uf_plot=uf_plot, plot_step=0)
+    ufg.find_clusters(plot_step=0)
+    ufg.grow_clusters(method="list")
+    ufg.peel_clusters(plot_step=0)
 
     # Apply matching
     tc.apply_matching_peeling(graph, toric_plot)

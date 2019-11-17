@@ -7,24 +7,18 @@ from progiter import ProgIter
 import multiprocessing as mp
 import cposguf_cluster_actions as cca
 from collections import defaultdict as dd
+from cluster_per_size import coordinates
 
+def d0(): return [0,0]
+def d1(): return [[0,0], [0,0]]
+def d2(): return dd(d1)
 
-def clusters1_3(): # All possible clusters between and including size 1 and 3
-    return 1, 3, [
-        frozenset({(0, 0, 0)}),
-        frozenset({(0, 0, 0), (0, 0, 1)}),
-        frozenset({(0, 0, 1), (1, 0, 1)}),
-        frozenset({(0, 0, 0), (0, 0, 1), (1, 0, 0)}),
-        frozenset({(1, 0, 0), (0, 1, 1), (0, 1, 0)}),
-        frozenset({(1, 0, 0), (0, 0, 1), (1, 0, 1)}),
-        frozenset({(0, 0, 0), (0, 0, 1), (0, 1, 0)}),
-        frozenset({(0, 0, 0), (0, 1, 0), (0, 2, 0)})
-    ]
+minl, maxl = 1, 4
+clist = coordinates(minl, maxl)
+data = pk.load_obj("sim4_r1c_data_gauss12_44-1-4")
+data_p = data["data_p"]
+countp = data["countp"]
 
-minl, maxl, clist = clusters1_3()
-tldata = pk.load_obj("sim4_tldata")
-tl_ratio_p = tldata["tl_ratio_p"]
-norm_avg_occ_p = tldata["norm_avg_occ_p"]
 
 def get_count(clusters, clist, size):
     """
@@ -68,61 +62,91 @@ def single(size, pX=0, graph=None, worker=0, iter=0):
     Runs the peeling decoder for one iteration
     """
 
+    size, pX, graph, worker, iter = 32, 0.089, None, 0, 0
+
     # Initialize lattice
     if graph is None:
         graph = go.init_toric_graph(size)
+    else:
+        graph.reset()
 
     # Initialize errors
     te.init_random_seed(worker=worker, iteration=iter)
     te.init_pauli(graph, pX)
 
+    # errors = [
+    #     graph.E[(0, y, x, td)].qID[1:]
+    #     for y in range(size) for x in range(size) for td in range(2)
+    #     if graph.E[(0, y, x, td)].state
+    # ]
+    # n = len(errors)
+    # choice = "tree" if n < size**2*0.2 else "list"
+
     # Measure stabiliziers
     tc.measure_stab(graph)
 
     ufg = uf.cluster_farmer(graph)
-    ufg.find_clusters()
-    ufg.tree_grow_bucket(graph.buckets[0], 0)
+    # ufg.find_clusters()
 
-    clusters = dd(list)
-    for y in range(size):
-        for x in range(size):
-            for td in range(2):
-                cluster = uf.find_cluster_root(graph.E[(0, y, x, td)].cluster)
-                if cluster is not None:
-                    clusters[cluster.cID].append((y, x, td))
+    errors = [
+        graph.E[(0, y, x, td)].qID[1:]
+        for y in range(size) for x in range(size) for td in range(2)
+        if graph.E[(0, y, x, td)].state
+    ]
+
+    # Get clusters from array data
+    clusters = cca.get_clusters_from_list(errors, size)
+
+
+    # ufg.tree_grow_bucket(graph.buckets[0], 0)
+    #
+    # clusters = dd(list)
+    # for y in range(size):
+    #     for x in range(size):
+    #         for td in range(2):
+    #             cluster = uf.find_cluster_root(graph.E[(0, y, x, td)].cluster)
+    #             if cluster is not None:
+    #                 clusters[cluster.cID].append((y, x, td))
+
     clusters = [
         cluster
         for cluster in clusters.values()
         if len(cluster) >= minl and len(cluster) <= maxl
     ]
+
     count = get_count(clusters, clist, size)
+    count
+    norm = [cc[0][0] - cc[1][0] for cc in [data_p[cl][(size, pX)] for cl in clist]]
 
-    cval = [co*oc*(ra-1) for co, oc, ra in zip(count, norm_avg_occ_p[(size, pX)], tl_ratio_p[(size, pX)])]
-    choice = 1 - int((sum(cval)+1) // 1)
+    # Old norm
+    # norm = [(ra**2-1)/(oc**.1) for oc, ra in zip(norm_avg_occ_p[(size, pX)], tl_ratio_p[(size, pX)])]
 
-    if choice == 0:
-        ufg.grow_clusters(method="tree", start_bucket=1)
-    else:
-        graph.grow_reset()
-        ufg.find_clusters()
-        ufg.grow_clusters(method="list")
+    cval = [co*no for co, no in zip(count, norm)]
 
-    ufg.peel_clusters(plot_step=0)
+    choice = "tree" if sum(cval[0:]) >= 0 else "list"
+
+    # graph.grow_reset()
+    ufg.find_clusters()
+    ufg.grow_clusters(method=choice)
+    ufg.peel_clusters()
 
     # Apply matching
     tc.apply_matching_peeling(graph)
 
     # Measure logical operator
     logical_error = tc.logical_error(graph)
-    graph.reset()
     correct = 1 if logical_error == [False, False, False, False] else 0
     return correct, choice
 
 
-def multiple(size, iters, pX=0, qres=None, worker=0):
+def multiple(size, iters, pX=0, qres=None, worker=None):
     """
     Runs the peeling decoder for a number of iterations. The graph is reused for speedup.
     """
+    if worker == None:
+        print(f"L = {size}, p = {pX}")
+        worker = 0
+
     graph = go.init_toric_graph(size)
     result = [
         single(size, pX, graph, worker, i)
@@ -169,34 +193,43 @@ def multiprocess(size, iters, pX=0, processes=None):
     )
 
     # Start and join processes
-    print("Started", processes, "workers.")
+    print(f"\nStarted {processes} workers for L = {size}, p = {pX}")
     for worker in workers:
         worker.start()
     for worker in workers:
         worker.join()
 
     results = [qres.get() for worker in workers]
-    suc_count = dd(int)
+    suc_count = {(1, "tree"):0, (1, "list"):0, (0, "tree"):0, (0, "list"):0}
     for result in results:
         for key, val in result.items():
             suc_count[key] += val
 
     return suc_count
 
-def d0(): return {(0,0):0, (0,1):0, (1,0):0, (1,1):0}
-database = dd(d0)
+def print_threshold(res):
+    tsucc = res[(1, "tree")]
+    lsucc = res[(1, "list")]
+    tfail = res[(0, "tree")]
+    lfail = res[(0, "list")]
+    tot = tsucc+tfail+lsucc+lfail
+    tthres = 0 if tsucc == 0 else tsucc/(tsucc+tfail)
+    lthres = 0 if lsucc == 0 else lsucc/(lsucc+lfail)
+    print("tree:", tthres, f"({(tsucc+tfail)/tot*100}%)")
+    print("list:", lthres, f"({(lsucc+lfail)/tot*100}%)")
+    print("both:", (tsucc+lsucc)/tot)
 
-L = [8 + 4*i for i in range(8)]
-P = [(90 + i)/1000 for i in range(11)]
-N = 50000
 
-for l in L:
-    for p in P:
+res = multiprocess(8, 30000, 0.089)
+print_threshold(res)
 
-        print("Calculating for L{}, p{}".format(l,p))
-        res = multiprocess(l, N, p)
-        print(res)
-        for key, val in res.items():
-            database[(l, p)][key] += val
-
-        pk.save_obj(database, "r1tl_threshold")
+# L = [8 + 4*i for i in range(7)]
+# P = [(90 + 2*i)/1000 for i in range(11)]
+# N = 10000
+# database = {}
+# for l in L:
+#     for p in P:
+#         res = multiprocess(l, N, p)
+#         print_threshold(res)
+#         database[(l, p)] = res
+#         pk.save_obj(database, "r1tl_threshold_p_norm0")

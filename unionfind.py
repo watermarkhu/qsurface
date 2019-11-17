@@ -117,7 +117,7 @@ class cluster_farmer:
 
     ##################  tree grown functions ####################
 
-    def grow(self, cluster, root_cluster, support):
+    def tree_grow(self, cluster, root_cluster, support):
         """
         :param cluster          the current cluster selected for growth
         :param root_cluster     the root cluster of the selected cluster
@@ -136,7 +136,7 @@ class cluster_farmer:
 
         while cluster.childs[1] != []:  # First go through child clusters
             child_cluster = cluster.childs[1].pop()
-            self.grow(child_cluster, root_cluster, support)
+            self.tree_grow(child_cluster, root_cluster, support)
 
         # cluster.boundary[0].reverse() if support == 0 else None
         while cluster.boundary[support] != []:
@@ -195,7 +195,7 @@ class cluster_farmer:
 
             # Check that cluster is not already in a higher bucket
             if cluster.bucket == bucket_i:
-                self.grow(cluster, cluster, cluster.support)
+                self.tree_grow(cluster, cluster, cluster.support)
 
 
     ############ tree_full mehod, includes intervention and more printing ##########
@@ -212,14 +212,14 @@ class cluster_farmer:
 
         while cluster.childs[1] != []:
             foster_cluster = cluster.childs[1].pop()
-            self.grow_full(foster_cluster, root_cluster, support, 0)
+            self.tree_grow_full(foster_cluster, root_cluster, support, 0)
 
         if family_growth:
             if cluster.childs[0] != [] and self.print_steps:
                 pr.printlog(f"{cluster} has children: {cluster.childs[0]}")
             while cluster.childs[0] != []:  # First go through child clusters
                 child_cluster = cluster.childs[0].pop()
-                self.grow_full(child_cluster, root_cluster, support, 1)
+                self.tree_grow_full(child_cluster, root_cluster, support, 1)
 
         # cluster.boundary[0].reverse() if support == 0 else None
         while cluster.boundary[support] != []:
@@ -294,7 +294,7 @@ class cluster_farmer:
             # Check that cluster is not already in a higher bucket
                 if self.print_steps:
                     pr.print_graph(self.graph, [cluster], prestring="B: ")
-                self.grow_full(cluster, cluster, cluster.support, 1)
+                self.tree_grow_full(cluster, cluster, cluster.support, 1)
             else:
                 if self.print_steps:
                     if cluster.bucket is None:

@@ -13,11 +13,20 @@ def plot_thresholds(
     fitp,  # p value
     fitN,  # number of total simulations
     fitt,  # number of successes
-    plot_name=None,
+    plot_name="",
     data_select=None,
     modified_ansatz=False,
     plotn=1000,
+    show_plot=True,
+    ax0=None,
+    ax1=None,
+    styles=[".", "-"]
 ):
+
+    if ax0 is None:
+        f0, ax0 = plt.subplots()
+    if ax1 is None:
+        f1, ax1 = plt.subplots()
 
     if data_select in ["even", "odd"]:
         res = 0 if data_select == "even" else 1
@@ -41,7 +50,7 @@ def plot_thresholds(
         else:
             return A + B * x + C * x ** 2
 
-    g_T, T_m, T_M = 0.1, 0.09, 0.105
+    g_T, T_m, T_M = 0.1, min(fitp), max(fitp)
     g_A, A_m, A_M = 0, -np.inf, np.inf
     g_B, B_m, B_M = 0, -np.inf, np.inf
     g_C, C_m, C_M = 0, -np.inf, np.inf
@@ -78,17 +87,14 @@ def plot_thresholds(
     for i, l in enumerate(set(fitL)):
         plot_i[l] = i
 
-    f0 = plt.figure()
-    linestyle = ["-", (0, (5, 1)), (0, (3, 1, 1, 1)), (0, (3, 1, 1, 1, 1, 1))]
-
     for lati in sorted(set(fitL)):
         fp, fN, fs = map(list, zip(*sorted(LP[lati], key=lambda k: k[0])))
         ft = [si / ni for si, ni in zip(fs, fN)]
-        plt.plot(
-            [q * 100 for q in fp], ft, ".", color="C" + str(plot_i[lati] % 10), ms=5
+        ax0.plot(
+            [q * 100 for q in fp], ft, styles[0], color="C" + str(plot_i[lati] % 10), ms=5
         )
         X = np.linspace(min(fp), max(fp), plotn)
-        plt.plot(
+        ax0.plot(
             [x * 100 for x in X],
             [fit_func((x, lati), *par) for x in X],
             "-",
@@ -96,24 +102,24 @@ def plot_thresholds(
             color="C" + str(plot_i[lati] % 10),
             lw=1.5,
             alpha=0.6,
-            ls=linestyle[plot_i[lati] // 10],
+            ls=styles[1],
         )
 
-    plt.axvline(par[0] * 100, ls="dotted", color="k", alpha=0.5)
-    plt.annotate(
-        "Threshold = " + str(round(100 * par[0], 2)) + "%",
-        (par[0] * 100, fit_func((par[0], 20), *par)),
+    DS = fit_func((par[0], 20), *par)
+
+    ax0.axvline(par[0] * 100, ls="dotted", color="k", alpha=0.5)
+    ax0.annotate(
+        "$p_t$ = {}%, DS = {:.2f}".format(str(round(100 * par[0], 2)), DS),
+        (par[0] * 100, DS),
         xytext=(10, 10),
         textcoords="offset points",
         fontsize=8,
     )
-    plt.title("Threshold of " + plot_name)
-    plt.xlabel("probability of Pauli X error (%)")
-    plt.ylabel("decoding success rate (%)")
-    plt.legend()
-    plt.show()
+    ax0.set_title("Threshold of " + plot_name)
+    ax0.set_xlabel("probability of Pauli X error (%)")
+    ax0.set_ylabel("decoding success rate")
+    ax0.legend()
 
-    f1 = plt.figure()
     for L, p, N, t in zip(fitL, fitp, fitN, fitt):
         if modified_ansatz:
             plt.plot(
@@ -130,12 +136,9 @@ def plot_thresholds(
                 color="C" + str(plot_i[L] % 10),
             )
     x = np.linspace(*plt.xlim(), plotn)
-    plt.plot(x, par[1] + par[2] * x + par[3] * x ** 2, "--", color="C0", alpha=0.5)
-    plt.xlabel("Rescaled error rate")
-    plt.ylabel("Modified succces probability")
-    plt.show()
-
-    return f0, f1
+    ax1.plot(x, par[1] + par[2] * x + par[3] * x ** 2, "--", color="C0", alpha=0.5)
+    ax1.set_xlabel("Rescaled error rate")
+    ax1.set_ylabel("Modified succces probability")
 
 
 if __name__ == "__main__":
@@ -208,7 +211,9 @@ if __name__ == "__main__":
     fitN = data.loc[:, "N"].values
     fitt = data.loc[:, "succes"].values
 
-    f0, f1 = plot_thresholds(fitL, fitp, fitN, fitt, plot_name=file_name)
+    f0, ax0 = plt.figure()
+    f1, ax1 = plt.figure()
+    plot_thresholds(fitL, fitp, fitN, fitt, plot_name=file_name, ax0=ax0, ax1=ax1)
 
     if save_result:
         data.to_csv(file_path)

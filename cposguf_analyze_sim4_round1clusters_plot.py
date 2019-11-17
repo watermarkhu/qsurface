@@ -32,7 +32,7 @@ def d2(): return dd(d1)
 data = pk.load_obj("sim4_r1c_data_gauss12_44")
 lrange = [8, 12, 16, 20, 24, 28, 32, 36, 40, 44]
 prange = [(90 + i)/1000 for i in range(21)]
-plotn = [0 + i for i in range(8)]
+plotn = [8 + i for i in range(2)]
 
 ####################################
 
@@ -99,21 +99,21 @@ grid = plt.GridSpec(len(plotn), 10, wspace=0.8, hspace=0.5)
 
 for i, cnum in enumerate(plotn):
 
-    # ax = plt.subplot(grid[i, 0])
-    # ax.set_ylabel(str(i))
-    # cca.plot_cluster(sdp[i][0], 2, 2, ax=ax)
-    # ax0 = plt.subplot(grid[i, 1:4])
-    # plt.ylim(0.9, 1.1)
-    # ax0.axhline(y=1, color="k", ls="--", lw=0.5)
-    # clear_ax(i, len(plotn), "p")
-    # ax1 = plt.subplot(grid[i, 4:7])
-    # plt.ylim(0.75, 1.25)
-    # ax1.axhline(y=1, color="k", ls="--", lw=0.5)
-    # clear_ax(i, len(plotn), "n")
-    # ax2 = plt.subplot(grid[i, 7:])
-    # plt.ylim(0.75, 1.25)
-    # ax2.axhline(y=1, color="k", ls="--", lw=0.5)
-    # clear_ax(i, len(plotn), "norm n")
+    ax = plt.subplot(grid[i, 0])
+    ax.set_ylabel(str(cnum))
+    cca.plot_cluster(sdp[cnum][0], 2, 2, ax=ax)
+    ax0 = plt.subplot(grid[i, 1:4])
+    plt.ylim(0.9, 1.1)
+    ax0.axhline(y=1, color="k", ls="--", lw=0.5)
+    clear_ax(i, len(plotn), "p")
+    ax1 = plt.subplot(grid[i, 4:7])
+    plt.ylim(0.75, 1.25)
+    ax1.axhline(y=1, color="k", ls="--", lw=0.5)
+    clear_ax(i, len(plotn), "n")
+    ax2 = plt.subplot(grid[i, 7:])
+    plt.ylim(0.75, 1.25)
+    ax2.axhline(y=1, color="k", ls="--", lw=0.5)
+    clear_ax(i, len(plotn), "norm n")
 
     for j, l, in enumerate(lrange):
         color="C{}".format(j % 10)
@@ -123,7 +123,7 @@ for i, cnum in enumerate(plotn):
             (mt, vt), (ml, vl) = sdp[cnum][1][(l, p)]
             nt, nl = countp[(l, p)]
             prange2.append(p*100)
-            pratio.append(mt/ml)
+            pratio.append(mt-ml)
             pavgc.append((nt + nl)/2)
             rtmt[(l, p)].append(mt/ml)
 
@@ -141,15 +141,13 @@ for i, cnum in enumerate(plotn):
         for n in nrange2:
             nrange3.append((n-nrange2[0])/(nrange2[-1] - nrange2[0]))
 
-        # for prn, prt, pac in zip(prange2, pratio, pavgc):
-        #     ax0.scatter(prn, prt, 1.5, color=color, alpha=pac/max(pavgc))
+        for prn, prt, pac in zip(prange2, pratio, pavgc):
+            ax0.scatter(prn, prt, 1.5, color=color, alpha=pac/max(pavgc))
+        for nrn0, nrn1, nrt, nac in zip(nrange2, nrange3, nratio, navgc):
+            ax1.scatter(nrn0, nrt, 1.5, color=color, alpha=nac/max(navgc))
+            ax2.scatter(nrn1, nrt, 1.5, color=color, alpha=nac/max(navgc))
 
-        # for nrn0, nrn1, nrt, nac in zip(nrange2, nrange3, nratio, navgc):
-        #     ax1.scatter(nrn0, nrt, 1.5, color=color, alpha=nac/max(navgc))
-        #     ax2.scatter(nrn1, nrt, 1.5, color=color, alpha=nac/max(navgc))
-        #
         # ax0.plot(prange2, pratio, color=color, ls=":")
-
         # ax1.plot(nrange2, nratio, color=color, ls=":")
         # ax2.plot(nrange3, nratio, color=color, ls=":")#, alpha = 1-0.2*i)
 
@@ -164,7 +162,7 @@ tldata = {
     "norm_avg_occ_p": clmt
     }
 
-pk.save_obj(tldata, "sim4_tldata")
+# pk.save_obj(tldata, "sim4_tldata")
 
 
 # fig = cca.plot_clusters(clusters, count, plotnum)

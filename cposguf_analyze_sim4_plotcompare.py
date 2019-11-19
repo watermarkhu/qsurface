@@ -165,7 +165,7 @@ def plot_both(graph_t, graph_l, seed, p, saveanim=None):
         uf_plot_t,
         ufl,
         uf_plot_l,
-        plot_growth=0,
+        plot_growth=1,
         print_steps=1
     )
 

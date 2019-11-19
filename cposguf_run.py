@@ -124,8 +124,6 @@ def multiple(comp_id, iters, size, p, worker=0):
         list_solved = True if logical_error == [False, False, False, False] else False
         graph.reset()
 
-        tree_solved, list_solved
-
         return (tree_solved, list_solved, seed)
 
     # Open SQL connection

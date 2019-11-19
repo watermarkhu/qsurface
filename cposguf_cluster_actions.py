@@ -149,6 +149,27 @@ def get_neighbor(y, x, td, L):
         ]
 
 
+def get_support2clusters(graph, size, minl=1, maxl=4):
+
+    errors = [
+        graph.E[(0, y, x, td)].qID[1:]
+        for y in range(size) for x in range(size) for td in range(2)
+        if graph.E[(0, y, x, td)].support == 2
+    ]
+
+    # Get clusters from array data
+    clusters = get_clusters_from_list(errors, size)
+
+    # Remove outlier clusters
+    clusters = [
+        cluster
+        for cluster in clusters.values()
+        if len(cluster) >= minl and len(cluster) <= maxl
+    ]
+
+    return clusters
+
+
 def get_clusters_from_list(list_of_qubits, size):
     """
     Returns a dict of clusters, with values lists of connected vertices from a list of vertices

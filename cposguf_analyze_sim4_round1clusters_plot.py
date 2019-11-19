@@ -1,4 +1,3 @@
-import pickle
 from collections import defaultdict as dd
 import cposguf_cluster_actions as cca
 import matplotlib.pyplot as plt
@@ -29,7 +28,7 @@ def d1(): return [[0,0], [0,0]]
 def d2(): return dd(d1)
 
 
-data = pk.load_obj("sim4_r1c_data_gauss12_44")
+data = pk.load_obj("sim4_r1ctrue_data_gauss12_44-c1_5")
 lrange = [8, 12, 16, 20, 24, 28, 32, 36, 40, 44]
 prange = [(90 + i)/1000 for i in range(21)]
 plotn = [8 + i for i in range(2)]

@@ -315,7 +315,7 @@ class cluster_farmer:
         while bucket != []:  # Loop over all clusters in the current bucket\
             cluster = find_cluster_root(bucket.pop())
 
-            if cluster.bucket == bucket_i:
+            if cluster.bucket == bucket_i and cluster.support == bucket_i % 2:
                 # Check that cluster is not already in a higher bucket
                 place.append(cluster)
 

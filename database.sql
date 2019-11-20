@@ -33,9 +33,9 @@ CREATE TABLE simulations (
   created_on timestamp NOT NULL,
   ftree_tlist boolean NOT NULL,
   seed numeric(24,0) NOT NULL,
-  analysis1 boolean NOT NULL DEFAULT False,
-  analysis2 boolean NOT NULL DEFAULT False,
-  analysis3 boolean NOT NULL DEFAULT False,
+  -- analysis1 boolean NOT NULL DEFAULT False,
+  -- analysis2 boolean NOT NULL DEFAULT False,
+  -- analysis3 boolean NOT NULL DEFAULT False,
   CONSTRAINT simulations_case_id_fkey FOREIGN KEY (lattice, p)
     REFERENCES cases (lattice, p) MATCH SIMPLE
     ON UPDATE NO ACTION ON DELETE NO ACTION,

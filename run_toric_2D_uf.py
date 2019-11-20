@@ -14,6 +14,7 @@ def single(
     pE=0,
     pX=0,
     pZ=0,
+    method="list",
     savefile=0,
     erasure_file=None,
     pauli_file=None,
@@ -21,16 +22,10 @@ def single(
     graph=None,
     worker=0,
     iter=0,
-    settings=None,
 ):
     """
     Runs the peeling decoder for one iteration
     """
-
-    if settings is None:
-        ro, rt, vc = 0, 0, 0
-    else:
-        ro, rt, vc = settings["ro"], settings["rt"], settings["vc"]
 
     if not os.path.exists("./errors/"):
         os.makedirs("./errors/")
@@ -83,12 +78,12 @@ def single(
         uf_plot,
         plot_growth=0,
         print_steps=0,
-        random_traverse=ro,
-        intervention=rt,
+        random_traverse=0,
+        intervention=0,
         vcomb=0
     )
     ufg.find_clusters(plot_step=0)
-    ufg.grow_clusters(method="list")
+    ufg.grow_clusters(method)
     ufg.peel_clusters(plot_step=0)
 
     # Apply matching
@@ -102,7 +97,7 @@ def single(
 
 
 def multiple(
-    size, iters, pE=0, pX=0, pZ=0, plot_load=0, qres=None, worker=None, settings=None
+    size, iters, pE=0, pX=0, pZ=0, method="list", plot_load=0, qres=None, worker=None
 ):
     """
     Runs the peeling decoder for a number of iterations. The graph is reused for speedup.
@@ -110,7 +105,7 @@ def multiple(
     graph = go.init_toric_graph(size)
     result = [
         single(
-            size, pE, pX, pZ, plot_load=plot_load, graph=graph, worker=worker, iter=i
+            size, pE, pX, pZ, method=method, plot_load=plot_load, graph=graph, worker=worker, iter=i
         )
         for i in ProgIter(range(iters))
     ]
@@ -121,7 +116,7 @@ def multiple(
         return N_succes
 
 
-def multiprocess(size, iters, pE=0, pX=0, pZ=0, processes=None, settings=None):
+def multiprocess(size, iters, pE=0, pX=0, pZ=0, method="list", processes=None):
     """
     Runs the peeling decoder for a number of iterations, split over a number of processes
     """
@@ -140,7 +135,7 @@ def multiprocess(size, iters, pE=0, pX=0, pZ=0, processes=None, settings=None):
         workers.append(
             mp.Process(
                 target=multiple,
-                args=(size, process_iters, pE, pX, pZ, False, qres, i, settings),
+                args=(size, process_iters, pE, pX, pZ, method, False, qres, i),
             )
         )
     workers.append(
@@ -152,23 +147,22 @@ def multiprocess(size, iters, pE=0, pX=0, pZ=0, processes=None, settings=None):
                 pE,
                 pX,
                 pZ,
+                method,
                 False,
                 qres,
                 processes - 1,
-                settings,
             ),
         )
     )
+    print("Starting", processes, "workers.")
 
     # Start and join processes
     for worker in workers:
         worker.start()
-    print("Started", processes, "workers.")
+
+    N_succes = sum([qres.get() for worker in workers])
+
     for worker in workers:
         worker.join()
-
-    results = [qres.get() for worker in workers]
-
-    N_succes = sum(results)
 
     return N_succes

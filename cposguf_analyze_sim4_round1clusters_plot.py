@@ -28,32 +28,24 @@ def d1(): return [[0,0], [0,0]]
 def d2(): return dd(d1)
 
 
-data = pk.load_obj("sim4_r1ctrue_data_gauss12_44-c1_5")
-lrange = [8, 12, 16, 20, 24, 28, 32, 36, 40, 44]
+data = pk.load_obj("sim4_realr1c_data_gauss8_44-c1_6")
+lrange = [8, 12, 16, 20, 24, 28] # , 32, 36, 40, 44]
 prange = [(90 + i)/1000 for i in range(21)]
-plotn = [8 + i for i in range(2)]
+plotn = [0 + i for i in range(14)]
+round = 0
 
 ####################################
 
-def sort_data(data, type=None):
-    if type == None:
-        sortdata = sorted(data.items(),
-            key=lambda kv:
-            sum([v1[0] + v2[0] for v1, v2 in list(kv[1].values())]),
-            reverse = True
-        )
-    elif type in data:
-        sortdata = sorted(data.items(),
-            key=lambda kv:
-            sum([v[type][0] for v in list(kv[1].values())]),
-            reverse = True
-        )
-    else:
-        raise(KeyError)
+def sort_data(data, round=0):
+    sortdata = sorted(data.items(),
+        key=lambda kv:
+        sum([sum(v[round]) for v in list(kv[1].values())]),
+        reverse = True
+    )
     return sortdata
 
-sdp = sort_data(data["data_p"])
-snp = sort_data(data["data_n"])
+sdp = sort_data(data["data_p"], round)
+snp = sort_data(data["data_n"], round)
 countn, countp = data["countn"], data["countp"]
 
 
@@ -63,30 +55,32 @@ fig0 = plt.figure()
 grid = plt.GridSpec(5, len(plotn), wspace=0.1, hspace=1)
 for i, cnum in enumerate(plotn):
     ax = plt.subplot(grid[0, i])
-    cca.plot_cluster(sdp[i][0], 2, 2, ax=ax)
+    cca.plot_cluster(sdp[i][0], 3, 3, ax=ax)
     ax.set_title(str(cnum))
 
 ax = plt.subplot(grid[1:, :])
 
-clms = np.zeros((2,len(plotn)))
-clmt = dd(list)
-
-for j, l in enumerate(lrange):
-    for k, p in enumerate(prange):
-        oc, (nc0, nc1) = 0, countp[(l, p)]
-        (no0, _), (no1, _) = sdp[plotn[0]][1][(l, p)]
+ocpa0, ocpa1 = [], []
+for l in lrange:
+    for p in prange:
+        ocp0, ocp1 = [], []
         for i, cnum in enumerate(plotn):
-            omu, ova = clms[0][i], clms[1][i]
-            (mu0, va0), (mu1, va1) = sdp[cnum][1][(l, p)]
-            clms[0][i] = (oc*omu + nc0*mu0/no0 + nc1*mu1/no1)/(oc+nc0+nc1)
-            clms[1][i] = (oc*(omu**2 + ova) + nc0*(mu0**2 + va0)/no0**2 + nc1*(mu1**2 + va1)/no1**2)/(oc + nc0 + nc1) - clms[0][i]**2
-            clmt[(l, p)].append((nc0*mu0/no0 + nc1*mu1/no1)/(nc0+nc1))
-        oc += nc0 + nc1
+            co0, co1 = countp[(l, p)]
+            oc0, oc1 = sdp[cnum][1][(l, p)][round]
+            ocp0.append(oc0/co0)
+            ocp1.append(oc1/co1)
+
+        ocpa0.append([ocp/sum(ocp0) for ocp in ocp0])
+        ocpa1.append([ocp/sum(ocp1) for ocp in ocp1])
+
 
 ax.set_title("Normalized averaged occurance rate of R1-clusters")
 ax.set_xlabel("Cluster #")
 ax.set_ylabel("Occurance rate")
-plt.errorbar(plotn, clms[0], np.sqrt(clms[1]), elinewidth=1, capsize=2, color="k", ls=":")
+
+plt.plot(plotn, np.mean(ocpa0, axis=0), label="tree")
+plt.plot(plotn, np.mean(ocpa1, axis=0), label="list")
+plt.legend()
 plt.show()
 
 
@@ -102,38 +96,42 @@ for i, cnum in enumerate(plotn):
     ax.set_ylabel(str(cnum))
     cca.plot_cluster(sdp[cnum][0], 2, 2, ax=ax)
     ax0 = plt.subplot(grid[i, 1:4])
-    plt.ylim(0.9, 1.1)
+    plt.ylim(0.8, 1.2)
     ax0.axhline(y=1, color="k", ls="--", lw=0.5)
     clear_ax(i, len(plotn), "p")
-    ax1 = plt.subplot(grid[i, 4:7])
+    ax1 = plt.subplot(grid[i, 4:])
     plt.ylim(0.75, 1.25)
     ax1.axhline(y=1, color="k", ls="--", lw=0.5)
     clear_ax(i, len(plotn), "n")
-    ax2 = plt.subplot(grid[i, 7:])
-    plt.ylim(0.75, 1.25)
-    ax2.axhline(y=1, color="k", ls="--", lw=0.5)
-    clear_ax(i, len(plotn), "norm n")
+    # ax2 = plt.subplot(grid[i, 7:])
+    # plt.ylim(0.75, 1.25)
+    # ax2.axhline(y=1, color="k", ls="--", lw=0.5)
+    # clear_ax(i, len(plotn), "norm n")
 
     for j, l, in enumerate(lrange):
         color="C{}".format(j % 10)
 
         pratio, prange2, pavgc = [], [], []
+
         for k, p in enumerate(prange):
-            (mt, vt), (ml, vl) = sdp[cnum][1][(l, p)]
+            ot, ol = sdp[cnum][1][(l, p)][round]
             nt, nl = countp[(l, p)]
+
+            ratio = ot/nt/(ol/nl)
             prange2.append(p*100)
-            pratio.append(mt-ml)
+            pratio.append(ratio)
+            rtmt[(l, p)].append(ratio)
             pavgc.append((nt + nl)/2)
-            rtmt[(l, p)].append(mt/ml)
 
         nrange = sorted([n for _,n in snp[cnum][1].keys()])
         nratio, nrange2, navgc = [], [], []
         for n in nrange:
-            (mt, vt), (ml, vl) = snp[cnum][1][(l, n)]
+            ot, ol = snp[cnum][1][(l, n)][round]
             nt ,nl = countn[(l, n)]
-            if mt > 0 and ml > 0 and nt> 500:
+            if ot > 100 and ol > 100 and nt> 200 and nl > 200:
+                ratio = ot/nt/(ol/nl)
                 nrange2.append(n)
-                nratio.append(mt/ml)
+                nratio.append(ratio)
                 navgc.append((nt + nl)/2)
 
         nrange3 = []
@@ -144,7 +142,7 @@ for i, cnum in enumerate(plotn):
             ax0.scatter(prn, prt, 1.5, color=color, alpha=pac/max(pavgc))
         for nrn0, nrn1, nrt, nac in zip(nrange2, nrange3, nratio, navgc):
             ax1.scatter(nrn0, nrt, 1.5, color=color, alpha=nac/max(navgc))
-            ax2.scatter(nrn1, nrt, 1.5, color=color, alpha=nac/max(navgc))
+        #     ax2.scatter(nrn1, nrt, 1.5, color=color, alpha=nac/max(navgc))
 
         # ax0.plot(prange2, pratio, color=color, ls=":")
         # ax1.plot(nrange2, nratio, color=color, ls=":")
@@ -156,10 +154,7 @@ fig.legend(handles=custom_lines, bbox_to_anchor=(0.97, 0.55))
 plt.show()
 
 
-tldata = {
-    "tl_ratio_p": rtmt,
-    "norm_avg_occ_p": clmt
-    }
+
 
 # pk.save_obj(tldata, "sim4_tldata")
 

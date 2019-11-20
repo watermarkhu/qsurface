@@ -5,8 +5,6 @@ import toric_error as te
 import toric_code as tc
 import unionfind as uf
 from collections import defaultdict as dd
-from cluster_per_size import coordinates
-import numpy as np
 import pickling as pk
 import os
 
@@ -96,7 +94,7 @@ for lattice in L:
         while sims != [None]:
 
             print("{:0.1f}%".format(fetched/num*100))
-            sims += cur.fetchmany(maxfetch)
+            sims += cur.fetchmany(maxfetch-1)
             fetched += maxfetch
 
             for type, seed in sims:

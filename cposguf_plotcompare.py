@@ -7,14 +7,15 @@ import unionfind as uf
 import uf_plot as up
 import logging
 import printing as pr
-from celluloid import Camera
 from matplotlib import pyplot as plt
 from matplotlib.lines import Line2D
 
 
 def grow_clusters(
+    graph_t,
     uft,
     uf_plot_t,
+    graph_l,
     ufl,
     uf_plot_l,
     plot_growth=0,
@@ -44,7 +45,7 @@ def grow_clusters(
             )
             uf_plot_t.waitforkeypress()
 
-        uft.tree_grow_bucket(bucket_t, bucket_i)
+        uft.tree_grow_bucket_full(bucket_t, bucket_i)
 
         uf_plot_t.ax.set_xlabel("")
         if print_steps:
@@ -90,9 +91,7 @@ def plot_final(tp, graph_t, graph_l):
             for td in range(2):
                 u_error = graph_t.E[(0, y, x, td)].matching
                 v_error = graph_l.E[(0, y, x, td)].matching
-
                 qubit = tp.qubits[(y, x, td)]
-
                 if u_error and not v_error:
                     qubit.set_edgecolor(uc)
                     tp.ax.draw_artist(qubit)
@@ -103,15 +102,9 @@ def plot_final(tp, graph_t, graph_l):
                     qubit.set_edgecolor(wc)
                     tp.ax.draw_artist(qubit)
 
-    uerr = Line2D(
-        [0], [0], lw=0, marker="o", color=uc, mfc="w", mew=2, ms=10, label="Tree"
-    )
-    verr = Line2D(
-        [0], [0], lw=0, marker="o", color=vc, mfc="w", mew=2, ms=10, label="List"
-    )
-    werr = Line2D(
-        [0], [0], lw=0, marker="o", color=wc, mfc="w", mew=2, ms=10, label="Both"
-    )
+    uerr = Line2D([0], [0], lw=0, marker="o", color=uc, mfc="w", mew=2, ms=10, label="Tree")
+    verr = Line2D([0], [0], lw=0, marker="o", color=vc, mfc="w", mew=2, ms=10, label="List")
+    werr = Line2D([0], [0], lw=0, marker="o", color=wc, mfc="w", mew=2, ms=10, label="Both")
 
     legend1 = plt.legend(
         handles=[uerr, verr, werr],
@@ -129,7 +122,6 @@ def plot_final(tp, graph_t, graph_l):
 def plot_both(graph_t, graph_l, seed, p, saveanim=None):
 
     toric_plot = tp.lattice_plot(graph_t, plot_size=6, line_width=1.5)
-    camera = Camera(toric_plot.f) if saveanim is not None else None
 
     te.apply_random_seed(seed)
     te.init_pauli(graph_t, pX=float(p))
@@ -141,28 +133,28 @@ def plot_both(graph_t, graph_l, seed, p, saveanim=None):
     tc.measure_stab(graph_l)
 
     uf_plot_t = up.toric(
-        graph_t, toric_plot.f, axn=2, plot_size=10, line_width=1.5, plotstep_click=1, camera=camera
-    )
+        graph_t, toric_plot.f, axn=2, plot_size=10, line_width=1.5, plotstep_click=1)
+
     uf_plot_t.ax.legend().set_visible(False)
     uf_plot_l = up.toric(
-        graph_l, toric_plot.f, axn=3, plot_size=10, line_width=1.5, plotstep_click=1, camera=camera
-    )
+        graph_l, toric_plot.f, axn=3, plot_size=10, line_width=1.5, plotstep_click=1)
 
     axes = toric_plot.f.get_axes()
     axes[0].set_title("Peeling lattice")
     axes[1].set_title("tree peeling lattice")
     axes[2].set_title("list peeling lattice")
-    if saveanim is not None: camera.snap()
 
-    uft = uf.cluster_farmer(graph_t, uf_plot_t, plot_growth=0, print_steps=1)
-    ufl = uf.cluster_farmer(graph_l, uf_plot_l, plot_growth=0, print_steps=1)
+    uft = uf.cluster_farmer(graph_t, uf_plot_t, plot_growth=1, print_steps=1)
+    ufl = uf.cluster_farmer(graph_l, uf_plot_l, plot_growth=1, print_steps=1)
 
-    uft.find_clusters(plot_step=0)
-    ufl.find_clusters(plot_step=0)
+    uft.find_clusters(plot_step=0, order="Vup-Hup")
+    ufl.find_clusters(plot_step=0, order="Vup-Hup")
 
     grow_clusters(
+        graph_t,
         uft,
         uf_plot_t,
+        graph_l,
         ufl,
         uf_plot_l,
         plot_growth=1,
@@ -173,11 +165,6 @@ def plot_both(graph_t, graph_l, seed, p, saveanim=None):
     ufl.peel_clusters(plot_step=0)
 
     plot_final(toric_plot, graph_t, graph_l)
-    if saveanim is not None:
-        camera.snap()
-        animation = camera.animate(interval=50)
-        animation.save(f"./anim/{saveanim}.mp4")
-
     # Measure logical operator
     graph_t.reset()
     graph_l.reset()
@@ -185,7 +172,7 @@ def plot_both(graph_t, graph_l, seed, p, saveanim=None):
 
 if __name__ == "__main__":
 
-    L = 8
+    L = 12
     p = 0.1
     limit = 10
     ftree_tlist = True

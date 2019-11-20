@@ -134,12 +134,12 @@ class cluster_farmer:
         string = str(cluster) + " grown."
         merge_cluster = None
 
-        while cluster.childs[1] != []:  # First go through child clusters
-            child_cluster = cluster.childs[1].pop()
+        while cluster.childs[0]:  # First go through child clusters
+            child_cluster = cluster.childs[0].pop()
             self.tree_grow(child_cluster, root_cluster, support)
 
         # cluster.boundary[0].reverse() if support == 0 else None
-        while cluster.boundary[support] != []:
+        while cluster.boundary[support]:
             root_cluster = find_cluster_root(cluster)
             (base_vertex, edge, grow_vertex) = cluster.boundary[support].pop()
             grow_cluster = grow_vertex.cluster
@@ -190,7 +190,7 @@ class cluster_farmer:
         Grows the current bucket. Only clusters with the same bucket_number are grown.
         """
 
-        while bucket != []:  # Loop over all clusters in the current bucket\
+        while bucket:  # Loop over all clusters in the current bucket\
             cluster = find_cluster_root(bucket.pop())
 
             # Check that cluster is not already in a higher bucket
@@ -207,22 +207,22 @@ class cluster_farmer:
         string = str(cluster) + " grown."
         merge_cluster = None
 
-        if cluster.childs[1] != [] and self.print_steps:
+        if cluster.childs[1] and self.print_steps:
             pr.printlog(f"{cluster} has fosters: {cluster.childs[1]}")
 
-        while cluster.childs[1] != []:
+        while cluster.childs[1]:
             foster_cluster = cluster.childs[1].pop()
             self.tree_grow_full(foster_cluster, root_cluster, support, 0)
 
         if family_growth:
-            if cluster.childs[0] != [] and self.print_steps:
+            if cluster.childs[0] and self.print_steps:
                 pr.printlog(f"{cluster} has children: {cluster.childs[0]}")
-            while cluster.childs[0] != []:  # First go through child clusters
+            while cluster.childs[0]:  # First go through child clusters
                 child_cluster = cluster.childs[0].pop()
                 self.tree_grow_full(child_cluster, root_cluster, support, 1)
 
         # cluster.boundary[0].reverse() if support == 0 else None
-        while cluster.boundary[support] != []:
+        while cluster.boundary[support]:
             root_cluster = find_cluster_root(cluster)
             (base_vertex, edge, grow_vertex) = cluster.boundary[support].pop()
             grow_cluster = grow_vertex.cluster
@@ -231,7 +231,7 @@ class cluster_farmer:
                 edge.support += 1
                 if support:
                     root_cluster.add_vertex(grow_vertex)
-                    edge.clsuter = root_cluster
+                    edge.cluster = root_cluster
                     self.cluster_new_vertex(root_cluster, grow_vertex, self.plot_growth)
                 else:
                     root_cluster.boundary[1].append((base_vertex, edge, grow_vertex))
@@ -288,7 +288,7 @@ class cluster_farmer:
         Grows the current bucket. Only clusters with the same bucket_number are grown.
         """
 
-        while bucket != []:  # Loop over all clusters in the current bucket
+        while bucket:  # Loop over all clusters in the current bucket
             cluster = find_cluster_root(bucket.pop())
             if cluster.bucket == bucket_i:
             # Check that cluster is not already in a higher bucket
@@ -308,11 +308,12 @@ class cluster_farmer:
     #################################################################################
     ####### List unionfind method ########
 
+
     def list_grow_bucket(self, bucket, bucket_i):
 
         fusion, place = [], []  # Initiate Fusion list
 
-        while bucket != []:  # Loop over all clusters in the current bucket\
+        while bucket:  # Loop over all clusters in the current bucket\
             cluster = find_cluster_root(bucket.pop())
 
             if cluster.bucket == bucket_i and cluster.support == bucket_i % 2:
@@ -324,7 +325,11 @@ class cluster_farmer:
 
                 # Grow cluster support for bucket placement
                 cluster.support = 1 - cluster.support
-                for vertex, new_edge, new_vertex in cluster.boundary[1]:
+
+                # for vertex, new_edge, new_vertex in cluster.boundary[1]:
+                while cluster.boundary[1]:
+                    vertex, new_edge, new_vertex = cluster.boundary[1].pop()
+
                     # Grow boundaries by half-edge
                     if new_edge.support != 2:
                         new_edge.support += 1
@@ -399,7 +404,7 @@ class cluster_farmer:
                     self.uf_plot.waitforkeypress() if self.plot else input()
                 break
 
-            if bucket == []:  # no need to check empty bucket
+            if not bucket:  # no need to check empty bucket
                 continue
 
             if self.print_steps:
@@ -427,7 +432,7 @@ class cluster_farmer:
                 self.uf_plot.waitforkeypress()
 
 
-    def find_clusters(self, plot_step=0):
+    def find_clusters(self, order="Vup-Hup", plot_step=0):
         """
         Given a set of erased qubits/edges on a lattice, this functions finds all edges that are connected and sorts them in separate clusters. A single anyon can also be its own cluster.
         It loops over all vertices (randomly if toggled, which produces a different tree), and calls {cluster_new_vertex} to find all connected erasure qubits, and finds the boundary for growth step 1. Afterwards the cluster is placed in a bucket based in its size.
@@ -438,12 +443,30 @@ class cluster_farmer:
         self.graph.wastebasket = []
         self.graph.maxbucket = 0
 
-        cID = 0
-        vertices = self.graph.V.values()
+        cID, s = 0, self.graph.size
 
-        # Random order: Doesn't matter when pE == 0
-        if self.random_order:
-            vertices = random.sample(set(vertices), len(vertices))
+        if order == "Vup-Hup":
+            vertices = self.graph.V.values()
+        if order == "Vdo-Hdo":
+            vertices = [self.graph.V[(t, y, x)]
+                for x in reversed(range(s))
+                for y in reversed(range(s))
+                for t in range(2)
+                ]
+        elif order == "Hup-Vdo":
+            vertices = [self.graph.V[(t, y, x)]
+                for y in reversed(range(s))
+                for x in range(s)
+                for t in range(2)
+                ]
+        elif order == "Hdo-Vdo":
+            vertices = [self.graph.V[(t, y, x)]
+                for y in reversed(range(s))
+                for x in reversed(range(s))
+                for t in range(2)
+                ]
+        elif order == "random":
+            vertices = random.sample(list(self.graph.V.values()), s*s*2)
 
         anyons = [vertex for vertex in vertices if vertex.state]
 

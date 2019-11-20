@@ -195,7 +195,7 @@ def get_clusters_from_list(list_of_qubits, size):
                             vertices[tuple(mv)] = cluster
                         clusters[cluster].extend(clusters[merging])
                         clusters.pop(merging)
-                    break
+                        break
         if nomerged:
             vertices[v] = cnum
             clusters[cnum].append(v)

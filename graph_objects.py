@@ -226,26 +226,23 @@ def init_toric_graph(size):
                 graph.add_vertex((ertype, y, x))
 
     # Add edges to graph
-    for ertype in range(2):
-        for y in range(size):
-            for x in range(size):
-                for td in range(2):
-                    qID = (ertype, y, x, td)
-                    if ertype == 0 and td == 0:
-                        VL_sID = (ertype, y, x)
-                        VR_sID = (ertype, y, (x + 1) % size)
-                        graph.add_edge(qID, VL_sID, VR_sID, "H")
-                    elif ertype == 1 and td == 1:
-                        VL_sID = (ertype, y, (x - 1) % size)
-                        VR_sID = (ertype, y, x)
-                        graph.add_edge(qID, VL_sID, VR_sID, "H")
-                    elif ertype == 0 and td == 1:
-                        VU_sID = (ertype, y, x)
-                        VD_sID = (ertype, (y + 1) % size, x)
-                        graph.add_edge(qID, VU_sID, VD_sID, "V")
-                    elif ertype == 1 and td == 0:
-                        VU_sID = (ertype, (y - 1) % size, x)
-                        VD_sID = (ertype, y, x)
-                        graph.add_edge(qID, VU_sID, VD_sID, "V")
+    for y in range(size):
+        for x in range(size):
+
+            VL_sID = (0, y, x)
+            VR_sID = (0, y, (x + 1) % size)
+            graph.add_edge((0, y, x, 0), VL_sID, VR_sID, "H")
+
+            VU_sID = (0, y, x)
+            VD_sID = (0, (y + 1) % size, x)
+            graph.add_edge((0, y, x, 1), VU_sID, VD_sID, "V")
+
+            VU_sID = (1, (y - 1) % size, x)
+            VD_sID = (1, y, x)
+            graph.add_edge((1, y, x, 0), VU_sID, VD_sID, "V")
+
+            VL_sID = (1, y, (x - 1) % size)
+            VR_sID = (1, y, x)
+            graph.add_edge((1, y, x, 1), VL_sID, VR_sID, "H")
 
     return graph

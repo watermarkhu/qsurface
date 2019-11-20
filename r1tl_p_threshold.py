@@ -7,17 +7,16 @@ from progiter import ProgIter
 import multiprocessing as mp
 import cposguf_cluster_actions as cca
 from collections import defaultdict as dd
-from cluster_per_size import coordinates
 
 def d0(): return [0,0]
 def d1(): return [[0,0], [0,0]]
 def d2(): return dd(d1)
 
 minl, maxl = 1, 4
-clist = coordinates(minl, maxl)
-data = pk.load_obj("sim4_r1c_data_gauss12_44-1-4")
+data = pk.load_obj("sim4_realr1c_data_gauss8_44-c1_6")
 data_p = data["data_p"]
 countp = data["countp"]
+
 
 
 def get_count(clusters, clist, size):
@@ -56,79 +55,72 @@ def get_count(clusters, clist, size):
     return count
 
 
-def single(size, pX=0, graph=None, worker=0, iter=0):
+def single(size, pX=0, graph0=None, graph1=None, worker=0, iter=0):
 
     """
     Runs the peeling decoder for one iteration
     """
 
-    size, pX, graph, worker, iter = 32, 0.089, None, 0, 0
+    # size, pX, graph, worker, iter = 28, 0.09, None, 0, 0
 
     # Initialize lattice
-    if graph is None:
-        graph = go.init_toric_graph(size)
+
+    if graph0 is None:
+        graph0 = go.init_toric_graph(size)
     else:
-        graph.reset()
+        graph0.reset()
+    if graph1 is None:
+        graph1 = go.init_toric_graph(size)
+    else:
+        graph1.reset()
 
-    # Initialize errors
-    te.init_random_seed(worker=worker, iteration=iter)
-    te.init_pauli(graph, pX)
+    seed = te.init_random_seed(worker=worker, iteration=iter)
+    te.init_pauli(graph0, pX)
 
-    # errors = [
-    #     graph.E[(0, y, x, td)].qID[1:]
-    #     for y in range(size) for x in range(size) for td in range(2)
-    #     if graph.E[(0, y, x, td)].state
-    # ]
-    # n = len(errors)
-    # choice = "tree" if n < size**2*0.2 else "list"
+    te.apply_random_seed(seed)
+    te.init_pauli(graph1, pX)
 
-    # Measure stabiliziers
-    tc.measure_stab(graph)
+    tc.measure_stab(graph0)
+    tc.measure_stab(graph1)
 
-    ufg = uf.cluster_farmer(graph)
-    # ufg.find_clusters()
+    uf0 = uf.cluster_farmer(graph0)
+    uf1 = uf.cluster_farmer(graph1)
 
-    errors = [
-        graph.E[(0, y, x, td)].qID[1:]
-        for y in range(size) for x in range(size) for td in range(2)
-        if graph.E[(0, y, x, td)].state
-    ]
+    uf0.find_clusters()
+    uf1.find_clusters()
 
-    # Get clusters from array data
-    clusters = cca.get_clusters_from_list(errors, size)
+    # Analyze clusters after bucket 0 growth
+    uf0.tree_grow_bucket(graph0.buckets[0], 0)
+    cl0 = cca.get_support2clusters(graph0, size, minl, maxl)
 
+    uf1.list_grow_bucket(graph1.buckets[0], 0)
+    cl1 = cca.get_support2clusters(graph1, size, minl, maxl)
 
-    # ufg.tree_grow_bucket(graph.buckets[0], 0)
-    #
-    # clusters = dd(list)
-    # for y in range(size):
-    #     for x in range(size):
-    #         for td in range(2):
-    #             cluster = uf.find_cluster_root(graph.E[(0, y, x, td)].cluster)
-    #             if cluster is not None:
-    #                 clusters[cluster.cID].append((y, x, td))
+    clist, normc0, normc1 = [], [], []
+    for key, val in data_p.items():
+        clist.append(key)
+        normc0.append(val[(size, pX)][0][0])
+        normc1.append(val[(size, pX)][0][1])
 
-    clusters = [
-        cluster
-        for cluster in clusters.values()
-        if len(cluster) >= minl and len(cluster) <= maxl
-    ]
+    count0 = get_count(cl0, clist, size)
+    count1 = get_count(cl1, clist, size)
 
-    count = get_count(clusters, clist, size)
-    count
-    norm = [cc[0][0] - cc[1][0] for cc in [data_p[cl][(size, pX)] for cl in clist]]
+    num0, num1 = countp[(size, pX)]
 
-    # Old norm
-    # norm = [(ra**2-1)/(oc**.1) for oc, ra in zip(norm_avg_occ_p[(size, pX)], tl_ratio_p[(size, pX)])]
+    val0 = sum([d/(d+abs(c-d)**1.002) for d, c in [(n/num0, c) for n, c in zip(normc0, count0)] if d > 0 ])
+    val1 = sum([d/(d+abs(c-d)**1) for d, c in [(n/num1, c) for n, c in zip(normc1, count1)] if d > 0 ])
 
-    cval = [co*no for co, no in zip(count, norm)]
+    choice = "tree" if val0 > val1 else "list"
 
-    choice = "tree" if sum(cval[0:]) >= 0 else "list"
+    if choice == "tree":
+        uf0.grow_clusters(method="tree", start_bucket=1)
+        uf0.peel_clusters()
+        graph = graph0
+    else:
+        uf1.grow_clusters(method="list", start_bucket=1)
+        uf1.peel_clusters()
+        graph = graph1
 
-    # graph.grow_reset()
-    ufg.find_clusters()
-    ufg.grow_clusters(method=choice)
-    ufg.peel_clusters()
 
     # Apply matching
     tc.apply_matching_peeling(graph)
@@ -147,9 +139,10 @@ def multiple(size, iters, pX=0, qres=None, worker=None):
         print(f"L = {size}, p = {pX}")
         worker = 0
 
-    graph = go.init_toric_graph(size)
+    graph0 = go.init_toric_graph(size)
+    graph1 = go.init_toric_graph(size)
     result = [
-        single(size, pX, graph, worker, i)
+        single(size, pX, graph0, graph1, worker, i)
         for i in ProgIter(range(iters))
     ]
 
@@ -220,7 +213,7 @@ def print_threshold(res):
     print("both:", (tsucc+lsucc)/tot)
 
 
-res = multiprocess(8, 30000, 0.089)
+res = multiprocess(16, 2000, 0.09)
 print_threshold(res)
 
 # L = [8 + 4*i for i in range(7)]

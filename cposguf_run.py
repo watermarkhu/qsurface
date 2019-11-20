@@ -95,108 +95,81 @@ def fetch_query(selection, L=None, p=None, limit=None, extra=None):
     return query
 
 
-def multiple(comp_id, iters, size, p, worker=0):
-    def single(graph, iter):
+def single(graph, p, it=0, worker=0):
 
-        seed = te.init_random_seed(worker=worker, iteration=iter)
+    seed = te.init_random_seed(worker=worker, iteration=it)
 
-        te.init_pauli(graph, pX=p)
-        tc.measure_stab(graph)
+    te.init_pauli(graph, pX=p)
+    tc.measure_stab(graph)
 
-        uff = uf.cluster_farmer(graph)
-        uff.find_clusters()
-        uff.grow_clusters(method="tree")
-        uff.peel_clusters()
-        tc.apply_matching_peeling(graph)
-        logical_error = tc.logical_error(graph)
-        tree_solved = True if logical_error == [False, False, False, False] else False
-        graph.reset()
+    uff = uf.cluster_farmer(graph)
+    uff.find_clusters()
+    uff.grow_clusters(method="tree")
+    uff.peel_clusters()
+    tc.apply_matching_peeling(graph)
+    logical_error = tc.logical_error(graph)
+    tree_solved = True if logical_error == [False, False, False, False] else False
+    graph.reset()
 
-        te.apply_random_seed(seed)
-        te.init_pauli(graph, pX=p)
-        tc.measure_stab(graph)
-        uff = uf.cluster_farmer(graph)
-        uff.find_clusters()
-        uff.grow_clusters(method="list")
-        uff.peel_clusters()
-        tc.apply_matching_peeling(graph)
-        logical_error = tc.logical_error(graph)
-        list_solved = True if logical_error == [False, False, False, False] else False
-        graph.reset()
+    te.apply_random_seed(seed)
+    te.init_pauli(graph, pX=p)
+    tc.measure_stab(graph)
+    uff = uf.cluster_farmer(graph)
+    uff.find_clusters()
+    uff.grow_clusters(method="list")
+    uff.peel_clusters()
+    tc.apply_matching_peeling(graph)
+    logical_error = tc.logical_error(graph)
+    list_solved = True if logical_error == [False, False, False, False] else False
+    graph.reset()
 
-        return (tree_solved, list_solved, seed)
+    return (tree_solved, list_solved, seed)
 
-    # Open SQL connection
-    con, cur = sql_connection()
 
-    # Simulate
+def multiple(iters, size, p, worker=0, qres=None):
+
     graph = go.init_toric_graph(size)
-    results = [single(graph, iter) for iter in ProgIter(range(iters))]
-    diff_res = [result[1:] for result in results if result[0] != result[1]]
+    results = [single(graph, p, it, worker) for it in ProgIter(range(iters))]
 
-    # Insert simulation into database
-    query = "INSERT INTO simulations (lattice, p, comp_id, created_on, ftree_tlist, seed) VALUES ({}, {}, '{}', current_timestamp, %s, %s)".format(
-        str(size), str(p), str(comp_id)
-    )
-
-    cur.executemany(query, diff_res)
-
-    # Update cases counters
-    cur.execute(
-        "SELECT tot_sims, tree_sims, list_sims, tree_wins, list_wins FROM cases WHERE lattice = {} AND p = {}".format(
-            size, p
-        )
-    )
-    counter = list(cur.fetchone())
-    counter[0] += iters
-    for tree_solved, list_solved, _ in results:
-        if tree_solved:
-            counter[1] += 1
-            if not list_solved:
-                counter[3] += 1
-        if list_solved:
-            counter[2] += 1
-            if not tree_solved:
-                counter[4] += 1
-
-    cur.execute(
-        "UPDATE cases SET tot_sims = {}, tree_sims = {}, list_sims = {}, tree_wins = {}, list_wins = {} WHERE lattice = {} and p = {}".format(
-            *counter, size, p
-        )
-    )
-
-    cur.close()
-    con.close()
+    if qres is not None:
+        qres.put(results)
+    else:
+        return results
 
 
-def multiprocess(comp_id, iters, size, p, processes=None):
+def multiprocess(iters, size, p, processes=None):
 
     if processes is None:
         processes = mp.cpu_count()
 
+    qres = mp.Queue()
     process_iters = iters // processes
     rest_iters = iters - process_iters * processes
     workers = []
 
     for i in range(processes - 1):
         workers.append(
-            mp.Process(target=multiple, args=(comp_id, process_iters, size, p, i))
+            mp.Process(target=multiple, args=(process_iters, size, p, i, qres))
         )
     workers.append(
         mp.Process(
             target=multiple,
-            args=(comp_id, process_iters + rest_iters, size, p, processes - 1),
+            args=(process_iters + rest_iters, size, p, processes - 1, qres),
         )
     )
 
+    print("Starting", processes, "workers.")
     for worker in workers:
         worker.start()
-    print("Started", processes, "workers.")
+
+    results = []
     for worker in workers:
-        while worker.is_alive():
-            time.sleep(2)
-            # print("Waiting for join...")
+        results += qres.get()
+
+    for worker in workers:
         worker.join()
+
+    return results
 
 
 if __name__ == "__main__":
@@ -234,9 +207,47 @@ if __name__ == "__main__":
             )
         )
         if num_process == 1:
-            multiple(comp_id, iters, lattice, p)
+            results = multiple(iters, lattice, p)
         else:
-            multiprocess(comp_id, iters, lattice, p, num_process)
+            results = multiprocess(iters, lattice, p, num_process)
+
+
+        diff_res = [result[1:] for result in results if result[0] != result[1]]
+
+        print("Updating SQL simulations table...")
+
+        # Insert simulation into database
+        query = "INSERT INTO simulations (lattice, p, comp_id, created_on, ftree_tlist, seed) VALUES ({}, {}, '{}', current_timestamp, %s, %s)".format(
+            str(lattice), str(p), str(comp_id)
+        )
+
+        cur.executemany(query, diff_res)
+
+        print("Updating SQL cases table...")
+        # Update cases counters
+        cur.execute(
+            "SELECT tot_sims, tree_sims, list_sims, tree_wins, list_wins FROM cases WHERE lattice = {} AND p = {}".format(
+                lattice, p
+            )
+        )
+        counter = list(cur.fetchone())
+        counter[0] += iters
+        for tree_solved, list_solved, _ in results:
+            if tree_solved:
+                counter[1] += 1
+                if not list_solved:
+                    counter[3] += 1
+            if list_solved:
+                counter[2] += 1
+                if not tree_solved:
+                    counter[4] += 1
+
+        cur.execute(
+            "UPDATE cases SET tot_sims = {}, tree_sims = {}, list_sims = {}, tree_wins = {}, list_wins = {} WHERE lattice = {} and p = {}".format(
+                *counter, lattice, p
+            )
+        )
+        print("SQL update done")
 
         # Check if keep running
         cur.execute(

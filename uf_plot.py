@@ -4,11 +4,10 @@ import printing as pr
 
 class toric:
     def __init__(
-        self, graph, figure, axn=2, plot_size=10, line_width=1.5, plotstep_click=False, camera=None
+        self, graph, figure, axn=2, plot_size=10, line_width=1.5, plotstep_click=False
     ):
 
         self.size = graph.size
-        self.camera = camera
 
         self.cl = [0.2, 0.2, 0.2]  # Line color
         self.cx = [0.9, 0.3, 0.3]  # X error color
@@ -180,7 +179,6 @@ class toric:
         keyboardClick = False
         while not keyboardClick:
             keyboardClick = plt.waitforbuttonpress(120)
-        if self.camera is not None: self.camera.snap()
 
     """
     ________________________________________________________________________________

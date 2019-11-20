@@ -143,24 +143,23 @@ def plot_thresholds(
 
 if __name__ == "__main__":
 
-    folder = "../thresholds/"
+    folder = "./"
 
     just_plot = 0
     print_data = 1
     save_result = 1
+    method = "tree"
     data_select = None
     modified_ansatz = 0
-    file_name = "uf_toric_pX_bucket_MOPgrowth_Npeel"
+    file_name = "threshold_fixed_" + method
     plot_name = file_name
 
-    lattices = [12, 16, 20, 24, 28, 32]
+    lattices = [8, 12, 16, 20, 24, 28, 32, 36, 40, 44]
     p = list(np.round(np.linspace(0.09, 0.11, 11), 21))
     Num = 50000
 
     r = git.Repo()
     hash = r.git.rev_parse(r.head, short=True)
-
-    settings = {"ro": 0, "rt": 0, "vc": 0}
 
     file_path = (
         folder + "data/" + file_name + ".csv"
@@ -185,10 +184,8 @@ if __name__ == "__main__":
             for pi in p:
 
                 print("Calculating for L = ", str(lati), "and p =", str(pi))
-                N_succes = multiprocess(
-                    lati, Num, 0, pi, 0, processes=4, settings=settings
-                )
-                # N_succes = multiple(lati, Num, 0, pi, 0)
+                N_succes = multiprocess(lati, Num, 0, pi, 0, method)
+                # N_succes = multiple(lati, Num, 0, pi, 0, method)
 
                 if any([(lati, pi) == a for a in indices]):
                     data.loc[(lati, round(pi, 6)), "N"] += Num
@@ -205,7 +202,6 @@ if __name__ == "__main__":
     print(data.to_string()) if print_data else None
 
     # Select data
-
     fitL = data.index.get_level_values("L")
     fitp = data.index.get_level_values("p")
     fitN = data.loc[:, "N"].values

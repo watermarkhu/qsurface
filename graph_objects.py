@@ -108,6 +108,14 @@ class iCluster(object):
         self.bucket = 0
         self.support = 0
 
+        # dgclusters
+        self.tempparent = self
+        self.cons = 0
+
+        # straightness
+        self.med = [0, 0]
+        self.rad = [0, 0]
+
     def __repr__(self):
         return "C" + str(self.cID) + "(" + str(self.size) + ":" + str(self.parity) + ")"
 
@@ -117,6 +125,28 @@ class iCluster(object):
         if vertex.state:
             self.parity += 1
         vertex.cluster = self
+
+        # # straightness
+        # _, y, x = vertex.sID
+        # for i, yx in enumerate([y, x]):
+        #     if self.size == 1:
+        #         self.med[i] = yx
+        #         continue
+        #     baseL = (self.med[i] - self.rad[i]) % lattice
+        #     baseH = (self.med[i] + self.rad[i]) % lattice
+        #     distances = [
+        #         abs(baseL - yx),
+        #         abs(baseH - yx),
+        #         abs((baseL - yx - lattice)),
+        #         abs((baseH - yx - lattice)),
+        #     ]
+        #     type = [k for k, a in enumerate(distances) if a == min(distances)]
+        #     if (0 in type and yx < baseL) or (1 in type and yx > baseH):
+        #         self.med[i] = (self.med[i]*(self.rad[i]*2 + 1) + yx)/(self.rad[i]*2+2)
+        #         self.rad[i] += .5
+        #     elif (2 in type and yx > baseL) or (3 in type and yx < baseH):
+        #         self.med[i] = (self.med[i]*(self.rad[i]*2 + 1) + yx + lattice)/(self.rad[i]*2+2)%lattice
+        #         self.rad[i] += .5
 
 
 class iVertex(object):

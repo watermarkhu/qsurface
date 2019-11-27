@@ -122,9 +122,6 @@ def single(size, pX=0, graph0=None, graph1=None, worker=0, iter=0):
         graph = graph1
 
 
-    # Apply matching
-    tc.apply_matching_peeling(graph)
-
     # Measure logical operator
     logical_error = tc.logical_error(graph)
     correct = 1 if logical_error == [False, False, False, False] else 0
@@ -213,16 +210,16 @@ def print_threshold(res):
     print("both:", (tsucc+lsucc)/tot)
 
 
-res = multiprocess(16, 2000, 0.09)
-print_threshold(res)
+# res = multiprocess(16, 2000, 0.09)
+# print_threshold(res)
 
-# L = [8 + 4*i for i in range(7)]
-# P = [(90 + 2*i)/1000 for i in range(11)]
-# N = 10000
-# database = {}
-# for l in L:
-#     for p in P:
-#         res = multiprocess(l, N, p)
-#         print_threshold(res)
-#         database[(l, p)] = res
-#         pk.save_obj(database, "r1tl_threshold_p_norm0")
+L = [8 + 4*i for i in range(7)]
+P = [(90 + 2*i)/1000 for i in range(11)]
+N = 10000
+database = {}
+for l in L:
+    for p in P:
+        res = multiprocess(l, N, p)
+        print_threshold(res)
+        database[(l, p)] = res
+        pk.save_obj(database, "r1tl_threshold_p_norm0")

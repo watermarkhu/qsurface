@@ -19,7 +19,7 @@ class lattice_plot:
         self.qsize2 = 0.25
         self.qsizeE = 0.7
         self.lw = line_width
-        self.slw = 1
+        self.slw = 2
 
         self.stabs = {}
         self.qubits = {}

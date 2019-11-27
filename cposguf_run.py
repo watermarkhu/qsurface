@@ -106,7 +106,6 @@ def single(graph, p, it=0, worker=0):
     uff.find_clusters()
     uff.grow_clusters(method="tree")
     uff.peel_clusters()
-    tc.apply_matching_peeling(graph)
     logical_error = tc.logical_error(graph)
     tree_solved = True if logical_error == [False, False, False, False] else False
     graph.reset()
@@ -118,7 +117,6 @@ def single(graph, p, it=0, worker=0):
     uff.find_clusters()
     uff.grow_clusters(method="list")
     uff.peel_clusters()
-    tc.apply_matching_peeling(graph)
     logical_error = tc.logical_error(graph)
     list_solved = True if logical_error == [False, False, False, False] else False
     graph.reset()

@@ -47,12 +47,9 @@ def get_matching_mwpm(graph):
     num = 0
 
     for ertype in range(2):
-        anyons = []  # Get all anyons as MWPM algorithm requires
-        for y in range(graph.size):
-            for x in range(graph.size):
-                vertex = graph.V[(ertype, y, x)]
-                if vertex.state:
-                    anyons.append(vertex)
+        anyons = [vertex for vertex in [
+            graph.V[(ertype, y, x)] for y in range(graph.size) for x in range(graph.size)
+        ] if vertex.state]
         all_anyons += anyons
 
         for i0, v0 in enumerate(anyons[:-1]):
@@ -81,12 +78,9 @@ def get_matching_blossom5(graph):
     num = 0
 
     for ertype in range(2):
-        anyons = []  # Get all anyons as MWPM algorithm requires
-        for y in range(graph.size):
-            for x in range(graph.size):
-                vertex = graph.V[(ertype, y, x)]
-                if vertex.state:
-                    anyons.append(vertex)
+        anyons = [vertex for vertex in [
+            graph.V[(ertype, y, x)] for y in range(graph.size) for x in range(graph.size)
+        ] if vertex.state]
         all_anyons += anyons
 
         for i0, v0 in enumerate(anyons[:-1]):
@@ -97,10 +91,9 @@ def get_matching_blossom5(graph):
                 wx = (x0 - x1) % (graph.size)
                 weight = min([wy, graph.size - wy]) + min([wx, graph.size - wx])
                 edges.append([num + i0, num + i1 + i0 + 1, weight])
-
         num = len(anyons)
 
-    output = pm.getMatching(len(anyons), edges) if anyons != [] else []
+    output = pm.getMatching(len(all_anyons), edges) if all_anyons != [] else []
     return [[all_anyons[i0], all_anyons[i1]] for i0, i1 in enumerate(output) if i0 > i1]
 
 
@@ -145,19 +138,6 @@ def apply_matching_mwpm(graph, matching_pairs, toric_plot=None):
 
     if toric_plot is not None:
         toric_plot.plot_lines(matching_pairs)
-        toric_plot.plot_final()
-
-
-def apply_matching_peeling(graph, toric_plot=None):
-    """
-    Uses the Peeling algorithm to get the matchings
-    Optionally, edge_data can be inputted here, which is useful in multiple iteration simulations
-    """
-    for edge in graph.E.values():
-        if edge.matching:
-            edge.state = not edge.state
-
-    if toric_plot is not None:
         toric_plot.plot_final()
 
 

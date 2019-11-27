@@ -117,194 +117,6 @@ class cluster_farmer:
 
     ##################  tree grown functions ####################
 
-    def tree_grow(self, cluster, root_cluster, support):
-        """
-        :param cluster          the current cluster selected for growth
-        :param root_cluster     the root cluster of the selected cluster
-
-        Recursive function which first grows a cluster's children and then itself.
-
-        There are two distinct growth steps. 1) first half step from a given vertex, the cluster size does not increase, no new edges or vertices are added to the cluster, except for during a merge. 2) second half step in which a new vertex is reached, and the edge is added to the cluster.
-        During the inital {find_clusters} function, the initial boundary, which contains edges ready for growth step 1, are added to {full_bound}. {half_bound} which contains the boundary edges for growth step 2, is yet empty. From here, clusters from even buckets go into growth step 1 on edges from {full_bound}, and clusters from uneven buckets go into growth step 2 on edges from "half_bound". New boundary edges are added to the other boundary list.
-        After growth, the cluster is placed into a new bucket using {cluster_place_bucket}. If a merge happens, the root cluster of the current cluster is made a child of the pendant root_cluster. And the pendant root cluster is placed in a new bucket instead.
-        If a cluster has children, these clusters are grown first. The new boundaries from these child clusters are appended to the root_cluster. Such that a parent does not need to remember its children.
-        """
-        # Check for root at beginning
-        root_level = True if cluster == root_cluster else False
-        string = str(cluster) + " grown."
-        merge_cluster = None
-
-        while cluster.childs[0]:  # First go through child clusters
-            child_cluster = cluster.childs[0].pop()
-            self.tree_grow(child_cluster, root_cluster, support)
-
-        # cluster.boundary[0].reverse() if support == 0 else None
-        while cluster.boundary[support]:
-            root_cluster = find_cluster_root(cluster)
-            (base_vertex, edge, grow_vertex) = cluster.boundary[support].pop()
-            grow_cluster = grow_vertex.cluster
-            grrt_cluster = find_cluster_root(grow_cluster)
-            if grrt_cluster is None:  # if new_vertex has no cluster: add to cluster
-                edge.support += 1
-                if support:
-                    root_cluster.add_vertex(grow_vertex)
-                    edge.cluster = root_cluster
-                    self.cluster_new_vertex(root_cluster, grow_vertex, self.plot_growth)
-                else:
-                    root_cluster.boundary[1].append((base_vertex, edge, grow_vertex))
-                if self.plot:
-                    self.uf_plot.add_edge(edge, base_vertex)
-            elif (
-                grrt_cluster is not root_cluster
-            ):  # if new_vertex is from another cluster: union
-                edge.support += 1
-                if not support and edge.support == 2 or support:
-                    string += " Merged with " + str(grrt_cluster) + "."
-                    edge.cluster = grrt_cluster
-                    union_clusters(grrt_cluster, root_cluster)
-                    grrt_cluster.childs[0].append(root_cluster)
-                    merge_cluster = grrt_cluster
-                    if self.plot:
-                        self.uf_plot.add_edge(edge, base_vertex)
-                elif not support:
-                    root_cluster.boundary[1].append((base_vertex, edge, grow_vertex))
-                    if self.plot:
-                        self.uf_plot.add_edge(edge, base_vertex)
-            else:  # if new_vertex is in same cluster: nothing
-                None
-
-        cluster.support = 1 - support
-
-        if root_level:  # only at the root level will a cluster be placed in a new bucket
-            if merge_cluster is None:
-                cluster_place_bucket(self.graph, root_cluster, self.vcomb)
-            else:
-                cluster_place_bucket(self.graph, merge_cluster, self.vcomb)
-
-        if self.plot and self.plot_growth:
-            self.uf_plot.draw_plot(string)
-
-
-    def tree_grow_bucket(self, bucket, bucket_i):
-        """
-        Grows the current bucket. Only clusters with the same bucket_number are grown.
-        """
-
-        while bucket:  # Loop over all clusters in the current bucket\
-            cluster = find_cluster_root(bucket.pop())
-
-            # Check that cluster is not already in a higher bucket
-            if cluster.bucket == bucket_i:
-                self.tree_grow(cluster, cluster, cluster.support)
-
-
-    ############ tree_full mehod, includes intervention and more printing ##########
-
-
-    def tree_grow_full(self, cluster, root_cluster, support, family_growth=1):
-
-        root_level = True if cluster == root_cluster else False
-        string = str(cluster) + " grown."
-        merge_cluster = None
-
-        if cluster.childs[1] and self.print_steps:
-            pr.printlog(f"{cluster} has fosters: {cluster.childs[1]}")
-
-        while cluster.childs[1]:
-            foster_cluster = cluster.childs[1].pop()
-            self.tree_grow_full(foster_cluster, root_cluster, support, 0)
-
-        if family_growth:
-            if cluster.childs[0] and self.print_steps:
-                pr.printlog(f"{cluster} has children: {cluster.childs[0]}")
-            while cluster.childs[0]:  # First go through child clusters
-                child_cluster = cluster.childs[0].pop()
-                self.tree_grow_full(child_cluster, root_cluster, support, 1)
-
-        # cluster.boundary[0].reverse() if support == 0 else None
-        while cluster.boundary[support]:
-            root_cluster = find_cluster_root(cluster)
-            (base_vertex, edge, grow_vertex) = cluster.boundary[support].pop()
-            grow_cluster = grow_vertex.cluster
-            grrt_cluster = find_cluster_root(grow_cluster)
-            if grrt_cluster is None:  # if new_vertex has no cluster: add to cluster
-                edge.support += 1
-                if support:
-                    root_cluster.add_vertex(grow_vertex)
-                    edge.cluster = root_cluster
-                    self.cluster_new_vertex(root_cluster, grow_vertex, self.plot_growth)
-                else:
-                    root_cluster.boundary[1].append((base_vertex, edge, grow_vertex))
-                if self.plot:
-                    self.uf_plot.add_edge(edge, base_vertex)
-            elif (
-                grrt_cluster is not root_cluster
-            ):  # if new_vertex is from another cluster: union
-                edge.support += 1
-                if not support and edge.support == 2 or support:
-                    string += " Merged with " + str(grrt_cluster) + "."
-                    edge.cluster = grrt_cluster
-                    union_clusters(grrt_cluster, root_cluster)
-                    grrt_cluster.childs[0].append(root_cluster)
-                    merge_cluster = grrt_cluster
-                    if self.plot:
-                        self.uf_plot.add_edge(edge, base_vertex)
-                    if self.intervention and family_growth and grrt_cluster.parity % 2 == 0:
-                        grrt_cluster.childs[1].append(root_cluster)
-                        if self.print_steps:
-                            pr.printlog("intervention on merge.")
-                        break
-                elif not support:
-                    root_cluster.boundary[1].append((base_vertex, edge, grow_vertex))
-                    if self.plot:
-                        self.uf_plot.add_edge(edge, base_vertex)
-            else:
-                None
-
-        if family_growth:
-            cluster.support = 1 - support
-
-        if root_level:  # only at the root level will a cluster be placed in a new bucket
-            if merge_cluster is None:
-                cluster_place_bucket(self.graph, root_cluster, self.vcomb)
-            else:
-                cluster_place_bucket(self.graph, merge_cluster, self.vcomb)
-
-        if self.plot and self.plot_growth:
-            self.uf_plot.draw_plot(string)
-        if self.print_steps and root_level:
-            if not self.plot:
-                pr.printlog(string)
-            print_cluster = root_cluster if merge_cluster is None else merge_cluster
-            pr.print_graph(self.graph, [print_cluster], prestring="A: ", poststring="")
-            if self.plot and self.plot_growth:
-                self.uf_plot.waitforkeypress()
-
-
-
-    def tree_grow_bucket_full(self, bucket, bucket_i):
-
-        """
-        Grows the current bucket. Only clusters with the same bucket_number are grown.
-        """
-
-        while bucket:  # Loop over all clusters in the current bucket
-            cluster = find_cluster_root(bucket.pop())
-            if cluster.bucket == bucket_i:
-            # Check that cluster is not already in a higher bucket
-                if self.print_steps:
-                    pr.print_graph(self.graph, [cluster], prestring="B: ")
-                self.tree_grow_full(cluster, cluster, cluster.support, 1)
-            else:
-                if self.print_steps:
-                    if cluster.bucket is None:
-                        pr.printlog(f"{cluster} is even.\n")
-                    else:
-                        if cluster.bucket > self.graph.maxbucket:
-                            pr.printlog(f"{cluster} is already in the wastebasket\n")
-                        else:
-                            pr.printlog(f"{cluster} is already in another bucket.\n")
-
     #################################################################################
     ####### List unionfind method ########
 
@@ -343,29 +155,69 @@ class cluster_farmer:
                 if self.plot_growth: self.uf_plot.draw_plot(str(cluster) + " grown.")
 
         if self.print_steps: mstr = {}
-        for base_vertex, edge, grow_vertex in fusion:
-            base_cluster = find_cluster_root(base_vertex.cluster)
-            grow_cluster = find_cluster_root(grow_vertex.cluster)
-            if grow_cluster is None:
-                # Fully grown edge. New vertex is on the old boundary. Find new boundary on vertex
-                base_cluster.add_vertex(grow_vertex)
-                self.cluster_new_vertex(base_cluster, grow_vertex, self.plot_growth)
-            elif grow_cluster is base_cluster:
-                # Edge grown on itself. This cluster is already connected. Cut half-edge
+
+        merging = []
+        for baseV, edge, growV in fusion:
+            baseC = find_cluster_root(baseV.cluster)
+            growC = find_cluster_root(growV.cluster)
+
+            # Fully grown edge. New vertex is on the old boundary. Find new boundary on vertex
+            if growC is None:
+                baseC.add_vertex(growV)
+                self.cluster_new_vertex(baseC, growV, self.plot_growth)
+
+            # Edge grown on itself. This cluster is already connected. Cut half-edge
+            elif growC is baseC:
                 edge.support -= 1
-                if self.plot: self.uf_plot.add_edge(edge, base_vertex)
-            else:  # Clusters merge by weighted union
-                if grow_cluster.size < base_cluster.size:  # apply weighted union
-                    base_cluster, grow_cluster = grow_cluster, base_cluster
-                if self.print_steps:  # Keep track of which clusters are merged into one
-                    if base_cluster.cID not in mstr:
-                        mstr[base_cluster.cID] = pr.print_graph(self.graph, [base_cluster], return_string=True)
-                    if grow_cluster.cID not in mstr:
-                        mstr[grow_cluster.cID] = pr.print_graph(self.graph, [grow_cluster], return_string=True)
-                    mstr[grow_cluster.cID] += "\n" + mstr[base_cluster.cID]
-                    mstr.pop(base_cluster.cID)
-                union_clusters(grow_cluster, base_cluster)
-                grow_cluster.boundary[0].extend(base_cluster.boundary[0])
+                if self.plot: self.uf_plot.add_edge(edge, baseV)
+
+            # Append to merging list, list of edges between clusters
+            else:
+                merging.append((baseC, baseV, edge, growV, growC))
+                if baseC.tempparent is not growC:
+                    baseC.tempparent = growC
+                    baseC.cons += 1
+                    growC.cons += 1
+
+        # Initiate subbucket for merging cluster edges, ordered by cluster connection degeneracy
+        merge_length = 10
+        con_buckets = [[] for _ in range(merge_length)]
+        for baseC, baseV, edge, growV, growC in merging:
+            count = baseC.cons + growC.cons - 2
+            if count >= merge_length:
+                count = merge_length - 1
+            con_buckets[count].append((baseV, edge, growV))
+
+        # Connect subbuckets, starting from lowest subbucket
+        for con_bucket in con_buckets:
+            for baseV, edge, growV in con_bucket:
+                baseC = find_cluster_root(baseV.cluster)
+                growC = find_cluster_root(growV.cluster)
+
+                # Edge grown on itself. This cluster is already connected. Cut half-edge
+                if growC is baseC:
+                    edge.support -= 1
+                    if self.plot: self.uf_plot.add_edge(edge, baseV)
+
+                # Merge clusters by union
+                else:
+                    # apply weighted union
+                    if growC.size < baseC.size:
+                        baseC, growC = growC, baseC
+
+                    # Keep track of which clusters are merged into one
+                    if self.print_steps:
+                        if baseC.cID not in mstr:
+                            mstr[baseC.cID] = pr.print_graph(self.graph, [baseC], return_string=True)
+                        if growC.cID not in mstr:
+                            mstr[growC.cID] = pr.print_graph(self.graph, [growC], return_string=True)
+                        mstr[growC.cID] += "\n" + mstr[baseC.cID]
+                        mstr.pop(baseC.cID)
+                    union_clusters(growC, baseC)
+                    growC.boundary[0].extend(baseC.boundary[0])
+                    growC.cons = 0
+                    growC.tempparent = growC
+
         if self.print_steps:
             pr.printlog("")
             for cID, string in mstr.items():
@@ -384,12 +236,6 @@ class cluster_farmer:
 
 
     def grow_clusters(self, method="tree", start_bucket=0):
-
-        grow_bucket = {
-            "tree": self.tree_grow_bucket,
-            "tree_full": self.tree_grow_bucket_full,
-            "list": self.list_grow_bucket
-        }
 
         if self.print_steps:
             pr.print_graph(self.graph)
@@ -413,7 +259,7 @@ class cluster_farmer:
                 )
                 self.uf_plot.waitforkeypress()
 
-            grow_bucket[method](bucket, bucket_i)
+            self.list_grow_bucket(bucket, bucket_i)
 
             if self.print_steps:
                 pr.print_graph(self.graph, printmerged=0)

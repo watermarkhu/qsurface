@@ -1,5 +1,5 @@
 from matplotlib import pyplot as plt
-from run_toric_2D_uf import multiprocess, multiple
+from run_toric_2D_mwpm import multiprocess, multiple
 from collections import defaultdict
 from scipy import optimize
 import numpy as np
@@ -145,27 +145,26 @@ if __name__ == "__main__":
 
     folder = "./"
 
-    just_plot = 0
+    just_plot = 1
     print_data = 1
     save_result = 1
-    method = "tree"
+    method = "list"
     data_select = None
     modified_ansatz = 0
-    file_name = "threshold_fixed_" + method
+    file_name = "threshold_fixed_mwpm_nxgraph"
     plot_name = file_name
 
-    lattices = [8, 12, 16, 20, 24, 28, 32, 36, 40, 44]
+    lattices = [8, 12, 16, 20, 24, 28]
     p = list(np.round(np.linspace(0.09, 0.11, 11), 21))
     Num = 50000
 
     r = git.Repo()
     hash = r.git.rev_parse(r.head, short=True)
 
-    file_path = (
-        folder + "data/" + file_name + ".csv"
-        if just_plot
-        else folder + "data/" + hash + "_" + file_name + ".csv"
-    )
+    path = file_name if just_plot else hash + "_" + file_name
+    file_path = folder + "./data/" + path + ".csv"
+    fig_path = folder + "./figures/" + path + ".pdf"
+
     if os.path.exists(file_path):
         data = pd.read_csv(file_path, header=0)
         data = data.set_index(["L", "p"])
@@ -184,7 +183,8 @@ if __name__ == "__main__":
             for pi in p:
 
                 print("Calculating for L = ", str(lati), "and p =", str(pi))
-                N_succes = multiprocess(lati, Num, 0, pi, 0, method)
+                N_succes = multiprocess(lati, Num, 0, pi, 0)
+                # N_succes = multiprocess(lati, Num, 0, pi, 0, method)
                 # N_succes = multiple(lati, Num, 0, pi, 0, method)
 
                 if any([(lati, pi) == a for a in indices]):
@@ -207,11 +207,20 @@ if __name__ == "__main__":
     fitN = data.loc[:, "N"].values
     fitt = data.loc[:, "succes"].values
 
-    f0, ax0 = plt.figure()
-    f1, ax1 = plt.figure()
-    plot_thresholds(fitL, fitp, fitN, fitt, plot_name=file_name, ax0=ax0, ax1=ax1)
+    fitdata = [[] for i in range(4)]
+    for L, p, N, t in zip(fitL, fitp, fitN, fitt):
+        if N != 0:
+            fitdata[0].append(L)
+            fitdata[1].append(p)
+            fitdata[2].append(N)
+            fitdata[3].append(t)
+
+    f0, ax0 = plt.subplots()
+    f1, ax1 = plt.subplots()
+    plot_thresholds(*fitdata, plot_name=file_name, ax0=ax0, ax1=ax1)
+
+    plt.show()
 
     if save_result:
         data.to_csv(file_path)
-        fname = folder + "./figures/" + hash + "_" + file_name + ".pdf"
-        f0.savefig(fname, transparent=True, format="pdf", bbox_inches="tight")
+        f0.savefig(fig_path, transparent=True, format="pdf", bbox_inches="tight")

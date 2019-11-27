@@ -2,7 +2,7 @@ import graph_objects as go
 import toric_code as tc
 import toric_error as te
 import toric_plot as tp
-from tqdm import tqdm
+from progiter import ProgIter
 import multiprocessing as mp
 
 
@@ -16,7 +16,7 @@ def single(
     pauli_file=None,
     plot_load=False,
     graph=None,
-    worker=None,
+    worker=0,
     iter=0,
 ):
     """
@@ -32,19 +32,26 @@ def single(
 
     # Initialize errors
     te.init_random_seed(worker=worker, iteration=iter)
-    te.init_erasure_region(
-        graph, pE, savefile, erasure_file, toric_plot=toric_plot, worker=worker
-    )
+
+    if pE != 0:
+        te.init_erasure_region(
+            graph,
+            pE,
+            savefile,
+            erasure_file=erasure_file,
+            toric_plot=toric_plot
+        )
+
     te.init_pauli(
-        graph, pX, pZ, savefile, pauli_file, toric_plot=toric_plot, worker=worker
+        graph, pX, pZ, savefile, pauli_file, toric_plot=toric_plot
     )
 
     # Measure stabiliziers
     tc.measure_stab(graph, toric_plot)
 
     # MWPM decoder
-    matching = tc.get_matching_mwpm(graph)
-    # matching = tc.get_matching_blossom5(graph):
+    # matching = tc.get_matching_mwpm(graph)
+    matching = tc.get_matching_blossom5(graph)
 
     # Apply matching
     tc.apply_matching_mwpm(graph, matching, toric_plot)
@@ -65,7 +72,7 @@ def multiple(size, iters, pE=0, pX=0, pZ=0, plot_load=False, qres=None, worker=N
         single(
             size, pE, pX, pZ, plot_load=plot_load, graph=graph, worker=worker, iter=i
         )
-        for i in tqdm(range(iters))
+        for i in ProgIter(range(iters))
     ]
     N_succes = sum(result)
     if qres is not None:

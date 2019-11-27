@@ -2,7 +2,7 @@ import graph_objects as go
 import toric_code as tc
 import toric_error as te
 import toric_plot as tp
-import unionfind as uf
+import unionfind_dgclusters as uf
 import uf_plot as up
 import os
 from progiter import ProgIter
@@ -72,7 +72,6 @@ def single(
         else None
     )
 
-
     ufg = uf.cluster_farmer(
         graph,
         uf_plot,
@@ -86,8 +85,8 @@ def single(
     ufg.grow_clusters(method)
     ufg.peel_clusters(plot_step=0)
 
-    # Apply matching
-    tc.apply_matching_peeling(graph, toric_plot)
+    if toric_plot:
+        toric_plot.plot_final()
 
     # Measure logical operator
     logical_error = tc.logical_error(graph)

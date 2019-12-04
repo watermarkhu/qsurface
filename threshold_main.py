@@ -147,11 +147,11 @@ if __name__ == "__main__":
 
     just_plot = 1
     print_data = 1
-    save_result = 1
+    save_result = 0
     method = "list"
     data_select = None
-    modified_ansatz = 0
-    file_name = "threshold_fixed_mwpm_nxgraph"
+    modified_ansatz = 1
+    file_name = "278ec3f_threshold_fixed_mwpm_mxgraph"
     plot_name = file_name
 
     lattices = [8, 12, 16, 20, 24, 28]
@@ -217,7 +217,7 @@ if __name__ == "__main__":
 
     f0, ax0 = plt.subplots()
     f1, ax1 = plt.subplots()
-    plot_thresholds(*fitdata, plot_name=file_name, ax0=ax0, ax1=ax1)
+    plot_thresholds(*fitdata, plot_name=file_name, ax0=ax0, ax1=ax1, modified_ansatz=modified_ansatz)
 
     plt.show()
 

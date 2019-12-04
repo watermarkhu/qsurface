@@ -1,18 +1,18 @@
-import run_toric_2D_mwpm as rt2
+import run_toric_2D_uf as rt2
 import time
 
 
 t0 = time.time()
-size = 8
+size = 16
 pX = 0.09
 pZ = 0.0
 pE = 0.0
-iters = 10000
+iters = 30000
 
-plot_load = 1
+plot_load = 0
 # output = rt2.single(size, pE, pX, pZ, plot_load=plot_load)
 # output = rt2.multiple(size, iters, pE, pX, pZ, plot_load=plot_load)
-output = rt2.multiprocess(size, iters, pE, pX, pZ, 4)
+output = rt2.multiprocess(size, iters, pE, pX, pZ)
 
 print("time taken =", time.time() - t0)
 print("p = " + str(output / iters * 100) + "%")

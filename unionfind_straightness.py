@@ -2,6 +2,36 @@ import printing as pr
 import random
 
 
+straightness_par = 0.05
+
+
+def ms(mid0, rad0, mid1, rad1, L):
+    mid, rad = [], []
+    for (m0, r0, m1, r1) in zip(mid0, rad0, mid1, rad1):
+
+        dis = m0 - m1
+        distances = [dis, L-abs(dis)]
+        abs_distances = [abs(x) for x in distances]
+
+        min_distance = min(abs_distances)
+        sign1 = -1 if abs_distances.index(min_distance) == 0 else 1
+
+        if dis != 0:
+            sign0 = dis//abs(dis)
+            direction = sign0*sign1
+        else:
+            direction = sign1
+
+        m1s = m0 + direction*min_distance
+
+        lower = min([m0 - r0, m1s - r1])
+        upper = max([m0 + r0, m1s + r1])
+
+        mid.append((upper+lower)/2%L)
+        rad.append((upper-lower)/2)
+
+    return mid, rad
+
 def find_cluster_root(cluster):
     """
     :param cluster      input cluster
@@ -19,7 +49,7 @@ def find_cluster_root(cluster):
         return None
 
 
-def union_clusters(parent, child):
+def union_clusters(parent, child, L):
     """
     :param parent       parent cluster
     :param child        child cluster
@@ -30,6 +60,8 @@ def union_clusters(parent, child):
     parent.size += child.size
     parent.parity += child.parity
 
+    parent.med, parent.rad = ms(parent.med, parent.rad, child.med, child.rad, L)
+
 
 def cluster_place_bucket(graph, cluster, vcomb=0):
     """
@@ -39,16 +71,32 @@ def cluster_place_bucket(graph, cluster, vcomb=0):
     If the max bucket number has been reached. The cluster is appended to the wastebasket, which will never be selected for growth.
         """
 
-    cluster.bucket = (
-        cluster.size - 1 + cluster.support
-        if vcomb
-        else 2 * (cluster.size - 1) + cluster.support
-    )
+    if cluster.parity % 2 == 1:
 
-    if cluster.parity % 2 == 1 and cluster.bucket < graph.numbuckets:
-        graph.buckets[cluster.bucket].append(cluster)
-        if cluster.bucket > graph.maxbucket:
-            graph.maxbucket = cluster.bucket
+        val = cluster.size**(1/2)
+        Rb, Rr = val // 1, val % 1
+        if Rr == 0:
+            R = [(Rb - 1)/2]*2
+        elif Rr < 0.5:
+            R = [(Rb - 1)/2, Rb/2]
+        else:
+            R = [Rb/2]*2
+        norm = R[0] + abs(R[1]-(cluster.size-1)/2)
+        if norm != 0:
+            straightness = (abs(min(cluster.rad)-R[0]) + abs(max(cluster.rad)-R[1]))/norm
+            straightness_delay = int(straightness * cluster.size * straightness_par)
+            # print(cluster, "delayed by:", straightness_delay)
+        else:
+            straightness_delay = 0
+
+        cluster.bucket = 2 * (cluster.size - 1 + straightness_delay) + cluster.support
+
+        if cluster.bucket < graph.numbuckets:
+            graph.buckets[cluster.bucket].append(cluster)
+            if cluster.bucket > graph.maxbucket:
+                graph.maxbucket = cluster.bucket
+        else:
+            cluster.bucket = None
     else:
         cluster.bucket = None
 
@@ -67,6 +115,7 @@ class cluster_farmer:
             vcomb=0
         ):
         self.graph = graph
+        self.size = self.graph.size
         self.uf_plot = uf_plot
         self.plot_growth= plot_growth
         self.print_steps = print_steps
@@ -75,8 +124,6 @@ class cluster_farmer:
         self.intervention = intervention
         self.vcomb = vcomb
         self.plot = True if uf_plot is not None else False
-
-        self.straightness_par = 0.5
 
 
     def cluster_new_vertex(self, cluster, vertex, plot_step=0):
@@ -107,6 +154,8 @@ class cluster_farmer:
                             if self.plot and plot_step:
                                 self.uf_plot.plot_edge_step(new_edge, "confirm")
                             self.cluster_new_vertex(cluster, vertex, plot_step)
+                            self.calc_new_straightness(cluster, vertex)
+                            cluster.med, cluster,rad = ms(cluster.med, cluster.rad, vertex.sID[1:], [0,0], self.size)
                         else:  # cycle detected, peel edge
                             new_edge.peeled = True
                             if self.plot and plot_step:
@@ -116,7 +165,6 @@ class cluster_farmer:
                         new_vertex.cluster is not cluster
                     ):  # Make sure new bound does not lead to self
                         cluster.boundary[0].append((vertex, new_edge, new_vertex))
-
 
     #################################################################################
     ####### List unionfind method ########
@@ -177,7 +225,7 @@ class cluster_farmer:
                         mstr[grow_cluster.cID] = pr.print_graph(self.graph, [grow_cluster], return_string=True)
                     mstr[grow_cluster.cID] += "\n" + mstr[base_cluster.cID]
                     mstr.pop(base_cluster.cID)
-                union_clusters(grow_cluster, base_cluster)
+                union_clusters(grow_cluster, base_cluster, self.size)
                 grow_cluster.boundary[0].extend(base_cluster.boundary[0])
         if self.print_steps:
             pr.printlog("")
@@ -197,12 +245,6 @@ class cluster_farmer:
 
 
     def grow_clusters(self, method="tree", start_bucket=0):
-
-        grow_bucket = {
-            "tree": self.tree_grow_bucket,
-            "tree_full": self.tree_grow_bucket_full,
-            "list": self.list_grow_bucket
-        }
 
         if self.print_steps:
             pr.print_graph(self.graph)
@@ -226,7 +268,7 @@ class cluster_farmer:
                 )
                 self.uf_plot.waitforkeypress()
 
-            grow_bucket[method](bucket, bucket_i)
+            self.list_grow_bucket(bucket, bucket_i)
 
             if self.print_steps:
                 pr.print_graph(self.graph, printmerged=0)
@@ -251,7 +293,7 @@ class cluster_farmer:
         It loops over all vertices (randomly if toggled, which produces a different tree), and calls {cluster_new_vertex} to find all connected erasure qubits, and finds the boundary for growth step 1. Afterwards the cluster is placed in a bucket based in its size.
 
         """
-        self.graph.numbuckets = ((self.graph.size * (self.graph.size // 2 - 1) * 2) * (1 + self.straightness_par))//1
+        self.graph.numbuckets = int((self.graph.size * (self.graph.size // 2 - 1) * 2) * (1 + straightness_par))
         self.graph.buckets = [[] for _ in range(self.graph.numbuckets)]
         self.graph.wastebasket = []
         self.graph.maxbucket = 0
@@ -287,6 +329,8 @@ class cluster_farmer:
             if vertex.cluster is None:
                 cluster = self.graph.add_cluster(cID)
                 cluster.add_vertex(vertex)
+                cluster.rad = [0, 0]
+                cluster.med = [vertex.sID[1], vertex.sID[2]]
                 self.cluster_new_vertex(cluster, vertex, plot_step)
                 cluster_place_bucket(self.graph, cluster, self.vcomb)
                 cID += 1

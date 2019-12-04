@@ -53,6 +53,7 @@ def cluster_place_bucket(graph, cluster, vcomb=0):
         cluster.bucket = None
 
 
+
 class cluster_farmer:
 
     def __init__(
@@ -319,6 +320,8 @@ class cluster_farmer:
         for vertex in anyons:
             if vertex.cluster is None:
                 cluster = self.graph.add_cluster(cID)
+                cluster.tempparent = cluster
+                cluster.cons = 0
                 cluster.add_vertex(vertex)
                 self.cluster_new_vertex(cluster, vertex, plot_step)
                 cluster_place_bucket(self.graph, cluster, self.vcomb)

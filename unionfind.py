@@ -383,7 +383,7 @@ class cluster_farmer:
     ######################## General functions #############################
 
 
-    def grow_clusters(self, method="tree", start_bucket=0):
+    def grow_clusters(self, method="list", start_bucket=0):
 
         grow_bucket = {
             "tree": self.tree_grow_bucket,

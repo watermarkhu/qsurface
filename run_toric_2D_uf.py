@@ -2,7 +2,7 @@ import graph_objects as go
 import toric_code as tc
 import toric_error as te
 import toric_plot as tp
-import unionfind_dgclusters as uf
+import unionfind_straightness as uf
 import uf_plot as up
 import os
 from progiter import ProgIter
@@ -37,7 +37,7 @@ def single(
         graph = go.init_toric_graph(size)
 
     toric_plot = (
-        tp.lattice_plot(graph, plot_size=8, line_width=2) if plot_load else None
+        tp.lattice_plot(graph, plot_size=6, line_width=2) if plot_load else None
     )
 
 
@@ -67,7 +67,7 @@ def single(
 
     # Peeling decoder
     uf_plot = (
-        up.toric(graph, toric_plot.f, plot_size=8, line_width=1.5, plotstep_click=1)
+        up.toric(graph, toric_plot.f, plot_size=6, line_width=1.5, plotstep_click=1)
         if plot_load
         else None
     )
@@ -96,7 +96,7 @@ def single(
 
 
 def multiple(
-    size, iters, pE=0, pX=0, pZ=0, method="list", plot_load=0, qres=None, worker=None
+    size, iters, pE=0, pX=0, pZ=0, method="list", plot_load=0, qres=None, worker=0
 ):
     """
     Runs the peeling decoder for a number of iterations. The graph is reused for speedup.

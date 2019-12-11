@@ -1,7 +1,7 @@
 import graph_objects as go
-import toric_code as tc
-import toric_error as te
-import toric_plot as tp
+import dec_mwpm as dc
+import toric_error2 as te
+import surface_plot as tp
 from progiter import ProgIter
 import multiprocessing as mp
 
@@ -11,10 +11,8 @@ def single(
     pE=0,
     pX=0,
     pZ=0,
-    savefile=False,
-    erasure_file=None,
-    pauli_file=None,
     plot_load=False,
+    type="toric",
     graph=None,
     worker=0,
     iter=0,
@@ -24,53 +22,54 @@ def single(
     """
 
     # Initialize lattice
-    if graph is None:
+
+    if type == "toric":
         graph = go.init_toric_graph(size)
-    toric_plot = (
-        tp.lattice_plot(graph, plot_size=8, line_width=2) if plot_load else None
-    )
+        decoder = dc.toric(graph)
+    elif type == "planar":
+        graph = go.init_planar_graph(size)
+        decoder = dc.planar(graph)
 
-    # Initialize errors
-    te.init_random_seed(worker=worker, iteration=iter)
+    if plot_load:
+        lplot = tp.lattice_plot(graph, plot_size=8, line_width=2)
+        te.init_random_seed(worker=worker, iteration=iter)
+        te.init_erasure(graph, pE)
+        lplot.plot_erasures()
+        te.init_pauli(graph, pX, pZ)
+        lplot.plot_errors()
+        graph.measure_stab()
+        lplot.plot_syndrome()
+        decoder.get_matching_blossom5()
+        if type == "planar":
+            decoder.remove_virtual()
+        lplot.plot_lines(decoder.matching)
+        decoder.apply_matching()
+        lplot.plot_final()
 
-    if pE != 0:
-        te.init_erasure_region(
-            graph,
-            pE,
-            savefile,
-            erasure_file=erasure_file,
-            toric_plot=toric_plot
-        )
+    else:
+        te.init_random_seed(worker=worker, iteration=iter)
+        te.init_erasure(graph, pE)
+        te.init_pauli(graph, pX, pZ)
+        graph.measure_stab()
+        decoder.get_matching_blossom5()
+        if type == "planar":
+            decoder.remove_virtual()
+        decoder.apply_matching()
 
-    te.init_pauli(
-        graph, pX, pZ, savefile, pauli_file, toric_plot=toric_plot
-    )
 
-    # Measure stabiliziers
-    tc.measure_stab(graph, toric_plot)
+    _ , correct = go.logical_error(graph)
 
-    # MWPM decoder
-    # matching = tc.get_matching_mwpm(graph)
-    matching = tc.get_matching_blossom5(graph)
-
-    # Apply matching
-    tc.apply_matching_mwpm(graph, matching, toric_plot)
-
-    # Measure logical operator
-    logical_error = tc.logical_error(graph)
-    graph.reset()
-    correct = True if logical_error == [False, False, False, False] else False
     return correct
 
 
-def multiple(size, iters, pE=0, pX=0, pZ=0, plot_load=False, qres=None, worker=None):
+def multiple(size, iters, pE=0, pX=0, pZ=0, plot_load=False, type="toric", qres=None, worker=0):
     """
     Runs the peeling decoder for a number of iterations. The graph is reused for speedup.
     """
     graph = go.init_toric_graph(size)
     result = [
         single(
-            size, pE, pX, pZ, plot_load=plot_load, graph=graph, worker=worker, iter=i
+            size, pE, pX, pZ, plot_load=plot_load, type=type, graph=graph, worker=worker, iter=i
         )
         for i in ProgIter(range(iters))
     ]
@@ -81,7 +80,7 @@ def multiple(size, iters, pE=0, pX=0, pZ=0, plot_load=False, qres=None, worker=N
         return N_succes
 
 
-def multiprocess(size, iters, pE=0, pX=0, pZ=0, processes=None):
+def multiprocess(size, iters, pE=0, pX=0, pZ=0, type="toric", processes=None):
     """
     Runs the peeling decoder for a number of iterations, split over a number of processes
     """
@@ -99,7 +98,7 @@ def multiprocess(size, iters, pE=0, pX=0, pZ=0, processes=None):
     for i in range(processes - 1):
         workers.append(
             mp.Process(
-                target=multiple, args=(size, process_iters, pE, pX, pZ, False, qres, i)
+                target=multiple, args=(size, process_iters, pE, pX, pZ, False, type, qres, i)
             )
         )
     workers.append(
@@ -112,6 +111,7 @@ def multiprocess(size, iters, pE=0, pX=0, pZ=0, processes=None):
                 pX,
                 pZ,
                 False,
+                type,
                 qres,
                 processes - 1,
             ),

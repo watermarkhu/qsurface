@@ -6,14 +6,14 @@ import random
 class lattice_plot:
     def __init__(self, graph, plot_size=8, line_width=1.5):
 
-        self.plot_base = 0
+        self.plot_base = 1
         self.plot_error = 1
-        self.plot_syndrome = 1
+        self.plot_anyons = 1
         self.plot_matching = 1
         self.plot_correction = 1
         self.plot_result = 1
         self.size = graph.size
-        self.G = graph
+        self.graph = graph
 
         self.qsize = 0.5
         self.qsize2 = 0.25
@@ -118,56 +118,67 @@ class lattice_plot:
 
         # Plot empty lattice
         # Loop over all indices
-        for yb in range(self.size):
-            y = yb * 4
-            for xb in range(self.size):
-                x = xb * 4
 
-                # Plot primary lattice
-                self.stabs[(0, yb, xb, "l")] = plt.plot(
-                    [x + 0, x + 1], [y + 1, y + 1], c=self.cl, lw=self.lw, ls="-"
+        def plot_stab(neighbor, y, x, type, alpha=1):
+            y += 2*type
+            x += 2*type
+            ls = "-" if type == 0 else "--"
+            if neighbor == "l":
+                return plt.plot(
+                    [x + 0, x + 1], [y + 1, y + 1], c=self.cl, lw=self.lw, ls=ls, alpha=alpha
                 )
-                self.stabs[(0, yb, xb, "r")] = plt.plot(
-                    [x + 1, x + 2], [y + 1, y + 1], c=self.cl, lw=self.lw, ls="-"
+            elif neighbor == "r":
+                 return plt.plot(
+                    [x + 1, x + 2], [y + 1, y + 1], c=self.cl, lw=self.lw, ls=ls, alpha=alpha
                 )
-                self.stabs[(0, yb, xb, "u")] = plt.plot(
-                    [x + 1, x + 1], [y + 0, y + 1], c=self.cl, lw=self.lw, ls="-"
+            elif neighbor == "u":
+                return plt.plot(
+                    [x + 1, x + 1], [y + 0, y + 1], c=self.cl, lw=self.lw, ls=ls, alpha=alpha
                 )
-                self.stabs[(0, yb, xb, "d")] = plt.plot(
-                    [x + 1, x + 1], [y + 1, y + 2], c=self.cl, lw=self.lw, ls="-"
-                )
-
-                # Plot secundary lattice
-                self.stabs[(1, yb, xb, "l")] = plt.plot(
-                    [x + 2, x + 3], [y + 3, y + 3], c=self.cl, lw=self.lw, ls="--"
-                )
-                self.stabs[(1, yb, xb, "r")] = plt.plot(
-                    [x + 3, x + 4], [y + 3, y + 3], c=self.cl, lw=self.lw, ls="--"
-                )
-                self.stabs[(1, yb, xb, "u")] = plt.plot(
-                    [x + 3, x + 3], [y + 2, y + 3], c=self.cl, lw=self.lw, ls="--"
-                )
-                self.stabs[(1, yb, xb, "d")] = plt.plot(
-                    [x + 3, x + 3], [y + 3, y + 4], c=self.cl, lw=self.lw, ls="--"
+            elif neighbor == "d":
+                return plt.plot(
+                    [x + 1, x + 1], [y + 1, y + 2], c=self.cl, lw=self.lw, ls=ls, alpha=alpha
                 )
 
-                # Plot qubits
-                self.qubits[(yb, xb, 0)] = plt.Circle(
+
+        # Plot stabilizers
+        for stab in graph.S.values():
+            (type, yb, xb) = stab.sID
+            y, x = yb * 4, xb * 4
+            stab.sp = {}
+            for neighbor in stab.neighbors.keys():
+                stab.sp[neighbor] = plot_stab(neighbor, y, x, type)[0]
+
+        # Plot open boundaries if exists
+        for bound in graph.B.values():
+            (type, yb, xb) = bound.sID
+            y, x = yb * 4, xb * 4
+            bound.sp = {}
+            for neighbor in bound.neighbors.keys():
+                bound.sp[neighbor] = plot_stab(neighbor, y, x, type, alpha=0.3)[0]
+
+        # Plot qubits
+        for qubit in graph.Q.values():
+            (yb, xb, td) = qubit.qID
+            y, x = yb * 4, xb * 4
+            if td == 0:
+                qubit.sp = plt.Circle(
                     (x + 3, y + 1),
                     self.qsize,
                     edgecolor=self.cc,
                     fill=False,
                     linewidth=self.lw,
                 )
-                self.qubits[(yb, xb, 1)] = plt.Circle(
+                self.ax.add_artist(qubit.sp)
+            else:
+                qubit.sp = plt.Circle(
                     (x + 1, y + 3),
                     self.qsize,
                     edgecolor=self.cc,
                     fill=False,
                     linewidth=self.lw,
                 )
-                self.ax.add_artist(self.qubits[(yb, xb, 0)])
-                self.ax.add_artist(self.qubits[(yb, xb, 1)])
+                self.ax.add_artist(qubit.sp)
 
         self.canvas.draw()
         if self.plot_base:
@@ -186,18 +197,12 @@ class lattice_plot:
         """
         plt.sca(self.ax)
 
-        for y in range(self.size):
-            for x in range(self.size):
+        for qubit in self.graph.Q.values():
+            qplot = qubit.sp
+            if qubit.erasure:
+                qplot.set_linestyle(":")
+                self.ax.draw_artist(qplot)
 
-                if self.G.E[(0, y, x, 0)].erasure:
-                    qubit = self.qubits[(y, x, 0)]
-                    qubit.set_linestyle(":")
-                    self.ax.draw_artist(qubit)
-
-                if self.G.E[(0, y, x, 1)].erasure:
-                    qubit = self.qubits[(y, x, 1)]
-                    qubit.set_linestyle(":")
-                    self.ax.draw_artist(qubit)
 
     def plot_errors(self, plot_qubits=False):
         """
@@ -206,39 +211,37 @@ class lattice_plot:
         """
         plt.sca(self.ax)
 
-        for y in range(self.size):
-            for x in range(self.size):
-                for td in range(2):
-                    X_error = self.G.E[(0, y, x, td)].state
-                    Z_error = self.G.E[(1, y, x, td)].state
+        for qubit in self.graph.Q.values():
+            qplot = qubit.sp
+            X_error = qubit.VXE.state
+            Z_error = qubit.PZE.state
 
-                    qubit = self.qubits[(y, x, td)]
+            if X_error and not Z_error:
+                qplot.set_fill(True)
+                qplot.set_facecolor(self.cx)
+                self.ax.draw_artist(qplot)
 
-                    if X_error and not Z_error:
-                        qubit.set_fill(True)
-                        qubit.set_facecolor(self.cx)
-                        self.ax.draw_artist(qubit)
+            elif Z_error and not X_error:
+                qplot.set_fill(True)
+                qplot.set_facecolor(self.cz)
+                self.ax.draw_artist(qplot)
 
-                    elif Z_error and not X_error:
-                        qubit.set_fill(True)
-                        qubit.set_facecolor(self.cz)
-                        self.ax.draw_artist(qubit)
+            elif X_error and Z_error:
+                qplot.set_fill(True)
+                qplot.set_facecolor(self.cy)
+                self.ax.draw_artist(qplot)
 
-                    elif X_error and Z_error:
-                        qubit.set_fill(True)
-                        qubit.set_facecolor(self.cy)
-                        self.ax.draw_artist(qubit)
-
-                    else:
-                        if plot_qubits:
-                            qubit.set_fill(False)
-                            self.ax.draw_artist(qubit)
+            else:
+                if plot_qubits:
+                    qplot.set_fill(False)
+                    self.ax.draw_artist(qplot)
 
         if self.plot_error:
             self.canvas.blit(self.ax.bbox)
             self.waitforkeypress("Errors plotted.")
 
-    def plot_anyons(self):
+
+    def plot_syndrome(self):
         """
         :param qua_loc      list of quasiparticle/anyon positions (y,x)
         plots the vertices of the anyons on the lattice
@@ -247,32 +250,19 @@ class lattice_plot:
         plt.sca(self.ax)
         C = [self.cX, self.cZ]
 
-        # Plot errors on primary and secondary lattice
-        for ertype, color in enumerate(C):
-            for yb in range(self.size):
-                for xb in range(self.size):
-                    vertex = self.G.V[(ertype, yb, xb)]
-                    if vertex.state:
-                        if "l" in vertex.neighbors:
-                            stab = self.stabs[(ertype, yb, xb, "l")][0]
-                            stab.set_color(color)
-                            self.ax.draw_artist(stab)
-                        if "r" in vertex.neighbors:
-                            stab = self.stabs[(ertype, yb, xb, "r")][0]
-                            stab.set_color(color)
-                            self.ax.draw_artist(stab)
-                        if "u" in vertex.neighbors:
-                            stab = self.stabs[(ertype, yb, xb, "u")][0]
-                            stab.set_color(color)
-                            self.ax.draw_artist(stab)
-                        if "d" in vertex.neighbors:
-                            stab = self.stabs[(ertype, yb, xb, "d")][0]
-                            stab.set_color(color)
-                            self.ax.draw_artist(stab)
+        for stab in self.graph.S.values():
+            (ertype, yb, xb) = stab.sID
+            splot = stab.sp
+            if stab.state:
+                for neighbor in stab.neighbors.keys():
+                    splot = stab.sp[neighbor]
+                    splot.set_color(C[ertype])
+                    self.ax.draw_artist(splot)
 
-        if self.plot_syndrome:
+        if self.plot_anyons:
             self.canvas.blit(self.ax.bbox)
             self.waitforkeypress("Syndromes plotted.")
+
 
     def plot_lines(self, matchings):
         """
@@ -326,23 +316,23 @@ class lattice_plot:
 
         plt.sca(self.ax)
 
-        for y in range(self.size):
-            for x in range(self.size):
-                for td in range(2):
-                    X_error = self.G.E[(0, y, x, td)].matching
-                    Z_error = self.G.E[(1, y, x, td)].matching
+        for qubit in self.graph.Q.values():
+            qplot = qubit.sp
+            X_error = qubit.VXE.state
+            Z_error = qubit.PZE.state
 
-                    qubit = self.qubits[(y, x, td)]
+            if X_error and not Z_error:
+                qplot.set_facecolor(self.cx)
+                self.ax.draw_artist(qplot)
 
-                    if X_error and not Z_error:
-                        qubit.set_edgecolor(self.cx)
-                        self.ax.draw_artist(qubit)
-                    elif Z_error and not X_error:
-                        qubit.set_edgecolor(self.cz)
-                        self.ax.draw_artist(qubit)
-                    elif X_error and Z_error:
-                        qubit.set_edgecolor(self.cy)
-                        self.ax.draw_artist(qubit)
+            elif Z_error and not X_error:
+                qplot.set_facecolor(self.cz)
+                self.ax.draw_artist(qplot)
+
+            elif X_error and Z_error:
+                qplot.set_facecolor(self.cy)
+                self.ax.draw_artist(qplot)
+
 
         if self.plot_correction:
             self.canvas.blit(self.ax.bbox)
@@ -350,15 +340,13 @@ class lattice_plot:
 
         if self.plot_result:
 
-            for y in range(self.size):
-                for x in range(self.size):
-                    for td in range(2):
-                        X_error = self.G.E[(0, y, x, td)].matching
-                        Z_error = self.G.E[(1, y, x, td)].matching
-                        qubit = self.qubits[(y, x, td)]
-                        if X_error or Z_error:
-                            qubit.set_edgecolor(self.cc)
-                            self.ax.draw_artist(qubit)
+            for qubit in self.graph.Q.values():
+                qplot = qubit.sp
+                X_error = qubit.VXE.state
+                Z_error = qubit.PZE.state
+                if X_error or Z_error:
+                    qplot.set_edgecolor(self.cc)
+                    self.ax.draw_artist(qplot)
 
             self.plot_errors(plot_qubits=True)
             print("Final lattice plotted. Press on the plot to continue")

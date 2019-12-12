@@ -11,7 +11,7 @@ class lattice_plot:
         self.plot_syndrome = 1
         self.plot_matching = 1
         self.plot_correction = 1
-        self.plot_result = 1
+        self.plot_result = 0
         self.size = graph.size
         self.G = graph
 

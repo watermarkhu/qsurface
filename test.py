@@ -7,7 +7,7 @@ size = 16
 pX = 0.09
 pZ = 0.0
 pE = 0.0
-iters = 30000
+iters = 20000
 
 plot_load = 0
 # output = rt2.single(size, pE, pX, pZ, plot_load=plot_load)

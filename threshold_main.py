@@ -1,5 +1,5 @@
 from matplotlib import pyplot as plt
-from run_toric_2D_mwpm import multiprocess, multiple
+from run_toric_2D_uf import multiprocess, multiple
 from collections import defaultdict
 from scipy import optimize
 import numpy as np
@@ -145,13 +145,13 @@ if __name__ == "__main__":
 
     folder = "./"
 
-    just_plot = 1
+    just_plot = 0
     print_data = 1
-    save_result = 0
+    save_result = 1
     method = "list"
     data_select = None
     modified_ansatz = 1
-    file_name = "278ec3f_threshold_fixed_mwpm_mxgraph"
+    file_name = "threshold_fixed_list_dgvertices"
     plot_name = file_name
 
     lattices = [8, 12, 16, 20, 24, 28]

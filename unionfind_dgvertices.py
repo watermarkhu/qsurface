@@ -98,9 +98,8 @@ class cluster_farmer:
                 (new_vertex, new_edge) = vertex.neighbors[wind]
 
                 if new_edge.erasure:
-                    if (
-                        new_edge.support == 0 and not new_edge.peeled
-                    ):  # if edge not already traversed
+                    # if edge not already traversed
+                    if new_edge.support == 0 and not new_edge.peeled:
                         if new_vertex.cluster is None:  # if no cycle detected
                             new_edge.support = 2
                             cluster.add_vertex(new_vertex)
@@ -112,9 +111,8 @@ class cluster_farmer:
                             if self.plot and plot_step:
                                 self.uf_plot.plot_edge_step(new_edge, "remove")
                 else:
-                    if (
-                        new_vertex.cluster is not cluster
-                    ):  # Make sure new bound does not lead to self
+                    # Make sure new bound does not lead to self
+                    if new_vertex.cluster is not cluster:
                         cluster.boundary[0].append((vertex, new_edge, new_vertex))
 
     ##################  tree grown functions ####################
@@ -185,36 +183,47 @@ class cluster_farmer:
 
         mergepoints = []
         for baseV, edge, growV in merging:
-            mergepoints.append(Vcount[baseV] + Vcount[growV])
+            points = 7 - (Vcount[baseV] + Vcount[growV])
+            # growC = find_cluster_root(growV.cluster)
+            # if growC.parity % 2 == 1:
+            #     points += 1
+            # if baseV.state:
+            #     points += 1
+            # if growV.state:
+            #     points += 1
+            # points += growV.distance//4
+            mergepoints.append(points)
 
-        indices = [i[0] for i in sorted(enumerate(mergepoints), key=lambda x:x[1], reverse = True)]
+        merge_buckets = [[] for i in range(6)]
+        for mergevertices, index in zip(merging, mergepoints):
+            merge_buckets[index].append(mergevertices)
 
-        for index in indices:
-            baseV, edge, growV = merging[index]
-            baseC = find_cluster_root(baseV.cluster)
-            growC = find_cluster_root(growV.cluster)
+        for merge_bucket in merge_buckets:
+            for baseV, edge, growV in merge_bucket:
+                baseC = find_cluster_root(baseV.cluster)
+                growC = find_cluster_root(growV.cluster)
 
-            # Edge grown on itself. This cluster is already connected. Cut half-edge
-            if growC is baseC:
-                edge.support -= 1
-                if self.plot: self.uf_plot.add_edge(edge, baseV)
+                    # Edge grown on itself. This cluster is already connected. Cut half-edge
+                if growC is baseC: # or (baseC.parity % 2 == 0 and growC.parity % 2 == 0):
+                    edge.support -= 1
+                    if self.plot: self.uf_plot.add_edge(edge, baseV)
 
-            # Merge clusters by union
-            else:
-                # apply weighted union
-                if growC.size < baseC.size:
-                    baseC, growC = growC, baseC
+                # Merge clusters by union
+                else:
+                    # apply weighted union
+                    if growC.size < baseC.size:
+                        baseC, growC = growC, baseC
 
-                # Keep track of which clusters are merged into one
-                if self.print_steps:
-                    if baseC.cID not in mstr:
-                        mstr[baseC.cID] = pr.print_graph(self.graph, [baseC], return_string=True)
-                    if growC.cID not in mstr:
-                        mstr[growC.cID] = pr.print_graph(self.graph, [growC], return_string=True)
-                    mstr[growC.cID] += "\n" + mstr[baseC.cID]
-                    mstr.pop(baseC.cID)
-                union_clusters(growC, baseC)
-                growC.boundary[0].extend(baseC.boundary[0])
+                    # Keep track of which clusters are merged into one
+                    if self.print_steps:
+                        if baseC.cID not in mstr:
+                            mstr[baseC.cID] = pr.print_graph(self.graph, [baseC], return_string=True)
+                        if growC.cID not in mstr:
+                            mstr[growC.cID] = pr.print_graph(self.graph, [growC], return_string=True)
+                        mstr[growC.cID] += "\n" + mstr[baseC.cID]
+                        mstr.pop(baseC.cID)
+                    union_clusters(growC, baseC)
+                    growC.boundary[0].extend(baseC.boundary[0])
 
         if self.print_steps:
             pr.printlog("")

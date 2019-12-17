@@ -4,7 +4,7 @@ import printing as pr
 
 class toric:
     def __init__(
-        self, graph, figure, axn=2, plot_size=10, line_width=1.5, plotstep_click=False
+        self, graph, figure, axn=2, plot_size=10, line_width=0.5, plotstep_click=False
     ):
 
         self.size = graph.size
@@ -22,32 +22,17 @@ class toric:
         self.qsize = 0.1
         self.lw = line_width
         self.plotstep_click = plotstep_click
-        self.f = figure
 
-        axes = figure.get_axes()
-        numx = len(axes)
-
-        if axn > numx:
-            for i, ax in enumerate(axes):
-                ax.change_geometry(1, numx + 1, i + 1)
-            self.ax = figure.add_subplot(1, axn, axn)
-            figure.set_figwidth((numx + 1) * plot_size)
-        else:
-            self.ax = axes[axn - 1]
-            self.ax.cla()
-
-        self.ax.invert_yaxis()
-        self.ax.set_aspect("equal")
-        self.ax.set_yticklabels([])
-        self.ax.set_xticklabels([])
-        for spine in self.ax.spines.values():
-            spine.set_visible(False)
-        self.ax.get_xaxis().set_ticks([])
-        self.ax.get_yaxis().set_ticks([])
+        self.f = plt.figure(figsize=(plot_size, plot_size))
         plt.ion()
         plt.show()
+        plt.axis("off")
+        self.ax = self.f.gca()
+        self.ax.invert_yaxis()
+        self.ax.set_aspect("equal")
 
         self.canvas = self.f.canvas
+        self.text = self.ax.text(0.5, 0, "", fontsize=10, va ="top", ha="center", transform=self.ax.transAxes)
 
         self.edges = {}
         self.vertices = {}
@@ -79,7 +64,7 @@ class toric:
         le_ze = Line2D([0], [0], ls="--", lw=self.lw, color=self.cz, label="Z-edge")
         self.ax.legend(
             handles=[le_xv, le_zv, le_xe, le_ze],
-            bbox_to_anchor=(1.35, 0.95),
+            bbox_to_anchor=(1.25, 0.95),
             loc="upper right",
             ncol=1,
         )
@@ -171,9 +156,16 @@ class toric:
             )
             self.ax.add_artist(self.vertices[vertex.sID])
 
-        self.canvas.blit(self.ax.bbox)
+        self.canvas.draw()
         pr.printlog("Peeling lattice initiated.")
         self.waitforkeypress()
+
+    def draw_plot(self, txt=None):
+        if txt is not None:
+            self.text.set_text(txt)
+            pr.printlog(txt)
+        self.canvas.draw()
+        if self.plotstep_click: self.waitforkeypress()
 
     def waitforkeypress(self):
         keyboardClick = False
@@ -207,9 +199,7 @@ class toric:
                 self.ax.draw_artist(edge0)
                 self.ax.draw_artist(edge1)
 
-        self.canvas.blit(self.ax.bbox)
-        pr.printlog(string)
-        self.waitforkeypress()
+        self.draw_plot(string)
 
     def add_edge(self, edge, vertex):
 
@@ -247,13 +237,6 @@ class toric:
                 edge1.set_color(self.cz)
             self.ax.draw_artist(edge0)
             self.ax.draw_artist(edge1)
-
-    def draw_plot(self, txt=None):
-        if txt is not None:
-            self.ax.set_xlabel(txt)
-            pr.printlog(txt)
-        self.canvas.blit(self.ax.bbox)
-        if self.plotstep_click: self.waitforkeypress()
 
     """
     ________________________________________________________________________________
@@ -301,7 +284,7 @@ class toric:
         self.ax.draw_artist(edge0)
         self.ax.draw_artist(edge1)
 
-        self.canvas.blit(self.ax.bbox)
+        self.canvas.draw()
 
         line = text + " edge " + str(edge)
         pr.printlog(line)
@@ -335,4 +318,4 @@ class toric:
 
         self.ax.draw_artist(plotvertex)
 
-        self.canvas.blit(self.ax.bbox)
+        self.canvas.draw()

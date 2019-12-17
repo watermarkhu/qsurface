@@ -3,16 +3,16 @@ import time
 
 
 t0 = time.time()
-size = 16
+size = 12
 pX = 0.09
 pZ = 0.0
 pE = 0.0
-iters = 20000
+iters = 10000
 
-plot_load = 0
-# output = rt2.single(size, pE, pX, pZ, plot_load=plot_load)
+plot_load = 1
+output = rt2.single(size, pE, pX, pZ, plot_load=plot_load)
 # output = rt2.multiple(size, iters, pE, pX, pZ, plot_load=plot_load)
-output = rt2.multiprocess(size, iters, pE, pX, pZ)
+# output = rt2.multiprocess(size, iters, pE, pX, pZ)
 
 print("time taken =", time.time() - t0)
 print("p = " + str(output / iters * 100) + "%")

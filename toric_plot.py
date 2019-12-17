@@ -4,7 +4,7 @@ import random
 
 
 class lattice_plot:
-    def __init__(self, graph, plot_size=8, line_width=1.5):
+    def __init__(self, graph, plot_size=8, line_width=0.5):
 
         self.plot_base = 0
         self.plot_error = 1
@@ -45,6 +45,7 @@ class lattice_plot:
         self.canvas = self.f.canvas
         self.ax.invert_yaxis()
         self.ax.set_aspect("equal")
+        self.text = self.ax.text(0.5, 0, "", fontsize=10, va ="top", ha="center", transform=self.ax.transAxes)
 
         # Initate legend
         le_qubit = Line2D(
@@ -112,7 +113,7 @@ class lattice_plot:
         self.lh = [le_qubit, le_xer, le_zer, le_yer, le_err, le_ver, le_pla]
 
         legend = plt.legend(
-            handles=self.lh, bbox_to_anchor=(-0.35, 0.95), loc="upper left", ncol=1
+            handles=self.lh, bbox_to_anchor=(-0.25, 0.95), loc="upper left", ncol=1
         )
         self.ax.add_artist(legend)
 
@@ -174,7 +175,10 @@ class lattice_plot:
             self.waitforkeypress("Lattice plotted.")
 
     def waitforkeypress(self, str):
-        print(str, "Press any key to continue...")
+        txt = str + " Press to continue..."
+        print(txt)
+        self.text.set_text(txt)
+
         keyboardClick = False
         while not keyboardClick:
             keyboardClick = plt.waitforbuttonpress(120)

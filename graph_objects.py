@@ -138,6 +138,7 @@ class iVertex(object):
         self.neighbors = {}
 
         # iteration parameters
+        self.distance = 0
         self.state = False
         self.cluster = None
         self.tree = False
@@ -153,10 +154,12 @@ class iVertex(object):
         self.state = False
         self.cluster = None
         self.tree = False
+        self.distance = 0
 
     def grow_reset(self):
         self.cluster = None
         self.tree = None
+        self.distance = 0
 
 class iEdge(object):
     """

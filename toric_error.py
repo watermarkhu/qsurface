@@ -215,9 +215,9 @@ def init_pauli(
                 st = datetime.datetime.fromtimestamp(timestamp).strftime(
                     "%Y-%m-%d_%H-%M-%S"
                 )
-                name = "./errors/" + st + "_erasure.txt"
+                name = "./errors/" + st + "_pauli.txt"
             else:
-                name = "./errors/erasure.txt"
+                name = "./errors/pauli.txt"
             st2 = datetime.datetime.fromtimestamp(time.time()).strftime(
                 "%Y-%m-%d %H-%M-%S"
             )
@@ -314,13 +314,16 @@ def read_pauli(graph, pauli_file):
 
     """
     filename = "./errors/" + pauli_file + ".txt"
-    print(filename)
     try:
         pauli_errors = open(filename, "r")
     except FileNotFoundError:
         sys.exit("Error file not found")
     firstlines = [next(pauli_errors) for _ in range(3)]
+    print(firstlines)
+
+
     graph.size = int(firstlines[1][4:])
+
     pX = float(next(pauli_errors)[5:])
 
     for linenum in range(graph.size * 2):

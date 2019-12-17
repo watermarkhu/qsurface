@@ -36,12 +36,7 @@ def measure_stab(graph, toric_plot=None):
         toric_plot.plot_anyons()
 
 
-def get_matching_mwpm(graph):
-    """
-    Uses the MWPM algorithm to get the matchings. A list of combinations of all the anyons and their respective weights are feeded to the blossom5 algorithm. To apply the matchings, we walk from each matching vertex to where their paths meet perpendicualarly, flipping the edges on the way over.
-    """
-
-    nxgraph = nx.Graph()
+def get_graph_edges(graph, func, object):
 
     all_anyons = []
     num = 0
@@ -59,9 +54,21 @@ def get_matching_mwpm(graph):
                 wy = (y0 - y1) % (graph.size)
                 wx = (x0 - x1) % (graph.size)
                 weight = min([wy, graph.size - wy]) + min([wx, graph.size - wx])
-                nxgraph.add_edge(num + i0, num + i1 + i0 + 1, weight=-weight)
-
+                func(object, num + i0, num + i0 + i1 + 1, weight)
         num = len(anyons)
+        return all_anyons, object
+
+def get_matching_mwpm(graph):
+    """
+    Uses the MWPM algorithm to get the matchings. A list of combinations of all the anyons and their respective weights are feeded to the blossom5 algorithm. To apply the matchings, we walk from each matching vertex to where their paths meet perpendicualarly, flipping the edges on the way over.
+    """
+
+    nxgraph = nx.Graph()
+
+    def edge_func(nxgraph, e0, e1, weight):
+        nxgraph.add_edge(e0, e1, weight=-weight)
+
+    all_anyons, nxgraph = get_graph_edges(graph, edge_func, nxgraph)
 
     matching = nx.algorithms.matching.max_weight_matching(nxgraph, maxcardinality=True)
     return [[all_anyons[i0], all_anyons[i1]] for i0, i1 in matching]
@@ -74,24 +81,10 @@ def get_matching_blossom5(graph):
 
     edges = []  # Get all possible edges between the anyons and their weights
 
-    all_anyons = []
-    num = 0
+    def edge_func(edges, e0, e1, weight):
+        edges.append([e0, e1, weight])
 
-    for ertype in range(2):
-        anyons = [vertex for vertex in [
-            graph.V[(ertype, y, x)] for y in range(graph.size) for x in range(graph.size)
-        ] if vertex.state]
-        all_anyons += anyons
-
-        for i0, v0 in enumerate(anyons[:-1]):
-            (_, y0, x0) = v0.sID
-            for i1, v1 in enumerate(anyons[i0 + 1 :]):
-                (_, y1, x1) = v1.sID
-                wy = (y0 - y1) % (graph.size)
-                wx = (x0 - x1) % (graph.size)
-                weight = min([wy, graph.size - wy]) + min([wx, graph.size - wx])
-                edges.append([num + i0, num + i1 + i0 + 1, weight])
-        num = len(anyons)
+    all_anyons, nxgraph = get_graph_edges(graph, edge_func, edges)
 
     output = pm.getMatching(len(all_anyons), edges) if all_anyons != [] else []
     return [[all_anyons[i0], all_anyons[i1]] for i0, i1 in enumerate(output) if i0 > i1]

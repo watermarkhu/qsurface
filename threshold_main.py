@@ -145,13 +145,13 @@ if __name__ == "__main__":
 
     folder = "./"
 
-    just_plot = 0
+    just_plot = 1
     print_data = 1
-    save_result = 1
+    save_result = 0
     method = "list"
     data_select = None
-    modified_ansatz = 1
-    file_name = "threshold_fixed_list_dgvertices"
+    modified_ansatz = 0
+    file_name = "278ec3f_threshold_fixed_mwpm_blossom5"
     plot_name = file_name
 
     lattices = [8, 12, 16, 20, 24, 28]

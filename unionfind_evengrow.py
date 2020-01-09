@@ -121,12 +121,21 @@ class cluster_farmer:
 
     def list_grow_bucket(self, bucket, bucket_i):
 
-        fusion, place = [], []  # Initiate Fusion list
+        fusion, place, waited_nodes = [], [], []  # Initiate Fusion list
 
-        while bucket:  # Loop over all clusters in the current bucket\
+        while bucket:  # Loop over all clusters in the current bucket
             cluster = find_cluster_root(bucket.pop())
 
             if cluster.bucket == bucket_i and cluster.support == bucket_i % 2:
+
+                if cluster.just_union:
+                    eg.comp_tree_delay(cluster)
+
+                    if self.print_steps:
+                        pr.print_tree(cluster.root_node, "children", "tree_rep")
+
+                    cluster.just_union = False
+
                 # Check that cluster is not already in a higher bucket
                 place.append(cluster)
 
@@ -138,78 +147,83 @@ class cluster_farmer:
 
                 # for vertex, new_edge, new_vertex in cluster.boundary[1]:
                 while cluster.boundary[1]:
-                    vertex, new_edge, new_vertex = cluster.boundary[1].pop()
+                    bound = cluster.boundary[1].pop()
+                    vertex, new_edge, new_vertex = bound
 
-                    # Grow boundaries by half-edge
-                    if new_edge.support != 2:
-                        new_edge.support += 1
+                    node = vertex.node
 
+                    if node.delay - node.w - cluster.mindl == 0:      # waited enough rounds as delay
+                        waited = False
 
-                        delay = [anode.d - anode.w for anode in vertex.anodes]
-                        mindelay = min(delay)
-                        anode = vertex.anodes[delay.index(mindelay)]
+                        # Grow boundaries by half-edge
+                        if new_edge.support != 2:
+                            new_edge.support += 1
 
-                        # grow anode size if not done before in same bucket
-                        if anode.bucket != bucket_i:
-                            anode.bucket = bucket_i
-                            anode.s += 1
-                            anode.g = 1 - anode.g
+                            if new_edge.support == 2:                       # if edge is fully grown
+                                fusion.append(bound)                        # Append to fusion list of edges
+                            else:
+                                cluster.boundary[0].append(bound)
+                            if self.plot: self.uf_plot.add_edge(new_edge, vertex)
+                    else:
+                        waited = True
+                        cluster.boundary[0].append(bound)
 
-                        #  waited enough rounds as delay            edge is fully grown
-                        if mindelay - cluster.mindl == 0 and new_edge.support == 2:
-                            # Apped to fusion list of edges
-                            fusion.append((vertex, new_edge, new_vertex, anode))
-                        else:
-                            # Half grown edges are added immediately to new boundary
-                            cluster.boundary[0].append((vertex, new_edge, new_vertex))
+                    # grow node size if not done before in same bucket
+                    if node.bucket != bucket_i:
+                        node.bucket = bucket_i
+                        node.s += 1
+                        if waited:
+                            waited_nodes.append(node)
 
-                        if self.plot: self.uf_plot.add_edge(new_edge, vertex)
                 if self.plot_growth: self.uf_plot.draw_plot(str(cluster) + " grown.")
 
+
+        for node in waited_nodes:
+            node.w += 1
+
         if self.print_steps: mstr = {}
-        for base_vertex, edge, grow_vertex, anode in fusion:
-            base_cluster = find_cluster_root(base_vertex.cluster)
+        for main_vertex, edge, grow_vertex in fusion:
+            main_cluster = find_cluster_root(main_vertex.cluster)
             grow_cluster = find_cluster_root(grow_vertex.cluster)
 
             # Fully grown edge. New vertex is on the old boundary. Find new boundary on vertex
             if grow_cluster is None:
-                base_cluster.add_vertex(grow_vertex)
+                main_cluster.add_vertex(grow_vertex)
 
                 # TODO: add some part in cluster_new_vertex to solve for erasure errors.
-                grow_vertex.anodes = base_vertex.anodes
-                self.cluster_new_vertex(base_cluster, grow_vertex, self.plot_growth)
+                grow_vertex.node = main_vertex.node
+                self.cluster_new_vertex(main_cluster, grow_vertex, self.plot_growth)
 
             # Edge grown on itself. This cluster is already connected. Cut half-edge
-            elif grow_cluster is base_cluster:
+            elif grow_cluster is main_cluster:
                 edge.support -= 1
-                if self.plot: self.uf_plot.add_edge(edge, base_vertex)
+                if self.plot: self.uf_plot.add_edge(edge, main_vertex)
 
             # Clusters merge by weighted union
             else:
-                # Apply union of anyontrees
-                eg.union(anode, base_cluster.anode.c, grow_vertex.anodes, grow_cluster.anode.c)
-
-                if anode.g == 0:
-                    base_vertex.anodes.extend(grow_vertex.anode)
-
-
                 # Apply weighted union of cluster trees
-                if grow_cluster.size < base_cluster.size:
-                    base_cluster, grow_cluster = grow_cluster, base_cluster
+                if grow_cluster.size < main_cluster.size:
+                    main_cluster, grow_cluster = grow_cluster, main_cluster
 
                 # Keep track of which clusters are merged into one to print later
                 if self.print_steps:
-                    if base_cluster.cID not in mstr:
-                        mstr[base_cluster.cID] = pr.print_graph(self.graph, [base_cluster], return_string=True)
+                    if main_cluster.cID not in mstr:
+                        mstr[main_cluster.cID] = pr.print_graph(self.graph, [main_cluster], return_string=True)
                     if grow_cluster.cID not in mstr:
                         mstr[grow_cluster.cID] = pr.print_graph(self.graph, [grow_cluster], return_string=True)
-                    mstr[grow_cluster.cID] += "\n" + mstr[base_cluster.cID]
-                    mstr.pop(base_cluster.cID)
+                    mstr[grow_cluster.cID] += "\n" + mstr[main_cluster.cID]
+                    mstr.pop(main_cluster.cID)
 
-                union_clusters(grow_cluster, base_cluster)
+                union_clusters(grow_cluster, main_cluster)
 
                 # Append boundary of smaller cluster to larger cluster
-                grow_cluster.boundary[0].extend(base_cluster.boundary[0])
+                grow_cluster.boundary[0].extend(main_cluster.boundary[0])
+
+                # Apply union of anyontrees
+                grow_cluster.root_node = eg.union(main_vertex, grow_vertex, main_cluster, grow_cluster)
+
+                grow_cluster.just_union = True
+
 
         if self.print_steps:
             pr.printlog("")
@@ -289,7 +303,7 @@ class cluster_farmer:
         for vertex in vertices:
             if vertex.state:
                 anyons.append(vertex)
-                vertex.anodes = [eg.anyonnode()]
+                vertex.node = eg.anyon_node(vertex.sID)
 
         for vertex in anyons:
             if vertex.cluster is None:

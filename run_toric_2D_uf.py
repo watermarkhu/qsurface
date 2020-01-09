@@ -2,7 +2,7 @@ import graph_objects as go
 import toric_code as tc
 import toric_error as te
 import toric_plot as tp
-import unionfind_dgvertices as uf
+import unionfind_evengrow as uf
 import uf_plot as up
 import os
 from progiter import ProgIter

@@ -319,8 +319,6 @@ def read_pauli(graph, pauli_file):
     except FileNotFoundError:
         sys.exit("Error file not found")
     firstlines = [next(pauli_errors) for _ in range(3)]
-    print(firstlines)
-
 
     graph.size = int(firstlines[1][4:])
 

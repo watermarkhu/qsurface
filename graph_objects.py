@@ -1,5 +1,3 @@
-import evengrow as eg
-
 class iGraph(object):
     """
     The graph in which the vertices, edges and clusters exist. Has the following parameters
@@ -40,9 +38,9 @@ class iGraph(object):
             + " Edges."
         )
 
-    def add_cluster(self, cID):
+    def add_cluster(self, cID, vertex):
         """Adds a cluster with cluster ID number cID"""
-        self.C[cID] = iCluster(cID)
+        self.C[cID] = iCluster(cID, vertex)
         return self.C[cID]
 
     def add_vertex(self, sID):
@@ -110,7 +108,9 @@ class iCluster(object):
         self.bucket = 0
         self.support = 0
 
-        self.anode = vertex.anode
+        self.just_union = False
+        self.root_node = vertex.node
+        self.tree_size = 1
         self.mindl = 0
         self.add_vertex(vertex)
 
@@ -148,7 +148,7 @@ class iVertex(object):
         self.state = False
         self.cluster = None
         self.tree = False
-        self.anodes = None
+        self.node = None
 
     def __repr__(self):
         type = "X" if self.sID[0] == 0 else "Z"
@@ -162,13 +162,12 @@ class iVertex(object):
         self.cluster = None
         self.tree = False
         self.distance = 0
-        self.anodes = None
+        self.node = None
 
     def grow_reset(self):
         self.cluster = None
         self.tree = None
         self.distance = 0
-        self.anodes = [eg.anyonnode()]
 
 class iEdge(object):
     """

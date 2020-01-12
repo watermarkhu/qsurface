@@ -29,6 +29,7 @@ class anyon_node(object):
         self.d = 0
         self.w = 0
         self.bucket = None
+        self.calc_delay = []
 
     @property
     def g(self):
@@ -86,44 +87,48 @@ def union(main_vertex, grow_vertex, main_cluster, grow_cluster):
     '''
     var main_vertex   merging vertex of base cluster
     var grow_vertex   merging vertex of grow cluster
-    var b_tree_size   size of anyon_tree of base cluster
-    var g_tree_size   size of anyon_tree of grow cluster
     '''
-    b_node, g_node = main_vertex.node, grow_vertex.node
+    m_node, g_node = main_vertex.node, grow_vertex.node
 
-    if main_cluster.tree_size > grow_cluster.tree_size:
-        an_node, ch_node = b_node, g_node
-        root_node = main_cluster.root_node
-        main_cluster.tree_size += grow_cluster.tree_size
+    if main_cluster.parity % 2 == grow_cluster.parity % 2:
+        if main_cluster.parity > grow_cluster.parity:
+            root_node, an_node, ch_node = main_cluster.root_node, m_node, g_node
+        else:
+            root_node, an_node, ch_node = grow_cluster.root_node, g_node, m_node
+        calc_delay_node = None
     else:
-        an_node, ch_node = g_node, b_node
-        root_node = grow_cluster.root_node
-        grow_cluster.tree_size += main_cluster.tree_size
+        if main_cluster.parity % 2 == 0:
+            root_node, an_node, ch_node = grow_cluster.root_node, g_node, m_node
+        else:
+            root_node, an_node, ch_node = main_cluster.root_node, m_node, g_node
+        calc_delay_node = ch_node
 
     # Create junction node if union on vertex
-    if b_node.g == 0:
-        node_list = []
-        for node in [b_node, g_node]:
-            if type(node) == anyon_node:
-                node_list.append(node)
-            elif type(node) == junction_node:
-                node_list.extend(node.anodes)
-            else:
-                raise TypeError()
+    if m_node.g == 0:
+        m_type, g_type = type(m_node), type(g_node)
+        if m_type == anyon_node and g_type == anyon_node:
+            an_node = junction_node(grow_vertex.sID, [m_node, g_node], an_node)
+            grow_vertex.node = an_node
+        elif m_type == anyon_node and g_type == junction_node:
+            g_node.anodes.append(m_node)
+        elif m_type == junction_node and g_type == anyon_node:
+            m_node.anodes.append(g_node)
+        else:
+            g_node.anodes.extend(m_node.anodes)
+            m_node.anodes.extend(g_node.anodes)
 
-        # create junction-node as child of previous ancestor, junction_node has now role of ancestor in union
-        an_node = junction_node(grow_vertex.sID, node_list, an_node)
-        grow_vertex.node = an_node
 
     make_ancestor_child(ch_node, True)
     ch_node.ancestor = an_node
     an_node.children.append(ch_node)
 
     # Calculate child node edge to ancestor
-    if b_node.g == 0:
-        ch_node.e = b_node.s // 2
+    if m_node.g == 0:
+        ch_node.e = m_node.s // 2
     else:
-        ch_node.e = (b_node.s + g_node.s) // 2
+        ch_node.e = (m_node.s + g_node.s) // 2
+
+    root_node.calc_delay.append(calc_delay_node)
 
     return root_node
 
@@ -147,39 +152,37 @@ def make_ancestor_child(node, main_level=False):
             node.e = None
 
 
-def comp_tree_delay(cluster):
+def comp_tree_delay(cluster, node):
 
-    cluster.root_node = go_to_root_cluster(cluster.root_node)
-    comp_tree_p_children(cluster.root_node)
-    comp_tree_delay_of_node(cluster.root_node, cluster)
-
-    pr.print_tree(cluster.root_node, "children", "tree_rep")
+    # cluster.root_node = go_to_root_cluster(cluster.root_node)
+    comp_tree_p_children(node)
+    comp_tree_delay_of_node(node, cluster)
 
 
-def go_to_root_cluster(node):
-    if node.ancestor is None:
-        return node
-    else:
-        return go_to_root_cluster(node.ancestor)
-
-
-def comp_tree_number_of_children(node):
-
-    if node.children:
-        num_child = 0
-        for child in node.children:
-            num_child += comp_tree_number_of_children(child)
-        node.c = num_child
-
-        if type(node) == anyon_node:
-            return num_child + 1
-        elif type(node) == junction_node:
-            return num_child
-        else:
-            raise TypeError()
-    else:
-        node.c = 0
-        return 1
+# def go_to_root_cluster(node):
+#     if node.ancestor is None:
+#         return node
+#     else:
+#         return go_to_root_cluster(node.ancestor)
+#
+#
+# def comp_tree_number_of_children(node):
+#
+#     if node.children:
+#         num_child = 0
+#         for child in node.children:
+#             num_child += comp_tree_number_of_children(child)
+#         node.c = num_child
+#
+#         if type(node) == anyon_node:
+#             return num_child + 1
+#         elif type(node) == junction_node:
+#             return num_child
+#         else:
+#             raise TypeError()
+#     else:
+#         node.c = 0
+#         return 1
 
 def comp_tree_p_children(node):
 
@@ -215,6 +218,9 @@ def comp_tree_p_ancestor(node):
 
 
 def comp_tree_delay_of_node(node, cluster, ancestor_data=None):
+
+    node.calc_delay = []
+    node.w = 0
 
     if node.ancestor is None:
         node.d, cluster.mindl = 0, 0

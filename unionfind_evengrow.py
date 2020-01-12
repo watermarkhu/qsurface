@@ -121,22 +121,28 @@ class cluster_farmer:
 
     def list_grow_bucket(self, bucket, bucket_i):
 
-        fusion, place, waited_nodes = [], [], []  # Initiate Fusion list
+        fusion, place, waited_nodes = [], [], [] # Initiate Fusion list
 
         while bucket:  # Loop over all clusters in the current bucket
             cluster = find_cluster_root(bucket.pop())
 
             if cluster.bucket == bucket_i and cluster.support == bucket_i % 2:
 
-                if cluster.just_union:
-                    eg.comp_tree_delay(cluster)
+                if cluster.root_node.calc_delay and self.print_steps:
+                    calc_nodes = [node.short_id for node in cluster.root_node.calc_delay]
+                    print("Computing delay root {} at nodes {} and children".format(cluster.root_node.short_id, calc_nodes))
+                    print_tree = True
+                else:
+                    print_tree = False
 
-                    if self.print_steps:
-                        pr.print_tree(cluster.root_node, "children", "tree_rep")
+                while cluster.root_node.calc_delay:
+                    node = cluster.root_node.calc_delay.pop()
+                    eg.comp_tree_delay(cluster, node)
 
-                    cluster.just_union = False
+                if print_tree:
+                    pr.print_tree(cluster.root_node, "children", "tree_rep")
+                    input("Tree printed")
 
-                # Check that cluster is not already in a higher bucket
                 place.append(cluster)
 
                 # Set boudary
@@ -177,7 +183,6 @@ class cluster_farmer:
 
                 if self.plot_growth: self.uf_plot.draw_plot(str(cluster) + " grown.")
 
-
         for node in waited_nodes:
             node.w += 1
 
@@ -201,6 +206,9 @@ class cluster_farmer:
 
             # Clusters merge by weighted union
             else:
+                # Apply union of anyontrees
+                root_node = eg.union(main_vertex, grow_vertex, main_cluster, grow_cluster)
+
                 # Apply weighted union of cluster trees
                 if grow_cluster.size < main_cluster.size:
                     main_cluster, grow_cluster = grow_cluster, main_cluster
@@ -218,22 +226,17 @@ class cluster_farmer:
 
                 # Append boundary of smaller cluster to larger cluster
                 grow_cluster.boundary[0].extend(main_cluster.boundary[0])
-
-                # Apply union of anyontrees
-                grow_cluster.root_node = eg.union(main_vertex, grow_vertex, main_cluster, grow_cluster)
-
-                grow_cluster.just_union = True
-
-
-        if self.print_steps:
-            pr.printlog("")
-            for cID, string in mstr.items():
-                pr.printlog(f"B:\n{string}\nA:\n{pr.print_graph(self.graph, [self.graph.C[cID]], return_string=True)}\n")
+                grow_cluster.root_node = root_node
 
         # Put clusters in new buckets. Some will be added double, but will be skipped by the new_boundary check
         for cluster in place:
             cluster = find_cluster_root(cluster)
             cluster_place_bucket(self.graph, cluster)
+
+        if self.print_steps:
+            pr.printlog("")
+            for cID, string in mstr.items():
+                pr.printlog(f"B:\n{string}\nA:\n{pr.print_graph(self.graph, [self.graph.C[cID]], return_string=True)}\n")
 
         if self.plot and not self.plot_growth:
             self.uf_plot.draw_plot("Clusters merged")

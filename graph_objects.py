@@ -108,9 +108,8 @@ class iCluster(object):
         self.bucket = 0
         self.support = 0
 
-        self.just_union = False
         self.root_node = vertex.node
-        self.tree_size = 1
+        self.calc_delay = []
         self.mindl = 0
         self.add_vertex(vertex)
 

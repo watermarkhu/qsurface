@@ -137,11 +137,11 @@ class cluster_farmer:
 
                 while cluster.root_node.calc_delay:
                     node = cluster.root_node.calc_delay.pop()
-                    eg.comp_tree_delay(cluster, node)
+                    eg.comp_tree_p_of_node(node)
+                    eg.comp_tree_d_of_node(node, cluster)
 
                 if print_tree:
                     pr.print_tree(cluster.root_node, "children", "tree_rep")
-                    input("Tree printed")
 
                 place.append(cluster)
 
@@ -158,7 +158,7 @@ class cluster_farmer:
 
                     node = vertex.node
 
-                    if node.delay - node.w - cluster.mindl == 0:      # waited enough rounds as delay
+                    if node.d - node.w - cluster.mindl == 0:      # waited enough rounds as delay
                         waited = False
 
                         # Grow boundaries by half-edge
@@ -187,46 +187,46 @@ class cluster_farmer:
             node.w += 1
 
         if self.print_steps: mstr = {}
-        for main_vertex, edge, grow_vertex in fusion:
-            main_cluster = find_cluster_root(main_vertex.cluster)
-            grow_cluster = find_cluster_root(grow_vertex.cluster)
+        for active_V, edge, passive_V in fusion:
+            active_C = find_cluster_root(active_V.cluster)
+            passive_C = find_cluster_root(passive_V.cluster)
 
             # Fully grown edge. New vertex is on the old boundary. Find new boundary on vertex
-            if grow_cluster is None:
-                main_cluster.add_vertex(grow_vertex)
+            if passive_C is None:
+                active_C.add_vertex(passive_V)
 
                 # TODO: add some part in cluster_new_vertex to solve for erasure errors.
-                grow_vertex.node = main_vertex.node
-                self.cluster_new_vertex(main_cluster, grow_vertex, self.plot_growth)
+                passive_V.node = active_V.node
+                self.cluster_new_vertex(active_C, passive_V, self.plot_growth)
 
             # Edge grown on itself. This cluster is already connected. Cut half-edge
-            elif grow_cluster is main_cluster:
+            elif passive_C is active_C:
                 edge.support -= 1
-                if self.plot: self.uf_plot.add_edge(edge, main_vertex)
+                if self.plot: self.uf_plot.add_edge(edge, active_V)
 
             # Clusters merge by weighted union
             else:
                 # Apply union of anyontrees
-                root_node = eg.union(main_vertex, grow_vertex, main_cluster, grow_cluster)
+                root_node = eg.adoption(active_V, passive_V, active_C, passive_C)
 
                 # Apply weighted union of cluster trees
-                if grow_cluster.size < main_cluster.size:
-                    main_cluster, grow_cluster = grow_cluster, main_cluster
+                if passive_C.size < active_C.size:
+                    active_C, passive_C = passive_C, active_C
 
                 # Keep track of which clusters are merged into one to print later
                 if self.print_steps:
-                    if main_cluster.cID not in mstr:
-                        mstr[main_cluster.cID] = pr.print_graph(self.graph, [main_cluster], return_string=True)
-                    if grow_cluster.cID not in mstr:
-                        mstr[grow_cluster.cID] = pr.print_graph(self.graph, [grow_cluster], return_string=True)
-                    mstr[grow_cluster.cID] += "\n" + mstr[main_cluster.cID]
-                    mstr.pop(main_cluster.cID)
+                    if active_C.cID not in mstr:
+                        mstr[active_C.cID] = pr.print_graph(self.graph, [active_C], return_string=True)
+                    if passive_C.cID not in mstr:
+                        mstr[passive_C.cID] = pr.print_graph(self.graph, [passive_C], return_string=True)
+                    mstr[passive_C.cID] += "\n" + mstr[active_C.cID]
+                    mstr.pop(active_C.cID)
 
-                union_clusters(grow_cluster, main_cluster)
+                union_clusters(passive_C, active_C)
 
                 # Append boundary of smaller cluster to larger cluster
-                grow_cluster.boundary[0].extend(main_cluster.boundary[0])
-                grow_cluster.root_node = root_node
+                passive_C.boundary[0].extend(active_C.boundary[0])
+                passive_C.root_node = root_node
 
         # Put clusters in new buckets. Some will be added double, but will be skipped by the new_boundary check
         for cluster in place:
@@ -265,7 +265,7 @@ class cluster_farmer:
 
             if self.print_steps:
                 pr.printlog(
-                "\n############################ GROW ############################" + f"\nGrowing bucket {bucket_i} of {self.graph.maxbucket}: {bucket}" + f"\nRemaining buckets: {self.graph.buckets[bucket_i + 1 : self.graph.maxbucket + 1]}, {self.graph.wastebasket}\n"
+                "\n############################ GROW ############################" + f"\nGrowing bucket {bucket_i} of {self.graph.maxbucket}: {bucket}" + f"\nReactiveing buckets: {self.graph.buckets[bucket_i + 1 : self.graph.maxbucket + 1]}, {self.graph.wastebasket}\n"
                 )
                 self.uf_plot.waitforkeypress()
 

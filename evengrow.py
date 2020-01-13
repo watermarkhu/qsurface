@@ -1,30 +1,30 @@
-import printing as pr
 from termcolor import colored as cs
 
 class anyon_node(object):
     '''
     Anyon node object - element in the aj-tree
-    var id        id number (loc)
-    var ancestor  ancestor of node in anyontree
-    var e         length of edge connectint to ancestor
-    var children  list of children nodes
-    var s         size, number of growth iterations
-    var g         growth state \ parity of s
-    var c         number of total descendent anyon nodes
-    var p         parity of node \ parity of c
-    var d         delay, iterations to wait
-    var w         waited, iterations already waited
+    var id          id number (loc)
+    var ancestor    ancestor of node in anyontree
+    var e           length of edge connectint to ancestor
+    var children    list of children nodes
+    var s           size, number of growth iterations
+    var g           growth state \ parity of s
+    var p           parity of node
+    var d           delay, iterations to wait
+    var w           waited, iterations already waited
+    var bucket      indicator to grow node size once per bucket
+    var calc_delay  list of children nodes with undefined delay
     '''
 
     def __init__(self, id):
 
         self.type = "A"
         self.id = id
+
         self.ancestor = None
         self.e = None
         self.children = []
         self.s = 0
-        # self.c = 0
         self.p = 0
         self.d = 0
         self.w = 0
@@ -35,14 +35,6 @@ class anyon_node(object):
     def g(self):
         return self.s % 2
 
-    # @property
-    # def p(self):
-    #     return self.c % 2
-
-    @property
-    def delay(self):
-        return self.d
-
     @property
     def short_id(self):
         type = "s" if self.id[0] == 0 else "p"
@@ -50,7 +42,7 @@ class anyon_node(object):
 
     @property
     def tree_rep(self):
-        return self.short_id + cs(self.s, "red") + cs(self.p, "magenta") + cs(self.delay, "cyan") + cs(self.w, "green") + cs(self.e, "yellow")
+        return self.short_id + cs(self.s, "red") + cs(self.p, "magenta") + cs(self.d, "cyan") + cs(self.w, "green") + cs(self.e, "yellow")
 
     def __repr__(self):
         children_id_list = [child.id for child in self.children]
@@ -66,74 +58,65 @@ class junction_node(anyon_node):
     inherit all methods from anyon_node
     add list of anyon-nodes
     '''
-
-    def __init__(self, id, anodes, pnode):
+    def __init__(self, id):
         super().__init__(id)
         self.type = "J"
-        self.anodes = anodes
-        self.ancestor = pnode
-        self.e = pnode.s // 2
-        pnode.children.append(self)
-
-    @property
-    def delay(self):
-        '''
-        delay defined as minimal delay from list of rooted anyon-nodes
-        '''
-        return min([anode.d for anode in self.anodes])
 
 
-def union(main_vertex, grow_vertex, main_cluster, grow_cluster):
+def adoption(ac_vertex, pa_vertex, ac_cluster, pa_cluster):
     '''
-    var main_vertex   merging vertex of base cluster
-    var grow_vertex   merging vertex of grow cluster
+    var ac_vertex   merging vertex of base cluster
+    var pa_vertex   merging vertex of grow cluster
     '''
-    m_node, g_node = main_vertex.node, grow_vertex.node
+    ac_node, pa_node = ac_vertex.node, pa_vertex.node
+    even_after_union = True if ac_cluster.parity % 2 == pa_cluster.parity % 2 else False
+    create_junction = True if ac_node.g == 0 and pa_node.s > 1 else False
 
-    if main_cluster.parity % 2 == grow_cluster.parity % 2:
-        if main_cluster.parity > grow_cluster.parity:
-            root_node, an_node, ch_node = main_cluster.root_node, m_node, g_node
-        else:
-            root_node, an_node, ch_node = grow_cluster.root_node, g_node, m_node
-        calc_delay_node = None
+    '''
+    ac_node:    root of active vertex
+    pa_node:    root of passive vertex
+    an_node:    ancestor node during union
+    ch_node:    child node during union
+
+    even_after_union:       if cluster is even after union, union of trees is done by weighted union
+                            else, union is done by always appending even tree to odd tree,
+                            delay calculation is needed from the child node (of union duo) and descendents
+    create_junstion:        if conditions are met, a junction-node is created on the passive vertex.
+                            this junction node is made a child of the ancestor node (of union duo)
+                            child node edge is affected
+    '''
+    if (even_after_union and ac_cluster.parity > pa_cluster.parity) or pa_cluster.parity % 2 == 0:
+        root_node, an_node, ch_node = ac_cluster.root_node, ac_node, pa_node
     else:
-        if main_cluster.parity % 2 == 0:
-            root_node, an_node, ch_node = grow_cluster.root_node, g_node, m_node
-        else:
-            root_node, an_node, ch_node = main_cluster.root_node, m_node, g_node
-        calc_delay_node = ch_node
+        root_node, an_node, ch_node = pa_cluster.root_node, pa_node, ac_node
 
-    # Create junction node if union on vertex
-    if m_node.g == 0:
-        m_type, g_type = type(m_node), type(g_node)
-        if m_type == anyon_node and g_type == anyon_node:
-            an_node = junction_node(grow_vertex.sID, [m_node, g_node], an_node)
-            grow_vertex.node = an_node
-        elif m_type == anyon_node and g_type == junction_node:
-            g_node.anodes.append(m_node)
-        elif m_type == junction_node and g_type == anyon_node:
-            m_node.anodes.append(g_node)
-        else:
-            g_node.anodes.extend(m_node.anodes)
-            m_node.anodes.extend(g_node.anodes)
+    calc_delay_node = None if even_after_union else ch_node
 
+    if create_junction:                                 # create junction-node on passive vertex
+        j_node = junction_node(pa_vertex.sID)
+        j_node.ancestor = an_node
+        j_node.e = an_node.s //2
+        an_node.children.append(j_node)
+        pa_vertex.node = j_node
+        if not even_after_union:
+            calc_delay_node = j_node
+        an_node = j_node
 
-    make_ancestor_child(ch_node, True)
-    ch_node.ancestor = an_node
+    make_ancestor_child(ch_node, True)                  # re-root child node as root of child-tree
+    ch_node.ancestor = an_node                          # merge trees by adoption
     an_node.children.append(ch_node)
 
-    # Calculate child node edge to ancestor
-    if m_node.g == 0:
-        ch_node.e = m_node.s // 2
+    if create_junction:                                 # Calculate child node edge to ancestor
+        ch_node.e = ch_node.s // 2
     else:
-        ch_node.e = (m_node.s + g_node.s) // 2
+        ch_node.e = (ac_node.s + pa_node.s) // 2
 
-    root_node.calc_delay.append(calc_delay_node)
+    root_node.calc_delay.append(calc_delay_node)        # store generator of undefined delay
 
     return root_node
 
 
-def make_ancestor_child(node, main_level=False):
+def make_ancestor_child(node, ac_level=False):
     '''
     Recursive function to reroot an tree in a certain node
     '''
@@ -147,120 +130,51 @@ def make_ancestor_child(node, main_level=False):
             ancestor.e = node.e
             node.children.append(ancestor)
 
-        if main_level:
+        if ac_level:
             node.ancestor = None
             node.e = None
 
 
-def comp_tree_delay(cluster, node):
-
-    # cluster.root_node = go_to_root_cluster(cluster.root_node)
-    comp_tree_p_children(node)
-    comp_tree_delay_of_node(node, cluster)
-
-
-# def go_to_root_cluster(node):
-#     if node.ancestor is None:
-#         return node
-#     else:
-#         return go_to_root_cluster(node.ancestor)
-#
-#
-# def comp_tree_number_of_children(node):
-#
-#     if node.children:
-#         num_child = 0
-#         for child in node.children:
-#             num_child += comp_tree_number_of_children(child)
-#         node.c = num_child
-#
-#         if type(node) == anyon_node:
-#             return num_child + 1
-#         elif type(node) == junction_node:
-#             return num_child
-#         else:
-#             raise TypeError()
-#     else:
-#         node.c = 0
-#         return 1
-
-def comp_tree_p_children(node):
+def comp_tree_p_of_node(node):
+    '''
+    Recursive function to find the parity of a node and its children
+    '''
 
     if node.children:
-        parity = 0
-        for child in node.children:
-            parity = int(parity == comp_tree_p_children(child))
-        node.p = parity
-
+        parity = sum([1 - comp_tree_p_of_node(child) for child in node.children]) % 2
         if type(node) == anyon_node:
-            return parity
-        elif type(node) == junction_node:
-            return 1 - parity
+            node.p = parity
         else:
-            raise TypeError()
+            node.p = 1 - parity
+        return node.p
     else:
         node.p = 0
         return 0
 
-def comp_tree_p_ancestor(node):
 
-    parity = 0
-    for child in node.children:
-        if type(child) == anyon_node:
-            parity = int(parity == child.p)
-        elif type(child) == junction_node:
-            parity = int(parity != child.p)
-        else:
-            raise TypeError()
-    node.c = parity
-
-    comp_tree_p_ancestor(node.ancestor)
-
-
-def comp_tree_delay_of_node(node, cluster, ancestor_data=None):
-
+def comp_tree_d_of_node(node, cluster):
+    '''
+    Recursive function to find the delay of a node and its children
+    '''
     node.calc_delay = []
     node.w = 0
 
     if node.ancestor is None:
         node.d, cluster.mindl = 0, 0
-
         for child in node.children:
-            comp_tree_delay_of_node(child, cluster)
+            comp_tree_d_of_node(child, cluster)
     else:
-        if type(node) == anyon_node:
+        ancestor = node.ancestor
+        size_diff = ((node.s + node.g)//2 - (ancestor.s + ancestor.g)//2 + node.e*(-1)**(node.p + 1))
+        support_fix = (node.g + ancestor.g)%2
+        node.d = ancestor.d + 2*size_diff - support_fix
 
-            if ancestor_data is None:
-                node_e = node.e
-                ancestor = node.ancestor
-            else:
-                node_e = node.e + ancestor_data[0]*(-1)**((node.p + node.ancestor.p)%2 + 1)
-                ancestor = ancestor_data[1]
+        if node.d < cluster.mindl:                  # store cluster minimum delay
+            cluster.mindl = node.d
+        for child in node.children:
+            comp_tree_d_of_node(child, cluster)
 
-            size_diff = ((node.s + node.g)//2 - (ancestor.s + ancestor.g)//2 + node_e*(-1)**(node.p + 1))
-            support_fix = (node.g + ancestor.g)%2
-            node.d = ancestor.d + 2*size_diff - support_fix
 
-            if node.d < cluster.mindl:
-                cluster.mindl = node.d
-
-            for child in node.children:
-                comp_tree_delay_of_node(child, cluster)
-
-        elif type(node) == junction_node:
-
-            sum_ekl = node.e if ancestor_data is None else node.e + ancestor_data[0]
-
-            if type(node.ancestor) == anyon_node:
-                ancestor_data = [sum_ekl, node.ancestor]
-            else:
-                ancestor_data[0] = sum_ekl
-
-            for child in node.children:
-                comp_tree_delay_of_node(child, cluster, ancestor_data)
-
-        else:
-            raise TypeError()
 
 
 

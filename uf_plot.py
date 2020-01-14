@@ -4,7 +4,7 @@ import printing as pr
 
 class toric:
     def __init__(
-        self, graph, figure, axn=2, plot_size=10, line_width=0.5, plotstep_click=False
+        self, graph, axn=2, plot_size=10, line_width=0.5, plotstep_click=False
     ):
 
         self.size = graph.size

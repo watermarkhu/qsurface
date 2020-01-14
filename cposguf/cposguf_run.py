@@ -7,7 +7,6 @@ from progiter import ProgIter
 import psycopg2 as pgs
 from configparser import ConfigParser
 import cpuinfo
-import time
 
 
 def read_config(path="./cposguf.ini"):

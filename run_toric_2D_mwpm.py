@@ -4,6 +4,27 @@ import toric_error as te
 import toric_plot as tp
 from progiter import ProgIter
 import multiprocessing as mp
+import os
+
+class decoder_config(object):
+    def __init__(self, path="./unionfind.ini"):
+
+        if not os.path.exists("./errors/"):
+            os.makedirs("./errors/")
+        if not os.path.exists("./figures/"):
+            os.makedirs("./figures/")
+
+        self.file = {
+            "savefile": False,
+            "erasure_file": None,
+            "pauli_file": None,
+        }
+
+        self.plot = {
+            "plot_size": 6,
+            "line_width": 1.5,
+            "plotstep_click": True
+        }
 
 
 def single(
@@ -11,40 +32,36 @@ def single(
     pE=0,
     pX=0,
     pZ=0,
-    savefile=False,
-    erasure_file=None,
-    pauli_file=None,
     plot_load=False,
     graph=None,
     worker=0,
     iter=0,
+    seed=None,
+    config=None,
+    **kwargs
 ):
     """
     Runs the peeling decoder for one iteration
     """
 
+    # import uf config
+    if config is None:
+        config = decoder_config()
+
     # Initialize lattice
     if graph is None:
         graph = go.init_toric_graph(size)
-    toric_plot = (
-        tp.lattice_plot(graph, plot_size=8, line_width=2) if plot_load else None
-    )
+
+    toric_plot = tp.lattice_plot(graph, **config.plot) if plot_load else None
 
     # Initialize errors
     te.init_random_seed(worker=worker, iteration=iter)
 
     if pE != 0:
-        te.init_erasure_region(
-            graph,
-            pE,
-            savefile,
-            erasure_file=erasure_file,
-            toric_plot=toric_plot
-        )
+        te.init_erasure_region(graph, pE, toric_plot, **config.file)
+        # te.init_erasure(graph, pE, savefile, erasure_file, toric_plot=toric_plot, worker=worker)
 
-    te.init_pauli(
-        graph, pX, pZ, savefile, pauli_file, toric_plot=toric_plot
-    )
+    te.init_pauli(graph, pX, pZ, toric_plot, **config.file)
 
     # Measure stabiliziers
     tc.measure_stab(graph, toric_plot)
@@ -63,17 +80,23 @@ def single(
     return correct
 
 
-def multiple(size, iters, pE=0, pX=0, pZ=0, plot_load=False, qres=None, worker=None):
+def multiple(size, iters, pE=0, pX=0, pZ=0, plot_load=False, qres=None, worker=None, seeds=None, config=None, **kwargs):
     """
     Runs the peeling decoder for a number of iterations. The graph is reused for speedup.
     """
+    # import uf config
+    if config is None:
+        config = decoder_config()
+
+    if seeds is None:
+        seeds = [te.init_random_seed(worker=worker, iteration=iter) for iter in range(iters)]
+
     graph = go.init_toric_graph(size)
     result = [
-        single(
-            size, pE, pX, pZ, plot_load=plot_load, graph=graph, worker=worker, iter=i
-        )
-        for i in ProgIter(range(iters))
+        single(size, pE, pX, pZ, plot_load, graph, worker, i, seed, config)
+        for i, seed in ProgIter(zip(range(iters), seeds))
     ]
+
     N_succes = sum(result)
     if qres is not None:
         qres.put(N_succes)
@@ -81,10 +104,13 @@ def multiple(size, iters, pE=0, pX=0, pZ=0, plot_load=False, qres=None, worker=N
         return N_succes
 
 
-def multiprocess(size, iters, pE=0, pX=0, pZ=0, processes=None):
+def multiprocess(size, iters, pE=0, pX=0, pZ=0, seeds=None, processes=None, config=None, **kwargs):
     """
     Runs the peeling decoder for a number of iterations, split over a number of processes
     """
+    # import uf config
+    if config is None:
+        config = decoder_config()
 
     if processes is None:
         processes = mp.cpu_count()
@@ -93,13 +119,20 @@ def multiprocess(size, iters, pE=0, pX=0, pZ=0, processes=None):
     process_iters = iters // processes
     rest_iters = iters - process_iters * processes
 
+    # Generate seeds for simulations
+    if seeds is None:
+        num_seeds = [process_iters for _ in range(processes - 1)] + [rest_iters]
+        seed_lists = [[te.init_random_seed(worker=worker, iteration=iter) for iter in range(iters)] for worker, iters in enumerate(num_seeds)]
+    else:
+        seed_lists = [seeds[int(i*process_iters):int((i+1)*process_iters)] for i in range(processes - 1)] + [seeds[int((processes-1)*process_iters):]]
+
     # Initiate processes
     qres = mp.Queue()
     workers = []
     for i in range(processes - 1):
         workers.append(
             mp.Process(
-                target=multiple, args=(size, process_iters, pE, pX, pZ, False, qres, i)
+                target=multiple, args=(size, process_iters, pE, pX, pZ, False, qres, i, seed_lists[i], config)
             )
         )
     workers.append(
@@ -114,6 +147,8 @@ def multiprocess(size, iters, pE=0, pX=0, pZ=0, processes=None):
                 False,
                 qres,
                 processes - 1,
+                seed_lists[processes - 1],
+                config
             ),
         )
     )

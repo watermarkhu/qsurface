@@ -32,7 +32,7 @@ def union_clusters(parent, child):
     parent.parity += child.parity
 
 
-def cluster_place_bucket(graph, cluster, vcomb=0):
+def cluster_place_bucket(graph, cluster):
     """
     :param cluster      current cluster
 
@@ -40,11 +40,7 @@ def cluster_place_bucket(graph, cluster, vcomb=0):
     If the max bucket number has been reached. The cluster is appended to the wastebasket, which will never be selected for growth.
         """
 
-    cluster.bucket = (
-        cluster.size - 1 + cluster.support
-        if vcomb
-        else 2 * (cluster.size - 1) + cluster.support
-    )
+    cluster.bucket = 2 * (cluster.size - 1) + cluster.support
 
     if cluster.parity % 2 == 1 and cluster.bucket < graph.numbuckets:
         graph.buckets[cluster.bucket].append(cluster)
@@ -60,21 +56,12 @@ class cluster_farmer:
             self,
             graph,
             uf_plot=None,
-            plot_growth=0,
-            print_steps=0,
-            random_order=0,
-            random_traverse=0,
-            intervention=0,
-            vcomb=0
+            **kwargs
         ):
         self.graph = graph
         self.uf_plot = uf_plot
-        self.plot_growth= plot_growth
-        self.print_steps = print_steps
-        self.random_order = random_order
-        self.random_traverse = random_traverse
-        self.intervention = intervention
-        self.vcomb = vcomb
+        for key, value in kwargs.items():
+            setattr(self, key, value)
         self.plot = True if uf_plot is not None else False
 
 
@@ -128,7 +115,7 @@ class cluster_farmer:
 
             if cluster.bucket == bucket_i and cluster.support == bucket_i % 2:
 
-                if cluster.root_node.calc_delay and self.print_steps:
+                if cluster.root_node.calc_delay and self.print_nodetree:
                     calc_nodes = [node.short_id for node in cluster.root_node.calc_delay]
                     print("Computing delay root {} at nodes {} and children".format(cluster.root_node.short_id, calc_nodes))
                     print_tree = True
@@ -288,7 +275,7 @@ class cluster_farmer:
                 self.uf_plot.waitforkeypress()
 
 
-    def find_clusters(self, order="Vup-Hup", plot_step=0):
+    def find_clusters(self, plot_step=0):
         """
         Given a set of erased qubits/edges on a lattice, this functions finds all edges that are connected and sorts them in separate clusters. A single anyon can also be its own cluster.
         It loops over all vertices (randomly if toggled, which produces a different tree), and calls {cluster_new_vertex} to find all connected erasure qubits, and finds the boundary for growth step 1. Afterwards the cluster is placed in a bucket based in its size.
@@ -312,7 +299,7 @@ class cluster_farmer:
             if vertex.cluster is None:
                 cluster = self.graph.add_cluster(cID, vertex)
                 self.cluster_new_vertex(cluster, vertex, plot_step)
-                cluster_place_bucket(self.graph, cluster, self.vcomb)
+                cluster_place_bucket(self.graph, cluster)
                 cID += 1
 
         if self.uf_plot is not None and not plot_step:

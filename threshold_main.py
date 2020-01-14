@@ -1,5 +1,6 @@
 from matplotlib import pyplot as plt
-from run_toric_2D_uf import multiprocess, multiple
+from run_toric_2D_uf import multiprocess
+import unionfind_evengrow as uf
 from collections import defaultdict
 from scipy import optimize
 import numpy as np
@@ -145,13 +146,12 @@ if __name__ == "__main__":
 
     folder = "./"
 
-    just_plot = 1
+    just_plot = 0
     print_data = 1
-    save_result = 0
-    method = "list"
+    save_result = 1
     data_select = None
     modified_ansatz = 0
-    file_name = "278ec3f_threshold_fixed_mwpm_blossom5"
+    file_name = "threshold_fixed_uf_evengrow"
     plot_name = file_name
 
     lattices = [8, 12, 16, 20, 24, 28]
@@ -183,9 +183,7 @@ if __name__ == "__main__":
             for pi in p:
 
                 print("Calculating for L = ", str(lati), "and p =", str(pi))
-                N_succes = multiprocess(lati, Num, 0, pi, 0)
-                # N_succes = multiprocess(lati, Num, 0, pi, 0, method)
-                # N_succes = multiple(lati, Num, 0, pi, 0, method)
+                N_succes = multiprocess(lati, Num, 0, pi, 0, uf=uf)
 
                 if any([(lati, pi) == a for a in indices]):
                     data.loc[(lati, round(pi, 6)), "N"] += Num

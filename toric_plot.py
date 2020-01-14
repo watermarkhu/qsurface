@@ -4,7 +4,7 @@ import random
 
 
 class lattice_plot:
-    def __init__(self, graph, plot_size=8, line_width=0.5):
+    def __init__(self, graph, plot_size=8, line_width=0.5, **kwargs):
 
         self.plot_base = 0
         self.plot_error = 1

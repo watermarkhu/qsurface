@@ -147,6 +147,11 @@ class iVertex(object):
         self.state = False
         self.cluster = None
         self.tree = False
+
+        # dgvertices
+        self.count = 0
+
+        # evengrow
         self.node = None
 
     def __repr__(self):

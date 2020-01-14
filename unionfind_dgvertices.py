@@ -1,6 +1,5 @@
 import printing as pr
 import random
-from collections import defaultdict as dd
 
 
 def find_cluster_root(cluster):
@@ -32,7 +31,7 @@ def union_clusters(parent, child):
     parent.parity += child.parity
 
 
-def cluster_place_bucket(graph, cluster, vcomb=0):
+def cluster_place_bucket(graph, cluster):
     """
     :param cluster      current cluster
 
@@ -40,11 +39,7 @@ def cluster_place_bucket(graph, cluster, vcomb=0):
     If the max bucket number has been reached. The cluster is appended to the wastebasket, which will never be selected for growth.
         """
 
-    cluster.bucket = (
-        cluster.size - 1 + cluster.support
-        if vcomb
-        else 2 * (cluster.size - 1) + cluster.support
-    )
+    cluster.bucket = 2 * (cluster.size - 1) + cluster.support
 
     if cluster.parity % 2 == 1 and cluster.bucket < graph.numbuckets:
         graph.buckets[cluster.bucket].append(cluster)
@@ -61,21 +56,12 @@ class cluster_farmer:
             self,
             graph,
             uf_plot=None,
-            plot_growth=0,
-            print_steps=0,
-            random_order=0,
-            random_traverse=0,
-            intervention=0,
-            vcomb=0
+            **kwargs
         ):
         self.graph = graph
         self.uf_plot = uf_plot
-        self.plot_growth= plot_growth
-        self.print_steps = print_steps
-        self.random_order = random_order
-        self.random_traverse = random_traverse
-        self.intervention = intervention
-        self.vcomb = vcomb
+        for key, value in kwargs.items():
+            setattr(self, key, value)
         self.plot = True if uf_plot is not None else False
 
 
@@ -157,41 +143,40 @@ class cluster_farmer:
         if self.print_steps: mstr = {}
 
         merging = []
-        for baseV, edge, growV in fusion:
-            baseC = find_cluster_root(baseV.cluster)
-            growC = find_cluster_root(growV.cluster)
+        for active_V, edge, passive_V in fusion:
+            active_C = find_cluster_root(active_V.cluster)
+            passive_C = find_cluster_root(passive_V.cluster)
 
             # Fully grown edge. New vertex is on the old boundary. Find new boundary on vertex
-            if growC is None:
-                baseC.add_vertex(growV)
-                self.cluster_new_vertex(baseC, growV, self.plot_growth)
+            if passive_C is None:
+                active_C.add_vertex(passive_V)
+                self.cluster_new_vertex(active_C, passive_V, self.plot_growth)
 
             # Edge grown on itself. This cluster is already connected. Cut half-edge
-            elif growC is baseC:
+            elif passive_C is active_C:
                 edge.support -= 1
-                if self.plot: self.uf_plot.add_edge(edge, baseV)
+                if self.plot: self.uf_plot.add_edge(edge, active_V)
 
             # Append to merging list, list of edges between clusters
             else:
-                merging.append((baseV, edge, growV))
+                merging.append((active_V, edge, passive_V))
 
 
-        Vcount = dd(int)
-        for baseV, edge, growV in merging:
-            Vcount[baseV] += 1
-            Vcount[growV] += 1
+        for active_V, edge, passive_V in merging:
+            active_V.count += 1
+            passive_V.count += 1
 
         mergepoints = []
-        for baseV, edge, growV in merging:
-            points = 7 - (Vcount[baseV] + Vcount[growV])
-            # growC = find_cluster_root(growV.cluster)
-            # if growC.parity % 2 == 1:
+        for active_V, edge, passive_V in merging:
+            points = 7 - (active_V.count + passive_V.count)
+            # passive_C = find_cluster_root(passive_V.cluster)
+            # if passive_C.parity % 2 == 1:
             #     points += 1
-            # if baseV.state:
+            # if active_V.state:
             #     points += 1
-            # if growV.state:
+            # if passive_V.state:
             #     points += 1
-            # points += growV.distance//4
+            # points += passive_V.distance//4
             mergepoints.append(points)
 
         merge_buckets = [[] for i in range(6)]
@@ -199,31 +184,32 @@ class cluster_farmer:
             merge_buckets[index].append(mergevertices)
 
         for merge_bucket in merge_buckets:
-            for baseV, edge, growV in merge_bucket:
-                baseC = find_cluster_root(baseV.cluster)
-                growC = find_cluster_root(growV.cluster)
+            for active_V, edge, passive_V in merge_bucket:
+                active_V.count, passive_V.count = 0, 0
+                active_C = find_cluster_root(active_V.cluster)
+                passive_C = find_cluster_root(passive_V.cluster)
 
-                    # Edge grown on itself. This cluster is already connected. Cut half-edge
-                if growC is baseC: # or (baseC.parity % 2 == 0 and growC.parity % 2 == 0):
+                # Edge grown on itself. This cluster is already connected. Cut half-edge
+                if passive_C is active_C: # or (active_C.parity % 2 == 0 and passive_C.parity % 2 == 0):
                     edge.support -= 1
-                    if self.plot: self.uf_plot.add_edge(edge, baseV)
+                    if self.plot: self.uf_plot.add_edge(edge, active_V)
 
                 # Merge clusters by union
                 else:
                     # apply weighted union
-                    if growC.size < baseC.size:
-                        baseC, growC = growC, baseC
+                    if passive_C.size < active_C.size:
+                        active_C, passive_C = passive_C, active_C
 
                     # Keep track of which clusters are merged into one
                     if self.print_steps:
-                        if baseC.cID not in mstr:
-                            mstr[baseC.cID] = pr.print_graph(self.graph, [baseC], return_string=True)
-                        if growC.cID not in mstr:
-                            mstr[growC.cID] = pr.print_graph(self.graph, [growC], return_string=True)
-                        mstr[growC.cID] += "\n" + mstr[baseC.cID]
-                        mstr.pop(baseC.cID)
-                    union_clusters(growC, baseC)
-                    growC.boundary[0].extend(baseC.boundary[0])
+                        if active_C.cID not in mstr:
+                            mstr[active_C.cID] = pr.print_graph(self.graph, [active_C], return_string=True)
+                        if passive_C.cID not in mstr:
+                            mstr[passive_C.cID] = pr.print_graph(self.graph, [passive_C], return_string=True)
+                        mstr[passive_C.cID] += "\n" + mstr[active_C.cID]
+                        mstr.pop(active_C.cID)
+                    union_clusters(passive_C, active_C)
+                    passive_C.boundary[0].extend(active_C.boundary[0])
 
         if self.print_steps:
             pr.printlog("")
@@ -325,10 +311,9 @@ class cluster_farmer:
 
         for vertex in anyons:
             if vertex.cluster is None:
-                cluster = self.graph.add_cluster(cID)
-                cluster.add_vertex(vertex)
+                cluster = self.graph.add_cluster(cID, vertex)
                 self.cluster_new_vertex(cluster, vertex, plot_step)
-                cluster_place_bucket(self.graph, cluster, self.vcomb)
+                cluster_place_bucket(self.graph, cluster)
                 cID += 1
 
         if self.uf_plot is not None and not plot_step:

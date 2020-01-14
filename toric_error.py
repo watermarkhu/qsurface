@@ -8,7 +8,7 @@ from decimal import Decimal as dec
 def init_random_seed(timestamp=None, worker=0, iteration=0):
     if timestamp is None:
         timestamp = time.time()
-    seed = "{:.0f}".format(timestamp*10**7) + str(worker) + str(iteration)
+    seed = int("{:.0f}".format(timestamp*10**7) + str(worker) + str(iteration))
     random.seed(dec(seed))
     return seed
 
@@ -21,7 +21,7 @@ def apply_random_seed(seed=None):
 
 
 def init_erasure_region(
-    graph, pE=0, savefile=0, timestamp=None, erasure_file=None, toric_plot=None
+    graph, pE=0, toric_plot=None, savefile=0, timestamp=None, erasure_file=None, **kwargs
 ):
     """
     :param pE           probability of an erasure error
@@ -124,7 +124,7 @@ def init_erasure_region(
 
 
 def init_erasure(
-    graph, pE=0, savefile=0, timestamp=None, erasure_file=None, toric_plot=None
+    graph, pE=0, toric_plot=None, savefile=0, timestamp=None, erasure_file=None, **kwargs
 ):
     """
     :param pE           probability of an erasure error
@@ -199,7 +199,7 @@ def init_erasure(
 
 
 def init_pauli(
-    graph, pX=0, pZ=0, savefile=0, timestamp=None, pauli_file=None, toric_plot=None
+    graph, pX=0, pZ=0, toric_plot=None, savefile=0, timestamp=None, pauli_file=None, **kwargs
 ):
     """
     :param pX           probability of a Pauli X error

@@ -59,21 +59,12 @@ class cluster_farmer:
             self,
             graph,
             uf_plot=None,
-            plot_growth=0,
-            print_steps=0,
-            random_order=0,
-            random_traverse=0,
-            intervention=0,
-            vcomb=0
+            **kwargs
         ):
         self.graph = graph
         self.uf_plot = uf_plot
-        self.plot_growth= plot_growth
-        self.print_steps = print_steps
-        self.random_order = random_order
-        self.random_traverse = random_traverse
-        self.intervention = intervention
-        self.vcomb = vcomb
+        for key, value in kwargs.items():
+            setattr(self, key, value)
         self.plot = True if uf_plot is not None else False
 
 
@@ -472,8 +463,7 @@ class cluster_farmer:
 
         for vertex in anyons:
             if vertex.cluster is None:
-                cluster = self.graph.add_cluster(cID)
-                cluster.add_vertex(vertex)
+                cluster = self.graph.add_cluster(cID, vertex)
                 self.cluster_new_vertex(cluster, vertex, plot_step)
                 cluster_place_bucket(self.graph, cluster, self.vcomb)
                 cID += 1

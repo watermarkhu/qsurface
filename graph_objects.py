@@ -153,6 +153,7 @@ class iVertex(object):
 
         # evengrow
         self.node = None
+        self.res_clu_node = None
 
     def __repr__(self):
         type = "X" if self.sID[0] == 0 else "Z"

@@ -21,6 +21,7 @@ class decoder_config(object):
             "random_order=0": False,
             "random_traverse": False,
             "plot_growth": False,
+            "plot_nodes": True,
 
             # Tree-method
             "intervention": False,
@@ -31,7 +32,7 @@ class decoder_config(object):
         }
 
         self.file = {
-            "savefile": False,
+            "savefile": 0,
             "erasure_file": None,
             "pauli_file": None,
         }

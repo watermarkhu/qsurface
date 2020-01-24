@@ -58,15 +58,6 @@ altered to check length of de-ansi-fied string
 which allows to print colored output (ansi formatting)
 '''
 
-class Node:
-    def __init__(self, name, parent=None):
-        self.name = name
-        self.parent = parent
-        self.children = []
-
-        if parent:
-            self.parent.children.append(self)
-
 
 def print_tree(current_node, childattr='children', nameattr='name', indent='', last='updown'):
 

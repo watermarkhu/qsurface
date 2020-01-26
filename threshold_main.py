@@ -151,7 +151,7 @@ if __name__ == "__main__":
     save_result = 1
     data_select = None
     modified_ansatz = 0
-    file_name = "threshold_fixed_uf_evengrow"
+    file_name = "threshold_fixed_uf_evengrow_v2"
     plot_name = file_name
 
     lattices = [8, 12, 16, 20, 24, 28]

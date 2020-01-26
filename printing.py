@@ -62,7 +62,7 @@ which allows to print colored output (ansi formatting)
 def print_tree(current_node, childattr='children', nameattr='name', indent='', last='updown'):
 
     if hasattr(current_node, nameattr):
-        name = lambda node: getattr(node, nameattr)
+        name = lambda node: getattr(node, nameattr)()
     else:
         name = lambda node: str(node)
 

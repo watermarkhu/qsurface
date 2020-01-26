@@ -21,14 +21,14 @@ class decoder_config(object):
             "random_order=0": False,
             "random_traverse": False,
             "plot_growth": False,
-            "plot_nodes": True,
 
             # Tree-method
             "intervention": False,
             "vcomb": False,
 
             # Evengrow
-            "print_nodetree": False,
+            "plot_nodes": 0,
+            "print_nodetree": 0,
         }
 
         self.file = {

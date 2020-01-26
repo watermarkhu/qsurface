@@ -108,6 +108,9 @@ class iCluster(object):
         self.bucket = 0
         self.support = 0
 
+        '''
+        Evengrow
+        '''
         self.root_node = vertex.node
         self.calc_delay = []
         self.mindl = 0
@@ -148,12 +151,16 @@ class iVertex(object):
         self.cluster = None
         self.tree = False
 
-        # dgvertices
+        '''
+        DGvertices
+        '''
         self.count = 0
 
-        # evengrow
+        '''
+        Evengrow
+        '''
         self.node = None
-        self.res_clu_node = None
+        self.new_bound = []
 
     def __repr__(self):
         type = "X" if self.sID[0] == 0 else "Z"

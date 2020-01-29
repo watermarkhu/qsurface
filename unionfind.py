@@ -132,19 +132,19 @@ class cluster_farmer:
         # cluster.boundary[0].reverse() if support == 0 else None
         while cluster.boundary[support]:
             root_cluster = find_cluster_root(cluster)
-            (base_vertex, edge, grow_vertex) = cluster.boundary[support].pop()
-            grow_cluster = grow_vertex.cluster
-            grrt_cluster = find_cluster_root(grow_cluster)
+            (active_V, edge, passive_V) = cluster.boundary[support].pop()
+            passive_C = passive_V.cluster
+            grrt_cluster = find_cluster_root(passive_C)
             if grrt_cluster is None:  # if new_vertex has no cluster: add to cluster
                 edge.support += 1
                 if support:
-                    root_cluster.add_vertex(grow_vertex)
+                    root_cluster.add_vertex(passive_V)
                     edge.cluster = root_cluster
-                    self.cluster_new_vertex(root_cluster, grow_vertex, self.plot_growth)
+                    self.cluster_new_vertex(root_cluster, passive_V, self.plot_growth)
                 else:
-                    root_cluster.boundary[1].append((base_vertex, edge, grow_vertex))
+                    root_cluster.boundary[1].append((active_V, edge, passive_V))
                 if self.plot:
-                    self.uf_plot.add_edge(edge, base_vertex)
+                    self.uf_plot.add_edge(edge, active_V)
             elif (
                 grrt_cluster is not root_cluster
             ):  # if new_vertex is from another cluster: union
@@ -156,11 +156,11 @@ class cluster_farmer:
                     grrt_cluster.childs[0].append(root_cluster)
                     merge_cluster = grrt_cluster
                     if self.plot:
-                        self.uf_plot.add_edge(edge, base_vertex)
+                        self.uf_plot.add_edge(edge, active_V)
                 elif not support:
-                    root_cluster.boundary[1].append((base_vertex, edge, grow_vertex))
+                    root_cluster.boundary[1].append((active_V, edge, passive_V))
                     if self.plot:
-                        self.uf_plot.add_edge(edge, base_vertex)
+                        self.uf_plot.add_edge(edge, active_V)
             else:  # if new_vertex is in same cluster: nothing
                 None
 
@@ -215,19 +215,19 @@ class cluster_farmer:
         # cluster.boundary[0].reverse() if support == 0 else None
         while cluster.boundary[support]:
             root_cluster = find_cluster_root(cluster)
-            (base_vertex, edge, grow_vertex) = cluster.boundary[support].pop()
-            grow_cluster = grow_vertex.cluster
-            grrt_cluster = find_cluster_root(grow_cluster)
+            (active_V, edge, passive_V) = cluster.boundary[support].pop()
+            passive_C = passive_V.cluster
+            grrt_cluster = find_cluster_root(passive_C)
             if grrt_cluster is None:  # if new_vertex has no cluster: add to cluster
                 edge.support += 1
                 if support:
-                    root_cluster.add_vertex(grow_vertex)
+                    root_cluster.add_vertex(passive_V)
                     edge.cluster = root_cluster
-                    self.cluster_new_vertex(root_cluster, grow_vertex, self.plot_growth)
+                    self.cluster_new_vertex(root_cluster, passive_V, self.plot_growth)
                 else:
-                    root_cluster.boundary[1].append((base_vertex, edge, grow_vertex))
+                    root_cluster.boundary[1].append((active_V, edge, passive_V))
                 if self.plot:
-                    self.uf_plot.add_edge(edge, base_vertex)
+                    self.uf_plot.add_edge(edge, active_V)
             elif (
                 grrt_cluster is not root_cluster
             ):  # if new_vertex is from another cluster: union
@@ -239,16 +239,16 @@ class cluster_farmer:
                     grrt_cluster.childs[0].append(root_cluster)
                     merge_cluster = grrt_cluster
                     if self.plot:
-                        self.uf_plot.add_edge(edge, base_vertex)
+                        self.uf_plot.add_edge(edge, active_V)
                     if self.intervention and family_growth and grrt_cluster.parity % 2 == 0:
                         grrt_cluster.childs[1].append(root_cluster)
                         if self.print_steps:
                             pr.printlog("intervention on merge.")
                         break
                 elif not support:
-                    root_cluster.boundary[1].append((base_vertex, edge, grow_vertex))
+                    root_cluster.boundary[1].append((active_V, edge, passive_V))
                     if self.plot:
-                        self.uf_plot.add_edge(edge, base_vertex)
+                        self.uf_plot.add_edge(edge, active_V)
             else:
                 None
 
@@ -299,67 +299,120 @@ class cluster_farmer:
     #################################################################################
     ####### List unionfind method ########
 
+    def grow_boundary(self, cluster):
+
+        cluster.boundary = [[], cluster.boundary[0]]                # Set boudary
+
+        while cluster.boundary[1]:                                  # grow boundary
+            bound = cluster.boundary[1].pop()
+            vertex, new_edge, new_vertex = bound
+
+            if new_edge.support != 2:                           # if not already fully grown
+                new_edge.support += 1                           # Grow boundaries by half-edge
+                if new_edge.support == 2:                       # if edge is fully grown
+                    self.fusion.append(bound)                   # Append to fusion list of edges
+                else:
+                    cluster.boundary[0].append(bound)
+
+                if self.plot: self.uf_plot.add_edge(new_edge, vertex)
+        if self.plot_growth: self.uf_plot.draw_plot(str(cluster) + " grown.")
+
+
+    def fully_grown_edge_choises(self, active_V, edge, passive_V):
+
+        active_C = find_cluster_root(active_V.cluster)
+        passive_C = find_cluster_root(passive_V.cluster)
+
+        '''
+        if:     Fully grown edge. New vertex is on the old boundary. Find new boundary on vertex
+        elif:   Edge grown on itself. This cluster is already connected. Cut half-edge
+        else:   Clusters merge by weighted union
+        '''
+
+        if passive_C is None:
+            active_C.add_vertex(passive_V)
+            self.cluster_new_vertex(active_C, passive_V, self.plot_growth)
+
+        elif passive_C is active_C:
+            edge.support -= 1
+            if self.plot: self.uf_plot.add_edge(edge, active_V)
+
+        else:
+            if passive_C.size < active_C.size:  # of clusters
+                active_C, passive_C = passive_C, active_C
+            if self.print_steps:                            # Keep track of which clusters are merged into one to print later
+                if active_C.cID not in self.mstr:
+                    self.mstr[active_C.cID] = pr.print_graph(self.graph, [active_C], return_string=True)
+                if passive_C.cID not in self.mstr:
+                    self.mstr[passive_C.cID] = pr.print_graph(self.graph, [passive_C], return_string=True)
+                self.mstr[passive_C.cID] += "\n" + self.mstr[active_C.cID]
+                self.mstr.pop(active_C.cID)
+            union_clusters(passive_C, active_C)
+            passive_C.boundary[0].extend(active_C.boundary[0])                      # Combine boundaries
+
+    def fuse_vertices(self, ):
+        for active_V, edge, passive_V in self.fusion:
+            self.fully_grown_edge_choises(active_V, edge, passive_V)
+
+
+    def fuse_dgvertices(self):
+
+        merging = []
+        for active_V, edge, passive_V in self.fusion:
+            active_C = find_cluster_root(active_V.cluster)
+            passive_C = find_cluster_root(passive_V.cluster)
+
+            '''
+            if:     Fully grown edge. New vertex is on the old boundary. Find new boundary on vertex
+            elif:   Edge grown on itself. This cluster is already connected. Cut half-edge
+            else:   Clusters merge by weighted union
+            '''
+
+            if passive_C is None:
+                active_C.add_vertex(passive_V)
+                self.cluster_new_vertex(active_C, passive_V, self.plot_growth)
+
+            elif passive_C is active_C:
+                edge.support -= 1
+                if self.plot: self.uf_plot.add_edge(edge, active_V)
+
+            else:
+                merging.append((active_V, edge, passive_V))
+
+        for active_V, edge, passive_V in merging:
+            active_V.count += 1
+            passive_V.count += 1
+
+        merge_buckets = [[] for i in range(6)]
+        for mergevertices in merging:
+            (active_V, edge, passive_V) = mergevertices
+            index = 7 - (active_V.count + passive_V.count)
+            merge_buckets[index].append(mergevertices)
+
+        for merge_bucket in merge_buckets:
+            for active_V, edge, passive_V in merge_bucket:
+                active_V.count, passive_V.count = 0, 0
+                self.fully_grown_edge_choises(active_V, edge, passive_V)
+
 
     def list_grow_bucket(self, bucket, bucket_i):
 
-        fusion, place = [], []  # Initiate Fusion list
+        self.fusion, place = [], []  # Initiate Fusion list
 
         while bucket:  # Loop over all clusters in the current bucket\
             cluster = find_cluster_root(bucket.pop())
 
             if cluster.bucket == bucket_i and cluster.support == bucket_i % 2:
-                # Check that cluster is not already in a higher bucket
                 place.append(cluster)
-
-                # Set boudary
-                cluster.boundary = [[], cluster.boundary[0]]
-
-                # Grow cluster support for bucket placement
                 cluster.support = 1 - cluster.support
+                self.grow_boundary(cluster)
 
-                # for vertex, new_edge, new_vertex in cluster.boundary[1]:
-                while cluster.boundary[1]:
-                    vertex, new_edge, new_vertex = cluster.boundary[1].pop()
+        self.fuse_vertices()
+        # self.fuse_dgvertices()
 
-                    # Grow boundaries by half-edge
-                    if new_edge.support != 2:
-                        new_edge.support += 1
-                        if new_edge.support == 2:
-                            # Apped to fusion list of edge fully grown
-                            fusion.append((vertex, new_edge, new_vertex))
-                        else:
-                            # Half grown edges are added immediately to new boundary
-                            cluster.boundary[0].append((vertex, new_edge, new_vertex))
-                        if self.plot: self.uf_plot.add_edge(new_edge, vertex)
-                if self.plot_growth: self.uf_plot.draw_plot(str(cluster) + " grown.")
-
-        if self.print_steps: mstr = {}
-        for base_vertex, edge, grow_vertex in fusion:
-            base_cluster = find_cluster_root(base_vertex.cluster)
-            grow_cluster = find_cluster_root(grow_vertex.cluster)
-            if grow_cluster is None:
-                # Fully grown edge. New vertex is on the old boundary. Find new boundary on vertex
-                base_cluster.add_vertex(grow_vertex)
-                self.cluster_new_vertex(base_cluster, grow_vertex, self.plot_growth)
-            elif grow_cluster is base_cluster:
-                # Edge grown on itself. This cluster is already connected. Cut half-edge
-                edge.support -= 1
-                if self.plot: self.uf_plot.add_edge(edge, base_vertex)
-            else:  # Clusters merge by weighted union
-                if grow_cluster.size < base_cluster.size:  # apply weighted union
-                    base_cluster, grow_cluster = grow_cluster, base_cluster
-                if self.print_steps:  # Keep track of which clusters are merged into one
-                    if base_cluster.cID not in mstr:
-                        mstr[base_cluster.cID] = pr.print_graph(self.graph, [base_cluster], return_string=True)
-                    if grow_cluster.cID not in mstr:
-                        mstr[grow_cluster.cID] = pr.print_graph(self.graph, [grow_cluster], return_string=True)
-                    mstr[grow_cluster.cID] += "\n" + mstr[base_cluster.cID]
-                    mstr.pop(base_cluster.cID)
-                union_clusters(grow_cluster, base_cluster)
-                grow_cluster.boundary[0].extend(base_cluster.boundary[0])
         if self.print_steps:
             pr.printlog("")
-            for cID, string in mstr.items():
+            for cID, string in self.mstr.items():
                 pr.printlog(f"B:\n{string}\nA:\n{pr.print_graph(self.graph, [self.graph.C[cID]], return_string=True)}\n")
 
         # Put clusters in new buckets. Some will be added double, but will be skipped by the new_boundary check

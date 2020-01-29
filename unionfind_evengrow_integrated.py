@@ -1,5 +1,6 @@
 import printing as pr
 import random
+import evengrow_directed as eg
 
 
 def find_cluster_root(cluster):
@@ -49,7 +50,6 @@ def cluster_place_bucket(graph, cluster):
         cluster.bucket = None
 
 
-
 class cluster_farmer:
 
     def __init__(
@@ -65,6 +65,7 @@ class cluster_farmer:
         self.plot = True if uf_plot is not None else False
 
 
+
     def cluster_new_vertex(self, cluster, vertex, plot_step=0):
         """
         :param cluster          current cluster
@@ -76,6 +77,7 @@ class cluster_farmer:
         If the newly found edge is part of the erasure, the edge and the corresponding vertex will be added to the cluster, and the function is started again on the new vertex. Otherwise it will be added to the boundary.
         If a vertex is an anyon, its property and the parity of the cluster will be updated accordingly.
         """
+        # TODO: add some part in cluster_new_vertex to solve for erasure errors in terms of anyontrees
 
         traverse_wind = random.sample(self.graph.wind, 4) if self.random_traverse else self.graph.wind
 
@@ -84,8 +86,8 @@ class cluster_farmer:
                 (new_vertex, new_edge) = vertex.neighbors[wind]
 
                 if new_edge.erasure:
-                    # if edge not already traversed
                     if new_edge.support == 0 and not new_edge.peeled:
+                        # if edge not already traversed
                         if new_vertex.cluster is None:  # if no cycle detected
                             new_edge.support = 2
                             cluster.add_vertex(new_vertex)
@@ -97,129 +99,197 @@ class cluster_farmer:
                             if self.plot and plot_step:
                                 self.uf_plot.plot_edge_step(new_edge, "remove")
                 else:
-                    # Make sure new bound does not lead to self
                     if new_vertex.cluster is not cluster:
-                        cluster.boundary[0].append((vertex, new_edge, new_vertex))
+                        # Make sure new bound does not lead to self
+                        vertex.new_bound.append((vertex, new_edge, new_vertex))
 
-    ##################  tree grown functions ####################
 
     #################################################################################
     ####### List unionfind method ########
 
+    def grow_boundary(self, cluster, node):
 
-    def list_grow_bucket(self, bucket, bucket_i):
+        if cluster.root_node.calc_delay and self.print_nodetree:
+            calc_nodes = [node.short_id() for node in cluster.root_node.calc_delay]
+            print("Computing delay root {} at nodes {} and children".format(cluster.root_node.short_id(), calc_nodes))
+            print_tree = True
+        else:
+            print_tree = False
 
-        fusion, place = [], []  # Initiate Fusion list
+        while cluster.root_node.calc_delay:
+            '''
+            Directed
+            '''
+            at_node = cluster.root_node.calc_delay.pop()
+            eg.comp_tree_p_of_node(at_node)
+            eg.comp_tree_d_of_node(at_node, cluster)
 
-        while bucket:  # Loop over all clusters in the current bucket\
-            cluster = find_cluster_root(bucket.pop())
+            '''
+            Undirected
+            '''
+            # at_node, at_edge, at_ancestor = cluster.root_node.calc_delay.pop()
+            # eg.comp_tree_p_of_node(at_node, at_ancestor)
+            # eg.comp_tree_d_of_node(at_node, cluster, [at_ancestor, at_edge])
 
-            if cluster.bucket == bucket_i and cluster.support == bucket_i % 2:
-                # Check that cluster is not already in a higher bucket
-                place.append(cluster)
+        if print_tree:
+            pr.print_tree(cluster.root_node, "children", "tree_rep")
 
-                # Set boudary
-                cluster.boundary = [[], cluster.boundary[0]]
+        if node.d - node.w == cluster.mindl:      # waited enough rounds as delay
+            node.s += 1
 
-                # Grow cluster support for bucket placement
-                cluster.support = 1 - cluster.support
+            node.boundary = [[], node.boundary[0]]
+            while node.boundary[1]:
 
-                # for vertex, new_edge, new_vertex in cluster.boundary[1]:
-                while cluster.boundary[1]:
-                    vertex, new_edge, new_vertex = cluster.boundary[1].pop()
+                bound = node.boundary[1].pop()
+                vertex, new_edge, new_vertex = bound
 
-                    # Grow boundaries by half-edge
-                    if new_edge.support != 2:
-                        new_edge.support += 1
-                        if new_edge.support == 2:
-                            # Apped to fusion list of edge fully grown
-                            fusion.append((vertex, new_edge, new_vertex))
-                        else:
-                            # Half grown edges are added immediately to new boundary
-                            cluster.boundary[0].append((vertex, new_edge, new_vertex))
-                        if self.plot: self.uf_plot.add_edge(new_edge, vertex)
-                if self.plot_growth: self.uf_plot.draw_plot(str(cluster) + " grown.")
+                if new_edge.support != 2:
 
-        if self.print_steps: mstr = {}
+                    new_edge.support += 1
+
+                    if new_edge.support == 2:                   # if edge is fully grown
+                        self.fusion.append(bound)               # Append to fusion list
+                    else:
+                        node.boundary[0].append(bound)
+
+                    if self.plot: self.uf_plot.add_edge(new_edge, vertex)
+
+            if self.plot and self.plot_nodes: self.uf_plot.draw_plot(str(node) + " grown.")
+        else:
+            node.w += 1
+
+        '''
+        Directed:
+        '''
+        for child in node.children:
+            self.grow_boundary(cluster, child)
+        '''
+        Undirected:
+        '''
+        # for child, _ in node.cons:
+        #     if child is not ancestor:
+        #         self.grow_node_boundary(cluster, child, node)
+
+
+    def fully_grown_edge_choises(self, active_V, edge, passive_V):
+
+        active_C = find_cluster_root(active_V.cluster)
+        passive_C = find_cluster_root(passive_V.cluster)
+
+        '''
+        if:     Fully grown edge. New vertex is on the old boundary. Find new boundary on vertex
+        elif:   Edge grown on itself. This cluster is already connected. Cut half-edge
+        else:   Clusters merge by weighted union
+        '''
+        if passive_C is None:
+            active_C.add_vertex(passive_V)
+            passive_V.node = active_V.node
+            self.cluster_new_vertex(active_C, passive_V, self.plot_growth)
+            self.bound_vertices.append(passive_V)
+
+        elif passive_C is active_C:
+            edge.support -= 1
+            if self.plot: self.uf_plot.add_edge(edge, active_V)
+
+        else:
+            root_node = eg.adoption(active_V, passive_V, active_C, passive_C)       # Apply union of anyontrees
+            if passive_C.size < active_C.size:                                      # Apply weighted union of clusters
+                active_C, passive_C = passive_C, active_C
+            if self.print_steps:                            # Keep track of which clusters are merged into one to print later
+                if active_C.cID not in self.mstr:
+                    self.mstr[active_C.cID] = pr.print_graph(self.graph, [active_C], return_string=True)
+                if passive_C.cID not in self.mstr:
+                    self.mstr[passive_C.cID] = pr.print_graph(self.graph, [passive_C], return_string=True)
+                self.mstr[passive_C.cID] += "\n" + self.mstr[active_C.cID]
+                self.mstr.pop(active_C.cID)
+            union_clusters(passive_C, active_C)
+            passive_C.root_node = root_node                 # Save root of anyontree
+
+
+    def fuse_vertices(self):
+
+        for active_V, edge, passive_V in self.fusion:
+            self.fully_grown_edge_choises(active_V, edge, passive_V)
+
+
+
+
+    def fuse_dgvertices(self):
 
         merging = []
-        for active_V, edge, passive_V in fusion:
+        for active_V, edge, passive_V in self.fusion:
             active_C = find_cluster_root(active_V.cluster)
             passive_C = find_cluster_root(passive_V.cluster)
 
-            # Fully grown edge. New vertex is on the old boundary. Find new boundary on vertex
+            '''
+            if:     Fully grown edge. New vertex is on the old boundary. Find new boundary on vertex
+            elif:   Edge grown on itself. This cluster is already connected. Cut half-edge
+            else:   Clusters merge by weighted union
+            '''
             if passive_C is None:
                 active_C.add_vertex(passive_V)
+                passive_V.node = active_V.node
                 self.cluster_new_vertex(active_C, passive_V, self.plot_growth)
+                self.bound_vertices.append(passive_V)
 
-            # Edge grown on itself. This cluster is already connected. Cut half-edge
             elif passive_C is active_C:
                 edge.support -= 1
                 if self.plot: self.uf_plot.add_edge(edge, active_V)
 
-            # Append to merging list, list of edges between clusters
             else:
                 merging.append((active_V, edge, passive_V))
 
-
-        for active_V, edge, passive_V in merging:
+        for (active_V, edge, passive_V) in merging:
             active_V.count += 1
             passive_V.count += 1
 
-        mergepoints = []
-        for active_V, edge, passive_V in merging:
-            points = 7 - (active_V.count + passive_V.count)
-            # passive_C = find_cluster_root(passive_V.cluster)
-            # if passive_C.parity % 2 == 1:
-            #     points += 1
-            # if active_V.state:
-            #     points += 1
-            # if passive_V.state:
-            #     points += 1
-            # points += passive_V.distance//4
-            mergepoints.append(points)
-
         merge_buckets = [[] for i in range(6)]
-        for mergevertices, index in zip(merging, mergepoints):
+        for mergevertices in merging:
+            (active_V, edge, passive_V) = mergevertices
+            index = 7 - (active_V.count + passive_V.count)
             merge_buckets[index].append(mergevertices)
 
         for merge_bucket in merge_buckets:
-            for active_V, edge, passive_V in merge_bucket:
+            for (active_V, edge, passive_V) in merge_bucket:
                 active_V.count, passive_V.count = 0, 0
-                active_C = find_cluster_root(active_V.cluster)
-                passive_C = find_cluster_root(passive_V.cluster)
+                self.fully_grown_edge_choises(active_V, edge, passive_V)
 
-                # Edge grown on itself. This cluster is already connected. Cut half-edge
-                if passive_C is active_C: # or (active_C.parity % 2 == 0 and passive_C.parity % 2 == 0):
-                    edge.support -= 1
-                    if self.plot: self.uf_plot.add_edge(edge, active_V)
 
-                # Merge clusters by union
-                else:
-                    # apply weighted union
-                    if passive_C.size < active_C.size:
-                        active_C, passive_C = passive_C, active_C
+    def list_grow_bucket(self, bucket, bucket_i):
 
-                    # Keep track of which clusters are merged into one
-                    if self.print_steps:
-                        if active_C.cID not in mstr:
-                            mstr[active_C.cID] = pr.print_graph(self.graph, [active_C], return_string=True)
-                        if passive_C.cID not in mstr:
-                            mstr[passive_C.cID] = pr.print_graph(self.graph, [passive_C], return_string=True)
-                        mstr[passive_C.cID] += "\n" + mstr[active_C.cID]
-                        mstr.pop(active_C.cID)
-                    union_clusters(passive_C, active_C)
-                    passive_C.boundary[0].extend(active_C.boundary[0])
+        if self.print_steps: self.mstr = {}
+        self.fusion, self.bound_vertices, place = [], [], [] # Initiate Fusion list
 
-        if self.print_steps:
-            pr.printlog("")
-            for cID, string in mstr.items():
-                pr.printlog(f"B:\n{string}\nA:\n{pr.print_graph(self.graph, [self.graph.C[cID]], return_string=True)}\n")
+        while bucket:  # Loop over all clusters in the current bucket
+            cluster = find_cluster_root(bucket.pop())
+
+            if cluster.bucket == bucket_i and cluster.support == bucket_i % 2:
+
+                place.append(cluster)
+                cluster.support = 1 - cluster.support
+                self.grow_boundary(cluster, cluster.root_node)
+
+                if self.plot_growth: self.uf_plot.draw_plot(str(cluster) + " grown.")
+
+        # Fusion all fully grown edges
+        # self.fuse_vertices()
+        self.fuse_dgvertices()
+
+
+        # Save new boundaries from vertices to nodes
+        for vertex in self.bound_vertices:
+            while vertex.new_bound:
+                vertex.node.boundary[0].append(vertex.new_bound.pop())
 
         # Put clusters in new buckets. Some will be added double, but will be skipped by the new_boundary check
         for cluster in place:
             cluster = find_cluster_root(cluster)
             cluster_place_bucket(self.graph, cluster)
+
+        if self.print_steps:
+            pr.printlog("")
+            for cID, string in self.mstr.items():
+                pr.printlog(f"B:\n{string}\nA:\n{pr.print_graph(self.graph, [self.graph.C[cID]], return_string=True)}\n")
 
         if self.plot and not self.plot_growth:
             self.uf_plot.draw_plot("Clusters merged")
@@ -228,7 +298,7 @@ class cluster_farmer:
     ######################## General functions #############################
 
 
-    def grow_clusters(self, method="tree", start_bucket=0):
+    def grow_clusters(self, method="list", start_bucket=0):
 
         if self.print_steps:
             pr.print_graph(self.graph)
@@ -248,7 +318,7 @@ class cluster_farmer:
 
             if self.print_steps:
                 pr.printlog(
-                "\n############################ GROW ############################" + f"\nGrowing bucket {bucket_i} of {self.graph.maxbucket}: {bucket}" + f"\nRemaining buckets: {self.graph.buckets[bucket_i + 1 : self.graph.maxbucket + 1]}, {self.graph.wastebasket}\n"
+                "\n############################ GROW ############################" + f"\nGrowing bucket {bucket_i} of {self.graph.maxbucket}: {bucket}" + f"\nReactiveing buckets: {self.graph.buckets[bucket_i + 1 : self.graph.maxbucket + 1]}, {self.graph.wastebasket}\n"
                 )
                 self.uf_plot.waitforkeypress()
 
@@ -271,7 +341,7 @@ class cluster_farmer:
                 self.uf_plot.waitforkeypress()
 
 
-    def find_clusters(self, order="Vup-Hup", plot_step=0):
+    def find_clusters(self, plot_step=0):
         """
         Given a set of erased qubits/edges on a lattice, this functions finds all edges that are connected and sorts them in separate clusters. A single anyon can also be its own cluster.
         It loops over all vertices (randomly if toggled, which produces a different tree), and calls {cluster_new_vertex} to find all connected erasure qubits, and finds the boundary for growth step 1. Afterwards the cluster is placed in a bucket based in its size.
@@ -282,37 +352,20 @@ class cluster_farmer:
         self.graph.wastebasket = []
         self.graph.maxbucket = 0
 
-        cID, s = 0, self.graph.size
+        cID = 0
+        vertices = self.graph.V.values()
 
-        if order == "Vup-Hup":
-            vertices = self.graph.V.values()
-        if order == "Vdo-Hdo":
-            vertices = [self.graph.V[(t, y, x)]
-                for x in reversed(range(s))
-                for y in reversed(range(s))
-                for t in range(2)
-                ]
-        elif order == "Hup-Vdo":
-            vertices = [self.graph.V[(t, y, x)]
-                for y in reversed(range(s))
-                for x in range(s)
-                for t in range(2)
-                ]
-        elif order == "Hdo-Vdo":
-            vertices = [self.graph.V[(t, y, x)]
-                for y in reversed(range(s))
-                for x in reversed(range(s))
-                for t in range(2)
-                ]
-        elif order == "random":
-            vertices = random.sample(list(self.graph.V.values()), s*s*2)
-
-        anyons = [vertex for vertex in vertices if vertex.state]
+        anyons = []
+        for vertex in vertices:
+            if vertex.state:
+                anyons.append(vertex)
+                vertex.node = eg.anyon_node(vertex.sID)
 
         for vertex in anyons:
             if vertex.cluster is None:
                 cluster = self.graph.add_cluster(cID, vertex)
                 self.cluster_new_vertex(cluster, vertex, plot_step)
+                vertex.node.boundary[0], vertex.new_bound = vertex.new_bound, []
                 cluster_place_bucket(self.graph, cluster)
                 cID += 1
 

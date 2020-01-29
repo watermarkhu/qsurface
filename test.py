@@ -1,13 +1,13 @@
 import run_toric_2D_uf as rt2
-import unionfind_evengrow as uf
+import unionfind_evengrow_integrated as uf
 import time
 
 t0 = time.time()
-size = 28
+size = 8
 pX = 0.09
 pZ = 0
 pE = 0.0
-iters = 10000
+iters = 50000
 
 plot_load = 1
 # output = rt2.single(size, pE, pX, pZ, plot_load=plot_load, uf=uf)

@@ -80,7 +80,7 @@ def single(
     return correct
 
 
-def multiple(size, iters, pE=0, pX=0, pZ=0, plot_load=False, qres=None, worker=None, seeds=None, config=None, **kwargs):
+def multiple(size, iters, pE=0, pX=0, pZ=0, plot_load=False, qres=None, worker=0, seeds=None, config=None, **kwargs):
     """
     Runs the peeling decoder for a number of iterations. The graph is reused for speedup.
     """

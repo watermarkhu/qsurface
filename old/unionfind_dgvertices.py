@@ -1,6 +1,5 @@
 import printing as pr
 import random
-import evengrow as eg
 
 
 def find_cluster_root(cluster):
@@ -50,6 +49,7 @@ def cluster_place_bucket(graph, cluster):
         cluster.bucket = None
 
 
+
 class cluster_farmer:
 
     def __init__(
@@ -84,8 +84,8 @@ class cluster_farmer:
                 (new_vertex, new_edge) = vertex.neighbors[wind]
 
                 if new_edge.erasure:
+                    # if edge not already traversed
                     if new_edge.support == 0 and not new_edge.peeled:
-                        # if edge not already traversed
                         if new_vertex.cluster is None:  # if no cycle detected
                             new_edge.support = 2
                             cluster.add_vertex(new_vertex)
@@ -97,10 +97,11 @@ class cluster_farmer:
                             if self.plot and plot_step:
                                 self.uf_plot.plot_edge_step(new_edge, "remove")
                 else:
+                    # Make sure new bound does not lead to self
                     if new_vertex.cluster is not cluster:
-                        # Make sure new bound does not lead to self
                         cluster.boundary[0].append((vertex, new_edge, new_vertex))
 
+    ##################  tree grown functions ####################
 
     #################################################################################
     ####### List unionfind method ########
@@ -108,28 +109,13 @@ class cluster_farmer:
 
     def list_grow_bucket(self, bucket, bucket_i):
 
-        fusion, place, waited_nodes = [], [], [] # Initiate Fusion list
+        fusion, place = [], []  # Initiate Fusion list
 
-        while bucket:  # Loop over all clusters in the current bucket
+        while bucket:  # Loop over all clusters in the current bucket\
             cluster = find_cluster_root(bucket.pop())
 
             if cluster.bucket == bucket_i and cluster.support == bucket_i % 2:
-
-                if cluster.root_node.calc_delay and self.print_nodetree:
-                    calc_nodes = [node.short_id for node in cluster.root_node.calc_delay]
-                    print("Computing delay root {} at nodes {} and children".format(cluster.root_node.short_id, calc_nodes))
-                    print_tree = True
-                else:
-                    print_tree = False
-
-                while cluster.root_node.calc_delay:
-                    node = cluster.root_node.calc_delay.pop()
-                    eg.comp_tree_p_of_node(node)
-                    eg.comp_tree_d_of_node(node, cluster)
-
-                if print_tree:
-                    pr.print_tree(cluster.root_node, "children", "tree_rep")
-
+                # Check that cluster is not already in a higher bucket
                 place.append(cluster)
 
                 # Set boudary
@@ -140,38 +126,19 @@ class cluster_farmer:
 
                 # for vertex, new_edge, new_vertex in cluster.boundary[1]:
                 while cluster.boundary[1]:
-                    bound = cluster.boundary[1].pop()
-                    vertex, new_edge, new_vertex = bound
+                    vertex, new_edge, new_vertex = cluster.boundary[1].pop()
 
-                    node = vertex.node
-
-                    if node.d - node.w - cluster.mindl == 0:      # waited enough rounds as delay
-                        waited = False
-
-                        # Grow boundaries by half-edge
-                        if new_edge.support != 2:
-                            new_edge.support += 1
-
-                            if new_edge.support == 2:                       # if edge is fully grown
-                                fusion.append(bound)                        # Append to fusion list of edges
-                            else:
-                                cluster.boundary[0].append(bound)
-                            if self.plot: self.uf_plot.add_edge(new_edge, vertex)
-                    else:
-                        waited = True
-                        cluster.boundary[0].append(bound)
-
-                    # grow node size if not done before in same bucket
-                    if node.bucket != bucket_i:
-                        node.bucket = bucket_i
-                        node.s += 1
-                        if waited:
-                            waited_nodes.append(node)
-
+                    # Grow boundaries by half-edge
+                    if new_edge.support != 2:
+                        new_edge.support += 1
+                        if new_edge.support == 2:
+                            # Apped to fusion list of edge fully grown
+                            fusion.append((vertex, new_edge, new_vertex))
+                        else:
+                            # Half grown edges are added immediately to new boundary
+                            cluster.boundary[0].append((vertex, new_edge, new_vertex))
+                        if self.plot: self.uf_plot.add_edge(new_edge, vertex)
                 if self.plot_growth: self.uf_plot.draw_plot(str(cluster) + " grown.")
-
-        for node in waited_nodes:
-            node.w += 1
 
         if self.print_steps: mstr = {}
 
@@ -183,9 +150,6 @@ class cluster_farmer:
             # Fully grown edge. New vertex is on the old boundary. Find new boundary on vertex
             if passive_C is None:
                 active_C.add_vertex(passive_V)
-
-                # TODO: add some part in cluster_new_vertex to solve for erasure errors.
-                passive_V.node = active_V.node
                 self.cluster_new_vertex(active_C, passive_V, self.plot_growth)
 
             # Edge grown on itself. This cluster is already connected. Cut half-edge
@@ -193,9 +157,10 @@ class cluster_farmer:
                 edge.support -= 1
                 if self.plot: self.uf_plot.add_edge(edge, active_V)
 
-            # Clusters merge by weighted union
+            # Append to merging list, list of edges between clusters
             else:
                 merging.append((active_V, edge, passive_V))
+
 
         for active_V, edge, passive_V in merging:
             active_V.count += 1
@@ -212,7 +177,6 @@ class cluster_farmer:
 
         for merge_bucket in merge_buckets:
             for active_V, edge, passive_V in merge_bucket:
-
                 active_V.count, passive_V.count = 0, 0
                 active_C = find_cluster_root(active_V.cluster)
                 passive_C = find_cluster_root(passive_V.cluster)
@@ -224,14 +188,11 @@ class cluster_farmer:
 
                 # Merge clusters by union
                 else:
-                    # Apply union of anyontrees
-                    root_node = eg.adoption(active_V, passive_V, active_C, passive_C)
-
-                    # Apply weighted union of cluster trees
+                    # apply weighted union
                     if passive_C.size < active_C.size:
                         active_C, passive_C = passive_C, active_C
 
-                    # Keep track of which clusters are merged into one to print later
+                    # Keep track of which clusters are merged into one
                     if self.print_steps:
                         if active_C.cID not in mstr:
                             mstr[active_C.cID] = pr.print_graph(self.graph, [active_C], return_string=True)
@@ -239,22 +200,18 @@ class cluster_farmer:
                             mstr[passive_C.cID] = pr.print_graph(self.graph, [passive_C], return_string=True)
                         mstr[passive_C.cID] += "\n" + mstr[active_C.cID]
                         mstr.pop(active_C.cID)
-
                     union_clusters(passive_C, active_C)
-
-                    # Append boundary of smaller cluster to larger cluster
                     passive_C.boundary[0].extend(active_C.boundary[0])
-                    passive_C.root_node = root_node
-
-        # Put clusters in new buckets. Some will be added double, but will be skipped by the new_boundary check
-        for cluster in place:
-            cluster = find_cluster_root(cluster)
-            cluster_place_bucket(self.graph, cluster)
 
         if self.print_steps:
             pr.printlog("")
             for cID, string in mstr.items():
                 pr.printlog(f"B:\n{string}\nA:\n{pr.print_graph(self.graph, [self.graph.C[cID]], return_string=True)}\n")
+
+        # Put clusters in new buckets. Some will be added double, but will be skipped by the new_boundary check
+        for cluster in place:
+            cluster = find_cluster_root(cluster)
+            cluster_place_bucket(self.graph, cluster)
 
         if self.plot and not self.plot_growth:
             self.uf_plot.draw_plot("Clusters merged")
@@ -263,7 +220,7 @@ class cluster_farmer:
     ######################## General functions #############################
 
 
-    def grow_clusters(self, method="list", start_bucket=0):
+    def grow_clusters(self, method="tree", start_bucket=0):
 
         if self.print_steps:
             pr.print_graph(self.graph)
@@ -283,7 +240,7 @@ class cluster_farmer:
 
             if self.print_steps:
                 pr.printlog(
-                "\n############################ GROW ############################" + f"\nGrowing bucket {bucket_i} of {self.graph.maxbucket}: {bucket}" + f"\nReactiveing buckets: {self.graph.buckets[bucket_i + 1 : self.graph.maxbucket + 1]}, {self.graph.wastebasket}\n"
+                "\n############################ GROW ############################" + f"\nGrowing bucket {bucket_i} of {self.graph.maxbucket}: {bucket}" + f"\nRemaining buckets: {self.graph.buckets[bucket_i + 1 : self.graph.maxbucket + 1]}, {self.graph.wastebasket}\n"
                 )
                 self.uf_plot.waitforkeypress()
 
@@ -306,7 +263,7 @@ class cluster_farmer:
                 self.uf_plot.waitforkeypress()
 
 
-    def find_clusters(self, plot_step=0):
+    def find_clusters(self, order="Vup-Hup", plot_step=0):
         """
         Given a set of erased qubits/edges on a lattice, this functions finds all edges that are connected and sorts them in separate clusters. A single anyon can also be its own cluster.
         It loops over all vertices (randomly if toggled, which produces a different tree), and calls {cluster_new_vertex} to find all connected erasure qubits, and finds the boundary for growth step 1. Afterwards the cluster is placed in a bucket based in its size.
@@ -317,14 +274,32 @@ class cluster_farmer:
         self.graph.wastebasket = []
         self.graph.maxbucket = 0
 
-        cID = 0
-        vertices = self.graph.V.values()
+        cID, s = 0, self.graph.size
 
-        anyons = []
-        for vertex in vertices:
-            if vertex.state:
-                anyons.append(vertex)
-                vertex.node = eg.anyon_node(vertex.sID)
+        if order == "Vup-Hup":
+            vertices = self.graph.V.values()
+        if order == "Vdo-Hdo":
+            vertices = [self.graph.V[(t, y, x)]
+                for x in reversed(range(s))
+                for y in reversed(range(s))
+                for t in range(2)
+                ]
+        elif order == "Hup-Vdo":
+            vertices = [self.graph.V[(t, y, x)]
+                for y in reversed(range(s))
+                for x in range(s)
+                for t in range(2)
+                ]
+        elif order == "Hdo-Vdo":
+            vertices = [self.graph.V[(t, y, x)]
+                for y in reversed(range(s))
+                for x in reversed(range(s))
+                for t in range(2)
+                ]
+        elif order == "random":
+            vertices = random.sample(list(self.graph.V.values()), s*s*2)
+
+        anyons = [vertex for vertex in vertices if vertex.state]
 
         for vertex in anyons:
             if vertex.cluster is None:

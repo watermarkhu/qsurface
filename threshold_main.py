@@ -99,7 +99,7 @@ def plot_thresholds(
             [x * 100 for x in X],
             [fit_func((x, lati), *par) for x in X],
             "-",
-            label=lati,
+            label="L = {}".format(lati),
             color="C" + str(plot_i[lati] % 10),
             lw=1.5,
             alpha=0.6,
@@ -146,12 +146,12 @@ if __name__ == "__main__":
 
     folder = "./"
 
-    just_plot = 0
+    just_plot = 1
     print_data = 1
     save_result = 1
     data_select = None
     modified_ansatz = 0
-    file_name = "threshold_fixed_uf_evengrow_v2"
+    file_name = "5542ff6_threshold_fixed_uf_evengrow_v2_20"
     plot_name = file_name
 
     lattices = [8, 12, 16, 20, 24, 28]

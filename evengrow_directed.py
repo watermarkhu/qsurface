@@ -34,7 +34,7 @@ class anyon_node(object):
         unionfind_evengrow_plugin
         Needed to grow node in size once per round for plugin version
         '''
-        # self.bucket = None
+        self.bucket = None
 
 
     @property

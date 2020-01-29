@@ -31,6 +31,8 @@ class decoder_config(object):
             "print_nodetree": 0,
         }
 
+        self.seed = 9999
+
         self.file = {
             "savefile": 0,
             "erasure_file": None,
@@ -76,8 +78,12 @@ def single(
     toric_plot = tp.lattice_plot(graph, **config.plot) if plot_load else None
 
     # Initialize errors
-    if seed is None:
+    if seed is None and config.seed is None:
         te.init_random_seed(worker=worker, iteration=iter)
+    elif seed is None:
+        te.apply_random_seed(config.seed)
+    elif config.seed is None:
+        te.apply_random_seed(seed)
 
     if pE != 0:
         te.init_erasure_region(graph, pE, toric_plot, **config.file)

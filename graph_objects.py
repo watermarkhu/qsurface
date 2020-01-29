@@ -5,12 +5,15 @@ class iGraph(object):
     C           dict of clusters with
                     Key:    cID number
                     Value:  Cluster object
-    V           dict of vertices with
+    S           dict of stabilizers with
                     Key:    sID number
-                    Value:  Vertex object
-    E           dict of edges with
+                    Value:  Stab object
+    B           dict of open boundaries with
+                    Key:    sID number
+                    Value:  Boundary object
+    Q           dict of qubits with
                     Key:    qID number
-                    Value:  Edge object
+                    Value:  Qubit object with two Edge objects
     wind        dict keys from the possible directions of neighbors.
 
     """
@@ -18,9 +21,11 @@ class iGraph(object):
     def __init__(self, size):
         self.size = size
         self.C = {}
-        self.V = {}
-        self.E = {}
+        self.S = {}
+        self.B = {}
+        self.Q = {}
         self.wind = ["u", "d", "l", "r"]
+        self.plot = None
 
     def __repr__(self):
 
@@ -32,10 +37,12 @@ class iGraph(object):
             "Graph object with "
             + str(numC)
             + " Clusters, "
-            + str(len(self.V))
-            + " Vertices and "
-            + str(len(self.E))
-            + " Edges."
+            + str(len(self.S))
+            + " Stabilizers,  "
+            + str(len(self.Q))
+            + " Qubits and "
+            + str(len(self.B))
+            + " Boundaries"
         )
 
     def add_cluster(self, cID, vertex):
@@ -43,25 +50,28 @@ class iGraph(object):
         self.C[cID] = iCluster(cID, vertex)
         return self.C[cID]
 
-    def add_vertex(self, sID):
-        """Adds a vertex with vertex ID number sID"""
-        self.V[sID] = iVertex(sID)
-        return self.V[sID]
+    def add_stab(self, sID):
+        """Adds a stabilizer with stab ID number sID"""
+        self.S[sID] = iStab(sID)
+        return self.S[sID]
 
-    def add_edge(self, qID, sIDlu, sIDrd, orientation):
+    def add_boundary(self, sID):
+        """Adds a open bounday (stab like) with bounday ID number sID"""
+        self.B[sID] = iBoundary(sID)
+        return self.B[sID]
+
+    def add_edge(self, qID, VL, VR, VU, VD):
         """Adds an edge with edge ID number qID with pointers to vertices. Also adds pointers to this edge on the vertices. """
 
-        V1 = self.V[sIDlu]
-        V2 = self.V[sIDrd]
-        E = iEdge(qID)
-        self.E[qID] = E
-        if orientation == "H":
-            V1.neighbors["r"] = (V2, E)
-            V2.neighbors["l"] = (V1, E)
-        elif orientation == "V":
-            V1.neighbors["d"] = (V2, E)
-            V2.neighbors["u"] = (V1, E)
-        return E
+        qubit = iQubit(qID)
+        self.Q[qID] = qubit
+        E1, E2 = (qubit.VXE, qubit.PZE) if qID[2] == 0 else (qubit.PZE, qubit.VXE)
+        VL.neighbors["r"] = (VR, E1)
+        VR.neighbors["l"] = (VL, E1)
+        VU.neighbors["d"] = (VD, E2)
+        VD.neighbors["u"] = (VU, E2)
+
+        return qubit
 
     def reset(self):
         """
@@ -69,17 +79,10 @@ class iGraph(object):
 
         """
         self.C = {}
-        for edge in self.E.values():
-            edge.reset()
-        for vertex in self.V.values():
-            vertex.reset()
-
-    def grow_reset(self):
-        self.C = {}
-        for edge in self.E.values():
-            edge.grow_reset()
-        for vertex in self.V.values():
-            vertex.grow_reset()
+        for qubit in self.Q.values():
+            qubit.reset()
+        for stab in self.S.values():
+            stab.reset()
 
 
 class iCluster(object):
@@ -120,24 +123,24 @@ class iCluster(object):
     def __repr__(self):
         return "C" + str(self.cID) + "(" + str(self.size) + ":" + str(self.parity) + ")"
 
-    def add_vertex(self, vertex):
-        """Adds a vertex to a cluster. Also update cluster value of this vertex."""
+    def add_stab(self, stab):
+        """Adds a stabilizer to a cluster. Also update cluster value of this stabilizer."""
         self.size += 1
-        if vertex.state:
+        if stab.state:
             self.parity += 1
-        vertex.cluster = self
+        stab.cluster = self
 
 
-class iVertex(object):
+class iStab(object):
     """
-    Vertex object with parameters:
-    sID         location of vertex (ertype, y, x)
-    neighbors   dict of the neighobrs (in the graph) of this vertex with
+    Stab object with parameters:
+    sID         location of stabilizer (ertype, y, x)
+    neighbors   dict of the neighobrs (in the graph) of this stabilizer with
                     Key:    wind
-                    Value   (Vertex object, Edge object)
-    state       boolean indicating anyon state of vertex
-    cluster     Cluster object of which this vertex is apart of
-    tree        boolean indicating whether this vertex has been traversed
+                    Value   (Stab object, Edge object)
+    state       boolean indicating anyon state of stabilizer
+    cluster     Cluster object of which this stabilizer is apart of
+    tree        boolean indicating whether this stabilizer has been traversed
     """
 
     def __init__(self, sID):
@@ -176,15 +179,34 @@ class iVertex(object):
         self.distance = 0
         self.node = None
 
-    def grow_reset(self):
-        self.cluster = None
-        self.tree = None
-        self.distance = 0
+
+class iBoundary(iStab):
+    def __repr__(self):
+        type = "X" if self.sID[0] == 0 else "Z"
+        return "b" + type + "(" + str(self.sID[1]) + "," + str(self.sID[2]) + ")"
+
+
+class iQubit(object):
+
+    def __init__(self, qID):
+        self.qID = qID
+        self.erasure = 0
+        self.VXE = iEdge((0, qID[2]))
+        self.PZE = iEdge((1, 1 - qID[2]))
+
+    def __repr__(self):
+        return "q({},{}:{})".format(*self.qID)
+
+    def reset(self):
+        self.erasure = 0
+        self.VXE.reset()
+        self.PZE.reset()
+
 
 class iEdge(object):
     """
     Edge object with parameters:
-    qID         location of qubit/edge (ertype, y, x, td)
+    type        type of this edge: 0 for X type connecting vertices, 1 for Z type connecting plaquettes
     vertices    tuple of the two conected vertices
     state       boolean indicating the state of the qubit
     cluster     Cluster object of which this edge is apart of
@@ -192,35 +214,21 @@ class iEdge(object):
     matching    boolean indicating whether this edge is apart of the matching
     """
 
-    def __init__(self, qID):
+    def __init__(self, type):
         # fixed parameters
-        self.qID = qID
+        self.type = type
 
         # iteration parameters
         self.cluster = None
         self.state = 0
-        self.erasure = 0
         self.support = 0
         self.peeled = 0
         self.matching = 0
 
     def __repr__(self):
-        if self.qID[0] == 0:
-            errortype = "X"
-            edgetype = "-" if self.qID[3] == 0 else "|"
-        else:
-            errortype = "Z"
-            edgetype = "|" if self.qID[3] == 0 else "-"
-        return (
-            "e"
-            + errortype
-            + edgetype
-            + "("
-            + str(self.qID[1])
-            + ","
-            + str(self.qID[2])
-            + ")"
-        )
+        errortype = "X" if self.type[0] == 0 else "Z"
+        orientation = "-" if self.type[1] == 0 else "|"
+        return "e"+ errortype + orientation
 
     def reset(self):
         """
@@ -228,7 +236,6 @@ class iEdge(object):
         """
         self.cluster = None
         self.state = 0
-        self.erasure = 0
         self.support = 0
         self.peeled = 0
         self.matching = 0
@@ -237,36 +244,3 @@ class iEdge(object):
         self.cluster = None
         self.support = 0
         self.peeled = 0
-
-
-def init_toric_graph(size):
-
-    graph = iGraph(size)
-
-    # Add vertices to graph
-    for ertype in range(2):
-        for y in range(size):
-            for x in range(size):
-                graph.add_vertex((ertype, y, x))
-
-    # Add edges to graph
-    for y in range(size):
-        for x in range(size):
-
-            VL_sID = (0, y, x)
-            VR_sID = (0, y, (x + 1) % size)
-            graph.add_edge((0, y, x, 0), VL_sID, VR_sID, "H")
-
-            VU_sID = (0, y, x)
-            VD_sID = (0, (y + 1) % size, x)
-            graph.add_edge((0, y, x, 1), VU_sID, VD_sID, "V")
-
-            VU_sID = (1, (y - 1) % size, x)
-            VD_sID = (1, y, x)
-            graph.add_edge((1, y, x, 0), VU_sID, VD_sID, "V")
-
-            VL_sID = (1, y, (x - 1) % size)
-            VR_sID = (1, y, x)
-            graph.add_edge((1, y, x, 1), VL_sID, VR_sID, "H")
-
-    return graph

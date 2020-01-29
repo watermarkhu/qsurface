@@ -1,3 +1,4 @@
+import uf_plot as up
 import printing as pr
 import random
 
@@ -53,19 +54,26 @@ def cluster_place_bucket(graph, cluster, vcomb=0):
         cluster.bucket = None
 
 
-class cluster_farmer:
+class toric(object):
 
     def __init__(
             self,
             graph,
-            uf_plot=None,
+            plot_config,
             **kwargs
         ):
         self.graph = graph
-        self.uf_plot = uf_plot
+
         for key, value in kwargs.items():
             setattr(self, key, value)
-        self.plot = True if uf_plot is not None else False
+
+        self.plot, self.uf_plot = True, up.toric(graph, **plot_config) if graph.plot else 0, 0
+
+
+    def decode(self):
+        self.find_clusters()
+        self.grow_clusters()
+        self.peel_clusters()
 
 
     def cluster_new_vertex(self, cluster, vertex, plot_step=0):

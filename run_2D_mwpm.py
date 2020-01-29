@@ -1,7 +1,7 @@
 import graph_objects as go
-import toric_code as tc
-import toric_error as te
-import toric_plot as tp
+import dec_mwpm as dc
+import toric_error2 as te
+import surface_plot as tp
 from progiter import ProgIter
 import multiprocessing as mp
 import os
@@ -13,6 +13,8 @@ class decoder_config(object):
             os.makedirs("./errors/")
         if not os.path.exists("./figures/"):
             os.makedirs("./figures/")
+
+        self.type = "toric"
 
         self.file = {
             "savefile": False,
@@ -63,24 +65,27 @@ def single(
 
     te.init_pauli(graph, pX, pZ, toric_plot, **config.file)
 
-    # Measure stabiliziers
-    tc.measure_stab(graph, toric_plot)
+    else:
+        te.init_random_seed(worker=worker, iteration=iter)
+        te.init_erasure(graph, pE)
+        te.init_pauli(graph, pX, pZ)
+        graph.measure_stab()
+        decoder.get_matching_blossom5()
+        if type == "planar":
+            decoder.remove_virtual()
+        decoder.apply_matching()
 
-    # MWPM decoder
-    # matching = tc.get_matching_mwpm(graph)
-    matching = tc.get_matching_blossom5(graph)
 
-    # Apply matching
-    tc.apply_matching_mwpm(graph, matching, toric_plot)
+    _ , correct = go.logical_error(graph)
 
-    # Measure logical operator
-    logical_error = tc.logical_error(graph)
-    graph.reset()
-    correct = True if logical_error == [False, False, False, False] else False
     return correct
 
 
+<<<<<<< HEAD:run_toric_2D_mwpm.py
 def multiple(size, iters, pE=0, pX=0, pZ=0, plot_load=False, qres=None, worker=0, seeds=None, config=None, **kwargs):
+=======
+def multiple(size, iters, pE=0, pX=0, pZ=0, plot_load=False, type="toric", qres=None, worker=0):
+>>>>>>> planar_graph:run_2D_mwpm.py
     """
     Runs the peeling decoder for a number of iterations. The graph is reused for speedup.
     """
@@ -93,8 +98,15 @@ def multiple(size, iters, pE=0, pX=0, pZ=0, plot_load=False, qres=None, worker=0
 
     graph = go.init_toric_graph(size)
     result = [
+<<<<<<< HEAD:run_toric_2D_mwpm.py
         single(size, pE, pX, pZ, plot_load, graph, worker, i, seed, config)
         for i, seed in ProgIter(zip(range(iters), seeds))
+=======
+        single(
+            size, pE, pX, pZ, plot_load=plot_load, type=type, graph=graph, worker=worker, iter=i
+        )
+        for i in ProgIter(range(iters))
+>>>>>>> planar_graph:run_2D_mwpm.py
     ]
 
     N_succes = sum(result)
@@ -104,7 +116,11 @@ def multiple(size, iters, pE=0, pX=0, pZ=0, plot_load=False, qres=None, worker=0
         return N_succes
 
 
+<<<<<<< HEAD:run_toric_2D_mwpm.py
 def multiprocess(size, iters, pE=0, pX=0, pZ=0, seeds=None, processes=None, config=None, **kwargs):
+=======
+def multiprocess(size, iters, pE=0, pX=0, pZ=0, type="toric", processes=None):
+>>>>>>> planar_graph:run_2D_mwpm.py
     """
     Runs the peeling decoder for a number of iterations, split over a number of processes
     """
@@ -132,7 +148,11 @@ def multiprocess(size, iters, pE=0, pX=0, pZ=0, seeds=None, processes=None, conf
     for i in range(processes - 1):
         workers.append(
             mp.Process(
+<<<<<<< HEAD:run_toric_2D_mwpm.py
                 target=multiple, args=(size, process_iters, pE, pX, pZ, False, qres, i, seed_lists[i], config)
+=======
+                target=multiple, args=(size, process_iters, pE, pX, pZ, False, type, qres, i)
+>>>>>>> planar_graph:run_2D_mwpm.py
             )
         )
     workers.append(
@@ -145,6 +165,7 @@ def multiprocess(size, iters, pE=0, pX=0, pZ=0, seeds=None, processes=None, conf
                 pX,
                 pZ,
                 False,
+                type,
                 qres,
                 processes - 1,
                 seed_lists[processes - 1],

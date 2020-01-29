@@ -1,8 +1,6 @@
 import graph_objects as go
-import toric_code as tc
-import toric_error as te
-import toric_plot as tp
-import uf_plot as up
+import graph_lattice_functions as gf
+import graph_lattice_plot as gp
 import os
 from progiter import ProgIter
 import multiprocessing as mp
@@ -16,11 +14,18 @@ class decoder_config(object):
         if not os.path.exists("./figures/"):
             os.makedirs("./figures/")
 
-        self.decoder = {
+
+        self.plot_load = 0
+        self.seed = 0
+        self.type = "toric"
+
+        self.decoder_config = {
             "print_steps": False,
             "random_order=0": False,
             "random_traverse": False,
-            "plot_growth": False,
+            "plot_find"     : 0,
+            "plot_growth"   : 0,
+            "plot_peel"     : 0,
 
             # Tree-method
             "intervention": False,
@@ -31,18 +36,16 @@ class decoder_config(object):
             "print_nodetree": 0,
         }
 
-        self.seed = 9999
-
-        self.file = {
+        self.file_config = {
             "savefile": 0,
             "erasure_file": None,
             "pauli_file": None,
         }
 
-        self.plot = {
-            "plot_size": 6,
-            "line_width": 1.5,
-            "plotstep_click": True
+        self.plot_config = {
+            "plot_size"     : 6,
+            "line_width"    : 1.5,
+            "plotstep_click": 1,
         }
 
 
@@ -51,23 +54,19 @@ def single(
     pE=0,
     pX=0,
     pZ=0,
-    plot_load=False,
     graph=None,
     worker=0,
     iter=0,
     seed=None,
-    uf=None,
+    dec=None,
     config=None,
     **kwargs
 ):
     """
     Runs the peeling decoder for one iteration
     """
-    # import decoder
-    if uf is None:
-        import unionfind as uf
 
-    # import uf config
+    # import decoder config
     if config is None:
         config = decoder_config()
 
@@ -75,40 +74,40 @@ def single(
     if graph is None:
         graph = go.init_toric_graph(size)
 
-    toric_plot = tp.lattice_plot(graph, **config.plot) if plot_load else None
+    if config.plot_load:
+        graph.plot = gp.lattice_plot(graph, **config.plot_config)
+
+    # import decoder
+    if dec is None:
+        import unionfind as dec
+
+    if config.type == "toric":
+        decoder = dec.toric(graph)
+    elif config.type == "planar":
+        decoder = dec.planar(graph)
 
     # Initialize errors
     if seed is None and config.seed is None:
-        te.init_random_seed(worker=worker, iteration=iter)
+        gf.init_random_seed(worker=worker, iteration=iter)
     elif seed is None:
-        te.apply_random_seed(config.seed)
+        gf.apply_random_seed(config.seed)
     elif config.seed is None:
-        te.apply_random_seed(seed)
+        gf.apply_random_seed(seed)
 
     if pE != 0:
-        te.init_erasure_region(graph, pE, toric_plot, **config.file)
-        # te.init_erasure(graph, pE, savefile, erasure_file, toric_plot=toric_plot, worker=worker)
+        gf.init_erasure_region(graph, pE, **config.file)
 
-    te.init_pauli(graph, pX, pZ, toric_plot, **config.file)
-
-    # Measure stabiliziers
-    tc.measure_stab(graph, toric_plot)
+    gf.init_pauli(graph, pX, pZ, **config.file)         # initialize errors
+    gf.measure_stab(graph)                              # Measure stabiliziers
 
     # Peeling decoder
-    uf_plot = up.toric(graph, **config.plot)if plot_load else None
 
-    ufg = uf.cluster_farmer(graph, uf_plot, **config.decoder)
-    ufg.find_clusters(plot_step=0)
-    ufg.grow_clusters()
-    ufg.peel_clusters(plot_step=0)
-
-    if toric_plot:
-        toric_plot.plot_final()
+    decoder = dec.decoder_object(graph, config.plot, **config.decoder)
+    decoder.decode()
 
     # Measure logical operator
-    logical_error = tc.logical_error(graph)
+    logical_error, correct = gf.logical_error(graph)
     graph.reset()
-    correct = True if logical_error == [False, False, False, False] else False
 
     return correct
 
@@ -139,7 +138,7 @@ def multiple(
         config = decoder_config()
 
     if seeds is None:
-        seeds = [te.init_random_seed(worker=worker, iteration=iter) for iter in range(iters)]
+        seeds = [gf.init_random_seed(worker=worker, iteration=iter) for iter in range(iters)]
 
     graph = go.init_toric_graph(size)
 
@@ -178,7 +177,7 @@ def multiprocess(size, iters, pE=0, pX=0, pZ=0, seeds=None, processes=None, uf=N
     # Generate seeds for simulations
     if seeds is None:
         num_seeds = [process_iters for _ in range(processes - 1)] + [rest_iters]
-        seed_lists = [[te.init_random_seed(worker=worker, iteration=iter) for iter in range(iters)] for worker, iters in enumerate(num_seeds)]
+        seed_lists = [[gf.init_random_seed(worker=worker, iteration=iter) for iter in range(iters)] for worker, iters in enumerate(num_seeds)]
     else:
         seed_lists = [seeds[int(i*process_iters):int((i+1)*process_iters)] for i in range(processes - 1)] + [seeds[int((processes-1)*process_iters):]]
 

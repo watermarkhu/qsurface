@@ -97,9 +97,28 @@ class toric(object):
             self.matching += get_matching(plaqs)
 
 
-    def apply_matching(self):
+    def get_distances(self, y0, x0, y1, x1):
+        dy0 = (y0 - y1) % self.graph.size
+        dx0 = (x0 - x1) % self.graph.size
+        dy1 = (y1 - y0) % self.graph.size
+        dx1 = (x1 - x0) % self.graph.size
 
-        size = self.graph.size
+        if dy0 < dy1:  # Find closest path and walking direction
+            dy = dy0
+            yd = "u"
+        else:
+            dy = dy1
+            yd = "d"
+        if dx0 < dx1:
+            dx = dx0
+            xd = "r"
+        else:
+            dx = dx1
+            xd = "l"
+
+        return dy, yd, dx, xd
+
+    def apply_matching(self):
 
         for v0, v1 in self.matching:  # Apply the matchings to the graph
 
@@ -107,49 +126,27 @@ class toric(object):
             (_, y1, x1) = v1.sID
 
             # Get distance between endpoints, take modulo to find min distance
-            if self.graph.type == "toric":
-                dy0 = (y0 - y1) % size
-                dx0 = (x0 - x1) % size
-                dy1 = (y1 - y0) % size
-                dx1 = (x1 - x0) % size
-            elif self.graph.type == "planar":
-                dy0 = y0 - y1
-                dx0 = x0 - x1
-                dy1 = y1 - y0
-                dx1 = x1 - x0
-
-            if dy0 < dy1:  # Find closest path and walking direction
-                dy = dy0
-                yd = "u"
-            else:
-                dy = dy1
-                yd = "d"
-            if dx0 < dx1:
-                dx = dx0
-                xd = "r"
-            else:
-                dx = dx1
-                xd = "l"
+            dy, yd, dx, xd = self.get_distances(y0, x0, y1, x1)
 
             ynext = v0  # walk vertically from v0
             for y in range(dy):
                 (ynext, edge) = ynext.neighbors[yd]
-                edge.state = not edge.state
-                edge.matching = not edge.matching
+                edge.state = 1 - edge.state
+                edge.matching = 1 - edge.matching
 
             xnext = v1  # walk horizontally from v1
             for x in range(dx):
                 (xnext, edge) = xnext.neighbors[xd]
-                edge.state = not edge.state
-                edge.matching = not edge.matching
+                edge.state = 1 - edge.state
+                edge.matching = 1 - edge.matching
 
 
 class planar(toric):
 
     def decode(self):
         self.get_matching_blossom5()
-        self.apply_matching()
         self.remove_virtual()
+        self.apply_matching()
         if self.graph.plot: self.graph.plot.plot_lines(self.matching)
 
 
@@ -202,10 +199,20 @@ class planar(toric):
 
         return edges
 
+
+    def get_distances(self, y0, x0, y1, x1):
+        dy = y0 - y1
+        dx = x0 - x1
+
+        yd = "u" if dy > 0 else "d"
+        xd = "l" if dx < 0 else "r"
+
+        return abs(dy), yd, abs(dx), xd
+
+
     def remove_virtual(self):
         matching = []
         for V1, V2 in self.matching:
-
             if not (type(V1) == go.iBoundary and type(V2) == go.iBoundary):
                 matching.append([V1, V2])
         self.matching = matching

@@ -1,8 +1,8 @@
 import pandas as pd
 import matplotlib.pyplot as plt
 
-file_name2 = "da3c8b0_threshold_fixed_list_dgvertices_smallp"
-file_name1 = "da3c8b0_threshold_fixed_mwpm_blossom5_smallp"
+file_name1 = "64d9f77_threshold_fixed_uf_egiv2_dgv"
+file_name2 = "5542ff6_threshold_fixed_uf_evengrow_v2"
 folder = "./"
 file_path1 = folder + "./data/" + file_name1 + ".csv"
 file_path2 = folder + "./data/" + file_name2 + ".csv"
@@ -14,13 +14,14 @@ data1 = data1.set_index(["L", "p"])
 data2 = pd.read_csv(file_path2, header=0)
 data2 = data2.set_index(["L", "p"])
 
+i1 = list(zip(*data1.index.values.tolist()))
+i2 = list(zip(*data2.index.values.tolist()))
 
-lattices = [8,9,10,11]
-P = [(90 + 2*i)/1000 for i in range(11)]
-
+L = sorted(list(set(i1[0]) & set(i2[0])))
+P = sorted(list(set(i1[1]) & set(i2[1])))
 
 plt.figure()
-for lati in lattices:
+for lati in L:
 
     l = []
     for pi in P:
@@ -31,7 +32,7 @@ for lati in lattices:
         suc2 = data2.loc[(lati, round(pi, 6)), "succes"]
 
         l.append((suc1/num1 - suc2/num2)*100)
-    plt.plot(l, label=str(lati))
+    plt.plot(P, l, label=str(lati))
 plt.xlabel("pX")
 plt.ylabel("Decoder improvement (%)")
 plt.title("mwpm decoder improvement over uf-dgvertices decoder")

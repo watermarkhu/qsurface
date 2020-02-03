@@ -1,18 +1,52 @@
-import run_toric_2D_uf as rt2
-import unionfind_evengrow_integrated as uf
-import time
+import run_surface_code as run
+import unionfind as decoder
 
-t0 = time.time()
-size = 8
-pX = 0.09
-pZ = 0
-pE = 0.0
+size = 10
+
+pX = 0.05
+pZ = 0.0
+pE = 0.05
 iters = 50000
 
-plot_load = 1
-# output = rt2.single(size, pE, pX, pZ, plot_load=plot_load, uf=uf)
-# output = rt2.multiple(size, iters, pE, pX, pZ, plot_load=plot_load, uf=uf)
-output = rt2.multiprocess(size, iters, pE, pX, pZ, uf=uf)
+class decoder_config(object):
+    def __init__(self, path="./unionfind.ini"):
 
-print("time taken =", time.time() - t0)
-print("p = " + str(output / iters * 100) + "%")
+        self.plot_load = 1
+        self.seed = None
+        self.type = "planar"
+
+        self.decoder = {
+            "print_steps": 1,
+            "random_order": False,
+            "random_traverse": False,
+            "plot_find"     : 0,
+            "plot_growth"   : 0,
+            "plot_peel"     : 0,
+
+            # Tree-method
+            "intervention": False,
+            "vcomb": False,
+
+            # Evengrow
+            "plot_nodes": 1,
+            "print_nodetree": 1,
+        }
+
+        self.file = {
+            "savefile": 0,
+            "erasure_file": None,
+            "pauli_file": None,
+        }
+
+        self.plot = {
+            "plot_size"     : 6,
+            "line_width"    : 1.5,
+            "plotstep_click": 1,
+        }
+
+
+output = run.single(size, decoder_config(), decoder, pE, pX, pZ, dec=decoder, config=decoder_config())
+# output = run.multiple(size, iters, pE, pX, pZ, dec=decoder, config=decoder_config())
+# output = run.multiprocess(size, iters, pE, pX, pZ, dec=decoder, config=decoder_config())
+
+print(output)

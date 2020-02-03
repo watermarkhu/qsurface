@@ -1,4 +1,5 @@
 import printing as pr
+import plot_unionfind as up
 import random
 import evengrow_directed as eg
 
@@ -50,19 +51,26 @@ def cluster_place_bucket(graph, cluster):
         cluster.bucket = None
 
 
-class cluster_farmer:
+class toric:
 
     def __init__(
             self,
             graph,
-            uf_plot=None,
+            plot_config=None,
             **kwargs
         ):
         self.graph = graph
-        self.uf_plot = uf_plot
+        self.plot_config = plot_config
+
         for key, value in kwargs.items():
             setattr(self, key, value)
-        self.plot = True if uf_plot is not None else False
+
+
+    def decode(self):
+        self.uf_plot = up.toric(self.graph, **self.plot_config) if self.graph.plot else None
+        self.find_clusters()
+        self.grow_clusters()
+        self.peel_clusters()
 
 
     def cluster_new_vertex(self, cluster, vertex, plot_step=0):
@@ -83,18 +91,18 @@ class cluster_farmer:
             if wind in vertex.neighbors:
                 (new_vertex, new_edge) = vertex.neighbors[wind]
 
-                if new_edge.erasure:
+                if new_edge.qubit.erasure:
                     if new_edge.support == 0 and not new_edge.peeled:
                         # if edge not already traversed
                         if new_vertex.cluster is None:  # if no cycle detected
                             new_edge.support = 2
                             cluster.add_vertex(new_vertex)
-                            if self.plot and plot_step:
+                            if self.graph.plot and plot_step:
                                 self.uf_plot.plot_edge_step(new_edge, "confirm")
                             self.cluster_new_vertex(cluster, vertex, plot_step)
                         else:  # cycle detected, peel edge
                             new_edge.peeled = True
-                            if self.plot and plot_step:
+                            if self.graph.plot and plot_step:
                                 self.uf_plot.plot_edge_step(new_edge, "remove")
                 else:
                     if new_vertex.cluster is not cluster:
@@ -142,7 +150,7 @@ class cluster_farmer:
                     else:
                         cluster.boundary[0].append(bound)
 
-                    if self.plot: self.uf_plot.add_edge(new_edge, vertex)
+                    if self.graph.plot: self.uf_plot.add_edge(new_edge, vertex)
             else:
                 waited = True
                 cluster.boundary[0].append(bound)
@@ -176,7 +184,7 @@ class cluster_farmer:
 
         elif passive_C is active_C:
             edge.support -= 1
-            if self.plot: self.uf_plot.add_edge(edge, active_V)
+            if self.graph.plot: self.uf_plot.add_edge(edge, active_V)
 
         else:
             root_node = eg.adoption(active_V, passive_V, active_C, passive_C)
@@ -217,7 +225,7 @@ class cluster_farmer:
             # Edge grown on itself. This cluster is already connected. Cut half-edge
             elif passive_C is active_C:
                 edge.support -= 1
-                if self.plot: self.uf_plot.add_edge(edge, active_V)
+                if self.graph.plot: self.uf_plot.add_edge(edge, active_V)
 
             # Clusters merge by weighted union
             else:
@@ -268,7 +276,7 @@ class cluster_farmer:
             for cID, string in self.mstr.items():
                 pr.printlog(f"B:\n{string}\nA:\n{pr.print_graph(self.graph, [self.graph.C[cID]], return_string=True)}\n")
 
-        if self.plot and not self.plot_growth:
+        if self.graph.plot and not self.plot_growth:
             self.uf_plot.draw_plot("Clusters merged")
 
 
@@ -279,7 +287,7 @@ class cluster_farmer:
 
         if self.print_steps:
             pr.print_graph(self.graph)
-            self.uf_plot.waitforkeypress() if self.plot else input("Press any key to continue...")
+            self.uf_plot.waitforkeypress() if self.graph.plot else input("Press any key to continue...")
 
         for bucket_i, bucket in enumerate(self.graph.buckets[start_bucket:], start_bucket):
 
@@ -287,7 +295,7 @@ class cluster_farmer:
                 # Break from upper buckets if top bucket has been reached.
                 if self.uf_plot is not None or self.print_steps:
                     pr.printlog("Max bucket number reached.")
-                    self.uf_plot.waitforkeypress() if self.plot else input()
+                    self.uf_plot.waitforkeypress() if self.graph.plot else input()
                 break
 
             if not bucket:  # no need to check empty bucket
@@ -304,21 +312,20 @@ class cluster_farmer:
             if self.print_steps:
                 pr.print_graph(self.graph, printmerged=0)
 
-            if self.plot:
+            if self.graph.plot:
                 self.uf_plot.ax.set_xlabel("")
                 if not self.plot_growth and not self.print_steps:
                     txt = "" if self.print_steps else f"Growing bucket #{bucket_i}/{self.graph.maxbucket}"
                     self.uf_plot.draw_plot(txt)
 
-        if self.plot:
+        if self.graph.plot:
             if self.print_steps:
                 pr.print_graph(self.graph)
             if self.plot_growth:
-                pr.printlog("Clusters grown.")
-                self.uf_plot.waitforkeypress()
+                self.uf_plot.draw_plot("Clusters grown.")
 
 
-    def find_clusters(self, plot_step=0):
+    def find_clusters(self):
         """
         Given a set of erased qubits/edges on a lattice, this functions finds all edges that are connected and sorts them in separate clusters. A single anyon can also be its own cluster.
         It loops over all vertices (randomly if toggled, which produces a different tree), and calls {cluster_new_vertex} to find all connected erasure qubits, and finds the boundary for growth step 1. Afterwards the cluster is placed in a bucket based in its size.
@@ -330,7 +337,7 @@ class cluster_farmer:
         self.graph.maxbucket = 0
 
         cID = 0
-        vertices = self.graph.V.values()
+        vertices = self.graph.S.values()
 
         anyons = []
         for vertex in vertices:
@@ -341,17 +348,17 @@ class cluster_farmer:
         for vertex in anyons:
             if vertex.cluster is None:
                 cluster = self.graph.add_cluster(cID, vertex)
-                self.cluster_new_vertex(cluster, vertex, plot_step)
+                self.cluster_new_vertex(cluster, vertex, self.plot_find)
                 cluster_place_bucket(self.graph, cluster)
                 cID += 1
 
-        if self.uf_plot is not None and not plot_step:
-            self.uf_plot.plot_removed(self.graph, "Clusters initiated.")
-        elif self.uf_plot is not None:
-            self.uf_plot.waitforkeypress("Clusters initiated.")
+        if self.uf_plot is not None:
+            if not self.plot_find:
+                self.uf_plot.plot_removed()
+            self.uf_plot.draw_plot("Clusters initiated.")
 
 
-    def peel_clusters(self, plot_step=0):
+    def peel_clusters(self):
         """
         Loops overal all vertices to find pendant vertices which are selected from peeling using {peel_edge}
 
@@ -366,7 +373,7 @@ class cluster_farmer:
 
             If there is only one neighbor of the input vertex that is in the same cluster, this vertex is a pendant vertex and can be peeled. The function calls itself on the other vertex of the edge leaf.
             """
-            plot = True if self.plot and plot_step else False
+            plot = True if self.graph.plot and self.plot_peel else False
             num_connect = 0
 
             for wind in self.graph.wind:
@@ -394,10 +401,11 @@ class cluster_farmer:
                         self.uf_plot.plot_edge_step(edge, "peel")
                 peel_edge(cluster, new_vertex)
 
-        for vertex in self.graph.V.values():
+        for vertex in self.graph.S.values():
             if vertex.cluster is not None:
                 cluster = find_cluster_root(vertex.cluster)
                 peel_edge(cluster, vertex)
 
-        if self.plot and not plot_step:
-            self.uf_plot.plot_removed(self.graph, "Peeling completed.")
+        if self.graph.plot and not self.plot_peel:
+            self.uf_plot.plot_removed()
+            self.uf_plot.draw_plot("Clusters peeled.")

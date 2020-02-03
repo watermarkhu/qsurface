@@ -11,9 +11,10 @@ class lattice_plot:
         self.plot_anyons = 1
         self.plot_matching = 1
         self.plot_correction = 1
-        self.plot_result = 0
+        self.plot_result = 1
         self.size = graph.size
         self.graph = graph
+        self.plot_size = plot_size
 
         self.qsize = 0.5
         self.qsize2 = 0.25
@@ -35,8 +36,15 @@ class lattice_plot:
         self.cZ = [0.3, 0.9, 0.3]  # Z quasiparticle color
         self.cE = [0.3, 0.5, 0.9]  # Erasure color
 
+        self.f = plt.figure(figsize=(self.plot_size, self.plot_size))
+
+        self.init_plot()
+
+    def init_plot(self):
+
+        plt.figure(self.f.number)
+
         # Initiate figure
-        self.f = plt.figure(figsize=(plot_size, plot_size))
         plt.ion()
         plt.cla()
         plt.show()
@@ -143,43 +151,43 @@ class lattice_plot:
 
 
         # Plot stabilizers
-        for stab in graph.S.values():
+        for stab in self.graph.S.values():
             (type, yb, xb) = stab.sID
             y, x = yb * 4, xb * 4
-            stab.sp = {}
+            stab.pg = {}
             for neighbor in stab.neighbors.keys():
-                stab.sp[neighbor] = plot_stab(neighbor, y, x, type)[0]
+                stab.pg[neighbor] = plot_stab(neighbor, y, x, type)[0]
 
         # Plot open boundaries if exists
-        for bound in graph.B.values():
+        for bound in self.graph.B.values():
             (type, yb, xb) = bound.sID
             y, x = yb * 4, xb * 4
-            bound.sp = {}
+            bound.pg = {}
             for neighbor in bound.neighbors.keys():
-                bound.sp[neighbor] = plot_stab(neighbor, y, x, type, alpha=0.3)[0]
+                bound.pg[neighbor] = plot_stab(neighbor, y, x, type, alpha=0.3)[0]
 
         # Plot qubits
-        for qubit in graph.Q.values():
+        for qubit in self.graph.Q.values():
             (yb, xb, td) = qubit.qID
             y, x = yb * 4, xb * 4
             if td == 0:
-                qubit.sp = plt.Circle(
+                qubit.pg = plt.Circle(
                     (x + 3, y + 1),
                     self.qsize,
                     edgecolor=self.cc,
                     fill=False,
                     linewidth=self.lw,
                 )
-                self.ax.add_artist(qubit.sp)
+                self.ax.add_artist(qubit.pg)
             else:
-                qubit.sp = plt.Circle(
+                qubit.pg = plt.Circle(
                     (x + 1, y + 3),
                     self.qsize,
                     edgecolor=self.cc,
                     fill=False,
                     linewidth=self.lw,
                 )
-                self.ax.add_artist(qubit.sp)
+                self.ax.add_artist(qubit.pg)
 
         self.canvas.draw()
         if self.plot_base:
@@ -202,7 +210,7 @@ class lattice_plot:
         plt.sca(self.ax)
 
         for qubit in self.graph.Q.values():
-            qplot = qubit.sp
+            qplot = qubit.pg
             if qubit.erasure:
                 qplot.set_linestyle(":")
                 self.ax.draw_artist(qplot)
@@ -216,7 +224,7 @@ class lattice_plot:
         plt.sca(self.ax)
 
         for qubit in self.graph.Q.values():
-            qplot = qubit.sp
+            qplot = qubit.pg
             X_error = qubit.VXE.state
             Z_error = qubit.PZE.state
 
@@ -256,12 +264,12 @@ class lattice_plot:
 
         for stab in self.graph.S.values():
             (ertype, yb, xb) = stab.sID
-            splot = stab.sp
+            gplotlot = stab.pg
             if stab.state:
                 for neighbor in stab.neighbors.keys():
-                    splot = stab.sp[neighbor]
-                    splot.set_color(C[ertype])
-                    self.ax.draw_artist(splot)
+                    gplotlot = stab.pg[neighbor]
+                    gplotlot.set_color(C[ertype])
+                    self.ax.draw_artist(gplotlot)
 
         if self.plot_anyons:
             self.canvas.blit(self.ax.bbox)
@@ -308,6 +316,7 @@ class lattice_plot:
             self.canvas.blit(self.ax.bbox)
             self.waitforkeypress("Matchings plotted.")
 
+
     def plot_final(self):
         """
         param: flips        qubits that have flipped in value (y,x)
@@ -321,20 +330,20 @@ class lattice_plot:
         plt.sca(self.ax)
 
         for qubit in self.graph.Q.values():
-            qplot = qubit.sp
-            X_error = qubit.VXE.state
-            Z_error = qubit.PZE.state
+            qplot = qubit.pg
+            X_error = qubit.VXE.matching
+            Z_error = qubit.PZE.matching
 
             if X_error and not Z_error:
-                qplot.set_facecolor(self.cx)
+                qplot.set_edgecolor(self.cx)
                 self.ax.draw_artist(qplot)
 
             elif Z_error and not X_error:
-                qplot.set_facecolor(self.cz)
+                qplot.set_edgecolor(self.cz)
                 self.ax.draw_artist(qplot)
 
             elif X_error and Z_error:
-                qplot.set_facecolor(self.cy)
+                qplot.set_edgecolor(self.cy)
                 self.ax.draw_artist(qplot)
 
 
@@ -345,7 +354,7 @@ class lattice_plot:
         if self.plot_result:
 
             for qubit in self.graph.Q.values():
-                qplot = qubit.sp
+                qplot = qubit.pg
                 X_error = qubit.VXE.state
                 Z_error = qubit.PZE.state
                 if X_error or Z_error:

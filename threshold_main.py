@@ -1,6 +1,6 @@
 from matplotlib import pyplot as plt
-from run_toric_2D_uf import multiprocess
-import unionfind_evengrow as uf
+from run_surface_code import multiprocess
+import unionfind_evengrow_integrated as uf
 from collections import defaultdict
 from scipy import optimize
 import numpy as np
@@ -151,7 +151,7 @@ if __name__ == "__main__":
     save_result = 1
     data_select = None
     modified_ansatz = 0
-    file_name = "5542ff6_threshold_fixed_uf_evengrow_v2_20"
+    file_name = "5542ff6_threshold_fixed_uf_evengrow_v2_high"
     plot_name = file_name
 
     lattices = [8, 12, 16, 20, 24, 28]

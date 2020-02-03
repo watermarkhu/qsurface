@@ -18,12 +18,15 @@ class iGraph(object):
 
     """
 
-    def __init__(self, size):
+    def __init__(self, size, type, decoder):
         self.size = size
+        self.type = type
+        self.decoder = decoder
         self.C = {}
         self.S = {}
         self.B = {}
         self.Q = {}
+        self.cID = 0
         self.wind = ["u", "d", "l", "r"]
         self.plot = None
 
@@ -50,6 +53,9 @@ class iGraph(object):
         self.C[cID] = iCluster(cID, vertex)
         return self.C[cID]
 
+    def get_cluster(self, cID, vertex):
+        return iCluster(cID, vertex)
+
     def add_stab(self, sID):
         """Adds a stabilizer with stab ID number sID"""
         self.S[sID] = iStab(sID)
@@ -60,7 +66,7 @@ class iGraph(object):
         self.B[sID] = iBoundary(sID)
         return self.B[sID]
 
-    def add_edge(self, qID, VL, VR, VU, VD):
+    def add_qubit(self, qID, VL, VR, VU, VD):
         """Adds an edge with edge ID number qID with pointers to vertices. Also adds pointers to this edge on the vertices. """
 
         qubit = iQubit(qID)
@@ -78,11 +84,16 @@ class iGraph(object):
         Resets the graph by deleting all clusters and resetting the edges and vertices
 
         """
-        self.C = {}
+        self.C, self.cID = {}, 0
         for qubit in self.Q.values():
             qubit.reset()
         for stab in self.S.values():
             stab.reset()
+        for bound in self.B.values():
+            bound.reset()
+
+        # if self.plot: self.plot.init_plot()
+        # if self.decoder.plot: self.decoder.plot.init_plot()
 
 
 class iCluster(object):
@@ -112,6 +123,11 @@ class iCluster(object):
         self.support = 0
 
         '''
+        planar
+        '''
+        self.on_bound = 0
+
+        '''
         Evengrow
         '''
         self.root_node = vertex.node
@@ -119,16 +135,15 @@ class iCluster(object):
         self.mindl = 0
         self.add_vertex(vertex)
 
-
     def __repr__(self):
         return "C" + str(self.cID) + "(" + str(self.size) + ":" + str(self.parity) + ")"
 
-    def add_stab(self, stab):
+    def add_vertex(self, vertex):
         """Adds a stabilizer to a cluster. Also update cluster value of this stabilizer."""
         self.size += 1
-        if stab.state:
+        if vertex.state:
             self.parity += 1
-        stab.cluster = self
+        vertex.cluster = self
 
 
 class iStab(object):
@@ -143,16 +158,16 @@ class iStab(object):
     tree        boolean indicating whether this stabilizer has been traversed
     """
 
-    def __init__(self, sID):
+    def __init__(self, sID, type=0):
         # fixed paramters
+        self.type = type
         self.sID = sID
         self.neighbors = {}
 
         # iteration parameters
-        self.distance = 0
-        self.state = False
+        self.state = 0
         self.cluster = None
-        self.tree = False
+        self.tree = 0
 
         '''
         DGvertices
@@ -173,14 +188,16 @@ class iStab(object):
         """
         Changes all iteration paramters to their initial value
         """
-        self.state = False
+        self.state = 0
         self.cluster = None
-        self.tree = False
-        self.distance = 0
+        self.tree = 0
         self.node = None
 
 
 class iBoundary(iStab):
+    def __init__(self, sID):
+        super().__init__(sID, type=1)
+
     def __repr__(self):
         type = "X" if self.sID[0] == 0 else "Z"
         return "b" + type + "(" + str(self.sID[1]) + "," + str(self.sID[2]) + ")"
@@ -191,8 +208,8 @@ class iQubit(object):
     def __init__(self, qID):
         self.qID = qID
         self.erasure = 0
-        self.VXE = iEdge((0, qID[2]))
-        self.PZE = iEdge((1, 1 - qID[2]))
+        self.VXE = iEdge((0, qID[2]), self)
+        self.PZE = iEdge((1, 1 - qID[2]), self)
 
     def __repr__(self):
         return "q({},{}:{})".format(*self.qID)
@@ -214,9 +231,10 @@ class iEdge(object):
     matching    boolean indicating whether this edge is apart of the matching
     """
 
-    def __init__(self, type):
+    def __init__(self, type, qubit):
         # fixed parameters
         self.type = type
+        self.qubit = qubit
 
         # iteration parameters
         self.cluster = None
@@ -228,7 +246,7 @@ class iEdge(object):
     def __repr__(self):
         errortype = "X" if self.type[0] == 0 else "Z"
         orientation = "-" if self.type[1] == 0 else "|"
-        return "e"+ errortype + orientation
+        return "e{}{}({},{},{})".format(errortype, orientation, *self.qubit.qID)
 
     def reset(self):
         """

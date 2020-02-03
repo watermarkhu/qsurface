@@ -2,12 +2,13 @@ import time
 import random
 from decimal import Decimal as dec
 import graph_objects as go
+import plot_graph_lattice as pg
 
 
-def init_toric_graph(size):
 
-    graph = go.iGraph(size)
-    graph.type = "toric"
+def init_toric_graph(size, decoder, plot_load=False, plot_config=None):
+
+    graph = go.iGraph(size, "toric", decoder)
 
     # Add vertices to graph
     for ertype in range(2):
@@ -21,19 +22,21 @@ def init_toric_graph(size):
 
             VL, VR = graph.S[(0, y, x)], graph.S[(0, y, (x + 1) % size)]
             VU, VD = graph.S[(1, (y - 1) % size, x)], graph.S[(1, y, x)]
-            graph.add_edge((y, x, 0), VL, VR, VU, VD)
+            graph.add_qubit((y, x, 0), VL, VR, VU, VD)
 
             VU, VD = graph.S[(0, y, x)], graph.S[(0, (y + 1) % size, x)]
             VL, VR = graph.S[(1, y, (x - 1) % size)], graph.S[(1, y, x)]
-            graph.add_edge((y, x, 1), VL, VR, VU, VD)
+            graph.add_qubit((y, x, 1), VL, VR, VU, VD)
+
+    if plot_load:
+        graph.plot = pg.lattice_plot(graph, **plot_config)
 
     return graph
 
 
-def init_planar_graph(size):
+def init_planar_graph(size, decoder, plot_load=False, plot_config=None):
 
-    graph = go.iGraph(size)
-    graph.type = "planar"
+    graph = go.iGraph(size, "planar", decoder)
 
     # Add vertices to graph
     for yx in range(size):
@@ -61,12 +64,15 @@ def init_planar_graph(size):
             else:
                 VU, VD = graph.S[(1, y - 1, x)], graph.S[(1, y, x)]
 
-            graph.add_edge((y, x, 0), VL, VR, VU, VD)
+            graph.add_qubit((y, x, 0), VL, VR, VU, VD)
 
             if y != size - 1 and x != size - 1:
                 VU, VD = graph.S[(0, y, x + 1)], graph.S[(0, y + 1, x + 1)]
                 VL, VR = graph.S[(1, y, x)], graph.S[(1, y, x + 1)]
-                graph.add_edge((y, x + 1, 1), VL, VR, VU, VD)
+                graph.add_qubit((y, x + 1, 1), VL, VR, VU, VD)
+
+    if plot_load:
+        graph.plot = pg.lattice_plot(graph, **plot_config)
 
     return graph
 
@@ -101,12 +107,12 @@ def init_erasure(graph, pE=0, **kwargs):
                 qubit.erasure = True
                 rand = random.random()
                 if rand < 0.25:
-                    qubit.VXE.state = not qubit.VXE.state
+                    qubit.VXE.state = 1 - qubit.VXE.state
                 elif rand >= 0.25 and rand < 0.5:
-                    qubit.PZE.state = not qubit.PZE.state
+                    qubit.PZE.state = 1 - qubit.PZE.state
                 elif rand >= 0.5 and rand < 0.75:
-                    qubit.VXE.state = not qubit.VXE.state
-                    qubit.PZE.state = not qubit.PZE.state
+                    qubit.VXE.state = 1 - qubit.VXE.state
+                    qubit.PZE.state = 1 - qubit.PZE.state
 
     if graph.plot: graph.plot.plot_erasures()
 
@@ -123,9 +129,9 @@ def init_pauli(graph, pX=0, pZ=0, **kwargs):
     if pX != 0 or pZ != 0:
         for qubit in graph.Q.values():
             if pX != 0 and random.random() < pX:
-                qubit.VXE.state = not qubit.VXE.state
+                qubit.VXE.state = 1 - qubit.VXE.state
             if pZ != 0 and random.random() < pZ:
-                qubit.PZE.state = not qubit.PZE.state
+                qubit.PZE.state = 1 - qubit.PZE.state
 
     if graph.plot: graph.plot.plot_errors()
 
@@ -135,10 +141,9 @@ def measure_stab(graph, **kwargs):
     The measurement outcomes of the stabilizers, which are the vertices on the graph are saved to their corresponding vertex objects. We loop over all vertex objects and over their neighboring edge or qubit objects.
     """
     for stab in graph.S.values():
-        for dir in graph.wind:
-            if dir in stab.neighbors:
-                if stab.neighbors[dir][1].state:
-                    stab.state = not stab.state
+        for vertex, edge in stab.neighbors.values():
+            if edge.state:
+                stab.state = 1 - stab.state
 
     if graph.plot: graph.plot.plot_syndrome()
 
@@ -150,20 +155,20 @@ def logical_error(graph):
     """
 
     if graph.plot: graph.plot.plot_final()
-    
+
     if graph.type == "toric":
 
         logical_error = [0, 0, 0, 0]
 
         for i in range(graph.size):
             if graph.Q[(i, 0, 0)].VXE.state:
-                logical_error[0] = not logical_error[0]
+                logical_error[0] = 1 - logical_error[0]
             if graph.Q[(0, i, 1)].VXE.state:
-                logical_error[1] = not logical_error[1]
+                logical_error[1] = 1 - logical_error[1]
             if graph.Q[(i, 0, 1)].PZE.state:
-                logical_error[2] = not logical_error[2]
+                logical_error[2] = 1 - logical_error[2]
             if graph.Q[(0, i, 0)].PZE.state:
-                logical_error[3] = not logical_error[3]
+                logical_error[3] = 1 - logical_error[3]
 
         errorless = True if logical_error == [0, 0, 0, 0] else False
         return logical_error, errorless
@@ -174,9 +179,9 @@ def logical_error(graph):
 
         for i in range(graph.size):
             if graph.Q[(i, 0, 0)].VXE.state:
-                logical_error[0] = not logical_error[0]
+                logical_error[0] = 1 - logical_error[0]
             if graph.Q[(0, i, 0)].PZE.state:
-                logical_error[1] = not logical_error[1]
+                logical_error[1] = 1 - logical_error[1]
 
         errorless = True if logical_error == [0, 0] else False
         return logical_error, errorless

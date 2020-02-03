@@ -7,7 +7,7 @@ def printlog(message, print_message=True, log_message=False):
     if log_message:
         logging.warning(message)
 
-def print_graph(graph, clusters=None, prestring="", poststring=None, printmerged=1, return_string=False):
+def print_graph(graph, clusters=None, prestring="", poststring=None, printmerged=1, include_even=0, return_string=False):
     """
     :param clusters     either None or a list of clusters
     :param prestring    string to print before evertything else
@@ -17,22 +17,19 @@ def print_graph(graph, clusters=None, prestring="", poststring=None, printmerged
     string = ""
     if clusters is None:
         clusters = list(graph.C.values())
-        string += "Showing all clusters:\n"
+        string += "Showing all clusters:\n" if include_even else "Showing active clusters:\n"
 
     for cluster in clusters:
-        if cluster.parent == cluster:
-            string += prestring + f"{cluster} (S{cluster.support},"
-            if cluster.bucket is None:
-                string += f" B{cluster.bucket})"
-            else:
-                if cluster.bucket < graph.numbuckets:
-                    string += f"B{cluster.bucket})"
-                else:
-                    string += f"B_)"
-            if cluster.cID != clusters[-1].cID: string += "\n"
-        elif printmerged:
-            string += str(cluster) + " is merged with " + str(cluster.parent) + ""
-            if cluster is not clusters[-1]: string += "\n"
+        if include_even or (not include_even and cluster.bucket is not None):
+            if cluster.parent == cluster:
+                string += prestring + f"{cluster} (S{cluster.support},"
+                string += f"B{cluster.bucket}" if cluster.bucket is not None else "B_"
+                string += f",{cluster.on_bound})" if graph.type == "planar" else ")"
+
+                if cluster.cID != clusters[-1].cID: string += "\n"
+            elif printmerged:
+                string += str(cluster) + " is merged with " + str(cluster.parent) + ""
+                if cluster is not clusters[-1]: string += "\n"
     if poststring is not None:
         string += "\n" + poststring
     if return_string:

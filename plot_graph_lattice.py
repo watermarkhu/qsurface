@@ -168,7 +168,7 @@ class lattice_plot:
 
         # Plot qubits
         for qubit in self.graph.Q.values():
-            (yb, xb, td) = qubit.qID
+            (yb, xb, zb, td) = qubit.qID
             y, x = yb * 4, xb * 4
             if td == 0:
                 qubit.pg = plt.Circle(
@@ -225,8 +225,8 @@ class lattice_plot:
 
         for qubit in self.graph.Q.values():
             qplot = qubit.pg
-            X_error = qubit.VXE.state
-            Z_error = qubit.PZE.state
+            X_error = qubit.E[0].state
+            Z_error = qubit.E[1].state
 
             if X_error and not Z_error:
                 qplot.set_fill(True)
@@ -331,8 +331,8 @@ class lattice_plot:
 
         for qubit in self.graph.Q.values():
             qplot = qubit.pg
-            X_error = qubit.VXE.matching
-            Z_error = qubit.PZE.matching
+            X_error = qubit.E[0].matching
+            Z_error = qubit.E[1].matching
 
             if X_error and not Z_error:
                 qplot.set_edgecolor(self.cx)
@@ -355,8 +355,8 @@ class lattice_plot:
 
             for qubit in self.graph.Q.values():
                 qplot = qubit.pg
-                X_error = qubit.VXE.state
-                Z_error = qubit.PZE.state
+                X_error = qubit.E[0].state
+                Z_error = qubit.E[1].state
                 if X_error or Z_error:
                     qplot.set_edgecolor(self.cc)
                     self.ax.draw_artist(qplot)

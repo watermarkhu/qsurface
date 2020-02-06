@@ -26,31 +26,26 @@ class toric(uf.toric):
         If a vertex is an anyon, its property and the parity of the cluster will be updated accordingly.
         """
 
-        traverse_wind = random.sample(self.graph.wind, 4) if self.random_traverse else self.graph.wind
+        for (new_vertex, new_edge) in vertex.neighbors.values():
+            if new_edge.qubit.erasure:
+                if new_edge.support == 0 and not new_edge.peeled:
+                    # if edge not already traversed
+                    if new_vertex.cluster is None:  # if no cycle detected
+                        new_edge.support = 2
+                        cluster.add_vertex(new_vertex)
+                        eg.new_empty(vertex, new_vertex, cluster)
 
-        for wind in traverse_wind:
-            if wind in vertex.neighbors:
-                (new_vertex, new_edge) = vertex.neighbors[wind]
-
-                if new_edge.qubit.erasure:
-                    if new_edge.support == 0 and not new_edge.peeled:
-                        # if edge not already traversed
-                        if new_vertex.cluster is None:  # if no cycle detected
-                            new_edge.support = 2
-                            cluster.add_vertex(new_vertex)
-                            eg.new_empty(vertex, new_vertex, cluster)
-                            
-                            if self.graph.plot and plot_step:
-                                self.plot.plot_edge_step(new_edge, "confirm")
-                            self.cluster_new_vertex(cluster, vertex, plot_step)
-                        else:  # cycle detected, peel edge
-                            new_edge.peeled = True
-                            if self.graph.plot and plot_step:
-                                self.plot.plot_edge_step(new_edge, "remove")
-                else:
-                    # Make sure new bound does not lead to self
-                    if new_vertex.cluster is not cluster:
-                        vertex.new_bound.append((vertex, new_edge, new_vertex))
+                        if self.graph.plot and plot_step:
+                            self.plot.plot_edge_step(new_edge, "confirm")
+                        self.cluster_new_vertex(cluster, vertex, plot_step)
+                    else:  # cycle detected, peel edge
+                        new_edge.peeled = True
+                        if self.graph.plot and plot_step:
+                            self.plot.plot_edge_step(new_edge, "remove")
+            else:
+                # Make sure new bound does not lead to self
+                if new_vertex.cluster is not cluster:
+                    vertex.new_bound.append((vertex, new_edge, new_vertex))
 
     '''
     ##################################################################################################
@@ -342,32 +337,27 @@ class planar(uf.planar, toric):
 
         new_list = []
 
-        traverse_wind = random.sample(self.graph.wind, 4) if self.random_traverse else self.graph.wind
-
         for vertex in bound_list:
-            for wind in traverse_wind:
-                if wind in vertex.neighbors:
-                    (new_vertex, new_edge) = vertex.neighbors[wind]
-
-                    if new_edge.qubit.erasure:
-                        # if edge not already traversed
-                        if new_edge.support == 0 and not new_edge.peeled:
-                            if new_vertex.cluster is None:  # if no cycle detected
-                                new_edge.support = 2
-                                vertex.cluster.add_vertex(new_vertex)
-                                eg.new_empty(vertex, new_vertex, vertex.cluster)
-                                self.bound_cluster_edges[vertex.cluster.cID].append(new_edge)
-                                self.bound_cluster_vertices[vertex.cluster.cID].append(new_vertex)
-                                if self.graph.plot and self.plot_find:
-                                    self.plot.plot_edge_step(new_edge, "confirm")
-                                new_list.append(new_vertex)
-                            else:  # cycle detected, peel edge
-                                new_edge.peeled = True
-                                if self.graph.plot and self.plot_find:
-                                    self.plot.plot_edge_step(new_edge, "remove")
-                    else:
-                        # Make sure new bound does not lead to self
-                        if new_vertex.cluster is not vertex.cluster:
-                            vertex.cluster.boundary[0].append((vertex, new_edge, new_vertex))
+            for (new_vertex, new_edge) in vertex.neighbors.values():
+                if new_edge.qubit.erasure:
+                    # if edge not already traversed
+                    if new_edge.support == 0 and not new_edge.peeled:
+                        if new_vertex.cluster is None:  # if no cycle detected
+                            new_edge.support = 2
+                            vertex.cluster.add_vertex(new_vertex)
+                            eg.new_empty(vertex, new_vertex, vertex.cluster)
+                            self.bound_cluster_edges[vertex.cluster.cID].append(new_edge)
+                            self.bound_cluster_vertices[vertex.cluster.cID].append(new_vertex)
+                            if self.graph.plot and self.plot_find:
+                                self.plot.plot_edge_step(new_edge, "confirm")
+                            new_list.append(new_vertex)
+                        else:  # cycle detected, peel edge
+                            new_edge.peeled = True
+                            if self.graph.plot and self.plot_find:
+                                self.plot.plot_edge_step(new_edge, "remove")
+                else:
+                    # Make sure new bound does not lead to self
+                    if new_vertex.cluster is not vertex.cluster:
+                        vertex.cluster.boundary[0].append((vertex, new_edge, new_vertex))
 
         self.cluster_new_vertex_boundary(new_list)

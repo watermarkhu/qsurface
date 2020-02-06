@@ -1,6 +1,6 @@
 from matplotlib import pyplot as plt
-from run_surface_code import multiprocess
-import unionfind_evengrow_integrated as uf
+from run_surface_code import multiprocess, decoder_config
+import unionfind_evengrow_plugin as decoder
 from collections import defaultdict
 from scipy import optimize
 import numpy as np
@@ -146,15 +146,15 @@ if __name__ == "__main__":
 
     folder = "./"
 
-    just_plot = 1
+    just_plot = 0
     print_data = 1
     save_result = 1
     data_select = None
     modified_ansatz = 0
-    file_name = "5542ff6_threshold_fixed_uf_evengrow_v2_high"
+    file_name = "planar_uf_evengrow2"
     plot_name = file_name
 
-    lattices = [8, 12, 16, 20, 24, 28]
+    lattices = [8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56, 60]
     p = list(np.round(np.linspace(0.09, 0.11, 11), 21))
     Num = 50000
 
@@ -183,7 +183,7 @@ if __name__ == "__main__":
             for pi in p:
 
                 print("Calculating for L = ", str(lati), "and p =", str(pi))
-                N_succes = multiprocess(lati, Num, 0, pi, 0, uf=uf)
+                N_succes = multiprocess(lati, decoder_config(), decoder, Num, 0, pi, 0)
 
                 if any([(lati, pi) == a for a in indices]):
                     data.loc[(lati, round(pi, 6)), "N"] += Num

@@ -86,8 +86,8 @@ class unionfind_plot:
         plt.sca(self.ax)
 
         for qubit in self.graph.Q.values():
-            self.draw_edge_VXE(qubit)
-            self.draw_edge_PZE(qubit)
+            self.draw_edge0(qubit)
+            self.draw_edge1(qubit)
 
         for stab in self.graph.S.values():
             self.draw_vertex(stab)
@@ -97,9 +97,9 @@ class unionfind_plot:
         self.waitforkeypress()
 
 
-    def draw_edge_VXE(self, qubit):
+    def draw_edge0(self, qubit):
 
-        (y0, x0, type) = qubit.qID
+        (y0, x0, z0, type) = qubit.qID
 
         (py1, px1) = (
             (y0, (x0 + 1) % self.size)
@@ -120,12 +120,12 @@ class unionfind_plot:
 
         up1 = self.ax.plot([x0,  pxm], [y0,  pym], c=color, lw=self.lw, ls=self.LS[0], alpha=alpha)
         up2 = self.ax.plot([pxm, px1], [pym, py1], c=color, lw=self.lw, ls=self.LS[0], alpha=alpha)
-        qubit.VXE.pu = [up1[0], up2[0]]
+        qubit.E[0].pu = [up1[0], up2[0]]
 
 
-    def draw_edge_PZE(self, qubit):
+    def draw_edge1(self, qubit):
 
-        (y0, x0, type) = qubit.qID
+        (y0, x0, z0, type) = qubit.qID
 
         (sy1, sx1) = (
             (y0, (x0 - 1) % self.size)
@@ -153,7 +153,7 @@ class unionfind_plot:
         up1 = self.ax.plot([x0,  sxm], [y0,  sym], c=color, lw=self.lw, ls=self.LS[1], alpha=alpha)
         up2 = self.ax.plot([sxm, sx1], [sym, sy1], c=color, lw=self.lw, ls=self.LS[1], alpha=alpha)
 
-        qubit.PZE.pu = [up1[0], up2[0]]
+        qubit.E[1].pu = [up1[0], up2[0]]
 
     def draw_vertex(self, stab):
 
@@ -217,7 +217,7 @@ class unionfind_plot:
         plt.sca(self.ax)
 
         for qubit in self.graph.Q.values():
-            for edge in [qubit.VXE, qubit.PZE]:
+            for edge in [qubit.E[0], qubit.E[1]]:
                 if edge.peeled and not edge.matching:
                     self.plot_edge(edge, 0, self.cl ,self.alpha)
                     self.plot_edge(edge, 1, self.cl ,self.alpha)
@@ -229,15 +229,15 @@ class unionfind_plot:
 
         if edge.support == 1:
 
-            (ye, xe, _) = edge.qubit.qID
+            (ye, xe, ze, _) = edge.qubit.qID
             (_, yv, xv) = vertex.sID
             id = 0 if (ye == yv and xe == xv) else 1
-            color = self.Cx if edge.type[0]==0 else self.Cz
+            color = self.Cx if edge.eID[0]==0 else self.Cz
             self.plot_edge(edge, id, color, 0.5)
             self.plot_edge(edge, 1-id, self.cl ,self.alpha)
 
         else:
-            color = self.cx if edge.type[0] == 0 else self.cz
+            color = self.cx if edge.eID[0] == 0 else self.cz
 
             self.plot_edge(edge, 0, color, 1)
             self.plot_edge(edge, 1, color, 1)
@@ -287,7 +287,7 @@ class unionfind_plot:
         pr.printlog(line)
         if self.plotstep_click: self.waitforkeypress()
 
-        color = c1 if edge.type[0] == 0 else c2
+        color = c1 if edge.eID[0] == 0 else c2
         self.plot_edge(edge, 0, color, alpha)
         self.plot_edge(edge, 1, color, alpha)
 

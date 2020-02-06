@@ -1,6 +1,25 @@
-import graph_lattice_functions as gf
+import graph_objects as go
 from progiter import ProgIter
 import multiprocessing as mp
+from decimal import Decimal as dec
+import random
+import time
+
+
+def init_random_seed(timestamp=None, worker=0, iteration=0, **kwargs):
+    if timestamp is None:
+        timestamp = time.time()
+    seed = "{:.0f}".format(timestamp*10**7) + str(worker) + str(iteration)
+    random.seed(dec(seed))
+    return seed
+
+
+def apply_random_seed(seed=None, **kwargs):
+    if seed is None:
+        seed = init_random_seed()
+    if type(seed) is not dec:
+        seed = dec(seed)
+    random.seed(seed)
 
 
 def single(
@@ -23,32 +42,31 @@ def single(
     if graph is None:
         if config.type == "toric":
             decoder = dec.toric(graph, plot_config=config.plot, **config.decoder)
-            graph = gf.init_toric_graph(size, decoder, config.plot_load, config.plot)
+            graph = go.toric(size, decoder)(size, decoder, config.plot_load, config.plot)
         elif config.type == "planar":
             decoder = dec.planar(graph, plot_config=config.plot, **config.decoder)
-            graph = gf.init_planar_graph(size, decoder, config.plot_load, config.plot)
+            graph = go.planar(size, decoder, config.plot_load, config.plot)
         decoder.graph = graph
-
 
     # Initialize errors
     if seed is None and config.seed is None:
-        gf.init_random_seed(worker=worker, iteration=iter)
+        init_random_seed(worker=worker, iteration=iter)
     elif seed is None:
-        gf.apply_random_seed(config.seed)
+        apply_random_seed(config.seed)
     elif config.seed is None:
-        gf.apply_random_seed(seed)
+        apply_random_seed(seed)
 
     if pE != 0:
-        gf.init_erasure(graph, pE, **config.file)
+        graph.init_erasure(pE, **config.file)
 
-    gf.init_pauli(graph, pX, pZ, **config.file)         # initialize errors
-    gf.measure_stab(graph)                              # Measure stabiliziers
+    graph.init_pauli(pX, pZ, **config.file)         # initialize errors
+    graph.measure_stab()                              # Measure stabiliziers
 
     # Peeling decoder
     graph.decoder.decode()
 
     # Measure logical operator
-    logical_error, correct = gf.logical_error(graph)
+    logical_error, correct = graph.logical_error()
     graph.reset()
 
     return correct
@@ -72,15 +90,16 @@ def multiple(
     """
 
     if seeds is None:
-        seeds = [gf.init_random_seed(worker=worker, iteration=iter) for iter in range(iters)]
+        seeds = [init_random_seed(worker=worker, iteration=iter) for iter in range(iters)]
 
     if config.type == "toric":
         decoder = dec.toric(None, plot_config=config.plot, **config.decoder)
-        graph = gf.init_toric_graph(size, decoder, config.plot_load, config.plot)
+        graph = go.toric(size, decoder)(size, decoder, config.plot_load, config.plot)
     elif config.type == "planar":
         decoder = dec.planar(None, plot_config=config.plot, **config.decoder)
-        graph = gf.init_planar_graph(size, decoder, config.plot_load, config.plot)
+        graph = go.planar(size, decoder, config.plot_load, config.plot)
     decoder.graph = graph
+
 
     result = [
         single(size, config, dec, pE, pX, pZ, graph, worker, i, seed)
@@ -109,7 +128,7 @@ def multiprocess(size, config, dec, iters, pE=0, pX=0, pZ=0, seeds=None, process
     # Generate seeds for simulations
     if seeds is None:
         num_seeds = [process_iters for _ in range(processes - 1)] + [rest_iters]
-        seed_lists = [[gf.init_random_seed(worker=worker, iteration=iter) for iter in range(iters)] for worker, iters in enumerate(num_seeds)]
+        seed_lists = [[init_random_seed(worker=worker, iteration=iter) for iter in range(iters)] for worker, iters in enumerate(num_seeds)]
     else:
         seed_lists = [seeds[int(i*process_iters):int((i+1)*process_iters)] for i in range(processes - 1)] + [seeds[int((processes-1)*process_iters):]]
 
@@ -158,9 +177,9 @@ def multiprocess(size, config, dec, iters, pE=0, pX=0, pZ=0, seeds=None, process
 
 
 class decoder_config(object):
-    def __init__(self, path="./unionfind.ini"):
+    def __init__(self):
 
-        self.plot_load = 1
+        self.plot_load = 0
         self.seed = None
         self.type = "planar"
 
@@ -198,8 +217,8 @@ if __name__ == "__main__":
     pE = 0.0
     iters = 50000
 
-    output = single(size, decoder_config(), decoder, pE, pX, pZ)
+    # output = single(size, decoder_config(), decoder, pE, pX, pZ)
     # output = multiple(size, decoder_config(), decoder, iters, pE, pX, pZ)
-    # output = multiprocess(size, decoder_config(), decoder, iters, pE, pX, pZ)
+    output = multiprocess(size, decoder_config(), decoder, iters, pE, pX, pZ)
 
     print(output, output/iters)

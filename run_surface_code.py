@@ -1,4 +1,3 @@
-import graph_objects as go
 import graph_lattice_functions as gf
 from progiter import ProgIter
 import multiprocessing as mp
@@ -161,21 +160,18 @@ def multiprocess(size, config, dec, iters, pE=0, pX=0, pZ=0, seeds=None, process
 class decoder_config(object):
     def __init__(self, path="./unionfind.ini"):
 
-        self.plot_load = 0
+        self.plot_load = 1
         self.seed = None
         self.type = "planar"
 
         self.decoder = {
             "random_order"  : 0,
-            "random_traverse": 0,
+            "random_traverse":0,
             "print_steps"   : 0,
             "plot_find"     : 0,
             "plot_growth"   : 0,
             "plot_peel"     : 0,
-
-            # Evengrow
-            "plot_nodes": 1,
-            "print_nodetree": 1,
+            "plot_nodes"    : 0,
         }
 
         self.file = {
@@ -193,17 +189,17 @@ class decoder_config(object):
 
 if __name__ == "__main__":
 
-    import unionfind as decoder
+    import unionfind_evengrow_plugin as decoder
 
     size = 8
 
-    pX = 0.09
+    pX = 0.1
     pZ = 0.0
-    pE = 0.
+    pE = 0.0
     iters = 50000
 
-    # output = single(size, decoder_config(), decoder, pE, pX, pZ)
+    output = single(size, decoder_config(), decoder, pE, pX, pZ)
     # output = multiple(size, decoder_config(), decoder, iters, pE, pX, pZ)
-    output = multiprocess(size, decoder_config(), decoder, iters, pE, pX, pZ)
+    # output = multiprocess(size, decoder_config(), decoder, iters, pE, pX, pZ)
 
     print(output, output/iters)

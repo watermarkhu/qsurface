@@ -48,5 +48,3 @@ class decoder_config(object):
 output = run.single(size, decoder_config(), decoder, pE, pX, pZ, dec=decoder, config=decoder_config())
 # output = run.multiple(size, iters, pE, pX, pZ, dec=decoder, config=decoder_config())
 # output = run.multiprocess(size, iters, pE, pX, pZ, dec=decoder, config=decoder_config())
-
-print(output)

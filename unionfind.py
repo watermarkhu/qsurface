@@ -5,12 +5,8 @@ import random
 
 class toric(object):
 
-    def __init__(
-            self,
-            graph,
-            plot_config=None,
-            **kwargs
-        ):
+    def __init__(self, graph, plot_config=None, *args, **kwargs):
+
         self.graph = graph
         self.plot_config = plot_config
 
@@ -18,8 +14,7 @@ class toric(object):
             setattr(self, key, value)
 
 
-    def decode(self):
-
+    def decode(self, *args, **kwargs):
 
         self.plot = up.unionfind_plot(self.graph, **self.plot_config) if self.graph.plot else None
 
@@ -35,7 +30,7 @@ class toric(object):
     ##################################################################################################
     '''
 
-    def union_clusters(self, parent, child):
+    def union_clusters(self, parent, child, *args, **kwargs):
         """
         :param parent       parent cluster
         :param child        child cluster
@@ -47,7 +42,7 @@ class toric(object):
         parent.parity += child.parity
 
 
-    def find_cluster_root(self, cluster):
+    def find_cluster_root(self, cluster, *args, **kwargs):
         """
         :param cluster      input cluster
 
@@ -71,7 +66,7 @@ class toric(object):
     ##################################################################################################
     '''
 
-    def cluster_place_bucket(self, cluster):
+    def cluster_place_bucket(self, cluster, *args, **kwargs):
         """
         :param cluster      current cluster
 
@@ -89,7 +84,7 @@ class toric(object):
             cluster.bucket = None
 
 
-    def cluster_new_vertex(self, cluster, vertex, plot_step=0):
+    def cluster_new_vertex(self, cluster, vertex, plot_step=0, *args, **kwargs):
         """
         :param cluster          current cluster
         :param vertex           vertex that is recently added to the cluster
@@ -132,7 +127,7 @@ class toric(object):
 
     ##################################################################################################
     '''
-    def find_clusters(self):
+    def find_clusters(self, *args, **kwargs):
         """
         Given a set of erased qubits/edges on a lattice, this functions finds all edges that are connected and sorts them in separate clusters. A single anyon can also be its own cluster.
         It loops over all vertices (randomly if toggled, which produces a different tree), and calls {cluster_new_vertex} to find all connected erasure qubits, and finds the boundary for growth step 1. Afterwards the cluster is placed in a bucket based in its size.
@@ -171,7 +166,7 @@ class toric(object):
     ##################################################################################################
     '''
 
-    def grow_clusters(self, start_bucket=0):
+    def grow_clusters(self, start_bucket=0, *args, **kwargs):
 
         if self.print_steps:
             pr.print_graph(self.graph)
@@ -213,7 +208,7 @@ class toric(object):
                 self.plot.draw_plot("Clusters grown.")
 
 
-    def grow_bucket(self, bucket, bucket_i):
+    def grow_bucket(self, bucket, bucket_i, *args, **kwargs):
 
         if self.print_steps: self.mstr = {}
         self.fusion, place = [], []  # Initiate Fusion list
@@ -224,26 +219,29 @@ class toric(object):
             if cluster.bucket == bucket_i and cluster.support == bucket_i % 2:
                 place.append(cluster)
                 cluster.support = 1 - cluster.support
-                self.grow_boundary(cluster)
+                self.grow_boundary(cluster, bucket_i)
+
+                if self.plot_growth: self.plot.draw_plot(str(cluster) + " grown.")
+
 
         self.fuse_vertices()
         # self.fuse_dgvertices()
-
-        if self.print_steps:
-            pr.printlog("")
-            for cID, string in self.mstr.items():
-                pr.printlog(f"B:\n{string}\nA:\n{pr.print_graph(self.graph, [self.graph.C[cID]], include_even=1, return_string=True)}\n")
 
         # Put clusters in new buckets. Some will be added double, but will be skipped by the new_boundary check
         for cluster in place:
             cluster = self.find_cluster_root(cluster)
             self.cluster_place_bucket(cluster)
 
+        if self.print_steps:
+            pr.printlog("")
+            for cID, string in self.mstr.items():
+                pr.printlog(f"B:\n{string}\nA:\n{pr.print_graph(self.graph, [self.graph.C[cID]], include_even=1, return_string=True)}\n")
+
         if self.graph.plot and not self.plot_growth:
             self.plot.draw_plot("Clusters merged")
 
 
-    def grow_boundary(self, cluster):
+    def grow_boundary(self, cluster, *args, **kwargs):
 
         cluster.boundary = [[], cluster.boundary[0]]                # Set boudary
 
@@ -271,12 +269,12 @@ class toric(object):
     '''
 
 
-    def fuse_vertices(self, ):
+    def fuse_vertices(self, *args, **kwargs):
         for active_V, edge, passive_V in self.fusion:
             self.fully_grown_edge_choises(active_V, edge, passive_V)
 
 
-    def fuse_dgvertices(self):
+    def fuse_dgvertices(self, *args, **kwargs):
 
         merging = []
         for active_V, edge, passive_V in self.fusion:
@@ -316,7 +314,7 @@ class toric(object):
                 self.fully_grown_edge_choises(active_V, edge, passive_V)
 
 
-    def fully_grown_edge_choises(self, active_V, edge, passive_V):
+    def fully_grown_edge_choises(self, active_V, edge, passive_V, *args, **kwargs):
 
         active_C = self.find_cluster_root(active_V.cluster)
         passive_C = self.find_cluster_root(passive_V.cluster)
@@ -358,7 +356,7 @@ class toric(object):
     ##################################################################################################
     '''
 
-    def peel_clusters(self):
+    def peel_clusters(self, *args, **kwargs):
         """
         Loops overal all vertices to find pendant vertices which are selected from peeling using {peel_edge}
 
@@ -373,7 +371,7 @@ class toric(object):
             self.plot.draw_plot("Clusters peeled.")
 
 
-    def peel_edge(self, cluster, vertex):
+    def peel_edge(self, cluster, vertex, *args, **kwargs):
         """
         :param cluster          current active cluster
         :param vertex           pendant vertex of the edge to be peeled
@@ -416,7 +414,7 @@ class planar(toric):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-    def decode(self):
+    def decode(self, *args, **kwargs):
 
         self.plot = up.unionfind_plot(self.graph, **self.plot_config) if self.graph.plot else None
 
@@ -432,8 +430,8 @@ class planar(toric):
 
     ##################################################################################################
     '''
-    def union_clusters(self, parent, child):
-        super().union_clusters(parent, child)
+    def union_clusters(self, parent, child, *args, **kwargs):
+        super().union_clusters(parent, child, *args, **kwargs)
         parent.on_bound = parent.on_bound or child.on_bound
 
     '''
@@ -444,12 +442,12 @@ class planar(toric):
     ##################################################################################################
     '''
 
-    def cluster_new_vertex(self, cluster, vertex, plot_step=0):
+    def cluster_new_vertex(self, cluster, vertex, plot_step=0, *args, **kwargs):
 
         if vertex.type == 1:
             cluster.on_bound = 1
 
-        super().cluster_new_vertex(cluster, vertex, plot_step)
+        super().cluster_new_vertex(cluster, vertex, plot_step, *args, **kwargs)
 
     '''
     ##################################################################################################
@@ -458,7 +456,7 @@ class planar(toric):
 
     ##################################################################################################
     '''
-    def find_clusters_boundary(self):
+    def find_clusters_boundary(self, *args, **kwargs):
 
         self.graph.numbuckets = 0
 
@@ -491,7 +489,7 @@ class planar(toric):
                 self.cluster_place_bucket(cluster)
 
 
-    def cluster_new_vertex_boundary(self, bound_list):
+    def cluster_new_vertex_boundary(self, bound_list, *args, **kwargs):
 
         if not bound_list:
             return
@@ -536,7 +534,7 @@ class planar(toric):
     '''
 
 
-    def fully_grown_edge_choises(self, active_V, edge, passive_V):
+    def fully_grown_edge_choises(self, active_V, edge, passive_V, *args, **kwargs):
 
         active_C = self.find_cluster_root(active_V.cluster)
         passive_C = self.find_cluster_root(passive_V.cluster)
@@ -544,4 +542,4 @@ class planar(toric):
             edge.support -= 1
             if self.graph.plot: self.plot.add_edge(edge, active_V)
         else:
-            super().fully_grown_edge_choises(active_V, edge, passive_V)
+            super().fully_grown_edge_choises(active_V, edge, passive_V, *args, **kwargs)

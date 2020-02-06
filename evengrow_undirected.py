@@ -47,17 +47,45 @@ class junction_node(anyon_node):
         super().__init__(id)
         self.type = "J"
 
+class boundary_node(anyon_node):
+    '''
+    inherit all methods from anyon_node
+    add list of anyon-nodes
+    '''
+    def __init__(self, id):
+        super().__init__(id)
+        self.type = "B"
+        self.p = 1
+
+
+class empty_node(anyon_node):
+    '''
+    inherit all methods from anyon_node
+    add list of anyon-nodes
+    '''
+    def __init__(self, id):
+        super().__init__(id)
+        self.type = "E"
+        self.dis = 0
+
 
 def comp_tree_p_of_node(node, ancestor=None):
     '''
     Recursive function to find the parity of a node and its children
     '''
     parity = sum([1 - comp_tree_p_of_node(con[0], node) for con in node.cons if con[0] is not ancestor]) % 2
+    
     if type(node) == anyon_node:
         node.p = parity
-    else:
+        return node.p
+
+    elif type(node) == junction_node:
         node.p = 1 - parity
-    return node.p
+        return node.p
+
+    else:
+        node.p = 1
+        return node.p
 
 
 def comp_tree_d_of_node(node, cluster, an_con=None):

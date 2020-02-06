@@ -15,10 +15,11 @@ class anyon_node(object):
     var calc_delay  list of children nodes with undefined delay
     '''
 
-    def __init__(self, id):
+    def __init__(self, vertex):
 
         self.type = "A"
-        self.id = id
+        self.vertex = vertex
+        self.id = vertex.sID
 
         self.ancestor = None
         self.e = None
@@ -68,6 +69,28 @@ class junction_node(anyon_node):
         self.type = "J"
 
 
+class boundary_node(anyon_node):
+    '''
+    inherit all methods from anyon_node
+    add list of anyon-nodes
+    '''
+    def __init__(self, id):
+        super().__init__(id)
+        self.type = "B"
+        self.p = 1
+
+
+class empty_node(anyon_node):
+    '''
+    inherit all methods from anyon_node
+    add list of anyon-nodes
+    '''
+    def __init__(self, id):
+        super().__init__(id)
+        self.type = "E"
+        self.dis = 0
+
+
 def make_ancestor_child(node, ac_level=False):
     '''
     Recursive function to reroot an tree in a certain node
@@ -93,11 +116,18 @@ def comp_tree_p_of_node(node):
     '''
 
     parity = sum([1 - comp_tree_p_of_node(child) for child in node.children]) % 2
+
     if type(node) == anyon_node:
         node.p = parity
-    else:
+        return node.p
+
+    elif type(node) == junction_node:
         node.p = 1 - parity
-    return node.p
+        return node.p
+
+    else:
+        node.p = 1
+        return node.p
 
 
 def comp_tree_d_of_node(node, cluster):
@@ -155,7 +185,7 @@ def adoption(ac_vertex, pa_vertex, ac_cluster, pa_cluster):
     make_ancestor_child(ch_node, True)
 
     if ac_node.g == 0 and pa_node.s > 1:                             # Connect via new juntion-node
-        pa_vertex.node = junction_node(pa_vertex.sID)
+        pa_vertex.node = junction_node(pa_vertex)
         connect_nodes(an_node, pa_vertex.node, an_node.s // 2)
         connect_nodes(pa_vertex.node, ch_node, ch_node.s // 2)
         calc_delay_node = None if even_after_union else pa_vertex.node
@@ -166,3 +196,16 @@ def adoption(ac_vertex, pa_vertex, ac_cluster, pa_cluster):
     root_node.calc_delay.append(calc_delay_node)        # store generator of undefined delay
 
     return root_node
+
+
+def new_empty(ac_vertex, pa_vertex, cluster):
+
+    pa_vertex.node = empty_node(pa_vertex)
+    ac_node, pa_node = ac_vertex.node, pa_vertex.node
+
+    if ac_node.type == "E":
+        connect_nodes(ac_node, pa_node, 1)
+        pa_node.dis = ac_node.dis + 1
+    else:
+        connect_nodes(ac_node, pa_node, ac_node.s // 2)
+        # cluster.root_node.calc_delay.append(pa_vertex.node)

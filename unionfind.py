@@ -1,11 +1,10 @@
 import plot_unionfind as up
 import printing as pr
-import random
 
 
 class toric(object):
 
-    def __init__(self, graph, plot_config=None, *args, **kwargs):
+    def __init__(self, graph=None, plot_config=None, *args, **kwargs):
 
         self.graph = graph
         self.plot_config = plot_config
@@ -134,9 +133,11 @@ class toric(object):
         self.graph.wastebasket = []
         self.graph.maxbucket = 0
 
-
-        vertices = self.graph.S.values()
-        anyons = [vertex for vertex in vertices if vertex.state]
+        anyons = []
+        for layer in self.graph.S.values():
+            for vertex in layer.values():
+                if vertex.state:
+                    anyons.append(vertex)
 
         for vertex in anyons:
             if vertex.cluster is None:
@@ -357,10 +358,11 @@ class toric(object):
         Loops overal all vertices to find pendant vertices which are selected from peeling using {peel_edge}
 
         """
-        for vertex in self.graph.S.values():
-            if vertex.cluster is not None:
-                cluster = self.find_cluster_root(vertex.cluster)
-                self.peel_edge(cluster, vertex)
+        for layer in self.graph.S.values():
+            for vertex in layer.values():
+                if vertex.cluster is not None:
+                    cluster = self.find_cluster_root(vertex.cluster)
+                    self.peel_edge(cluster, vertex)
 
         if self.graph.plot and not self.plot_peel:
             self.plot.plot_removed()
@@ -407,8 +409,6 @@ class toric(object):
 
 
 class planar(toric):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
 
     def decode(self, *args, **kwargs):
 

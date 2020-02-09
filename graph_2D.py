@@ -21,27 +21,30 @@ class toric(object):
 
     """
 
-    def __init__(self, size, decoder, plot_load=False, plot_config=None, type="toric"):
+    def __init__(self, size, decoder, plot_load=False, plot_config=None, type="toric", *args, **kwargs):
 
         self.type = type
         self.size = size
+        self.range = range(size)
         self.decoder = decoder
+        decoder.graph = self
         self.C = {}
         self.S = {}
-        self.B = {}
         self.Q = {}
         self.cID = 0
 
-        self.init_graph(plot_load, plot_config)
+        self.init_graph_layer()
 
+        self.plot = pg.lattice_plot(self, **plot_config) if plot_load else None
 
     def __repr__(self):
-
         numC = 0
         for cluster in self.C.values():
             if cluster.parent == cluster:
                 numC += 1
-        return f"{self.type} graph object with {numC} clusters, {len(self.S)} stabs, {len(self.Q)} qubits and {len(self.B)} boundaries"
+        numS = len([len(layer) for layer in self.S])
+        numQ = len([len(layer) for layer in self.Q])
+        return f"2D {self.type} graph object with: {numC} clusters, {numS} stabs, {numQ} qubits"
 
     '''
     ########################################################################################
@@ -50,26 +53,34 @@ class toric(object):
 
     ########################################################################################
     '''
-    def init_graph(self, plot_load, plot_config):
 
-        for ertype in range(2):
-            for y in range(self.size):
-                for x in range(self.size):
-                    self.add_stab((ertype, y, x))
+    def init_graph_layer(self, z=0):
+
+        self.S[z], self.Q[z], = {}, {}
+
+        for ertype in [0,1]:
+            for y in self.range:
+                for x in self.range:
+                    self.add_stab(ertype, y, x, z)
 
         # Add edges to self
-        for y in range(self.size):
-            for x in range(self.size):
+        for y in self.range:
+            for x in self.range:
 
-                VL, VR = self.S[(0, y, x)], self.S[(0, y, (x + 1) % self.size)]
-                VU, VD = self.S[(1, (y - 1) % self.size, x)], self.S[(1, y, x)]
-                self.add_qubit(y, x, 0, VL, VR, VU, VD)
+                vW, vE = self.S[z][(0, y, x)], self.S[z][(0, y, (x + 1) % self.size)]
+                vN, vS = self.S[z][(1, (y - 1) % self.size, x)], self.S[z][(1, y, x)]
+                self.add_qubit(0, y, x, z, vW, vE, vN, vS)
 
-                VU, VD = self.S[(0, y, x)], self.S[(0, (y + 1) % self.size, x)]
-                VL, VR = self.S[(1, y, (x - 1) % self.size)], self.S[(1, y, x)]
-                self.add_qubit(y, x, 1, VL, VR, VU, VD)
+                vN, vS = self.S[z][(0, y, x)], self.S[z][(0, (y + 1) % self.size, x)]
+                vW, vE = self.S[z][(1, y, (x - 1) % self.size)], self.S[z][(1, y, x)]
+                self.add_qubit(1, y, x, z, vW, vE, vN, vS)
 
-        self.plot = pg.lattice_plot(self, **plot_config) if plot_load else None
+
+    def apply_and_measure_errors(self, pX=0, pZ=0, pE=0, **kwargs):
+
+            self.init_erasure(pE=pE)
+            self.init_pauli(pX=pX, pZ=pZ)         # initialize errors
+            self.measure_stab()                       # Measure stabiliziers
 
 
     def init_erasure(self, pE=0, **kwargs):
@@ -80,18 +91,20 @@ class toric(object):
         Initializes an erasure error with probabilty pE, which will take form as a uniformly chosen pauli X and/or Z error.
         """
 
-        if pE != 0:
-            for qubit in self.Q.values():
-                if random.random() < pE:
-                    qubit.erasure = True
-                    rand = random.random()
-                    if rand < 0.25:
-                        qubit.E[0].state = 1 - qubit.E[0].state
-                    elif rand >= 0.25 and rand < 0.5:
-                        qubit.E[1].state = 1 - qubit.E[1].state
-                    elif rand >= 0.5 and rand < 0.75:
-                        qubit.E[0].state = 1 - qubit.E[0].state
-                        qubit.E[1].state = 1 - qubit.E[1].state
+        if pE == 0:
+            return
+
+        for qubit in self.Q[0].values():
+            if random.random() < pE:
+                qubit.erasure = True
+                rand = random.random()
+                if rand < 0.25:
+                    qubit.E[0].state = 1
+                elif rand >= 0.25 and rand < 0.5:
+                    qubit.E[1].state = 1
+                elif rand >= 0.5 and rand < 0.75:
+                    qubit.E[0].state = 1
+                    qubit.E[1].state = 1
 
         if self.plot: self.plot.plot_erasures()
 
@@ -106,11 +119,11 @@ class toric(object):
         """
 
         if pX != 0 or pZ != 0:
-            for qubit in self.Q.values():
+            for qubit in self.Q[0].values():
                 if pX != 0 and random.random() < pX:
-                    qubit.E[0].state = 1 - qubit.E[0].state
+                    qubit.E[0].state = 1
                 if pZ != 0 and random.random() < pZ:
-                    qubit.E[1].state = 1 - qubit.E[1].state
+                    qubit.E[1].state = 1
 
         if self.plot: self.plot.plot_errors()
 
@@ -119,7 +132,7 @@ class toric(object):
         """
         The measurement outcomes of the stabilizers, which are the vertices on the self are saved to their corresponding vertex objects. We loop over all vertex objects and over their neighboring edge or qubit objects.
         """
-        for stab in self.S.values():
+        for stab in self.S[0].values():
             for vertex, edge in stab.neighbors.values():
                 if edge.state:
                     stab.state = 1 - stab.state
@@ -127,7 +140,7 @@ class toric(object):
         if self.plot: self.plot.plot_syndrome()
 
 
-    def logical_error(self):
+    def logical_error(self, z=0):
 
         """
         Finds whether there are any logical errors on the lattice/self. The logical error is returned as [Xvertical, Xhorizontal, Zvertical, Zhorizontal], where each item represents a homological Loop
@@ -137,14 +150,14 @@ class toric(object):
 
         logical_error = [0, 0, 0, 0]
 
-        for i in range(self.size):
-            if self.Q[(i, 0, 0, 0)].E[0].state:
+        for i in self.range:
+            if self.Q[z][(0, i, 0)].E[0].state:
                 logical_error[0] = 1 - logical_error[0]
-            if self.Q[(0, i, 1, 0)].E[0].state:
+            if self.Q[z][(1, 0, i)].E[0].state:
                 logical_error[1] = 1 - logical_error[1]
-            if self.Q[(i, 0, 1, 0)].E[1].state:
+            if self.Q[z][(1, i, 0)].E[1].state:
                 logical_error[2] = 1 - logical_error[2]
-            if self.Q[(0, i, 0, 0)].E[1].state:
+            if self.Q[z][(0, 0, i)].E[1].state:
                 logical_error[3] = 1 - logical_error[3]
 
         errorless = True if logical_error == [0, 0, 0, 0] else False
@@ -160,41 +173,32 @@ class toric(object):
 
     def add_cluster(self, cID, vertex):
         """Adds a cluster with cluster ID number cID"""
-        self.C[cID] = Cluster(cID, vertex)
-        return self.C[cID]
+        cluster = self.C[cID] = Cluster(cID, vertex)
+        return cluster
 
     def get_cluster(self, cID, vertex):
         return Cluster(cID, vertex)
 
-    def add_stab(self, sID):
+    def add_stab(self, ertype, y, x, z):
         """Adds a stabilizer with stab ID number sID"""
-        self.S[sID] = Stab(sID)
-        return self.S[sID]
+        stab = self.S[z][(ertype, y, x)] = Stab(sID=(ertype, y, x, z))
+        return stab
 
-    def add_boundary(self, sID):
+    def add_boundary(self, ertype, y, x, z):
         """Adds a open bounday (stab like) with bounday ID number sID"""
-        self.B[sID] = Bound(sID)
-        return self.B[sID]
+        bound = self.B[z][(ertype, y, x)] = Bound(sID=(ertype, y, x, z))
+        return bound
 
-    def add_edge(self, qID):
-        self.E[qID] = Edge(qID)
-        return self.E[qID]
-
-    def add_qubit(self, y, x, td, VL, VR, VU, VD, z=0):
+    def add_qubit(self, td, y, x, z, vW, vE, vN, vS):
         """Adds an edge with edge ID number qID with pointers to vertices. Also adds pointers to this edge on the vertices. """
 
-        #(ertype, y, x, td, z, hv)
-
-        qID = (y, x, z, td)
-        qubit = Qubit(*qID)
-        self.Q[qID] = qubit
-
+        qubit = self.Q[z][(td, y, x)] = Qubit(qID=(td, y, x, z))
         E1, E2 = (qubit.E[0], qubit.E[1]) if td == 0 else (qubit.E[1], qubit.E[0])
 
-        VL.neighbors["r"] = (VR, E1)
-        VR.neighbors["l"] = (VL, E1)
-        VU.neighbors["d"] = (VD, E2)
-        VD.neighbors["u"] = (VU, E2)
+        vW.neighbors["e"] = (vE, E1)
+        vE.neighbors["w"] = (vW, E1)
+        vN.neighbors["s"] = (vS, E2)
+        vS.neighbors["n"] = (vN, E2)
 
     def reset(self):
         """
@@ -202,73 +206,89 @@ class toric(object):
 
         """
         self.C, self.cID = {}, 0
-        for qubit in self.Q.values():
-            qubit.reset()
-        for stab in self.S.values():
-            stab.reset()
-        for bound in self.B.values():
-            bound.reset()
+        for qlayer in self.Q.values():
+            for qubit in qlayer.values():
+                qubit.reset()
+        for slayer in self.S.values():
+            for stab in slayer.values():
+                stab.reset()
 
-        # if self.plot: self.plot.init_plot()
-        # if self.decoder.plot: self.decoder.plot.init_plot()
 
 class planar(toric):
     def __init__(self, *args, **kwargs):
+        self.B = {}
         super().__init__(type="planar", *args, **kwargs)
 
+    def __repr__(self):
+        numC = 0
+        for cluster in self.C.values():
+            if cluster.parent == cluster:
+                numC += 1
+        numS = len([len(layer) for layer in self.S])
+        numQ = len([len(layer) for layer in self.Q])
+        numB = len([len(layer) for layer in self.B])
+        return f"2D {self.type} graph object with: {numC} clusters, {numS} stabs, {numQ} qubits, {numB} boundaries"
 
-    def init_graph(self, plot_load, plot_config):
+
+    def init_graph_layer(self, z=0):
+
+        self.S[z], self.Q[z], self.B[z]= {}, {}, {}
 
         # Add vertices to self
-        for yx in range(self.size):
+        for yx in self.range:
             for xy in range(self.size - 1):
-                self.add_stab((0, yx, xy + 1))
-                self.add_stab((1, xy, yx))
+                self.add_stab(0, yx, xy + 1, z)
+                self.add_stab(1, xy, yx, z)
 
-            self.add_boundary((0, yx, 0))
-            self.add_boundary((0, yx, self.size))
-            self.add_boundary((1, -1, yx))
-            self.add_boundary((1, self.size - 1, yx))
+            self.add_boundary(0, yx, 0, z)
+            self.add_boundary(0, yx, self.size, z)
+            self.add_boundary(1, -1, yx, z)
+            self.add_boundary(1, self.size - 1, yx, z)
 
-        for y in range(self.size):
-            for x in range(self.size):
+        for y in self.range:
+            for x in self.range:
                 if x == 0:
-                    VL, VR = self.B[(0, y, x)], self.S[(0, y, x + 1)]
+                    vW, vE = self.B[z][(0, y, x)], self.S[z][(0, y, x + 1)]
                 elif x == self.size - 1:
-                    VL, VR = self.S[(0, y, x)], self.B[(0, y, x + 1)]
+                    vW, vE = self.S[z][(0, y, x)], self.B[z][(0, y, x + 1)]
                 else:
-                    VL, VR = self.S[(0, y, x)], self.S[(0, y, x + 1)]
+                    vW, vE = self.S[z][(0, y, x)], self.S[z][(0, y, x + 1)]
                 if y == 0:
-                    VU, VD = self.B[(1, y - 1, x)], self.S[(1, y, x)]
+                    vN, vS = self.B[z][(1, y - 1, x)], self.S[z][(1, y, x)]
                 elif y == self.size - 1:
-                    VU, VD = self.S[(1, y - 1, x)], self.B[(1, y, x)]
+                    vN, vS = self.S[z][(1, y - 1, x)], self.B[z][(1, y, x)]
                 else:
-                    VU, VD = self.S[(1, y - 1, x)], self.S[(1, y, x)]
+                    vN, vS = self.S[z][(1, y - 1, x)], self.S[z][(1, y, x)]
 
-                self.add_qubit(y, x, 0, VL, VR, VU, VD)
+                self.add_qubit(0, y, x, z, vW, vE, vN, vS)
 
                 if y != self.size - 1 and x != self.size - 1:
-                    VU, VD = self.S[(0, y, x + 1)], self.S[(0, y + 1, x + 1)]
-                    VL, VR = self.S[(1, y, x)], self.S[(1, y, x + 1)]
-                    self.add_qubit(y, x + 1, 1, VL, VR, VU, VD)
-
-        self.plot = pg.lattice_plot(self, **plot_config) if plot_load else None
+                    vN, vS = self.S[z][(0, y, x + 1)], self.S[z][(0, y + 1, x + 1)]
+                    vW, vE = self.S[z][(1, y, x)], self.S[z][(1, y, x + 1)]
+                    self.add_qubit(1, y, x + 1, z, vW, vE, vN, vS)
 
 
-    def logical_error(self):
+    def logical_error(self, z=0):
 
         if self.plot: self.plot.plot_final()
 
         logical_error = [False, False]
 
-        for i in range(self.size):
-            if self.Q[(i, 0, 0, 0)].E[0].state:
+        for i in self.range:
+            if self.Q[z][(0, i, 0)].E[0].state:
                 logical_error[0] = 1 - logical_error[0]
-            if self.Q[(0, i, 0, 0)].E[1].state:
+            if self.Q[z][(0, 0, i)].E[1].state:
                 logical_error[1] = 1 - logical_error[1]
 
         errorless = True if logical_error == [0, 0] else False
         return logical_error, errorless
+
+
+    def reset(self):
+        super().reset()
+        for layer in self.B.values():
+            for bound in layer.values():
+                bound.reset()
 
 '''
 ########################################################################################
@@ -331,7 +351,7 @@ class Cluster(object):
 class Stab(object):
     """
     Stab object with parameters:
-    sID         location of stabilizer (ertype, y, x)
+    sID         location of stabilizer (ertype, y, x, z)
     neighbors   dict of the neighobrs (in the graph) of this stabilizer with
                     Key:    wind
                     Value   (Stab object, Edge object)
@@ -345,6 +365,7 @@ class Stab(object):
         self.type = type
         self.sID = sID
         self.neighbors = {}
+        self.meas_error = 0
 
         # iteration parameters
         self.state = 0
@@ -364,7 +385,7 @@ class Stab(object):
 
     def __repr__(self):
         type = "X" if self.sID[0] == 0 else "Z"
-        return "v" + type + "(" + str(self.sID[1]) + "," + str(self.sID[2]) + ")"
+        return "v{}({},{},{})".format(type, *self.sID[1:])
 
     def reset(self):
         """
@@ -382,17 +403,22 @@ class Bound(Stab):
 
     def __repr__(self):
         type = "X" if self.sID[0] == 0 else "Z"
-        return "b" + type + "(" + str(self.sID[1]) + "," + str(self.sID[2]) + ")"
+        return "b{}({},{},{})".format(type, *self.sID[1:])
 
 
 class Qubit(object):
-    def __init__(self, y, x, z, td):
-        self.qID = (y, x, z, td)
+    def __init__(self, qID):
+        '''
+        qID         (td, y, x, z)
+        erasure     boolean of erased edge
+        '''
+
+        self.qID = qID       # (y, x, z, td)
         self.erasure = 0
         self.E = [Edge(self, ertype=0), Edge(self, ertype=1)]
 
     def __repr__(self):
-        return "q({},{},{}:{})".format(*self.qID)
+        return "q({},{},{}:{})".format(*self.qID[1:], self.qID[0])
 
     def reset(self):
         self.erasure = 0
@@ -403,9 +429,7 @@ class Qubit(object):
 class Edge(object):
     """
     Edge object with parameters:
-    qID         (ertype, y, x, z, td, hv)
-
-    erasure     boolean of erased edge
+    type        0 for X, 1 for Z
     vertices    tuple of the two conected vertices
     state       boolean indicating the state of the qubit
     cluster     Cluster object of which this edge is apart of
@@ -413,10 +437,14 @@ class Edge(object):
     matching    boolean indicating whether this edge is apart of the matching
     """
 
-    def __init__(self, qubit, ertype, hv=0):
+    def __init__(self, qubit, ertype, edge_type=0):
         # fixed parameters
         self.qubit = qubit
-        self.eID = (ertype, hv)
+        self.ertype = ertype
+        if edge_type == 0:
+            self.orientation = "-" if self.ertype == self.qubit.qID[0] else "|"
+        else:
+            self.orientation = "~"
 
         # iteration parameters
         self.cluster    = None
@@ -427,11 +455,8 @@ class Edge(object):
         self.matching   = 0
 
     def __repr__(self):
-        errortype = "X" if self.eID[0] == 0 else "Z"
-        orientation = "-" if self.eID[0] == self.qubit.qID[3] else "|"
-        hvtype = "e" if self.eID[1] == 0 else "v"
-        coordinate = self.qubit.qID[:3]
-        return "{}{}{}({},{},{})".format(hvtype, errortype, orientation, *coordinate)
+        errortype = "X" if self.ertype == 0 else "Z"
+        return "e{}{}({},{},{})".format(errortype, self.orientation, *self.qubit.qID[1:])
 
     def reset(self):
         """

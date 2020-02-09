@@ -1,4 +1,3 @@
-import graph_objects as go
 from progiter import ProgIter
 import multiprocessing as mp
 from decimal import Decimal as dec
@@ -22,13 +21,27 @@ def apply_random_seed(seed=None, **kwargs):
     random.seed(seed)
 
 
+def lattice_type(type, config, dec, go, size):
+    if type == "toric":
+        decoder = dec.toric(plot_config=config.plot, **config.decoder)
+        graph = go.toric(size, decoder, config.plot_load, config.plot)
+    elif type == "planar":
+        decoder = dec.planar(plot_config=config.plot, **config.decoder)
+        graph = go.planar(size, decoder, config.plot_load, config.plot)
+    return decoder, graph
+
+
 def single(
-    size,
     config,
     dec,
-    pE=0,
+    go,
+    ltype="toric",
+    size=10,
     pX=0,
     pZ=0,
+    pE=0,
+    pmX=0,
+    pmZ=0,
     graph=None,
     worker=0,
     iter=0,
@@ -40,13 +53,7 @@ def single(
     """
     # Initialize lattice
     if graph is None:
-        if config.type == "toric":
-            decoder = dec.toric(graph, plot_config=config.plot, **config.decoder)
-            graph = go.toric(size, decoder)(size, decoder, config.plot_load, config.plot)
-        elif config.type == "planar":
-            decoder = dec.planar(graph, plot_config=config.plot, **config.decoder)
-            graph = go.planar(size, decoder, config.plot_load, config.plot)
-        decoder.graph = graph
+        decoder, graph = lattice_type(ltype, config, dec, go, size)
 
     # Initialize errors
     if seed is None and config.seed is None:
@@ -56,11 +63,7 @@ def single(
     elif config.seed is None:
         apply_random_seed(seed)
 
-    if pE != 0:
-        graph.init_erasure(pE, **config.file)
-
-    graph.init_pauli(pX, pZ, **config.file)         # initialize errors
-    graph.measure_stab()                              # Measure stabiliziers
+    graph.apply_and_measure_errors(pX=pX, pZ=pZ, pE=pE, pmX=pmX, pmZ=pmZ)
 
     # Peeling decoder
     graph.decoder.decode()
@@ -73,13 +76,17 @@ def single(
 
 
 def multiple(
-    size,
+    iters,
     config,
     dec,
-    iters,
-    pE=0,
+    go,
+    ltype="toric",
+    size=10,
     pX=0,
     pZ=0,
+    pE=0,
+    pmX=0,
+    pmZ=0,
     qres=None,
     worker=0,
     seeds=None,
@@ -92,18 +99,11 @@ def multiple(
     if seeds is None:
         seeds = [init_random_seed(worker=worker, iteration=iter) for iter in range(iters)]
 
-    if config.type == "toric":
-        decoder = dec.toric(None, plot_config=config.plot, **config.decoder)
-        graph = go.toric(size, decoder)(size, decoder, config.plot_load, config.plot)
-    elif config.type == "planar":
-        decoder = dec.planar(None, plot_config=config.plot, **config.decoder)
-        graph = go.planar(size, decoder, config.plot_load, config.plot)
-    decoder.graph = graph
-
+    decoder, graph = lattice_type(ltype, config, dec, go, size)
 
     result = [
-        single(size, config, dec, pE, pX, pZ, graph, worker, i, seed)
-        for i, seed in zip(ProgIter(range(iters)), seeds)
+        single(config, dec, go, ltype, size, pX, pZ, pE, pmX, pmZ ,graph, worker, iter, seed)
+        for iter, seed in zip(ProgIter(range(iters)), seeds)
     ]
 
     N_succes = sum(result)
@@ -113,7 +113,16 @@ def multiple(
         return N_succes
 
 
-def multiprocess(size, config, dec, iters, pE=0, pX=0, pZ=0, seeds=None, processes=None, **kwargs):
+def multiprocess(
+        iters,
+        config,
+        dec,
+        go,
+        seeds,
+        processes,
+        **kwargs
+        # size, config, dec, iters, pE=0, pX=0, pZ=0, pM=0, seeds=None, processes=None, **kwargs):
+    ):
     """
     Runs the peeling decoder for a number of iterations, split over a number of processes
     """
@@ -132,36 +141,17 @@ def multiprocess(size, config, dec, iters, pE=0, pX=0, pZ=0, seeds=None, process
     else:
         seed_lists = [seeds[int(i*process_iters):int((i+1)*process_iters)] for i in range(processes - 1)] + [seeds[int((processes-1)*process_iters):]]
 
-    if dec is None:
-        import unionfind as dec
-
     # Initiate processes
     qres = mp.Queue()
     workers = []
-    for i in range(processes - 1):
+    for i in range(processes):
         workers.append(
             mp.Process(
                 target=multiple,
-                args=(size, config, dec, process_iters, pE, pX, pZ, qres, i, seed_lists[i]),
+                args=(process_iters, config, dec, go),
+                kwargs={"qres": qres, "worker": i, "seeds": seed_lists[i], **kwargs},
             )
         )
-    workers.append(
-        mp.Process(
-            target=multiple,
-            args=(
-                size,
-                config,
-                dec,
-                rest_iters,
-                pE,
-                pX,
-                pZ,
-                qres,
-                processes - 1,
-                seed_lists[processes - 1],
-            ),
-        )
-    )
     print("Starting", processes, "workers.")
 
     # Start and join processes
@@ -181,7 +171,6 @@ class decoder_config(object):
 
         self.plot_load = 0
         self.seed = None
-        self.type = "planar"
 
         self.decoder = {
             "random_order"  : 0,
@@ -208,17 +197,20 @@ class decoder_config(object):
 
 if __name__ == "__main__":
 
-    import unionfind_evengrow_plugin as decoder
+    import dec_mwpm as decoder
+    import graph_3D as go
 
-    size = 8
-
-    pX = 0.1
-    pZ = 0.0
-    pE = 0.0
+    sim_config = {
+        "ltype" : "toric",
+        "size"  : 3,
+        "pX"    : 0.1,
+        "pZ"    : 0.0,
+        "pE"    : 0.0,
+        "pmX"   : 0.1,
+        "pmZ"   : 0.0,
+    }
     iters = 50000
 
-    # output = single(size, decoder_config(), decoder, pE, pX, pZ)
-    # output = multiple(size, decoder_config(), decoder, iters, pE, pX, pZ)
-    output = multiprocess(size, decoder_config(), decoder, iters, pE, pX, pZ)
+    output = single(decoder_config(), decoder, go, **sim_config)
 
     print(output, output/iters)

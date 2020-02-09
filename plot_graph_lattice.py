@@ -132,43 +132,44 @@ class lattice_plot:
             y += 2*type
             x += 2*type
             ls = "-" if type == 0 else "--"
-            if neighbor == "l":
+            if neighbor == "w":
                 return plt.plot(
                     [x + 0, x + 1], [y + 1, y + 1], c=self.cl, lw=self.lw, ls=ls, alpha=alpha
                 )
-            elif neighbor == "r":
+            elif neighbor == "e":
                  return plt.plot(
                     [x + 1, x + 2], [y + 1, y + 1], c=self.cl, lw=self.lw, ls=ls, alpha=alpha
                 )
-            elif neighbor == "u":
+            elif neighbor == "n":
                 return plt.plot(
                     [x + 1, x + 1], [y + 0, y + 1], c=self.cl, lw=self.lw, ls=ls, alpha=alpha
                 )
-            elif neighbor == "d":
+            elif neighbor == "s":
                 return plt.plot(
                     [x + 1, x + 1], [y + 1, y + 2], c=self.cl, lw=self.lw, ls=ls, alpha=alpha
                 )
 
 
         # Plot stabilizers
-        for stab in self.graph.S.values():
-            (type, yb, xb) = stab.sID
+        for stab in self.graph.S[0].values():
+            (type, yb, xb) = stab.sID[:3]
             y, x = yb * 4, xb * 4
             stab.pg = {}
             for neighbor in stab.neighbors.keys():
                 stab.pg[neighbor] = plot_stab(neighbor, y, x, type)[0]
 
         # Plot open boundaries if exists
-        for bound in self.graph.B.values():
-            (type, yb, xb) = bound.sID
-            y, x = yb * 4, xb * 4
-            bound.pg = {}
-            for neighbor in bound.neighbors.keys():
-                bound.pg[neighbor] = plot_stab(neighbor, y, x, type, alpha=0.3)[0]
+        if hasattr(self.graph, 'B'):
+            for bound in self.graph.B[0].values():
+                (type, yb, xb) = bound.sID[:3]
+                y, x = yb * 4, xb * 4
+                bound.pg = {}
+                for neighbor in bound.neighbors.keys():
+                    bound.pg[neighbor] = plot_stab(neighbor, y, x, type, alpha=0.3)[0]
 
         # Plot qubits
-        for qubit in self.graph.Q.values():
-            (yb, xb, zb, td) = qubit.qID
+        for qubit in self.graph.Q[0].values():
+            (td, yb, xb) = qubit.qID[:3]
             y, x = yb * 4, xb * 4
             if td == 0:
                 qubit.pg = plt.Circle(
@@ -209,7 +210,7 @@ class lattice_plot:
         """
         plt.sca(self.ax)
 
-        for qubit in self.graph.Q.values():
+        for qubit in self.graph.Q[0].values():
             qplot = qubit.pg
             if qubit.erasure:
                 qplot.set_linestyle(":")
@@ -223,7 +224,7 @@ class lattice_plot:
         """
         plt.sca(self.ax)
 
-        for qubit in self.graph.Q.values():
+        for qubit in self.graph.Q[0].values():
             qplot = qubit.pg
             X_error = qubit.E[0].state
             Z_error = qubit.E[1].state
@@ -262,8 +263,8 @@ class lattice_plot:
         plt.sca(self.ax)
         C = [self.cX, self.cZ]
 
-        for stab in self.graph.S.values():
-            (ertype, yb, xb) = stab.sID
+        for stab in self.graph.S[0].values():
+            (ertype, yb, xb) = stab.sID[:3]
             gplotlot = stab.pg
             if stab.state:
                 for neighbor in stab.neighbors.keys():
@@ -291,8 +292,8 @@ class lattice_plot:
 
             color = [random.random() * 0.8 + 0.2 for _ in range(3)]
 
-            (_, topy, topx) = v0.sID
-            (type, boty, botx) = v1.sID
+            (type, topy, topx) = v0.sID[:3]
+            (type, boty, botx) = v1.sID[:3]
 
             p, ls = P[type], LS[type]
 
@@ -329,7 +330,7 @@ class lattice_plot:
 
         plt.sca(self.ax)
 
-        for qubit in self.graph.Q.values():
+        for qubit in self.graph.Q[0].values():
             qplot = qubit.pg
             X_error = qubit.E[0].matching
             Z_error = qubit.E[1].matching
@@ -353,7 +354,7 @@ class lattice_plot:
 
         if self.plot_result:
 
-            for qubit in self.graph.Q.values():
+            for qubit in self.graph.Q[0].values():
                 qplot = qubit.pg
                 X_error = qubit.E[0].state
                 Z_error = qubit.E[1].state

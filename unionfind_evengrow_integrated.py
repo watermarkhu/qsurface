@@ -1,7 +1,6 @@
 import unionfind as uf
 import printing as pr
 import evengrow_directed as eg
-import random
 
 
 class toric(uf.toric):
@@ -66,13 +65,12 @@ class toric(uf.toric):
         self.graph.wastebasket = []
         self.graph.maxbucket = 0
 
-        vertices = self.graph.S.values()
-
         anyons = []
-        for vertex in vertices:
-            if vertex.state:
-                anyons.append(vertex)
-                vertex.node = eg.anyon_node(vertex)
+        for layer in self.graph.S.values():
+            for vertex in layer.values():
+                if vertex.state:
+                    anyons.append(vertex)
+                    vertex.node = eg.anyon_node(vertex)
 
         for vertex in anyons:
             if vertex.cluster is None:
@@ -286,8 +284,6 @@ class toric(uf.toric):
 
 
 class planar(uf.planar, toric):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
 
     '''
     ##################################################################################################
@@ -304,16 +300,17 @@ class planar(uf.planar, toric):
         self.bound_cluster_vertices = []
 
         erasure_bound = []
-        for bound in self.graph.B.values():
-            for vertex, edge in bound.neighbors.values():
-                if edge.qubit.erasure:
-                    cluster = self.graph.get_cluster(self.graph.cID, bound)
-                    cluster.on_bound = 1
-                    bound_clusters.append(cluster)
-                    self.bound_cluster_vertices.append([bound])
-                    erasure_bound.append(bound)
-                    bound.node = eg.boundary_node(bound)
-                    self.graph.cID += 1
+        for layer in self.graph.B.values():
+            for bound in layer.values():
+                for vertex, edge in bound.neighbors.values():
+                    if edge.qubit.erasure:
+                        cluster = self.graph.get_cluster(self.graph.cID, bound)
+                        cluster.on_bound = 1
+                        bound_clusters.append(cluster)
+                        self.bound_cluster_vertices.append([bound])
+                        erasure_bound.append(bound)
+                        bound.node = eg.boundary_node(bound)
+                        self.graph.cID += 1
 
         self.bound_cluster_edges = [[] for _ in range(self.graph.cID)]
         self.cluster_new_vertex_boundary(erasure_bound)

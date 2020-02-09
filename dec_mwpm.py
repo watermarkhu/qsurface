@@ -1,6 +1,5 @@
 import networkx as nx
 import blossom5.pyMatch as pm
-import graph_objects as go
 
 """
 :param size:
@@ -23,8 +22,12 @@ Qubit values are either 0 or 1, which is analogous to the -1, and 1 state, respe
 
 
 class toric(object):
-    def __init__(self, graph, **kwargs):
-        self.graph = graph
+    def __init__(self, graph=None, *args, **kwargs):
+
+        self.graph = None
+
+        for key, value in kwargs.items():
+            setattr(self, key, value)
 
 
     def decode(self):
@@ -36,24 +39,26 @@ class toric(object):
 
     def get_stabs(self):
         verts, plaqs = [], []
-        for stab in self.graph.S.values():
-            if stab.state:
-                if stab.sID[0] == 0:
-                    verts.append(stab)
-                else:
-                    plaqs.append(stab)
+        for layer in self.graph.S.values():
+            for stab in layer.values():
+                if stab.state:
+                    if stab.sID[0] == 0:
+                        verts.append(stab)
+                    else:
+                        plaqs.append(stab)
         return verts, plaqs
 
 
     def get_edges(self, anyons):
         edges = []
         for i0, v0 in enumerate(anyons[:-1]):
-            (_, y0, x0) = v0.sID
+            (_, y0, x0, z0) = v0.sID
             for i1, v1 in enumerate(anyons[i0 + 1 :]):
-                (_, y1, x1) = v1.sID
+                (_, y1, x1, z1) = v1.sID
                 wy = (y0 - y1) % (self.graph.size)
                 wx = (x0 - x1) % (self.graph.size)
-                weight = min([wy, self.graph.size - wy]) + min([wx, self.graph.size - wx])
+                wz = abs(z0 - z1)
+                weight = min([wy, self.graph.size - wy]) + min([wx, self.graph.size - wx]) + wz
                 edges.append([i0, i1 + i0 + 1, weight])
         return edges
 
@@ -86,6 +91,9 @@ class toric(object):
         """
         verts, plaqs = self.get_stabs()
 
+        print(verts)
+        print(plaqs)
+
         def get_matching(anyons):
             output = pm.getMatching(len(anyons), self.get_edges(anyons))
             return [[anyons[i0], anyons[i1]] for i0, i1 in enumerate(output) if i0 > i1]
@@ -96,37 +104,32 @@ class toric(object):
         if plaqs:
             self.matching += get_matching(plaqs)
 
+        print(self.matching)
 
-    def get_distances(self, y0, x0, y1, x1):
+
+    def get_distances(self, V0, V1):
+        y0, x0, z0 = V0.sID[1:]
+        y1, x1, z1 = V1.sID[1:]
+
         dy0 = (y0 - y1) % self.graph.size
         dx0 = (x0 - x1) % self.graph.size
         dy1 = (y1 - y0) % self.graph.size
         dx1 = (x1 - x0) % self.graph.size
 
-        if dy0 < dy1:  # Find closest path and walking direction
-            dy = dy0
-            yd = "u"
-        else:
-            dy = dy1
-            yd = "d"
-        if dx0 < dx1:
-            dx = dx0
-            xd = "r"
-        else:
-            dx = dx1
-            xd = "l"
+        dy, yd = (dy0, "n") if dy0 < dy1 else (dy1, "s")
+        dx, xd = (dx0, "e") if dx0 < dx1 else (dx1, "w")
 
-        return dy, yd, dx, xd
+        dz = abs(z1 - z0)
+        zd = "u" if z0 > z1 else "d"
+
+        return dy, yd, dx, xd, dz, zd
 
     def apply_matching(self):
 
         for v0, v1 in self.matching:  # Apply the matchings to the graph
 
-            (_, y0, x0) = v0.sID
-            (_, y1, x1) = v1.sID
-
             # Get distance between endpoints, take modulo to find min distance
-            dy, yd, dx, xd = self.get_distances(y0, x0, y1, x1)
+            dy, yd, dx, xd, dz, zd = self.get_distances(v0, v1)
 
             ynext = v0  # walk vertically from v0
             for y in range(dy):
@@ -137,6 +140,12 @@ class toric(object):
             xnext = v1  # walk horizontally from v1
             for x in range(dx):
                 (xnext, edge) = xnext.neighbors[xd]
+                edge.state = 1 - edge.state
+                edge.matching = 1 - edge.matching
+
+            znext = xnext
+            for z in range(dz):
+                (znext, edge) = znext.neighbors[zd]
                 edge.state = 1 - edge.state
                 edge.matching = 1 - edge.matching
 
@@ -152,21 +161,22 @@ class planar(toric):
 
     def get_stabs(self):
         verts, plaqs, tv, tp = [], [], [], []
-        for stab in self.graph.S.values():
-            type, y, x = stab.sID
-            if stab.state:
-                if type == 0:
-                    verts.append(stab)
-                    if x < self.graph.size/2:
-                        tv.append(self.graph.B[(type, y, 0)])
+        for layer in self.graph.S.values():
+            for stab in layer.values():
+                type, y, x, z = stab.sID
+                if stab.state:
+                    if type == 0:
+                        verts.append(stab)
+                        if x < self.graph.size/2:
+                            tv.append(self.graph.B[z][(type, y, 0)])
+                        else:
+                            tv.append(self.graph.B[z][(type, y, self.graph.size)])
                     else:
-                        tv.append(self.graph.B[(type, y, self.graph.size)])
-                else:
-                    plaqs.append(stab)
-                    if y < self.graph.size/2:
-                        tp.append(self.graph.B[(type, -1, x)])
-                    else:
-                        tp.append(self.graph.B[(type, self.graph.size - 1, x)])
+                        plaqs.append(stab)
+                        if y < self.graph.size/2:
+                            tp.append(self.graph.B[z][(type, -1, x)])
+                        else:
+                            tp.append(self.graph.B[z][(type, self.graph.size - 1, x)])
         verts += tv
         plaqs += tp
         return verts, plaqs
@@ -177,12 +187,13 @@ class planar(toric):
         edges = []
         mid = len(anyons)//2
         for i0, v0 in enumerate(anyons[:mid-1]):
-            (_, y0, x0) = v0.sID
+            (_, y0, x0, z0) = v0.sID
             for i1, v1 in enumerate(anyons[i0 + 1 :mid]):
-                (_, y1, x1) = v1.sID
+                (_, y1, x1, z1) = v1.sID
                 wy = abs(y0 - y1)
                 wx = abs(x0 - x1)
-                weight = wy + wx
+                wz = abs(z0 - z1)
+                weight = wy + wx + wz
                 edges.append([i0, i1 + i0 + 1, weight])
 
 
@@ -192,27 +203,32 @@ class planar(toric):
 
 
         for i in range(mid):
-            (type, ys, xs) = anyons[i].sID
-            (type, yb, xb) = anyons[mid + i].sID
+            (type, ys, xs, zs) = anyons[i].sID
+            (type, yb, xb, zb) = anyons[mid + i].sID
             weight = abs(xb - xs) if type == 0 else abs(yb - ys)
             edges.append([i, mid + i, weight])
 
         return edges
 
 
-    def get_distances(self, y0, x0, y1, x1):
+    def get_distances(self, V0, V1):
+
+        y0, x0, z0 = V0.sID[1:]
+        y1, x1, z1 = V1.sID[1:]
         dy = y0 - y1
         dx = x0 - x1
+        dz = z0 - z1
 
-        yd = "u" if dy > 0 else "d"
-        xd = "l" if dx < 0 else "r"
+        yd = "n" if dy > 0 else "s"
+        xd = "w" if dx < 0 else "e"
+        zd = "u" if dz > 0 else "d"
 
-        return abs(dy), yd, abs(dx), xd
+        return abs(dy), yd, abs(dx), xd, abs(dz), zd
 
 
     def remove_virtual(self):
         matching = []
         for V1, V2 in self.matching:
-            if not (type(V1) == go.iBoundary and type(V2) == go.iBoundary):
+            if not (V1.type == 1 and V2.type == 1):
                 matching.append([V1, V2])
         self.matching = matching

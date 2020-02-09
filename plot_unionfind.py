@@ -85,11 +85,11 @@ class unionfind_plot:
         # Initate plot
         plt.sca(self.ax)
 
-        for qubit in self.graph.Q.values():
+        for qubit in self.graph.Q[0].values():
             self.draw_edge0(qubit)
             self.draw_edge1(qubit)
 
-        for stab in self.graph.S.values():
+        for stab in self.graph.S[0].values():
             self.draw_vertex(stab)
 
         self.canvas.draw()
@@ -99,7 +99,7 @@ class unionfind_plot:
 
     def draw_edge0(self, qubit):
 
-        (y0, x0, z0, type) = qubit.qID
+        (type, y0, x0) = qubit.qID[:3]
 
         (py1, px1) = (
             (y0, (x0 + 1) % self.size)
@@ -125,7 +125,7 @@ class unionfind_plot:
 
     def draw_edge1(self, qubit):
 
-        (y0, x0, z0, type) = qubit.qID
+        (type, y0, x0) = qubit.qID[:3]
 
         (sy1, sx1) = (
             (y0, (x0 - 1) % self.size)
@@ -157,7 +157,7 @@ class unionfind_plot:
 
     def draw_vertex(self, stab):
 
-        (ertype, y, x) = stab.sID
+        (ertype, y, x) = stab.sID[:3]
         if ertype == 1:
             y += 0.5
             x += 0.5
@@ -216,7 +216,7 @@ class unionfind_plot:
         """
         plt.sca(self.ax)
 
-        for qubit in self.graph.Q.values():
+        for qubit in self.graph.Q[0].values():
             for edge in [qubit.E[0], qubit.E[1]]:
                 if edge.peeled and not edge.matching:
                     self.plot_edge(edge, 0, self.cl ,self.alpha)
@@ -229,15 +229,15 @@ class unionfind_plot:
 
         if edge.support == 1:
 
-            (ye, xe, ze, _) = edge.qubit.qID
-            (_, yv, xv) = vertex.sID
+            (ye, xe) = edge.qubit.qID[1:3]
+            (yv, xv) = vertex.sID[1:3]
             id = 0 if (ye == yv and xe == xv) else 1
-            color = self.Cx if edge.eID[0]==0 else self.Cz
+            color = self.Cx if edge.ertype ==0 else self.Cz
             self.plot_edge(edge, id, color, 0.5)
             self.plot_edge(edge, 1-id, self.cl ,self.alpha)
 
         else:
-            color = self.cx if edge.eID[0] == 0 else self.cz
+            color = self.cx if edge.ertype == 0 else self.cz
 
             self.plot_edge(edge, 0, color, 1)
             self.plot_edge(edge, 1, color, 1)
@@ -287,7 +287,7 @@ class unionfind_plot:
         pr.printlog(line)
         if self.plotstep_click: self.waitforkeypress()
 
-        color = c1 if edge.eID[0] == 0 else c2
+        color = c1 if edge.ertype == 0 else c2
         self.plot_edge(edge, 0, color, alpha)
         self.plot_edge(edge, 1, color, alpha)
 

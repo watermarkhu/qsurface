@@ -393,7 +393,8 @@ class toric(object):
         if num_connect == 1:
             edge.peeled = True
             if vertex.state:
-                edge.state = not edge.state
+                decode_edge = self.graph.Q[self.graph.decode_layer][edge.qubit.qID].E[edge.ertype]
+                decode_edge.state = not decode_edge.state
                 edge.matching = True
                 vertex.state = False
                 new_vertex.state = not new_vertex.state
@@ -460,15 +461,16 @@ class planar(toric):
         self.bound_cluster_vertices = []
 
         erasure_bound = []
-        for bound in self.graph.B.values():
-            for vertex, edge in bound.neighbors.values():
-                if edge.qubit.erasure:
-                    cluster = self.graph.get_cluster(self.graph.cID, bound)
-                    cluster.on_bound = 1
-                    bound_clusters.append(cluster)
-                    self.bound_cluster_vertices.append([bound])
-                    erasure_bound.append(bound)
-                    self.graph.cID += 1
+        for layer in self.graph.B.values():
+            for bound in layer.values():
+                for vertex, edge in bound.neighbors.values():
+                    if edge.qubit.erasure:
+                        cluster = self.graph.get_cluster(self.graph.cID, bound)
+                        cluster.on_bound = 1
+                        bound_clusters.append(cluster)
+                        self.bound_cluster_vertices.append([bound])
+                        erasure_bound.append(bound)
+                        self.graph.cID += 1
 
         self.bound_cluster_edges = [[] for _ in range(self.graph.cID)]
         self.cluster_new_vertex_boundary(erasure_bound)

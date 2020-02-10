@@ -1,6 +1,7 @@
 import plot_graph_lattice as pg
 import random
 
+
 class toric(object):
     """
     The graph in which the vertices, edges and clusters exist. Has the following parameters
@@ -28,6 +29,7 @@ class toric(object):
         self.range = range(size)
         self.decoder = decoder
         decoder.graph = self
+        self.decode_layer = 0
         self.C = {}
         self.S = {}
         self.Q = {}
@@ -35,16 +37,10 @@ class toric(object):
 
         self.init_graph_layer()
 
-        self.plot = pg.lattice_plot(self, **plot_config) if plot_load else None
+        self.plot = pg.plot_2D(self, **plot_config) if plot_load else None
 
     def __repr__(self):
-        numC = 0
-        for cluster in self.C.values():
-            if cluster.parent == cluster:
-                numC += 1
-        numS = len([len(layer) for layer in self.S])
-        numQ = len([len(layer) for layer in self.Q])
-        return f"2D {self.type} graph object with: {numC} clusters, {numS} stabs, {numQ} qubits"
+        return f"2D {self.type} graph object with"
 
     '''
     ########################################################################################
@@ -56,6 +52,7 @@ class toric(object):
 
     def init_graph_layer(self, z=0):
 
+        self.dirs = ["n", "s", "e", "w"]
         self.S[z], self.Q[z], = {}, {}
 
         for ertype in [0,1]:
@@ -133,9 +130,12 @@ class toric(object):
         The measurement outcomes of the stabilizers, which are the vertices on the self are saved to their corresponding vertex objects. We loop over all vertex objects and over their neighboring edge or qubit objects.
         """
         for stab in self.S[0].values():
-            for vertex, edge in stab.neighbors.values():
-                if edge.state:
-                    stab.state = 1 - stab.state
+            for dir in self.dirs:
+                if dir in stab.neighbors:
+                    vertex, edge = stab.neighbors[dir]
+                    if edge.state:
+                        stab.parity = 1 - stab.parity
+                    stab.state = stab.parity
 
         if self.plot: self.plot.plot_syndrome()
 
@@ -181,18 +181,18 @@ class toric(object):
 
     def add_stab(self, ertype, y, x, z):
         """Adds a stabilizer with stab ID number sID"""
-        stab = self.S[z][(ertype, y, x)] = Stab(sID=(ertype, y, x, z))
+        stab = self.S[z][(ertype, y, x)] = Stab(sID=(ertype, y, x), z=z)
         return stab
 
     def add_boundary(self, ertype, y, x, z):
         """Adds a open bounday (stab like) with bounday ID number sID"""
-        bound = self.B[z][(ertype, y, x)] = Bound(sID=(ertype, y, x, z))
+        bound = self.B[z][(ertype, y, x)] = Bound(sID=(ertype, y, x), z=z)
         return bound
 
     def add_qubit(self, td, y, x, z, vW, vE, vN, vS):
         """Adds an edge with edge ID number qID with pointers to vertices. Also adds pointers to this edge on the vertices. """
 
-        qubit = self.Q[z][(td, y, x)] = Qubit(qID=(td, y, x, z))
+        qubit = self.Q[z][(td, y, x)] = Qubit(qID=(td, y, x), z=z)
         E1, E2 = (qubit.E[0], qubit.E[1]) if td == 0 else (qubit.E[1], qubit.E[0])
 
         vW.neighbors["e"] = (vE, E1)
@@ -219,19 +219,10 @@ class planar(toric):
         self.B = {}
         super().__init__(type="planar", *args, **kwargs)
 
-    def __repr__(self):
-        numC = 0
-        for cluster in self.C.values():
-            if cluster.parent == cluster:
-                numC += 1
-        numS = len([len(layer) for layer in self.S])
-        numQ = len([len(layer) for layer in self.Q])
-        numB = len([len(layer) for layer in self.B])
-        return f"2D {self.type} graph object with: {numC} clusters, {numS} stabs, {numQ} qubits, {numB} boundaries"
-
 
     def init_graph_layer(self, z=0):
 
+        self.dirs = ["n", "s", "e", "w"]
         self.S[z], self.Q[z], self.B[z]= {}, {}, {}
 
         # Add vertices to self
@@ -351,7 +342,7 @@ class Cluster(object):
 class Stab(object):
     """
     Stab object with parameters:
-    sID         location of stabilizer (ertype, y, x, z)
+    sID         location of stabilizer (ertype, y, x)
     neighbors   dict of the neighobrs (in the graph) of this stabilizer with
                     Key:    wind
                     Value   (Stab object, Edge object)
@@ -360,15 +351,16 @@ class Stab(object):
     tree        boolean indicating whether this stabilizer has been traversed
     """
 
-    def __init__(self, sID, type=0):
+    def __init__(self, sID, type=0, z=0):
         # fixed paramters
         self.type = type
         self.sID = sID
+        self.z = z
         self.neighbors = {}
-        self.meas_error = 0
 
         # iteration parameters
         self.state = 0
+        self.parity = 0
         self.cluster = None
         self.tree = 0
 
@@ -385,40 +377,42 @@ class Stab(object):
 
     def __repr__(self):
         type = "X" if self.sID[0] == 0 else "Z"
-        return "v{}({},{},{})".format(type, *self.sID[1:])
+        return "v{}({},{}|{})".format(type, *self.sID[1:], self.z)
 
     def reset(self):
         """
         Changes all iteration paramters to their initial value
         """
         self.state = 0
+        self.parity = 0
         self.cluster = None
         self.tree = 0
         self.node = None
 
 
 class Bound(Stab):
-    def __init__(self, sID):
-        super().__init__(sID, type=1)
+    def __init__(self, sID, z=0):
+        super().__init__(sID, type=1, z=z)
 
     def __repr__(self):
         type = "X" if self.sID[0] == 0 else "Z"
-        return "b{}({},{},{})".format(type, *self.sID[1:])
+        return "b{}({},{}|{})".format(type, *self.sID[1:], self.z)
 
 
 class Qubit(object):
-    def __init__(self, qID):
+    def __init__(self, qID, z=0):
         '''
-        qID         (td, y, x, z)
+        qID         (td, y, x)
         erasure     boolean of erased edge
         '''
 
         self.qID = qID       # (y, x, z, td)
+        self.z = z
         self.erasure = 0
         self.E = [Edge(self, ertype=0), Edge(self, ertype=1)]
 
     def __repr__(self):
-        return "q({},{},{}:{})".format(*self.qID[1:], self.qID[0])
+        return "q({},{}:{}|{})".format(*self.qID[1:], self.qID[0], self.z)
 
     def reset(self):
         self.erasure = 0
@@ -437,9 +431,10 @@ class Edge(object):
     matching    boolean indicating whether this edge is apart of the matching
     """
 
-    def __init__(self, qubit, ertype, edge_type=0):
+    def __init__(self, qubit, ertype, z=0, edge_type=0):
         # fixed parameters
         self.qubit = qubit
+        self.z = 0
         self.ertype = ertype
         if edge_type == 0:
             self.orientation = "-" if self.ertype == self.qubit.qID[0] else "|"
@@ -456,7 +451,7 @@ class Edge(object):
 
     def __repr__(self):
         errortype = "X" if self.ertype == 0 else "Z"
-        return "e{}{}({},{},{})".format(errortype, self.orientation, *self.qubit.qID[1:])
+        return "e{}{}({},{}|{})".format(errortype, self.orientation, *self.qubit.qID[1:], self.z)
 
     def reset(self):
         """

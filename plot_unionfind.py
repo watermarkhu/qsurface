@@ -99,7 +99,7 @@ class unionfind_plot:
 
     def draw_edge0(self, qubit):
 
-        (type, y0, x0) = qubit.qID[:3]
+        (type, y0, x0) = qubit.qID
 
         (py1, px1) = (
             (y0, (x0 + 1) % self.size)
@@ -125,7 +125,7 @@ class unionfind_plot:
 
     def draw_edge1(self, qubit):
 
-        (type, y0, x0) = qubit.qID[:3]
+        (type, y0, x0) = qubit.qID
 
         (sy1, sx1) = (
             (y0, (x0 - 1) % self.size)
@@ -157,7 +157,7 @@ class unionfind_plot:
 
     def draw_vertex(self, stab):
 
-        (ertype, y, x) = stab.sID[:3]
+        (ertype, y, x) = stab.sID
         if ertype == 1:
             y += 0.5
             x += 0.5

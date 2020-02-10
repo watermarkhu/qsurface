@@ -1,33 +1,30 @@
 import graph_2D as go
+import plot_graph_lattice as pg
 import random
 
 
 class toric(go.toric):
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, size, decoder, plot_load=False, plot_config=None, type="toric", *args, **kwargs):
+        super().__init__(size, decoder, type=type, *args, **kwargs)
+
+        self.decode_layer = self.size - 1
         self.G = {}
 
         for z in range(1, self.size):
             self.init_graph_layer(z=z)
 
             for vU, vD in zip(self.S[z].values(), self.S[z-1].values()):
-                bridge = self.G[vU.sID] = Bridge(gID=vU.sID)
+                bridge = self.G[vU.sID] = Bridge(gID=vU.sID, z=z)
 
                 vU.neighbors["d"] = (vD, bridge.E)
                 vD.neighbors["u"] = (vU, bridge.E)
 
+        self.plot = pg.plot_3D(self, **plot_config) if plot_load else None
+
 
     def __repr__(self):
-        numC = 0
-        for cluster in self.C.values():
-            if cluster.parent == cluster:
-                numC += 1
-        numS = len([len(layer) for layer in self.S])
-        numQ = len([len(layer) for layer in self.Q])
-        numG = len(self.G)
-        name = f"3D {self.type} graph object with: {numC} clusters, {numS} stabs, {numQ} qubits, {numG} bridges"
-        return name
+        return f"3D {self.type} graph object"
 
     '''
     ########################################################################################
@@ -43,15 +40,13 @@ class toric(go.toric):
         for z in self.range[:-1]:
 
             self.init_erasure(pE=pE, z=z)
-            self.init_pauli(pX=pX, pZ=z)
-
-        for z in self.range:
+            self.init_pauli(pX=pX, pZ=pZ, z=z)
             self.measure_stab(pmX=pmX, pmZ=pmZ, z=z)
 
+        self.init_erasure(pE=pE, z=z+1)
+        self.init_pauli(pX=pX, pZ=pZ, z=z+1)
+        self.measure_stab(pmX=0, pmZ=0, z=z+1)
 
-            print("\n",z)
-            for vertex in self.S[z].values():
-                print(vertex, vertex.state)
 
 
     def init_erasure(self, pE=0, z=0, **kwargs):
@@ -67,18 +62,18 @@ class toric(go.toric):
 
         for qubitu in self.Q[z].values():
 
-            qubitd_states = [0,0] if z ==0 else [self.Q[z-1][qubitu.qID].E[n].state for n in range(1)]
+            qubitu.E[0].state, qubitu.E[1].state = (0,0) if z == 0 else (self.Q[z-1][qubitu.qID[:3]].E[n].state for n in range(2))
 
             if random.random() < pE:
                 qubitu.erasure = True
                 rand = random.random()
                 if rand < 0.25:
-                    qubitu.E[0].state = 1 - qubitd_states[0]
+                    qubitu.E[0].state = 1 - qubitu.E[0].state
                 elif rand >= 0.25 and rand < 0.5:
-                    qubitu.E[1].state = 1 - qubitd_states[1]
+                    qubitu.E[1].state = 1 - qubitu.E[1].state
                 elif rand >= 0.5 and rand < 0.75:
-                    qubitu.E[0].state = 1 - qubitd_states[0]
-                    qubitu.E[1].state = 1 - qubitd_states[1]
+                    qubitu.E[0].state = 1 - qubitu.E[0].state
+                    qubitu.E[1].state = 1 - qubitu.E[1].state
 
 
     def init_pauli(self, pX=0, pZ=0, z=0, **kwargs):
@@ -94,36 +89,40 @@ class toric(go.toric):
             return
 
         for qubitu in self.Q[z].values():
-            qubitd_states = [0,0] if z ==0 else [self.Q[z-1][qubitu.qID].E[n].state for n in range(1)]
+            qubitu.E[0].state, qubitu.E[1].state = (0,0) if z == 0 else (self.Q[z-1][qubitu.qID].E[n].state for n in [0, 1])
 
             if pX != 0 and random.random() < pX:
-                qubitu.E[0].state = 1 - qubitd_states[0]
+                qubitu.E[0].state = 1 - qubitu.E[0].state
             if pZ != 0 and random.random() < pZ:
-                qubitu.E[1].state = 1 - qubitd_states[1]
+                qubitu.E[1].state = 1 - qubitu.E[1].state
+
+        if self.plot: self.plot.plot_errors(z)
+
 
     def measure_stab(self, pmX=0, pmZ=0, z=0, **kwargs):
         """
         The measurement outcomes of the stabilizers, which are the vertices on the self are saved to their corresponding vertex objects. We loop over all vertex objects and over their neighboring edge or qubit objects.
         """
+
         for stab in self.S[z].values():
 
-            for vertex, edge in stab.neighbors.values():
-                if edge.state:
-                    stab.state = 1 - stab.state
+            for dir in self.dirs:
+                if dir in stab.neighbors:
+                    vertex, edge = stab.neighbors[dir]
+                    if edge.state:
+                        stab.parity = 1 - stab.parity
 
             pM = pmX if stab.sID[0] == 0 else pmZ
-
             if pM != 0:
-
                 if z != self.size - 1 and random.random() < pM:
-                    stab.state = 1 - stab.state
-                    stab.meas_error = 1
+                    stab.parity = 1 - stab.parity
 
-                stabd_state = 0 if z == 0 else self.S[z-1][stab.sID[:3]].meas_error
-                if stabd_state:
-                    stab.state = 1 - stab.state
+            stabd_state = 0 if z == 0 else self.S[z-1][stab.sID[:3]].parity
 
+            stab.state = 0 if stabd_state == stab.parity else 1
 
+        if self.plot:
+            self.plot.plot_syndrome(z)
 
 
     def logical_error(self):
@@ -144,23 +143,14 @@ class toric(go.toric):
 
 
 class planar(go.planar, toric):
-    def __repr__(self):
-        numC = 0
-        for cluster in self.C.values():
-            if cluster.parent == cluster:
-                numC += 1
-        numS = len([len(layer) for layer in self.S])
-        numQ = len([len(layer) for layer in self.Q])
-        numB = len([len(layer) for layer in self.B])
-        numG = len(self.G)
-        name = f"3D {self.type} graph object with: {numC} clusters, {numS} stabs, {numQ} qubits, {numB} boundaries, {numG} bridges"
-        return name
+    pass
 
 
 class Bridge(object):
-    def __init__(self, gID):
+    def __init__(self, gID, z=0):
 
-        self.qID = gID       # (td, y, x, z)
+        self.qID = gID       # (td, y, x)
+        self.z = z
         self.erasure = 0
         self.E = go.Edge(self, ertype=gID[0], edge_type=1)
 

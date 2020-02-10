@@ -169,7 +169,7 @@ def multiprocess(
 class decoder_config(object):
     def __init__(self):
 
-        self.plot_load = 0
+        self.plot_load = 1
         self.seed = None
 
         self.decoder = {
@@ -201,12 +201,12 @@ if __name__ == "__main__":
     import graph_3D as go
 
     sim_config = {
-        "ltype" : "toric",
-        "size"  : 3,
+        "ltype" : "planar",
+        "size"  : 4,
         "pX"    : 0.1,
         "pZ"    : 0.0,
         "pE"    : 0.0,
-        "pmX"   : 0.1,
+        "pmX"   : 0.0,
         "pmZ"   : 0.0,
     }
     iters = 50000

@@ -34,12 +34,12 @@ class toric(uf.toric):
                         cluster.add_vertex(new_vertex)
                         eg.new_empty(vertex, new_vertex, cluster)
 
-                        if self.graph.plot and plot_step:
+                        if self.plot and plot_step:
                             self.plot.plot_edge_step(new_edge, "confirm")
                         self.cluster_new_vertex(cluster, vertex, plot_step)
                     else:  # cycle detected, peel edge
                         new_edge.peeled = True
-                        if self.graph.plot and plot_step:
+                        if self.plot and plot_step:
                             self.plot.plot_edge_step(new_edge, "remove")
             else:
                 # Make sure new bound does not lead to self
@@ -60,11 +60,6 @@ class toric(uf.toric):
         It loops over all vertices (randomly if toggled, which produces a different tree), and calls {cluster_new_vertex} to find all connected erasure qubits, and finds the boundary for growth step 1. Afterwards the cluster is placed in a bucket based in its size.
 
         """
-        self.graph.numbuckets = self.graph.size * (self.graph.size // 2 - 1) * 2
-        self.graph.buckets = [[] for _ in range(self.graph.numbuckets)]
-        self.graph.wastebasket = []
-        self.graph.maxbucket = 0
-
         anyons = []
         for layer in self.graph.S.values():
             for vertex in layer.values():
@@ -130,7 +125,7 @@ class toric(uf.toric):
             for cID, string in self.mstr.items():
                 pr.printlog(f"B:\n{string}\nA:\n{pr.print_graph(self.graph, [self.graph.C[cID]], include_even=1, return_string=True)}\n")
 
-        if self.graph.plot and not self.plot_growth:
+        if self.plot and not self.plot_growth:
             self.plot.draw_plot("Clusters merged")
 
 
@@ -179,9 +174,9 @@ class toric(uf.toric):
                     else:
                         node.boundary[0].append(bound)
 
-                    if self.graph.plot: self.plot.add_edge(new_edge, vertex)
+                    if self.plot: self.plot.add_edge(new_edge, vertex)
 
-            if self.graph.plot and self.plot_nodes: self.plot.draw_plot(str(node) + " grown.")
+            if self.plot and self.plot_nodes: self.plot.draw_plot(str(node) + " grown.")
         else:
             node.w += 1
 
@@ -225,7 +220,7 @@ class toric(uf.toric):
 
             elif passive_C is active_C:
                 edge.support -= 1
-                if self.graph.plot: self.plot.add_edge(edge, active_V)
+                if self.plot: self.plot.add_edge(edge, active_V)
 
             else:
                 merging.append((active_V, edge, passive_V))
@@ -265,7 +260,7 @@ class toric(uf.toric):
 
         elif passive_C is active_C:
             edge.support -= 1
-            if self.graph.plot: self.plot.add_edge(edge, active_V)
+            if self.plot: self.plot.add_edge(edge, active_V)
 
         else:
             root_node = eg.adoption(active_V, passive_V, active_C, passive_C)
@@ -293,8 +288,6 @@ class planar(uf.planar, toric):
     ##################################################################################################
     '''
     def find_clusters_boundary(self, *args, **kwargs):
-
-        self.graph.numbuckets = 0
 
         bound_clusters = []
         self.bound_cluster_vertices = []
@@ -345,12 +338,12 @@ class planar(uf.planar, toric):
                             eg.new_empty(vertex, new_vertex, vertex.cluster)
                             self.bound_cluster_edges[vertex.cluster.cID].append(new_edge)
                             self.bound_cluster_vertices[vertex.cluster.cID].append(new_vertex)
-                            if self.graph.plot and self.plot_find:
+                            if self.plot and self.plot_find:
                                 self.plot.plot_edge_step(new_edge, "confirm")
                             new_list.append(new_vertex)
                         else:  # cycle detected, peel edge
                             new_edge.peeled = True
-                            if self.graph.plot and self.plot_find:
+                            if self.plot and self.plot_find:
                                 self.plot.plot_edge_step(new_edge, "remove")
                 else:
                     # Make sure new bound does not lead to self

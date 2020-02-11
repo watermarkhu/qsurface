@@ -1,12 +1,10 @@
-import plot_unionfind as up
 import printing as pr
 
 
 class toric(object):
 
-    def __init__(self, graph=None, plot_config=None, *args, **kwargs):
+    def __init__(self, plot_config=None, *args, **kwargs):
 
-        self.graph = graph
         self.plot_config = plot_config
 
         for key, value in kwargs.items():
@@ -15,8 +13,9 @@ class toric(object):
 
     def decode(self, *args, **kwargs):
 
-        self.plot = up.unionfind_plot(self.graph, **self.plot_config) if self.graph.plot else None
+        self.plot = self.graph.init_uf_plot() if self.graph.gl_plot else None
 
+        self.init_buckets()
         self.find_clusters()
         self.grow_clusters()
         self.peel_clusters()
@@ -70,15 +69,15 @@ class toric(object):
         :param cluster      current cluster
 
         The inputted cluster has undergone a size change, either due to cluster growth or during a cluster merge, in which case the new root cluster is inputted. We increase the appropiate bucket number of the cluster intil the fitting bucket has been reached. The cluster is then appended to that bucket.
-        If the max bucket number has been reached. The cluster is appended to the wastebasket, which will never be selected for growth.
+        If the max bucket number has been reached. The cluster is appended to the wastebucket, which will never be selected for growth.
             """
 
         cluster.bucket = 2 * (cluster.size - 1) + cluster.support
 
-        if (cluster.parity % 2 == 1 and not cluster.on_bound) and cluster.bucket < self.graph.numbuckets:
-            self.graph.buckets[cluster.bucket].append(cluster)
-            if cluster.bucket > self.graph.maxbucket:
-                self.graph.maxbucket = cluster.bucket
+        if (cluster.parity % 2 == 1 and not cluster.on_bound) and cluster.bucket < self.numbuckets:
+            self.buckets[cluster.bucket].append(cluster)
+            if cluster.bucket > self.maxbucket:
+                self.maxbucket = cluster.bucket
         else:
             cluster.bucket = None
 
@@ -103,12 +102,12 @@ class toric(object):
                     if new_vertex.cluster is None:  # if no cycle detected
                         new_edge.support = 2
                         cluster.add_vertex(new_vertex)
-                        if self.graph.plot and plot_step:
+                        if self.plot and plot_step:
                             self.plot.plot_edge_step(new_edge, "confirm")
                         self.cluster_new_vertex(cluster, new_vertex, plot_step)
                     else:  # cycle detected, peel edge
                         new_edge.peeled = True
-                        if self.graph.plot and plot_step:
+                        if self.plot and plot_step:
                             self.plot.plot_edge_step(new_edge, "remove")
             else:
                 # Make sure new bound does not lead to self
@@ -122,17 +121,22 @@ class toric(object):
 
     ##################################################################################################
     '''
+    def init_buckets(self):
+        '''
+        initializes buckets for bucket growth
+        '''
+        self.numbuckets = self.graph.size * (self.graph.size//2)**(self.graph.dim-1) * 2
+        self.buckets = [[] for _ in range(self.numbuckets)]
+        self.wastebucket = []
+        self.maxbucket = 0
+
+
     def find_clusters(self, *args, **kwargs):
         """
         Given a set of erased qubits/edges on a lattice, this functions finds all edges that are connected and sorts them in separate clusters. A single anyon can also be its own cluster.
         It loops over all vertices (randomly if toggled, which produces a different tree), and calls {cluster_new_vertex} to find all connected erasure qubits, and finds the boundary for growth step 1. Afterwards the cluster is placed in a bucket based in its size.
 
         """
-        self.graph.numbuckets = self.graph.size * (self.graph.size // 2 - 1) * 2
-        self.graph.buckets = [[] for _ in range(self.graph.numbuckets)]
-        self.graph.wastebasket = []
-        self.graph.maxbucket = 0
-
         anyons = []
         for layer in self.graph.S.values():
             for vertex in layer.values():
@@ -151,6 +155,7 @@ class toric(object):
                 self.plot.plot_removed()
             self.plot.draw_plot("Clusters initiated.")
 
+
     '''
     ##################################################################################################
 
@@ -167,15 +172,15 @@ class toric(object):
 
         if self.print_steps:
             pr.print_graph(self.graph)
-            self.plot.waitforkeypress() if self.graph.plot else input("Press any key to continue...")
+            self.plot.waitforkeypress() if self.plot else input("Press any key to continue...")
 
-        for bucket_i, bucket in enumerate(self.graph.buckets[start_bucket:], start_bucket):
+        for bucket_i, bucket in enumerate(self.buckets[start_bucket:], start_bucket):
 
-            if bucket_i > self.graph.maxbucket:
+            if bucket_i > self.maxbucket:
                 # Break from upper buckets if top bucket has been reached.
                 if self.plot is not None or self.print_steps:
                     pr.printlog("Max bucket number reached.")
-                    self.plot.waitforkeypress() if self.graph.plot else input()
+                    self.plot.waitforkeypress() if self.plot else input()
                 break
 
             if not bucket:  # no need to check empty bucket
@@ -183,7 +188,7 @@ class toric(object):
 
             if self.print_steps:
                 pr.printlog(
-                "\n############################ GROW ############################" + f"\nGrowing bucket {bucket_i} of {self.graph.maxbucket}: {bucket}" + f"\nRemaining buckets: {self.graph.buckets[bucket_i + 1 : self.graph.maxbucket + 1]}, {self.graph.wastebasket}\n"
+                "\n############################ GROW ############################" + f"\nGrowing bucket {bucket_i} of {self.maxbucket}: {bucket}" + f"\nRemaining buckets: {self.buckets[bucket_i + 1 : self.maxbucket + 1]}, {self.wastebucket}\n"
                 )
                 self.plot.waitforkeypress()
 
@@ -192,13 +197,13 @@ class toric(object):
             if self.print_steps:
                 pr.print_graph(self.graph, printmerged=0)
 
-            if self.graph.plot:
+            if self.plot:
                 self.plot.ax.set_xlabel("")
                 if not self.plot_growth and not self.print_steps:
-                    txt = "" if self.print_steps else f"Growing bucket #{bucket_i}/{self.graph.maxbucket}"
+                    txt = "" if self.print_steps else f"Growing bucket #{bucket_i}/{self.maxbucket}"
                     self.plot.draw_plot(txt)
 
-        if self.graph.plot:
+        if self.plot:
             if self.print_steps:
                 pr.print_graph(self.graph, include_even=1)
             if self.plot_growth:
@@ -234,7 +239,7 @@ class toric(object):
             for cID, string in self.mstr.items():
                 pr.printlog(f"B:\n{string}\nA:\n{pr.print_graph(self.graph, [self.graph.C[cID]], include_even=1, return_string=True)}\n")
 
-        if self.graph.plot and not self.plot_growth:
+        if self.plot and not self.plot_growth:
             self.plot.draw_plot("Clusters merged")
 
 
@@ -253,7 +258,7 @@ class toric(object):
                 else:
                     cluster.boundary[0].append(bound)
 
-                if self.graph.plot: self.plot.add_edge(new_edge, vertex)
+                if self.plot: self.plot.add_edge(new_edge, vertex)
 
         if self.plot_growth: self.plot.draw_plot(str(cluster) + " grown.")
 
@@ -290,7 +295,7 @@ class toric(object):
 
             elif passive_C is active_C:
                 edge.support -= 1
-                if self.graph.plot: self.plot.add_edge(edge, active_V)
+                if self.plot: self.plot.add_edge(edge, active_V)
 
             else:
                 merging.append((active_V, edge, passive_V))
@@ -328,7 +333,7 @@ class toric(object):
 
         elif passive_C is active_C:
             edge.support -= 1
-            if self.graph.plot: self.plot.add_edge(edge, active_V)
+            if self.plot: self.plot.add_edge(edge, active_V)
 
         else:
             if passive_C.size < active_C.size:  # of clusters
@@ -364,7 +369,7 @@ class toric(object):
                     cluster = self.find_cluster_root(vertex.cluster)
                     self.peel_edge(cluster, vertex)
 
-        if self.graph.plot and not self.plot_peel:
+        if self.plot and not self.plot_peel:
             self.plot.plot_removed()
             self.plot.draw_plot("Clusters peeled.")
 
@@ -378,7 +383,7 @@ class toric(object):
 
         If there is only one neighbor of the input vertex that is in the same cluster, this vertex is a pendant vertex and can be peeled. The function calls itself on the other vertex of the edge leaf.
         """
-        plot = True if self.graph.plot and self.plot_peel else False
+        plot = True if self.plot and self.plot_peel else False
         num_connect = 0
 
         for (NV, NE) in vertex.neighbors.values():
@@ -393,8 +398,11 @@ class toric(object):
         if num_connect == 1:
             edge.peeled = True
             if vertex.state:
-                decode_edge = self.graph.Q[self.graph.decode_layer][edge.qubit.qID].E[edge.ertype]
-                decode_edge.state = not decode_edge.state
+
+                if edge.edge_type == 0:
+                    decode_edge = self.graph.Q[self.graph.decode_layer][edge.qubit.qID].E[edge.ertype]
+                    decode_edge.state = not decode_edge.state
+
                 edge.matching = True
                 vertex.state = False
                 new_vertex.state = not new_vertex.state
@@ -413,14 +421,15 @@ class planar(toric):
 
     def decode(self, *args, **kwargs):
 
-        self.plot = up.unionfind_plot(self.graph, **self.plot_config) if self.graph.plot else None
+        self.plot = self.graph.init_uf_plot() if self.graph.gl_plot else None
 
+        self.init_buckets()
         self.find_clusters_boundary()
         self.find_clusters()
         self.grow_clusters()
         self.peel_clusters()
 
-    '''
+    '''s
     ##################################################################################################
 
                                             UNION-FIND funtions
@@ -454,8 +463,6 @@ class planar(toric):
     ##################################################################################################
     '''
     def find_clusters_boundary(self, *args, **kwargs):
-
-        self.graph.numbuckets = 0
 
         bound_clusters = []
         self.bound_cluster_vertices = []
@@ -505,12 +512,12 @@ class planar(toric):
                             vertex.cluster.add_vertex(new_vertex)
                             self.bound_cluster_edges[vertex.cluster.cID].append(new_edge)
                             self.bound_cluster_vertices[vertex.cluster.cID].append(new_vertex)
-                            if self.graph.plot and self.plot_find:
+                            if self.plot and self.plot_find:
                                 self.plot.plot_edge_step(new_edge, "confirm")
                             new_list.append(new_vertex)
                         else:  # cycle detected, peel edge
                             new_edge.peeled = True
-                            if self.graph.plot and self.plot_find:
+                            if self.plot and self.plot_find:
                                 self.plot.plot_edge_step(new_edge, "remove")
                 else:
                     # Make sure new bound does not lead to self
@@ -534,6 +541,6 @@ class planar(toric):
         passive_C = self.find_cluster_root(passive_V.cluster)
         if active_C.on_bound and (passive_V.type == 1 or (passive_C is not None and passive_C.on_bound)):
             edge.support -= 1
-            if self.graph.plot: self.plot.add_edge(edge, active_V)
+            if self.plot: self.plot.add_edge(edge, active_V)
         else:
             super().fully_grown_edge_choises(active_V, edge, passive_V, *args, **kwargs)

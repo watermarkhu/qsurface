@@ -23,11 +23,11 @@ def apply_random_seed(seed=None, **kwargs):
 
 def lattice_type(type, config, dec, go, size):
     if type == "toric":
-        decoder = dec.toric(plot_config=config.plot, **config.decoder)
-        graph = go.toric(size, decoder, config.plot_load, config.plot)
+        decoder = dec.toric(**config.decoder, plot_config=config.plot)
+        graph = go.toric(size, decoder, config.plotting, config.plot)
     elif type == "planar":
-        decoder = dec.planar(plot_config=config.plot, **config.decoder)
-        graph = go.planar(size, decoder, config.plot_load, config.plot)
+        decoder = dec.planar(**config.decoder, plot_config=config.plot)
+        graph = go.planar(size, decoder, config.plotting, config.plot)
     return decoder, graph
 
 
@@ -169,17 +169,17 @@ def multiprocess(
 class decoder_config(object):
     def __init__(self):
 
-        self.plot_load = 1
+        self.plotting = 1
         self.seed = None
 
         self.decoder = {
             "random_order"  : 0,
             "random_traverse":0,
             "print_steps"   : 0,
-            "plot_find"     : 0,
-            "plot_growth"   : 0,
-            "plot_peel"     : 0,
-            "plot_nodes"    : 0,
+            "plot_find"     : 1,
+            "plot_growth"   : 1,
+            "plot_peel"     : 1,
+            "plot_nodes"    : 1,
         }
 
         self.file = {
@@ -197,7 +197,7 @@ class decoder_config(object):
 
 if __name__ == "__main__":
 
-    import dec_mwpm as decoder
+    import unionfind_evengrow_integrated as decoder
     import graph_3D as go
 
     sim_config = {
@@ -206,7 +206,7 @@ if __name__ == "__main__":
         "pX"    : 0.1,
         "pZ"    : 0.0,
         "pE"    : 0.0,
-        "pmX"   : 0.0,
+        "pmX"   : 0.1,
         "pmZ"   : 0.0,
     }
     iters = 50000

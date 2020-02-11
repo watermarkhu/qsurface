@@ -1,30 +1,39 @@
 import graph_2D as go
-import plot_graph_lattice as pg
+import plot_graph_lattice as pgl
+import plot_unionfind as puf
 import random
 
 
 class toric(go.toric):
 
-    def __init__(self, size, decoder, plot_load=False, plot_config=None, type="toric", *args, **kwargs):
-        super().__init__(size, decoder, type=type, *args, **kwargs)
+    def __init__(self, size, decoder, plotting=0, plot_config={}, *args, **kwargs):
+        super().__init__(size, decoder, *args, **kwargs)
 
+        self.dim = 3
         self.decode_layer = self.size - 1
         self.G = {}
 
         for z in range(1, self.size):
+
             self.init_graph_layer(z=z)
+            self.G[z] = {}
 
             for vU, vD in zip(self.S[z].values(), self.S[z-1].values()):
-                bridge = self.G[vU.sID] = Bridge(gID=vU.sID, z=z)
+                bridge = self.G[z][vU.sID] = Bridge(qID=vU.sID, z=z)
 
                 vU.neighbors["d"] = (vD, bridge.E)
                 vD.neighbors["u"] = (vU, bridge.E)
 
-        self.plot = pg.plot_3D(self, **plot_config) if plot_load else None
+        self.plot_config = plot_config
+        self.gl_plot = pgl.plot_3D(self, **plot_config) if plotting else None
 
+    def init_uf_plot(self):
+
+        self.uf_plot = puf.plot_3D(self, **self.plot_config)
+        return self.uf_plot
 
     def __repr__(self):
-        return f"3D {self.type} graph object"
+        return f"3D {self.__class__.__name__} graph object"
 
     '''
     ########################################################################################
@@ -40,13 +49,21 @@ class toric(go.toric):
         for z in self.range[:-1]:
 
             self.init_erasure(pE=pE, z=z)
-            self.init_pauli(pX=pX, pZ=pZ, z=z)
+            self.init_pauli(pX=pX, pZ=pZ, pE=pE, z=z)
             self.measure_stab(pmX=pmX, pmZ=pmZ, z=z)
 
         self.init_erasure(pE=pE, z=z+1)
         self.init_pauli(pX=pX, pZ=pZ, z=z+1)
         self.measure_stab(pmX=0, pmZ=0, z=z+1)
 
+        if self.gl_plot:
+
+            for z in self.range:
+                self.gl_plot.plot_erasures(z)
+                self.gl_plot.plot_errors(z)
+                self.gl_plot.plot_syndrome(z)
+
+            self.gl_plot.draw_plot("Errors and syndromes plotted")
 
 
     def init_erasure(self, pE=0, z=0, **kwargs):
@@ -76,7 +93,7 @@ class toric(go.toric):
                     qubitu.E[1].state = 1 - qubitu.E[1].state
 
 
-    def init_pauli(self, pX=0, pZ=0, z=0, **kwargs):
+    def init_pauli(self, pX=0, pZ=0, pE=0, z=0, **kwargs):
         """
         :param pX           probability of a Pauli X error
         :param pZ           probability of a Pauli Z error
@@ -89,14 +106,14 @@ class toric(go.toric):
             return
 
         for qubitu in self.Q[z].values():
-            qubitu.E[0].state, qubitu.E[1].state = (0,0) if z == 0 else (self.Q[z-1][qubitu.qID].E[n].state for n in [0, 1])
+
+            if pE == 0:
+                qubitu.E[0].state, qubitu.E[1].state = (0,0) if z == 0 else (self.Q[z-1][qubitu.qID].E[n].state for n in [0, 1])
 
             if pX != 0 and random.random() < pX:
                 qubitu.E[0].state = 1 - qubitu.E[0].state
             if pZ != 0 and random.random() < pZ:
                 qubitu.E[1].state = 1 - qubitu.E[1].state
-
-        if self.plot: self.plot.plot_errors(z)
 
 
     def measure_stab(self, pmX=0, pmZ=0, z=0, **kwargs):
@@ -121,9 +138,6 @@ class toric(go.toric):
 
             stab.state = 0 if stabd_state == stab.parity else 1
 
-        if self.plot:
-            self.plot.plot_syndrome(z)
-
 
     def logical_error(self):
         return super().logical_error(z=self.size-1)
@@ -138,24 +152,26 @@ class toric(go.toric):
 
     def reset(self):
         super().reset()
-        for bridge in self.G.values():
-            bridge.reset()
+        for layer in self.G.values():
+            for bridge in layer.values():
+                bridge.reset()
 
 
-class planar(go.planar, toric):
-    pass
+class planar(toric, go.planar):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
 
 
 class Bridge(object):
-    def __init__(self, gID, z=0):
+    def __init__(self, qID, z=0):
 
-        self.qID = gID       # (td, y, x)
+        self.qID = qID       # (ertype, y, x)
         self.z = z
         self.erasure = 0
-        self.E = go.Edge(self, ertype=gID[0], edge_type=1)
+        self.E = go.Edge(self, ertype=qID[0], edge_type=1, z=z)
 
     def __repr__(self):
-        return "g({},{},{}:{})".format(*self.gID[1:], self.gID[0])
+        return "g({},{},{}:{})".format(*self.qID[1:], self.qID[0])
 
     def reset(self):
         self.E.reset()

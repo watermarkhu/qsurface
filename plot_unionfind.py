@@ -1,40 +1,10 @@
 import matplotlib.pyplot as plt
-from matplotlib.lines import Line2D
+import plot_graph_lattice as gp
 import printing as pr
 
-class unionfind_plot:
-    def __init__(
-        self, graph, axn=2, plot_size=10, line_width=0.5, plotstep_click=False
-    ):
+class plot_2D(gp.plot_2D):
 
-        self.size = graph.size
-        self.graph = graph
-        self.plot_size = plot_size
-
-        self.cl = [0.2, 0.2, 0.2]  # Line color
-        self.cx = [0.9, 0.3, 0.3]  # X error color
-        self.cz = [0.5, 0.5, 0.9]  # Z error color
-        self.Cx = [0.5, 0.1, 0.1]
-        self.Cz = [0.1, 0.1, 0.5]
-        self.cX = [0.9, 0.7, 0.3]
-        self.cZ = [0.3, 0.9, 0.3]
-
-        self.C1 = [self.cx, self.cz]
-        self.C2 = [self.cX, self.cZ]
-        self.LS = ["-", "--"]
-
-        self.alpha = 0.3
-
-        self.qsize = 0.1
-        self.lw = line_width
-        self.plotstep_click = plotstep_click
-
-        self.f = plt.figure(figsize=(self.plot_size, self.plot_size))
-
-        self.init_plot()
-
-    def init_plot(self):
-
+    def init_plot(self, z=0):
 
         plt.figure(self.f.number)
         plt.ion()
@@ -47,34 +17,11 @@ class unionfind_plot:
         self.canvas = self.f.canvas
         self.text = self.ax.text(0.5, 0, "", fontsize=10, va ="top", ha="center", transform=self.ax.transAxes)
 
-        self.edges = {}
-        self.vertices = {}
-
         # Initate legend
-        le_xv = Line2D(
-            [0],
-            [0],
-            lw=0,
-            marker="o",
-            color="w",
-            mew=0,
-            mfc=self.cx,
-            ms=10,
-            label="X-vertex",
-        )
-        le_zv = Line2D(
-            [0],
-            [0],
-            lw=0,
-            marker="o",
-            color="w",
-            mew=0,
-            mfc=self.cz,
-            ms=10,
-            label="Z-vertex",
-        )
-        le_xe = Line2D([0], [0], ls="-", lw=self.lw, color=self.cx, label="X-edge")
-        le_ze = Line2D([0], [0], ls="--", lw=self.lw, color=self.cz, label="Z-edge")
+        le_xv = self.legend_circle("X-vertex", mew=0, mfc=self.cx)
+        le_zv = self.legend_circle("Z-vertex", mew=0, mfc=self.cz)
+        le_xe = self.legend_circle("X-edge", lw=self.lw, color=self.cx)
+        le_ze = self.legend_circle("Z-edge", ls="--", lw=self.lw, color=self.cz)
         self.ax.legend(
             handles=[le_xv, le_zv, le_xe, le_ze],
             bbox_to_anchor=(1.25, 0.95),
@@ -85,16 +32,16 @@ class unionfind_plot:
         # Initate plot
         plt.sca(self.ax)
 
-        for qubit in self.graph.Q[0].values():
+        for qubit in self.graph.Q[z].values():
             self.draw_edge0(qubit)
             self.draw_edge1(qubit)
 
-        for stab in self.graph.S[0].values():
+        for stab in self.graph.S[z].values():
             self.draw_vertex(stab)
 
-        self.canvas.draw()
         pr.printlog("Peeling lattice initiated.")
         self.waitforkeypress()
+
 
 
     def draw_edge0(self, qubit):
@@ -116,11 +63,11 @@ class unionfind_plot:
 
         pxm, pym = (x0 + px1)/2,  (y0 + py1)/2
 
-        color, alpha = (self.C1[0], 1) if qubit.erasure else (self.cl, self.alpha)
+        color, alpha = (self.C1[0], 1) if qubit.erasure else (self.cl, self.alpha2)
 
-        up1 = self.ax.plot([x0,  pxm], [y0,  pym], c=color, lw=self.lw, ls=self.LS[0], alpha=alpha)
-        up2 = self.ax.plot([pxm, px1], [pym, py1], c=color, lw=self.lw, ls=self.LS[0], alpha=alpha)
-        qubit.E[0].pu = [up1[0], up2[0]]
+        up1 = self.draw_line([x0,  pxm], [y0,  pym], Z=qubit.z, color=color, lw=self.lw, ls=self.LS[0], alpha=alpha)
+        up2 = self.draw_line([pxm,  px1], [pym,  py1], Z=qubit.z, color=color, lw=self.lw, ls=self.LS[0], alpha=alpha)
+        qubit.E[0].pu = [up1, up2]
 
 
     def draw_edge1(self, qubit):
@@ -148,12 +95,12 @@ class unionfind_plot:
 
         sxm, sym = (x0 + sx1)/2,  (y0 + sy1)/2
 
-        color, alpha = (self.C1[1], 1) if qubit.erasure else (self.cl, self.alpha)
+        color, alpha = (self.C1[1], 1) if qubit.erasure else (self.cl, self.alpha2)
 
-        up1 = self.ax.plot([x0,  sxm], [y0,  sym], c=color, lw=self.lw, ls=self.LS[1], alpha=alpha)
-        up2 = self.ax.plot([sxm, sx1], [sym, sy1], c=color, lw=self.lw, ls=self.LS[1], alpha=alpha)
+        up1 = self.draw_line([x0,  sxm], [y0,  sym], Z=qubit.z, color=color, lw=self.lw, ls=self.LS[1], alpha=alpha)
+        up2 = self.draw_line([sxm,  sx1], [sym,  sy1], Z=qubit.z, color=color, lw=self.lw, ls=self.LS[1], alpha=alpha)
+        qubit.E[1].pu = [up1, up2]
 
-        qubit.E[1].pu = [up1[0], up2[0]]
 
     def draw_vertex(self, stab):
 
@@ -162,16 +109,11 @@ class unionfind_plot:
             y += 0.5
             x += 0.5
 
-        if stab.state:
-            fill = True
-            lw = self.lw
-        else:
-            fill = False
-            lw = 0
+        fill, lw = (1, self.lw) if stab.state else (0,0)
 
         stab.pu = plt.Circle(
             (x, y),
-            self.qsize,
+            self.qsizeU,
             facecolor=self.C2[ertype],
             linewidth=lw,
             edgecolor=self.C1[ertype],
@@ -180,18 +122,6 @@ class unionfind_plot:
         )
         self.ax.add_artist(stab.pu)
 
-
-    def draw_plot(self, txt=None):
-        if txt is not None:
-            self.text.set_text(txt)
-            pr.printlog(txt)
-        self.canvas.draw()
-        if self.plotstep_click: self.waitforkeypress()
-
-    def waitforkeypress(self):
-        keyboardClick = False
-        while not keyboardClick:
-            keyboardClick = plt.waitforbuttonpress(120)
 
     """
     ________________________________________________________________________________
@@ -208,7 +138,7 @@ class unionfind_plot:
         self.ax.draw_artist(p_edge)
 
 
-    def plot_removed(self):
+    def plot_removed(self, z=0):
         """
         :param rem_list         list of edges
         plots the normal edge color over the edges that have been removed during the formation of the tree structure
@@ -216,29 +146,27 @@ class unionfind_plot:
         """
         plt.sca(self.ax)
 
-        for qubit in self.graph.Q[0].values():
+        for qubit in self.graph.Q[z].values():
             for edge in [qubit.E[0], qubit.E[1]]:
                 if edge.peeled and not edge.matching:
-                    self.plot_edge(edge, 0, self.cl ,self.alpha)
-                    self.plot_edge(edge, 1, self.cl ,self.alpha)
+                    self.plot_edge(edge, 0, self.cl ,self.alpha2)
+                    self.plot_edge(edge, 1, self.cl ,self.alpha2)
 
 
     def add_edge(self, edge, vertex):
 
-        plt.figure(self.f.number)
+        plt.sca(self.ax)
 
         if edge.support == 1:
-
             (ye, xe) = edge.qubit.qID[1:3]
             (yv, xv) = vertex.sID[1:3]
             id = 0 if (ye == yv and xe == xv) else 1
             color = self.Cx if edge.ertype ==0 else self.Cz
-            self.plot_edge(edge, id, color, 0.5)
-            self.plot_edge(edge, 1-id, self.cl ,self.alpha)
+            self.plot_edge(edge, id, color, self.alpha)
+            self.plot_edge(edge, 1-id, self.cl ,self.alpha2)
 
         else:
             color = self.cx if edge.ertype == 0 else self.cz
-
             self.plot_edge(edge, 0, color, 1)
             self.plot_edge(edge, 1, color, 1)
 
@@ -259,8 +187,8 @@ class unionfind_plot:
         if type == "remove":
             c1 = self.cl
             c2 = self.cl
-            text = "❌ remove"
-            alpha = self.alpha
+            text = "❌remove"
+            alpha = self.alpha2
         elif type == "confirm":
             c1 = self.cx
             c2 = self.cz
@@ -270,7 +198,7 @@ class unionfind_plot:
             c1 = self.cl
             c2 = self.cl
             text = "❌ peeling"
-            alpha = self.alpha
+            alpha = self.alpha2
         elif type == "match":
             c1 = self.cX
             c2 = self.cZ
@@ -281,11 +209,9 @@ class unionfind_plot:
 
         self.plot_edge(edge, 0, "k", 1)
         self.plot_edge(edge, 1, "k", 1)
-        self.canvas.draw()
 
         line = text + " edge " + str(edge)
-        pr.printlog(line)
-        if self.plotstep_click: self.waitforkeypress()
+        self.draw_plot(line)
 
         color = c1 if edge.ertype == 0 else c2
         self.plot_edge(edge, 0, color, alpha)
@@ -305,4 +231,147 @@ class unionfind_plot:
 
         self.ax.draw_artist(stab.pu)
 
-        self.canvas.draw()
+
+class plot_3D(plot_2D, gp.plot_3D):
+
+    def init_plot(self, *args, **kwargs):
+        '''
+        Initializes 3D plot of toric/planar lattice
+        Stabilizers are plotted with Axes3D.line objects
+        Qubits are plotted with Axes3D.scatter objects
+        '''
+
+        plt.figure(self.f.number)
+        self.canvas = self.f.canvas
+        plt.ion()
+        plt.cla()
+
+        self.ax = plt.axes(projection='3d', label="main")
+        self.ax.set_axis_off()
+
+        for layer in self.graph.Q.values():
+            for qubit in layer.values():
+                self.draw_edge0(qubit)
+                self.draw_edge1(qubit)
+
+        for layer in self.graph.G.values():
+            for bridge in layer.values():
+                self.draw_bridge(bridge)
+
+        self.scatter = {}
+        for z, layer in self.graph.S.items():
+            X, Y, fC, eC, i, stab_locs = [], [], [], [], 0, {}
+
+            for stab in layer.values():
+
+                (ertype, y, x) = stab.sID
+
+                if ertype == 0:
+                    X.append(x)
+                    Y.append(y)
+                else:
+                    X.append(x+.5)
+                    Y.append(y+.5)
+
+                if stab.state:
+                    fC.append(self.C2[ertype] + [1])
+                    eC.append(self.C1[ertype] + [1])
+                else:
+                    fC.append([0, 0, 0, 0])
+                    eC.append([0, 0, 0, 0])
+
+                stab_locs[stab.sID] = i
+                i += 1
+
+            self.scatter[z] = {
+                "plot"  : None,
+                "locs"  : stab_locs,
+                "fC"    : fC,
+                "eC"    : eC,
+                "X"     : X,
+                "Y"     : Y,
+                "Z"     : z
+            }
+            self.plot_scatter(z)
+
+        self.set_axes_equal()
+        self.draw_plot("Peeling lattice plotted.")
+
+
+    def plot_scatter(self, z):
+        '''
+        Axes3D.scatter objects do not update color using set_color() function after blitting.
+        Workaround is to remove entire scatter object from the plot and plotting a new scatter object with correct colors.
+        '''
+
+        X = self.scatter[z]["X"]
+        Y = self.scatter[z]["Y"]
+        Z = self.scatter[z]['Z']
+        F = self.scatter[z]["fC"]
+        E = self.scatter[z]["eC"]
+
+        if self.scatter[z]["plot"]:
+            self.scatter[z]["plot"].remove()
+
+        self.scatter[z]["plot"] = self.ax.scatter(X, Y, Z, s=self.scatter_size, facecolor=F, edgecolor=E)
+
+
+    def draw_bridge(self, bridge):
+
+        (ertype, y, x), z = bridge.qID, bridge.z
+        if ertype == 1:
+            y += 0.5
+            x += 0.5
+
+        up1 = self.draw_line([x,  x], [y,  y], Z=[z, z-.5], color=self.cl, lw=self.lw, ls=self.LS[ertype], alpha=self.alpha2)
+        up2 = self.draw_line([x,  x], [y,  y], Z=[z-.5, z-1], color=self.cl, lw=self.lw, ls=self.LS[ertype], alpha=self.alpha2)
+
+        bridge.E.pu = [up1, up2]
+
+
+    def plot_removed(self):
+        for z in self.graph.Q:
+            super().plot_removed(z)
+        for z in self.graph.G:
+            for bridge in self.graph.G[z].values():
+                edge = bridge.E
+                if edge.peeled and not edge.matching:
+                    self.plot_edge(edge, 0, self.cl ,self.alpha)
+                    self.plot_edge(edge, 1, self.cl ,self.alpha)
+
+
+    def add_edge(self, edge, vertex):
+
+        if edge.support == 1:
+            (ye, xe), ze = edge.qubit.qID[1:3], edge.z
+            (yv, xv), zv = vertex.sID[1:3], vertex.z
+
+            if edge.edge_type == 0:
+                id = 0 if (ye == yv and xe == xv) else 1
+            else:
+                id = 0 if ze == zv else 1
+            color = self.Cx if edge.ertype ==0 else self.Cz
+            self.plot_edge(edge, id, color, self.alpha)
+            self.plot_edge(edge, 1-id, self.cl, self.alpha2)
+        else:
+            color = self.cx if edge.ertype == 0 else self.cz
+            self.plot_edge(edge, 0, color, 1)
+            self.plot_edge(edge, 1, color, 1)
+
+
+    def plot_strip_step_anyon(self, stab):
+        """
+        plot function for the flips of the anyons
+        plots the anyon in white (removal) or normal error edge color (addition)
+        """
+
+        loc = self.scatter[stab.z]["locs"][stab.sID]
+        ertype = stab.sID[0]
+
+
+        if stab.state:
+            self.scatter[stab.z]["eC"][loc] = self.C1[ertype] + [1]
+        else:
+            self.scatter[stab.z]["eC"][loc] = [0, 0, 0, 0]
+
+        self.plot_scatter(stab.z)

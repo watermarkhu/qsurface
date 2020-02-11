@@ -1,4 +1,5 @@
-import plot_graph_lattice as pg
+import plot_graph_lattice as pgl
+import plot_unionfind as puf
 import random
 
 
@@ -22,9 +23,8 @@ class toric(object):
 
     """
 
-    def __init__(self, size, decoder, plot_load=False, plot_config=None, type="toric", *args, **kwargs):
+    def __init__(self, size, decoder, plotting=0, plot_config={}, *args, **kwargs):
 
-        self.type = type
         self.size = size
         self.range = range(size)
         self.decoder = decoder
@@ -34,13 +34,19 @@ class toric(object):
         self.S = {}
         self.Q = {}
         self.cID = 0
+        self.dim = 2
 
         self.init_graph_layer()
 
-        self.plot = pg.plot_2D(self, **plot_config) if plot_load else None
+        self.plot_config = plot_config
+        self.gl_plot = pgl.plot_2D(self, **plot_config) if plotting else None
 
     def __repr__(self):
-        return f"2D {self.type} graph object with"
+        return f"2D {self.__class__.__name__} graph object with"
+
+    def init_uf_plot(self):
+        self.uf_plot = puf.plot_2D(self, **self.plot_config)
+        return self.uf_plot
 
     '''
     ########################################################################################
@@ -103,7 +109,7 @@ class toric(object):
                     qubit.E[0].state = 1
                     qubit.E[1].state = 1
 
-        if self.plot: self.plot.plot_erasures()
+        if self.gl_plot: self.gl_plot.plot_erasures()
 
 
     def init_pauli(self, pX=0, pZ=0, **kwargs):
@@ -122,7 +128,7 @@ class toric(object):
                 if pZ != 0 and random.random() < pZ:
                     qubit.E[1].state = 1
 
-        if self.plot: self.plot.plot_errors()
+        if self.gl_plot: self.gl_plot.plot_errors()
 
 
     def measure_stab(self, **kwargs):
@@ -137,7 +143,7 @@ class toric(object):
                         stab.parity = 1 - stab.parity
                     stab.state = stab.parity
 
-        if self.plot: self.plot.plot_syndrome()
+        if self.gl_plot: self.gl_plot.plot_syndrome()
 
 
     def logical_error(self, z=0):
@@ -146,7 +152,7 @@ class toric(object):
         Finds whether there are any logical errors on the lattice/self. The logical error is returned as [Xvertical, Xhorizontal, Zvertical, Zhorizontal], where each item represents a homological Loop
         """
 
-        if self.plot: self.plot.plot_final()
+        if self.gl_plot: self.gl_plot.plot_final()
 
         logical_error = [0, 0, 0, 0]
 
@@ -217,8 +223,7 @@ class toric(object):
 class planar(toric):
     def __init__(self, *args, **kwargs):
         self.B = {}
-        super().__init__(type="planar", *args, **kwargs)
-
+        super().__init__(*args, **kwargs)
 
     def init_graph_layer(self, z=0):
 
@@ -261,9 +266,9 @@ class planar(toric):
 
     def logical_error(self, z=0):
 
-        if self.plot: self.plot.plot_final()
+        if self.gl_plot: self.gl_plot.plot_final()
 
-        logical_error = [False, False]
+        logical_error = [0, 0]
 
         for i in self.range:
             if self.Q[z][(0, i, 0)].E[0].state:
@@ -409,7 +414,7 @@ class Qubit(object):
         self.qID = qID       # (y, x, z, td)
         self.z = z
         self.erasure = 0
-        self.E = [Edge(self, ertype=0), Edge(self, ertype=1)]
+        self.E = [Edge(self, ertype=0, z=z), Edge(self, ertype=1, z=z)]
 
     def __repr__(self):
         return "q({},{}:{}|{})".format(*self.qID[1:], self.qID[0], self.z)
@@ -434,8 +439,9 @@ class Edge(object):
     def __init__(self, qubit, ertype, z=0, edge_type=0):
         # fixed parameters
         self.qubit = qubit
-        self.z = 0
         self.ertype = ertype
+        self.z = z
+        self.edge_type = edge_type
         if edge_type == 0:
             self.orientation = "-" if self.ertype == self.qubit.qID[0] else "|"
         else:

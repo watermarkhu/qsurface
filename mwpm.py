@@ -34,7 +34,7 @@ class toric(object):
         self.get_matching()
         self.apply_matching()
 
-        if self.graph.plot: self.graph.plot.plot_lines(self.matching)
+        if self.graph.gl_plot: self.graph.gl_plot.plot_lines(self.matching)
 
 
     def get_stabs(self):
@@ -130,7 +130,7 @@ class planar(toric):
         self.get_matching()
         self.remove_virtual()
         self.apply_matching()
-        if self.graph.plot: self.graph.plot.plot_lines(self.matching)
+        if self.graph.gl_plot: self.graph.gl_plot.plot_lines(self.matching)
 
 
     def get_stabs(self):

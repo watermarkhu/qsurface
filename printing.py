@@ -24,7 +24,7 @@ def print_graph(graph, clusters=None, prestring="", poststring=None, printmerged
             if cluster.parent == cluster:
                 string += prestring + f"{cluster} (S{cluster.support},"
                 string += f"B{cluster.bucket}" if cluster.bucket is not None else "B_"
-                string += f",{cluster.on_bound})" if graph.type == "planar" else ")"
+                string += f",{cluster.on_bound})" if graph.__class__.__name__ == "planar" else ")"
 
                 if cluster.cID != clusters[-1].cID: string += "\n"
             elif printmerged:

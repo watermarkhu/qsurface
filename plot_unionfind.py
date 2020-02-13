@@ -4,6 +4,21 @@ import printing as pr
 
 class plot_2D(gp.plot_2D):
 
+    def init_legend(self, x, y, loc="upper right"):
+
+        self.ax.set_title("{} uf-lattice".format(self.graph.__class__.__name__))
+
+        le_xv = self.legend_circle("X-vertex", mew=0, mfc=self.cX)
+        le_zv = self.legend_circle("Z-vertex", mew=0, mfc=self.cZ)
+        le_xe = self.legend_circle("X-edge", lw=self.lw, color=self.cx, marker=None)
+        le_ze = self.legend_circle("Z-edge", ls="--", lw=self.lw, color=self.cz, marker=None)
+        self.ax.legend(
+            handles=[le_xv, le_zv, le_xe, le_ze],
+            bbox_to_anchor=(x, y),
+            loc=loc,
+            ncol=1,
+    )
+
     def init_plot(self, z=0):
 
         plt.figure(self.f.number)
@@ -18,16 +33,7 @@ class plot_2D(gp.plot_2D):
         self.text = self.ax.text(0.5, 0, "", fontsize=10, va ="top", ha="center", transform=self.ax.transAxes)
 
         # Initate legend
-        le_xv = self.legend_circle("X-vertex", mew=0, mfc=self.cx)
-        le_zv = self.legend_circle("Z-vertex", mew=0, mfc=self.cz)
-        le_xe = self.legend_circle("X-edge", lw=self.lw, color=self.cx)
-        le_ze = self.legend_circle("Z-edge", ls="--", lw=self.lw, color=self.cz)
-        self.ax.legend(
-            handles=[le_xv, le_zv, le_xe, le_ze],
-            bbox_to_anchor=(1.25, 0.95),
-            loc="upper right",
-            ncol=1,
-        )
+        self.init_legend(1.25, 0.95)
 
         # Initate plot
         plt.sca(self.ax)
@@ -241,13 +247,7 @@ class plot_3D(plot_2D, gp.plot_3D):
         Qubits are plotted with Axes3D.scatter objects
         '''
 
-        plt.figure(self.f.number)
-        self.canvas = self.f.canvas
-        plt.ion()
-        plt.cla()
-
-        self.ax = plt.axes(projection='3d', label="main")
-        self.ax.set_axis_off()
+        self.init_axis(1, 1, 1, 0, 0, 0)
 
         for layer in self.graph.Q.values():
             for qubit in layer.values():
@@ -294,26 +294,9 @@ class plot_3D(plot_2D, gp.plot_3D):
             }
             self.plot_scatter(z)
 
+        self.init_legend(1.05, 0.95)
         self.set_axes_equal()
         self.draw_plot("Peeling lattice plotted.")
-
-
-    def plot_scatter(self, z):
-        '''
-        Axes3D.scatter objects do not update color using set_color() function after blitting.
-        Workaround is to remove entire scatter object from the plot and plotting a new scatter object with correct colors.
-        '''
-
-        X = self.scatter[z]["X"]
-        Y = self.scatter[z]["Y"]
-        Z = self.scatter[z]['Z']
-        F = self.scatter[z]["fC"]
-        E = self.scatter[z]["eC"]
-
-        if self.scatter[z]["plot"]:
-            self.scatter[z]["plot"].remove()
-
-        self.scatter[z]["plot"] = self.ax.scatter(X, Y, Z, s=self.scatter_size, facecolor=F, edgecolor=E)
 
 
     def draw_bridge(self, bridge):

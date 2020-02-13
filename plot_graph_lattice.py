@@ -35,7 +35,7 @@ class plot_2D:
         self.cZ = [0.3, 0.9, 0.3]  # Z quasiparticle color
         self.Cx = [0.5, 0.1, 0.1]
         self.Cz = [0.1, 0.1, 0.5]
-        self.cE = [0.3, 0.5, 0.9]  # Erasure color
+        self.cE = [0.9, 0.3, 0.7]  # Erasure color
         self.C1 = [self.cx, self.cz]
         self.C2 = [self.cX, self.cZ]
         self.LS = ["-", "--"]
@@ -47,6 +47,7 @@ class plot_2D:
         self.f = plt.figure(figsize=(self.plot_size, self.plot_size))
 
         self.init_plot(z)
+
 
     def draw_plot(self, txt=None):
         if txt is not None:
@@ -75,6 +76,23 @@ class plot_2D:
             label=label,
         )
 
+
+    def init_legend(self, x, y, items=[], loc="upper right"):
+
+        self.ax.set_title("{} lattice".format(self.graph.__class__.__name__))
+
+        le_qubit    = self.legend_circle("Qubit", mfc=self.cc, mec=self.cc)
+        le_xer      = self.legend_circle("X-error", mfc=self.cx, mec=self.cx)
+        le_zer      = self.legend_circle("Y-error", mfc=self.cz, mec=self.cz)
+        le_yer      = self.legend_circle("Z-error", mfc=self.cy, mec=self.cy)
+        le_ver      = self.legend_circle("Vertex", ls="-", lw=self.lw, color=self.cX, mfc=self.cX, mec=self.cX, marker="|")
+        le_pla      = self.legend_circle("Plaquette", ls="--", lw=self.lw, color=self.cZ, mfc=self.cZ, mec=self.cZ, marker="|")
+
+        self.lh = [le_qubit, le_xer, le_zer, le_yer, le_ver, le_pla] + items
+
+        self.ax.legend(handles=self.lh, bbox_to_anchor=(x, y), loc=loc, ncol=1)
+
+
     def init_plot(self, z=0):
         '''
         param: z        z layer to plot, defaults to 0
@@ -96,23 +114,6 @@ class plot_2D:
         self.ax.set_aspect("equal")
         self.text = self.ax.text(0.5, 0, "", fontsize=10, va ="top", ha="center", transform=self.ax.transAxes)
 
-        # Initate legend
-        le_qubit    = self.legend_circle("Qubit", mfc="w")
-        le_xer      = self.legend_circle("X-error", mfc=self.cx)
-        le_zer      = self.legend_circle("Y-error", mfc=self.cz)
-        le_yer      = self.legend_circle("Z-error", mfc=self.cy)
-        le_err      = self.legend_circle("Erasure", mfc="w", marker="$\u25CC$", mec=self.cE, mew=1, ms=12)
-        le_ver      = self.legend_circle("Vertex", ls="-", lw=self.lw, color=self.cX)
-        le_pla      = self.legend_circle("Plaquette", ls="--", lw=self.lw, color=self.cZ)
-        self.lh = [le_qubit, le_xer, le_zer, le_yer, le_err, le_ver, le_pla]
-
-        legend = plt.legend(
-            handles=self.lh, bbox_to_anchor=(-0.25, 0.95), loc="upper left", ncol=1
-        )
-        self.ax.add_artist(legend)
-
-        # Plot empty lattice
-        # Loop over all indices
 
         # Plot stabilizers
         for stab in self.graph.S[z].values():
@@ -127,6 +128,8 @@ class plot_2D:
         for qubit in self.graph.Q[z].values():
             self.plot_qubit(qubit)
 
+        le_err = self.legend_circle("Erasure", mfc="w", marker="$\u25CC$", mec=self.cc, mew=1, ms=12)
+        self.init_legend(1.25, 0.95, items=[le_err])
         self.draw_plot("Lattice plotted.")
 
 
@@ -360,12 +363,7 @@ class plot_3D(plot_2D):
         self.ax.set_zlim3d([z_middle - plot_radius, z_middle + plot_radius])
 
 
-    def init_plot(self, *args, **kwargs):
-        '''
-        Initializes 3D plot of toric/planar lattice
-        Stabilizers are plotted with Axes3D.line objects
-        Qubits are plotted with Axes3D.scatter objects
-        '''
+    def init_axis(self, xl, yl, zl, xb, yb, zb):
 
         plt.figure(self.f.number)
         self.canvas = self.f.canvas
@@ -373,7 +371,41 @@ class plot_3D(plot_2D):
         plt.cla()
 
         self.ax = plt.axes(projection='3d', label="main")
-        self.ax.set_axis_off()
+        self.ax.set_xlabel("X")
+        self.ax.set_ylabel("Y")
+        self.ax.set_zlabel("T")
+
+        self.ax.w_xaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))
+        self.ax.w_yaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))
+        self.ax.w_zaxis.set_pane_color((1.0, 1.0, 1.0, 0.0))
+        self.ax.w_xaxis.line.set_color((0, 0, 0, 0.1))
+        self.ax.w_yaxis.line.set_color((0, 0, 0, 0.1))
+        self.ax.w_zaxis.line.set_color((0, 0, 0, 0.1))
+
+        ticks = [str(i) for i in range(self.size)]
+        self.ax.set_xticks([i*xl + xb for i in range(self.size)])
+        self.ax.set_yticks([i*yl + yb for i in range(self.size)])
+        self.ax.set_zticks([i*zl + zb for i in range(self.size)])
+        self.ax.set_xticklabels(ticks)
+        self.ax.set_yticklabels(ticks)
+        self.ax.set_zticklabels(ticks)
+
+        self.ax.xaxis._axinfo["grid"]['linestyle'] = ":"
+        self.ax.yaxis._axinfo["grid"]['linestyle'] = ":"
+        self.ax.zaxis._axinfo["grid"]['linestyle'] = ":"
+        self.ax.xaxis._axinfo["grid"]['alpha'] = 0.2
+        self.ax.yaxis._axinfo["grid"]['alpha'] = 0.2
+        self.ax.zaxis._axinfo["grid"]['alpha'] = 0.2
+
+
+    def init_plot(self, *args, **kwargs):
+        '''
+        Initializes 3D plot of toric/planar lattice
+        Stabilizers are plotted with Axes3D.line objects
+        Qubits are plotted with Axes3D.scatter objects
+        '''
+
+        self.init_axis(4, 4, self.z_distance, 3, 1, 0)
 
         # Plot stabilizers
         for layer in self.graph.S.values():
@@ -403,19 +435,24 @@ class plot_3D(plot_2D):
                 locs[qubit.qID] = i
                 i += 1
 
-            color = [self.cc for _ in range(len(X))]
-            sizes = [self.scatter_size for _ in range(len(X))]
+            ec = [self.cc for _ in range(len(X))]
+            fc = [self.cc for _ in range(len(X))]
 
             self.scatter[z] = {
                 "plot"  : None,
                 "locs"  : locs,
-                "size"  : sizes,
                 "X"     : X,
                 "Y"     : Y,
-                "Z"     : z*self.z_distance
+                "Z"     : z*self.z_distance,
+                "eC"    : ec,
+                "fC"    : fc,
             }
-            self.plot_scatter(z, color, self.scatter_size)
+            self.plot_scatter(z)
 
+        le_err = self.legend_circle("Erasure", mfc=self.cc, mec=self.cE)
+        le_xan = self.legend_circle("X-anyon", marker="*", mfc=self.cX, mec=self.cX)
+        le_zan = self.legend_circle("Z-anyon", marker="*", mfc=self.cZ, mec=self.cZ)
+        self.init_legend(1.05, 0.95, items=[le_err, le_xan, le_zan])
         self.set_axes_equal()
         self.draw_plot("Lattice plotted.")
 
@@ -424,7 +461,7 @@ class plot_3D(plot_2D):
         return self.ax.plot(X, Y, zs=Z, c=color, lw=lw, ls=ls, alpha=alpha)[0]
 
 
-    def plot_scatter(self, z, color, sizes=None):
+    def plot_scatter(self, z):
         '''
         Axes3D.scatter objects do not update color using set_color() function after blitting.
         Workaround is to remove entire scatter object from the plot and plotting a new scatter object with correct colors.
@@ -433,14 +470,13 @@ class plot_3D(plot_2D):
         X = self.scatter[z]["X"]
         Y = self.scatter[z]["Y"]
         Z = self.scatter[z]['Z']
+        F = self.scatter[z]["fC"]
+        E = self.scatter[z]["eC"]
 
         if self.scatter[z]["plot"]:
             self.scatter[z]["plot"].remove()
 
-        if sizes:
-            self.scatter[z]["plot"] = self.ax.scatter(X, Y, Z, s=sizes, c=color)
-        else:
-            self.scatter[z]["plot"] = self.ax.scatter(X, Y, Z, c=color)
+        self.scatter[z]["plot"] = self.ax.scatter(X, Y, Z, s=self.scatter_size, facecolor=F, edgecolor=E)
 
 
     def plot_errors(self, z, plot_qubits=False):
@@ -452,29 +488,31 @@ class plot_3D(plot_2D):
         plt.sca(self.ax)
         qubits = self.graph.Q[z].values()
         plocs = self.scatter[z]["locs"]
-        sizes = self.scatter[z]["size"]
 
-        color = [self.cc for _ in range(len(qubits))]
 
         for qubit in qubits:
             X_error = qubit.E[0].state
             Z_error = qubit.E[1].state
 
             if X_error or Z_error or plot_qubits:
-
+                loc = plocs[qubit.qID]
                 if X_error and not Z_error:
-                    color[plocs[qubit.qID]] = self.cx
+                    self.scatter[z]["eC"][loc] = self.cx
+                    self.scatter[z]["fC"][loc] = self.cx
 
                 elif Z_error and not X_error:
-                    color[plocs[qubit.qID]] = self.cz
+                    self.scatter[z]["eC"][loc] = self.cz
+                    self.scatter[z]["fC"][loc] = self.cz
 
                 elif X_error and Z_error:
-                    color[plocs[qubit.qID]] = self.cy
+                    self.scatter[z]["eC"][loc] = self.cy
+                    self.scatter[z]["fC"][loc] = self.cy
 
                 elif plot_qubits:
-                    color[plocs[qubit.qID]] = self.cc
+                    self.scatter[z]["eC"][loc] = self.cc
+                    self.scatter[z]["fC"][loc] = self.cc
 
-        self.plot_scatter(z, color, sizes)
+        self.plot_scatter(z)
 
 
     def plot_erasures(self, z):
@@ -485,26 +523,28 @@ class plot_3D(plot_2D):
         plt.sca(self.ax)
         qubits = self.graph.Q[z].values()
         plocs = self.scatter[z]["locs"]
-        sizes = self.scatter[z]["size"]
-        color = [self.cc for _ in range(len(qubits))]
 
         for qubit in qubits:
             X_error = qubit.E[0].state
             Z_error = qubit.E[1].state
+            loc = plocs[qubit.qID]
+
+            if X_error and not Z_error:
+                self.scatter[z]["eC"][loc] = self.cx
+                self.scatter[z]["fC"][loc] = self.cx
+
+            elif Z_error and not X_error:
+                self.scatter[z]["eC"][loc] = self.cz
+                self.scatter[z]["fC"][loc] = self.cz
+
+            elif X_error and Z_error:
+                self.scatter[z]["eC"][loc] = self.cy
+                self.scatter[z]["fC"][loc] = self.cy
 
             if qubit.erasure:
-                sizes[plocs[qubit.qID]] = self.scatter_size/3
+                self.scatter[z]["eC"][loc] = self.cE
 
-            if X_error or Z_error:
-                if X_error and not Z_error:
-                    color[plocs[qubit.qID]] = self.cx
-                elif Z_error and not X_error:
-                    color[plocs[qubit.qID]] = self.cz
-                elif X_error and Z_error:
-                    color[plocs[qubit.qID]] = self.cy
-
-        self.scatter[z]["size"] = sizes
-        self.plot_scatter(z, color, sizes)
+        self.plot_scatter(z)
 
 
     def plot_syndrome(self, z):
@@ -515,7 +555,6 @@ class plot_3D(plot_2D):
         """
 
         plt.sca(self.ax)
-        C = [self.cX, self.cZ]
 
         for stab in self.graph.S[z].values():
             (ertype, yb, xb) = stab.sID
@@ -524,11 +563,19 @@ class plot_3D(plot_2D):
                 for dir in self.graph.dirs:
                     if dir in stab.neighbors:
                         gplotlot = stab.pg[dir]
-                        gplotlot.set_color(C[ertype])
+                        gplotlot.set_color(self.C2[ertype])
                         self.ax.draw_artist(gplotlot)
+
+            if stab.mstate:
+                for dir in self.graph.dirs:
+                    if dir in stab.neighbors:
+                        gplotlot = stab.pg[dir]
+                        gplotlot.set_linewidth(2*self.lw)
+                        self.ax.draw_artist(gplotlot)
+
             if stab.state:
-                X, Y, Z = xb * 4 + 2*ertype, yb * 4 + 2*ertype, (z - 1/2) * self.z_distance
-                stab.ap = self.ax.scatter(X, Y, Z, s=self.scatter_size, c=[C[ertype]], alpha=1, marker="*")
+                X, Y, Z = xb * 4 + 1 + 2 *ertype,  yb * 4 + 1 + 2*ertype, (z - 1/2) * self.z_distance
+                stab.ap = self.ax.scatter(X, Y, Z, s=self.scatter_size, c=[self.C2[ertype]], alpha=1, marker="*")
 
 
     def plot_lines(self, matchings):
@@ -562,10 +609,4 @@ class plot_3D(plot_2D):
         self.draw_plot("Matchings plotted.")
 
     def plot_final(self):
-        '''
-        Plots a plot_graph 2D figure of the final z layer.
-        '''
-        z = self.graph.size - 1
-
-        fp = plot_2D(self.graph, z=z)
-        fp.plot_errors(z=z)
+        pass

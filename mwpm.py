@@ -1,5 +1,5 @@
-import networkx as nx
 import blossom5.pyMatch as pm
+import decorators
 
 """
 :param size:
@@ -20,11 +20,8 @@ self.array stores the qubit values and has dimension [XZ_error{0,1}, Top_down{0,
 Qubit values are either 0 or 1, which is analogous to the -1, and 1 state, respectively
 """
 
-
-class toric(object):
-    def __init__(self, graph=None, *args, **kwargs):
-
-        self.graph = None
+class toric(metaclass=decorators.FuncCallCounter):
+    def __init__(self, *args, **kwargs):
 
         for key, value in kwargs.items():
             setattr(self, key, value)
@@ -72,13 +69,6 @@ class toric(object):
         """
         verts, plaqs, d_verts, d_plaqs = self.get_stabs()
 
-        # def get_matching(anyons, d_anyons):
-        #     edges = self.get_edges(anyons)
-        #     for i0, i1, weight in edges:
-        #         nxgraph.add_edge(i0, i1, weight=-weight)
-        #     output = nx.algorithms.matching.max_weight_matching(nxgraph, maxcardinality=True)
-        #     return [[d_anyons[i0], d_anyons[i1]] for i0, i1 in output]
-
         def get_matching(anyons, d_anyons):
             output = pm.getMatching(len(anyons), self.get_edges(anyons))
             return [[d_anyons[i0], d_anyons[i1], anyons[i0], anyons[i1]] for i0, i1 in enumerate(output) if i0 > i1]
@@ -91,8 +81,8 @@ class toric(object):
 
 
     def get_distances(self, V0, V1):
-        y0, x0 = V0.sID[1:]
-        y1, x1 = V1.sID[1:]
+        (y0, x0) = V0.sID[1:]
+        (y1, x1) = V1.sID[1:]
 
         dy0 = (y0 - y1) % self.graph.size
         dx0 = (x0 - x1) % self.graph.size
@@ -104,24 +94,40 @@ class toric(object):
 
         return dy, yd, dx, xd
 
+
     def apply_matching(self):
 
-        for v0, v1, _, _ in self.matching:  # Apply the matchings to the graph
+        for v0, v1, m0, m1 in self.matching:  # Apply the matchings to the graph
 
             # Get distance between endpoints, take modulo to find min distance
             dy, yd, dx, xd = self.get_distances(v0, v1)
+            xv = self.walk_and_flip(v0, m0, dy, yd)
+            self.walk_and_flip(v1, m1, dx, xd)
 
-            ynext = v0  # walk vertically from v0
-            for y in range(dy):
-                (ynext, edge) = ynext.neighbors[yd]
-                edge.state = 1 - edge.state
-                edge.matching = 1 - edge.matching
+            # Only for keeping track of matching edges
+            self.walk_z_matchings(m0, m1, xv)
 
-            xnext = v1  # walk horizontally from v1
-            for x in range(dx):
-                (xnext, edge) = xnext.neighbors[xd]
-                edge.state = 1 - edge.state
-                edge.matching = 1 - edge.matching
+
+    def walk_and_flip(self, flipnode, matchnode, length, dir):
+        '''
+        adds this edge to the matching
+        '''
+        for _ in range(length):
+            (flipnode, flipedge)    = flipnode.neighbors[dir]
+            (matchnode, matchedge)  = matchnode.neighbors[dir]
+            flipedge.state      = 1 - flipedge.state
+            matchedge.matching  = 1 - matchedge.matching
+        return flipnode
+
+    def walk_z_matchings(self, m0, m1, xv):
+        '''
+        apply mathings in z direction
+        '''
+        dz = m0.z - m1.z
+        zd = "u" if dz < 0 else "d"
+        for _ in range(dz):
+            (xv, edge) = xv.neighbors[zd]
+            edge.matching = 1 - edge.matching
 
 
 class planar(toric):

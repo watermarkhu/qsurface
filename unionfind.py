@@ -1,7 +1,8 @@
 import printing as pr
+import decorators
 
 
-class toric(object):
+class toric(metaclass=decorators.FuncCallCounter):
 
     def __init__(self, plot_config=None, *args, **kwargs):
 
@@ -41,7 +42,7 @@ class toric(object):
 
 
     def find_cluster_root(self, cluster, *args, **kwargs):
-        """
+        """cla
         :param cluster      input cluster
 
         Loops through the cluster tree to find the root cluster of the given cluster. When the parent cluster is not at the root level, the function is started again on the parent cluster. The recursiveness of the function makes sure that at each level the parent is pointed towards the root cluster, furfilling the collapsing rule.
@@ -125,7 +126,7 @@ class toric(object):
         '''
         initializes buckets for bucket growth
         '''
-        self.numbuckets = self.graph.size * (self.graph.size//2)**(self.graph.dim-1) * 2
+        self.numbuckets = self.graph.size**(self.graph.dim)   #* (self.graph.size//2)**(self.graph.dim-1) * 2
         self.buckets = [[] for _ in range(self.numbuckets)]
         self.wastebucket = []
         self.maxbucket = 0
@@ -224,7 +225,6 @@ class toric(object):
                 self.grow_boundary(cluster, bucket_i)
 
                 if self.plot_growth: self.plot.draw_plot(str(cluster) + " grown.")
-
 
         self.fuse_vertices()
         # self.fuse_dgvertices()
@@ -400,8 +400,7 @@ class toric(object):
             if vertex.state:
 
                 if edge.edge_type == 0:
-                    decode_edge = self.graph.Q[self.graph.decode_layer][edge.qubit.qID].E[edge.ertype]
-                    decode_edge.state = not decode_edge.state
+                    self.matching_edge(edge)
 
                 edge.matching = True
                 vertex.state = False
@@ -415,6 +414,16 @@ class toric(object):
             else:
                 if plot: self.plot.plot_edge_step(edge, "peel")
             self.peel_edge(cluster, new_vertex)
+
+
+    def matching_edge(self, edge):
+        '''
+        flips the value of the edge on the decode layer of the lattice
+        '''
+        decode_edge = self.graph.Q[self.graph.decode_layer][edge.qubit.qID].E[edge.ertype]
+        decode_edge.state = not decode_edge.state
+
+
 
 
 class planar(toric):

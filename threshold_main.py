@@ -1,6 +1,5 @@
 from matplotlib import pyplot as plt
 from run_surface_code import multiprocess, decoder_config
-import unionfind_evengrow_plugin as decoder
 from collections import defaultdict
 from scipy import optimize
 import numpy as np
@@ -144,6 +143,9 @@ def plot_thresholds(
 
 if __name__ == "__main__":
 
+    import unionfind as decoder
+    import graph_3D as go
+
     folder = "./"
 
     just_plot = 0
@@ -151,10 +153,10 @@ if __name__ == "__main__":
     save_result = 1
     data_select = None
     modified_ansatz = 0
-    file_name = "planar_uf_evengrow2"
+    file_name = "toric_3D_uf"
     plot_name = file_name
 
-    lattices = [8, 12, 16, 20, 24, 28, 32, 36, 40, 44, 48, 52, 56, 60]
+    lattices = [8, 12, 16, 20, 24]
     p = list(np.round(np.linspace(0.09, 0.11, 11), 21))
     Num = 50000
 
@@ -183,7 +185,18 @@ if __name__ == "__main__":
             for pi in p:
 
                 print("Calculating for L = ", str(lati), "and p =", str(pi))
-                N_succes = multiprocess(lati, decoder_config(), decoder, Num, 0, pi, 0)
+
+                sim_config = {
+                    "ltype" : "toric",
+                    "size"  : lati,
+                    "pX"    : pi,
+                    "pZ"    : 0.0,
+                    "pE"    : 0.0,
+                    "pmX"   : pi,
+                    "pmZ"   : 0.0,
+                }
+
+                N_succes = multiprocess(Num, decoder_config(), decoder, go, **sim_config)
 
                 if any([(lati, pi) == a for a in indices]):
                     data.loc[(lati, round(pi, 6)), "N"] += Num

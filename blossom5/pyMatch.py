@@ -37,7 +37,7 @@ def getMatching_fast(numNodes, nodes1, nodes2, weights):
 
 def getMatching(numNodes, graphArray):
 
-    mtime0 = time.time()
+    # mtime0 = time.time()
 
     numEdges = len(graphArray)
 

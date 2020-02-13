@@ -1,4 +1,5 @@
 from termcolor import colored as cs
+import decorators
 
 class anyon_node(object):
     '''
@@ -98,16 +99,18 @@ def make_ancestor_child(node, ac_level=False):
     if node is not None:
         make_ancestor_child(node.ancestor)
         ancestor = node.ancestor
-
-        if ancestor is not None:
-            ancestor.children.remove(node)
-            ancestor.ancestor = node
-            ancestor.e = node.e
-            node.children.append(ancestor)
-
+        mac(node, ancestor)
         if ac_level:
             node.ancestor = None
             node.e = None
+
+@decorators.countcalls
+def mac(node, ancestor):
+    if ancestor is not None:
+        ancestor.children.remove(node)
+        ancestor.ancestor = node
+        ancestor.e = node.e
+        node.children.append(ancestor)
 
 
 def comp_tree_p_of_node(node):
@@ -141,16 +144,19 @@ def comp_tree_d_of_node(node, cluster):
         for child in node.children:
             comp_tree_d_of_node(child, cluster)
     else:
-        ancestor = node.ancestor
-        # size_diff = (node.s + node.g)//2 - (ancestor.s + node.g)//2 + node.e*(-1)**(node.p + 1)
-        # support_fix = (node.g + ancestor.g)%2
-        # node.d = ancestor.d + 2 * size_diff - support_fix - 1
-        node.d = ancestor.d + (node.s//2 - ancestor.s//2 + node.e*(-1)**(node.p + 1))
-
+        ctd(node)
         if node.d < cluster.mindl:                  # store cluster minimum delay
             cluster.mindl = node.d
         for child in node.children:
             comp_tree_d_of_node(child, cluster)
+
+@decorators.countcalls
+def ctd(node):
+    ancestor = node.ancestor
+    # size_diff = (node.s + node.g)//2 - (ancestor.s + node.g)//2 + node.e*(-1)**(node.p + 1)
+    # support_fix = (node.g + ancestor.g)%2
+    # node.d = ancestor.d + 2 * size_diff - support_fix - 1
+    node.d = ancestor.d + (node.s//2 - ancestor.s//2 + node.e*(-1)**(node.p + 1))
 
 
 def connect_nodes(ancestor, child, edge):

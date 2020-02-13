@@ -23,7 +23,7 @@ class toric(object):
 
     """
 
-    def __init__(self, size, decoder, plotting=0, plot_config={}, *args, **kwargs):
+    def __init__(self, size, decoder, plot2D=0, plot_config={}, *args, **kwargs):
 
         self.size = size
         self.range = range(size)
@@ -35,11 +35,13 @@ class toric(object):
         self.Q = {}
         self.cID = 0
         self.dim = 2
+        self.matching_weight = 0
 
         self.init_graph_layer()
 
+        self.plot2D = plot2D
         self.plot_config = plot_config
-        self.gl_plot = pgl.plot_2D(self, **plot_config) if plotting else None
+        self.gl_plot = pgl.plot_2D(self, **plot_config) if plot2D else None
 
     def __repr__(self):
         return f"2D {self.__class__.__name__} graph object with"
@@ -121,12 +123,11 @@ class toric(object):
         initates Pauli X and Z errors on the lattice based on the error rates
         """
 
-        if pX != 0 or pZ != 0:
-            for qubit in self.Q[0].values():
-                if pX != 0 and random.random() < pX:
-                    qubit.E[0].state = 1
-                if pZ != 0 and random.random() < pZ:
-                    qubit.E[1].state = 1
+        for qubit in self.Q[0].values():
+            if pX != 0 and random.random() < pX:
+                qubit.E[0].state = 1
+            if pZ != 0 and random.random() < pZ:
+                qubit.E[1].state = 1
 
         if self.gl_plot: self.gl_plot.plot_errors()
 
@@ -168,6 +169,17 @@ class toric(object):
 
         errorless = True if logical_error == [0, 0, 0, 0] else False
         return logical_error, errorless
+
+
+    def count_matching_weight(self, z=0):
+        '''
+        Loops through all qubits on the layer and counts the number of matchings edges
+        '''
+        for qubit in self.Q[z].values():
+            if qubit.E[0].matching == 1:
+                self.matching_weight += 1
+            if qubit.E[1].matching == 1:
+                self.matching_weight += 1
 
     '''
     ########################################################################################
@@ -219,6 +231,13 @@ class toric(object):
             for stab in slayer.values():
                 stab.reset()
 
+'''
+########################################################################################
+
+                                        Planar class
+
+########################################################################################
+'''
 
 class planar(toric):
     def __init__(self, *args, **kwargs):
@@ -358,16 +377,17 @@ class Stab(object):
 
     def __init__(self, sID, type=0, z=0):
         # fixed paramters
-        self.type = type
-        self.sID = sID
-        self.z = z
-        self.neighbors = {}
+        self.type       = type
+        self.sID        = sID
+        self.z          = z
+        self.neighbors  = {}
 
         # iteration parameters
-        self.state = 0
-        self.parity = 0
-        self.cluster = None
-        self.tree = 0
+        self.state      = 0
+        self.mstate     = 0
+        self.parity     = 0
+        self.cluster    = None
+        self.tree       = 0
 
         '''
         DGvertices
@@ -388,11 +408,12 @@ class Stab(object):
         """
         Changes all iteration paramters to their initial value
         """
-        self.state = 0
-        self.parity = 0
-        self.cluster = None
-        self.tree = 0
-        self.node = None
+        self.state      = 0
+        self.mstate     = 0
+        self.parity     = 0
+        self.cluster    = None
+        self.tree       = 0
+        self.node       = None
 
 
 class Bound(Stab):

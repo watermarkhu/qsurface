@@ -6,7 +6,7 @@ import random
 
 class toric(go.toric):
 
-    def __init__(self, size, decoder, plotting=0, plot_config={}, *args, **kwargs):
+    def __init__(self, size, decoder, plot2D, plot3D=0, plot_config={}, *args, **kwargs):
         super().__init__(size, decoder, *args, **kwargs)
 
         self.dim = 3
@@ -24,8 +24,9 @@ class toric(go.toric):
                 vU.neighbors["d"] = (vD, bridge.E)
                 vD.neighbors["u"] = (vU, bridge.E)
 
+        self.plot2D = plot2D
         self.plot_config = plot_config
-        self.gl_plot = pgl.plot_3D(self, **plot_config) if plotting else None
+        self.gl_plot = pgl.plot_3D(self, **plot_config) if plot3D else None
 
     def init_uf_plot(self):
 
@@ -52,9 +53,9 @@ class toric(go.toric):
             self.init_pauli(pX=pX, pZ=pZ, pE=pE, z=z)
             self.measure_stab(pmX=pmX, pmZ=pmZ, z=z)
 
-        self.init_erasure(pE=pE, z=z+1)
-        self.init_pauli(pX=pX, pZ=pZ, z=z+1)
-        self.measure_stab(pmX=0, pmZ=0, z=z+1)
+        self.init_erasure(pE=pE, z=self.decode_layer)
+        self.init_pauli(pX=pX, pZ=pZ, z=self.decode_layer)
+        self.measure_stab(pmX=0, pmZ=0, z=self.decode_layer)
 
         if self.gl_plot:
 
@@ -123,6 +124,7 @@ class toric(go.toric):
 
         for stab in self.S[z].values():
 
+            stab.parity = 0
             for dir in self.dirs:
                 if dir in stab.neighbors:
                     vertex, edge = stab.neighbors[dir]
@@ -130,17 +132,37 @@ class toric(go.toric):
                         stab.parity = 1 - stab.parity
 
             pM = pmX if stab.sID[0] == 0 else pmZ
-            if pM != 0:
-                if z != self.size - 1 and random.random() < pM:
-                    stab.parity = 1 - stab.parity
+            if pM != 0 and random.random() < pM:
+                stab.parity = 1 - stab.parity
+                stab.mstate = 1
 
             stabd_state = 0 if z == 0 else self.S[z-1][stab.sID[:3]].parity
-
             stab.state = 0 if stabd_state == stab.parity else 1
 
 
     def logical_error(self):
+        '''
+        Plots a 2D lattice if specified
+        Finds logical error on the last (most recent) z layer
+        '''
+        if self.plot2D:
+            fp = pgl.plot_2D(self, z=self.decode_layer, **self.plot_config)
+            fp.plot_errors(z=self.decode_layer)
+            self.measure_stab(pmX=0, pmZ=0, z=self.decode_layer)
+            fp.plot_syndrome(z=self.decode_layer)
         return super().logical_error(z=self.size-1)
+
+
+    def count_matching_weight(self):
+        '''
+        Loops through all qubits on the layer and counts the number of matchings edges
+        '''
+        for z in self.range:
+            super().count_matching_weight(z=z)
+        for layer in self.G.values():
+            for bridge in layer.values():
+                if bridge.E.matching:
+                    self.matching_weight += 1
 
     '''
     ########################################################################################
@@ -156,11 +178,25 @@ class toric(go.toric):
             for bridge in layer.values():
                 bridge.reset()
 
+'''
+########################################################################################
+
+                                        Planar class
+
+########################################################################################
+'''
 
 class planar(toric, go.planar):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
+'''
+########################################################################################
+
+                            Subclasses: Graph objects
+
+########################################################################################
+'''
 
 class Bridge(object):
     def __init__(self, qID, z=0):

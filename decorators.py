@@ -3,6 +3,7 @@ import time
 
 '''
 From: https://realpython.com/primer-on-python-decorators/
+https://stackoverflow.com/questions/2365701/decorating-python-class-methods-how-do-i-pass-the-instance-to-the-decorator
 '''
 
 def timer(func):
@@ -35,15 +36,48 @@ def debug(func):
     return wrapper_debug
 
 
-class CountCalls:
+class countcalls:
     """Count the number of calls made to the decorated function"""
 
     def __init__(self, func):
         functools.update_wrapper(self, func)
         self.func = func
-        self.num_calls = 0
+        self.calls = 0
 
     def __call__(self, *args, **kwargs):
-        self.num_calls += 1
-        # print(f"Call {self.num_calls} of {self.func.__name__!r}")
+        self.calls += 1
+        # print(f"Call {self.calls} of {self.func.__name__!r}")
         return self.func(*args, **kwargs)
+
+
+'''
+https://www.python-course.eu/python3_count_function_calls.php
+'''
+
+class FuncCallCounter(type):
+    """ A Metaclass which decorates all the methods of the
+        subclass using call_counter as the decorator
+    """
+
+    @staticmethod
+    def call_counter(func):
+        """ Decorator for counting the number of function
+            or method calls to the function or method func
+        """
+        def helper(*args, **kwargs):
+            helper.calls += 1
+            return func(*args, **kwargs)
+        helper.calls = 0
+        helper.__name__= func.__name__
+
+        return helper
+
+    def __new__(cls, clsname, superclasses, attributedict):
+        """ Every method gets decorated with the decorator call_counter,
+            which will do the actual call counting
+        """
+        for attr in attributedict:
+            if callable(attributedict[attr]) and not attr.startswith("__"):
+                attributedict[attr] = cls.call_counter(attributedict[attr])
+
+        return type.__new__(cls, clsname, superclasses, attributedict)

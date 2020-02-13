@@ -1,6 +1,7 @@
 from progiter import ProgIter
 import multiprocessing as mp
-from decimal import Decimal as dec
+from decimal import Decimal as decimal
+import decorators
 import random
 import time
 
@@ -9,25 +10,25 @@ def init_random_seed(timestamp=None, worker=0, iteration=0, **kwargs):
     if timestamp is None:
         timestamp = time.time()
     seed = "{:.0f}".format(timestamp*10**7) + str(worker) + str(iteration)
-    random.seed(dec(seed))
+    random.seed(decimal(seed))
     return seed
 
 
 def apply_random_seed(seed=None, **kwargs):
     if seed is None:
         seed = init_random_seed()
-    if type(seed) is not dec:
-        seed = dec(seed)
+    if type(seed) is not decimal:
+        seed = decimal(seed)
     random.seed(seed)
 
 
 def lattice_type(type, config, dec, go, size):
     if type == "toric":
         decoder = dec.toric(**config.decoder, plot_config=config.plot)
-        graph = go.toric(size, decoder, config.plotting, config.plot)
+        graph = go.toric(size, decoder, plot2D=config.plot2D, plot3D=config.plot3D, plot_config=config.plot)
     elif type == "planar":
         decoder = dec.planar(**config.decoder, plot_config=config.plot)
-        graph = go.planar(size, decoder, config.plotting, config.plot)
+        graph = go.planar(size, decoder, plot2D=config.plot2D, plot3D=config.plot3D, plot_config=config.plot)
     return decoder, graph
 
 
@@ -69,6 +70,7 @@ def single(
     graph.decoder.decode()
 
     # Measure logical operator
+    graph.count_matching_weight()
     logical_error, correct = graph.logical_error()
     graph.reset()
 
@@ -107,6 +109,11 @@ def multiple(
     ]
 
     N_succes = sum(result)
+
+    # print(dec.toric.find_cluster_root.calls, dec.toric.union_clusters.calls)
+    # print(eg.ctd.calls, eg.mac.calls)
+    # print("weight", graph.matching_weight)
+
     if qres is not None:
         qres.put(N_succes)
     else:
@@ -118,10 +125,9 @@ def multiprocess(
         config,
         dec,
         go,
-        seeds,
-        processes,
+        seeds=None,
+        processes=None,
         **kwargs
-        # size, config, dec, iters, pE=0, pX=0, pZ=0, pM=0, seeds=None, processes=None, **kwargs):
     ):
     """
     Runs the peeling decoder for a number of iterations, split over a number of processes
@@ -169,17 +175,18 @@ def multiprocess(
 class decoder_config(object):
     def __init__(self):
 
-        self.plotting = 1
+        self.plot2D = 0
+        self.plot3D = 0
         self.seed = None
 
         self.decoder = {
             "random_order"  : 0,
             "random_traverse":0,
             "print_steps"   : 0,
-            "plot_find"     : 1,
-            "plot_growth"   : 1,
-            "plot_peel"     : 1,
-            "plot_nodes"    : 1,
+            "plot_find"     : 0,
+            "plot_growth"   : 0,
+            "plot_peel"     : 0,
+            "plot_nodes"    : 0,
         }
 
         self.file = {
@@ -197,20 +204,22 @@ class decoder_config(object):
 
 if __name__ == "__main__":
 
-    import unionfind_evengrow_integrated as decoder
+    import unionfind as decode
+    import evengrow_directed as eg
     import graph_3D as go
 
     sim_config = {
         "ltype" : "planar",
-        "size"  : 4,
+        "size"  : 6,
         "pX"    : 0.1,
-        "pZ"    : 0.0,
+        "pZ"    : 0.1,
         "pE"    : 0.0,
         "pmX"   : 0.1,
-        "pmZ"   : 0.0,
+        "pmZ"   : 0.1,
     }
-    iters = 50000
+    iters = 50
 
-    output = single(decoder_config(), decoder, go, **sim_config)
+    output = single(decoder_config(), decode, go, **sim_config)
+    # output = multiple(iters, decoder_config(), decode, go, **sim_config)
 
     print(output, output/iters)

@@ -1,6 +1,5 @@
 import unionfind as uf
 import printing as pr
-import evengrow_directed as eg
 
 
 class toric(uf.toric):
@@ -25,7 +24,7 @@ class toric(uf.toric):
                     if new_vertex.cluster is None:  # if no cycle detected
                         new_edge.support = 2
                         cluster.add_vertex(new_vertex)
-                        eg.new_empty(vertex, new_vertex, cluster)
+                        self.eg.new_empty(vertex, new_vertex, cluster)
 
                         if self.plot and plot_step:
                             self.plot.plot_edge_step(new_edge, "confirm")
@@ -58,7 +57,7 @@ class toric(uf.toric):
             for vertex in layer.values():
                 if vertex.state:
                     anyons.append(vertex)
-                    vertex.node = eg.anyon_node(vertex)
+                    vertex.node = self.eg.anyon_node(vertex)
 
         for vertex in anyons:
             if vertex.cluster is None:
@@ -97,8 +96,8 @@ class toric(uf.toric):
 
         while cluster.root_node.calc_delay:                         # calculate parity and delay in even part
             at_node = cluster.root_node.calc_delay.pop()
-            eg.comp_tree_p_of_node(at_node)
-            eg.comp_tree_d_of_node(at_node, cluster)
+            self.eg.comp_tree_p_of_node(at_node)
+            self.eg.comp_tree_d_of_node(at_node, cluster)
 
         if print_tree:
             pr.print_tree(cluster.root_node, "children", "tree_rep")
@@ -205,7 +204,7 @@ class toric(uf.toric):
             if self.plot: self.plot.add_edge(edge, active_V)
 
         else:
-            root_node = eg.adoption(active_V, passive_V, active_C, passive_C)
+            root_node = self.eg.adoption(active_V, passive_V, active_C, passive_C)
             if passive_C.size < active_C.size:
                 active_C, passive_C = passive_C, active_C
             if self.print_steps:
@@ -244,7 +243,7 @@ class planar(uf.planar, toric):
                         bound_clusters.append(cluster)
                         self.bound_cluster_vertices.append([bound])
                         erasure_bound.append(bound)
-                        bound.node = eg.boundary_node(bound)
+                        bound.node = self.eg.boundary_node(bound)
                         self.graph.cID += 1
 
         self.bound_cluster_edges = [[] for _ in range(self.graph.cID)]
@@ -278,7 +277,7 @@ class planar(uf.planar, toric):
                         if new_vertex.cluster is None:  # if no cycle detected
                             new_edge.support = 2
                             vertex.cluster.add_vertex(new_vertex)
-                            eg.new_empty(vertex, new_vertex, vertex.cluster)
+                            self.eg.new_empty(vertex, new_vertex, vertex.cluster)
                             self.bound_cluster_edges[vertex.cluster.cID].append(new_edge)
                             self.bound_cluster_vertices[vertex.cluster.cID].append(new_vertex)
                             if self.plot and self.plot_find:

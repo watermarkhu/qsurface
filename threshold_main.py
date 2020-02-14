@@ -1,7 +1,8 @@
 from matplotlib import pyplot as plt
-from run_surface_code import multiprocess, decoder_config
+from run_surface_code import multiprocess
 from collections import defaultdict
 from scipy import optimize
+from pprint import pprint
 import numpy as np
 import pandas as pd
 import git
@@ -9,20 +10,20 @@ import os
 
 
 def plot_thresholds(
-    fitL,  # lattice size
-    fitp,  # p value
-    fitN,  # number of total simulations
-    fitt,  # number of successes
-    plot_name="",
-    data_select=None,
-    modified_ansatz=False,
-    plotn=1000,
-    show_plot=True,
-    ax0=None,
-    ax1=None,
-    styles=[".", "-"]
+    fitL,                       # lattice size
+    fitp,                       # p value
+    fitN,                       # number of total simulations
+    fitt,                       # number of successes
+    plot_name="",               # Plot title
+    data_select=None,           # in ["even", "odd"], selects even or odd lattices to plot
+    modified_ansatz=False,      # uses the modifined ansatz for plotting
+    plotn=1000,                 # number of points on x axis
+    show_plot=True,             # show plotted figure
+    ax0=None,                   # axis object of error fit plot
+    ax1=None,                   # axis object of rescaled fit plot
+    styles=[".", "-"]           # linestyles for data and fit
 ):
-
+    ''' getting data '''
     if ax0 is None:
         f0, ax0 = plt.subplots()
     if ax1 is None:
@@ -40,8 +41,7 @@ def plot_thresholds(
     for L, P, N, T in zip(fitL, fitp, fitN, fitt):
         LP[L].append([P, N, T])
 
-    # Fitting using scripy optimize curve_fit
-
+    ''' Fitting function '''
     def fit_func(PL, pthres, A, B, C, D, nu, mu):
         p, L = PL
         x = (p - pthres) * L ** (1 / nu)
@@ -50,7 +50,8 @@ def plot_thresholds(
         else:
             return A + B * x + C * x ** 2
 
-    g_T, T_m, T_M = 0.1, min(fitp), max(fitp)
+    ''' Initial parameters for fitting function'''
+    g_T, T_m, T_M = (min(fitp) + max(fitp))/2, min(fitp), max(fitp)
     g_A, A_m, A_M = 0, -np.inf, np.inf
     g_B, B_m, B_M = 0, -np.inf, np.inf
     g_C, C_m, C_M = 0, -np.inf, np.inf
@@ -68,6 +69,7 @@ def plot_thresholds(
     par_guess = [g_T, g_A, g_B, g_C, g_D, gnu, gmu]
     bound = [(T_m, A_m, B_m, C_m, D_m, num, mum), (T_M, A_M, B_M, C_M, D_M, nuM, muM)]
 
+    ''' fitting the data '''
     par, pcov = optimize.curve_fit(
         fit_func,
         (fitp, fitL),
@@ -82,7 +84,7 @@ def plot_thresholds(
     print("A=", par[1], "B=", par[2], "C=", par[3])
     print("D=", par[4], "nu=", par[5], "mu=", par[6])
 
-    # Plot all results from file (not just current simulation)
+    ''' Plot all results from file (not just current simulation) '''
     plot_i = {}
     for i, l in enumerate(set(fitL)):
         plot_i[l] = i
@@ -120,6 +122,8 @@ def plot_thresholds(
     ax0.set_ylabel("decoding success rate")
     ax0.legend()
 
+    ''' Plot using the rescaled error rate'''
+
     for L, p, N, t in zip(fitL, fitp, fitN, fitt):
         if modified_ansatz:
             plt.plot(
@@ -141,9 +145,44 @@ def plot_thresholds(
     ax1.set_ylabel("Modified succces probability")
 
 
+class decoder_config(object):
+    def __init__(self):
+
+        self.plot2D = 0
+        self.plot3D = 0
+        self.seed = None
+
+        self.decoder = {
+            "random_order"  : 0,
+            "random_traverse":0,
+            "print_steps"   : 0,
+            "plot_find"     : 0,
+            "plot_growth"   : 0,
+            "plot_peel"     : 0,
+            "plot_nodes"    : 0,
+        }
+
+        self.file = {
+            "savefile": 0,
+            "erasure_file": None,
+            "pauli_file": None,
+        }
+
+        self.plot = {
+            "plot_size"     : 6,
+            "line_width"    : 1.5,
+            "plotstep_click": 1,
+        }
+
 if __name__ == "__main__":
 
-    import unionfind as decoder
+    '''
+    ############################################
+                    options
+    '''
+
+    import unionfind_evengrow_plugin as decoder
+    import evengrow_directed as eg
     import graph_3D as go
 
     folder = "./"
@@ -153,12 +192,21 @@ if __name__ == "__main__":
     save_result = 1
     data_select = None
     modified_ansatz = 0
-    file_name = "toric_3D_uf"
+    file_name = "toric_3D_uf_test"
     plot_name = file_name
 
-    lattices = [8, 12, 16, 20, 24]
-    p = list(np.round(np.linspace(0.09, 0.11, 11), 21))
-    Num = 50000
+    lattices = [8, 10]
+    P = list(np.round(np.linspace(0.024, 0.034, 1), 6))
+    # P = list(np.round(np.linspace(0.096, 0.106, 6), 6))
+    Num = 1000
+    P_store = 1000
+
+    '''
+    ############################################
+    '''
+
+
+
 
     r = git.Repo()
     hash = r.git.rev_parse(r.head, short=True)
@@ -167,22 +215,13 @@ if __name__ == "__main__":
     file_path = folder + "./data/" + path + ".csv"
     fig_path = folder + "./figures/" + path + ".pdf"
 
-    if os.path.exists(file_path):
-        data = pd.read_csv(file_path, header=0)
-        data = data.set_index(["L", "p"])
-    else:
-        index = pd.MultiIndex.from_product([lattices, p], names=["L", "p"])
-        data = pd.DataFrame(
-            np.zeros((len(lattices) * len(p), 2)), index=index, columns=["N", "succes"]
-        )
-
-    indices = data.index.values
-    cols = ["N", "succes"]
+    data = None
+    int_P = [int(p*P_store) for p in P]
 
     # Simulate and save results to file
     if not just_plot:
-        for i, lati in enumerate(lattices):
-            for pi in p:
+        for lati in lattices:
+            for pi, int_p in zip(P, int_P):
 
                 print("Calculating for L = ", str(lati), "and p =", str(pi))
 
@@ -190,29 +229,42 @@ if __name__ == "__main__":
                     "ltype" : "toric",
                     "size"  : lati,
                     "pX"    : pi,
-                    "pZ"    : 0.0,
-                    "pE"    : 0.0,
+                    "pZ"    : 0,
+                    "pE"    : 0,
                     "pmX"   : pi,
-                    "pmZ"   : 0.0,
+                    "pmZ"   : 0,
                 }
 
-                N_succes = multiprocess(Num, decoder_config(), decoder, go, **sim_config)
+                output = multiprocess(Num, decoder_config(), decoder, go, eg=eg, **sim_config)
+                pprint(dict(output))
+                print()
+                columns = list(output.keys())
 
-                if any([(lati, pi) == a for a in indices]):
-                    data.loc[(lati, round(pi, 6)), "N"] += Num
-                    data.loc[(lati, round(pi, 6)), "succes"] += N_succes
+                if data is None:
+                    if os.path.exists(file_path):
+                        data = pd.read_csv(file_path, header=0)
+                        data = data.set_index(["L", "p"])
+                    else:
+                        index = pd.MultiIndex.from_product([lattices, int_P], names=["L", "p"])
+                        data = pd.DataFrame(
+                            np.zeros((len(lattices) * len(P), len(columns))), index=index, columns=columns
+                        )
+
+                if data.index.isin([(lati, int_p)]).any():
+                    for key, value in output.items():
+                        data.loc[(lati, int_p), key] += value
                 else:
-                    data.loc[(lati, round(pi, 6)), cols] = pd.Series(
-                        [Num, N_succes]
-                    ).values
-                    data = data.sort_index()
+                    for key, value in output.items():
+                        data.loc[(lati, int_p), key] = value
 
+                data = data.sort_index()
                 if save_result:
                     data.to_csv(file_path)
 
     print(data.to_string()) if print_data else None
 
-    # Select data
+    ''' Select data to plot '''
+
     fitL = data.index.get_level_values("L")
     fitp = data.index.get_level_values("p")
     fitN = data.loc[:, "N"].values
@@ -222,14 +274,13 @@ if __name__ == "__main__":
     for L, p, N, t in zip(fitL, fitp, fitN, fitt):
         if N != 0:
             fitdata[0].append(L)
-            fitdata[1].append(p)
+            fitdata[1].append(p/P_store)
             fitdata[2].append(N)
             fitdata[3].append(t)
 
     f0, ax0 = plt.subplots()
     f1, ax1 = plt.subplots()
     plot_thresholds(*fitdata, plot_name=file_name, ax0=ax0, ax1=ax1, modified_ansatz=modified_ansatz)
-
     plt.show()
 
     if save_result:

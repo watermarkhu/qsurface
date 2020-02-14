@@ -1,12 +1,15 @@
 from progiter import ProgIter
 import multiprocessing as mp
 from decimal import Decimal as decimal
-import decorators
+from collections import defaultdict as dd
 import random
 import time
 
 
 def init_random_seed(timestamp=None, worker=0, iteration=0, **kwargs):
+    '''
+    Initializes a random seed based on the current time, simulaton worker and iteration, which ensures a unique seed
+    '''
     if timestamp is None:
         timestamp = time.time()
     seed = "{:.0f}".format(timestamp*10**7) + str(worker) + str(iteration)
@@ -15,6 +18,9 @@ def init_random_seed(timestamp=None, worker=0, iteration=0, **kwargs):
 
 
 def apply_random_seed(seed=None, **kwargs):
+    '''
+    Applies a certain seed in the same format as init_random_seed()
+    '''
     if seed is None:
         seed = init_random_seed()
     if type(seed) is not decimal:
@@ -22,12 +28,15 @@ def apply_random_seed(seed=None, **kwargs):
     random.seed(seed)
 
 
-def lattice_type(type, config, dec, go, size):
+def lattice_type(type, config, dec, go, size, **kwargs):
+    '''
+    Initilizes the graph and decoder type based on the lattice structure. 
+    '''
     if type == "toric":
-        decoder = dec.toric(**config.decoder, plot_config=config.plot)
+        decoder = dec.toric(**config.decoder, **kwargs, plot_config=config.plot)
         graph = go.toric(size, decoder, plot2D=config.plot2D, plot3D=config.plot3D, plot_config=config.plot)
     elif type == "planar":
-        decoder = dec.planar(**config.decoder, plot_config=config.plot)
+        decoder = dec.planar(**config.decoder, **kwargs, plot_config=config.plot)
         graph = go.planar(size, decoder, plot2D=config.plot2D, plot3D=config.plot3D, plot_config=config.plot)
     return decoder, graph
 
@@ -54,7 +63,7 @@ def single(
     """
     # Initialize lattice
     if graph is None:
-        decoder, graph = lattice_type(ltype, config, dec, go, size)
+        decoder, graph = lattice_type(ltype, config, dec, go, size, **kwargs)
 
     # Initialize errors
     if seed is None and config.seed is None:
@@ -101,23 +110,32 @@ def multiple(
     if seeds is None:
         seeds = [init_random_seed(worker=worker, iteration=iter) for iter in range(iters)]
 
-    decoder, graph = lattice_type(ltype, config, dec, go, size)
+    decoder, graph = lattice_type(ltype, config, dec, go, size, **kwargs)
 
+    t_begin = time.time()
     result = [
-        single(config, dec, go, ltype, size, pX, pZ, pE, pmX, pmZ ,graph, worker, iter, seed)
+        single(config, dec, go, ltype, size, pX, pZ, pE, pmX, pmZ ,graph, worker, iter, seed, **kwargs)
         for iter, seed in zip(ProgIter(range(iters)), seeds)
     ]
+    t_end = time.time()
 
-    N_succes = sum(result)
-
-    # print(dec.toric.find_cluster_root.calls, dec.toric.union_clusters.calls)
-    # print(eg.ctd.calls, eg.mac.calls)
-    # print("weight", graph.matching_weight)
+    output = {
+        "N"         : iters,
+        "succes"    : sum(result),
+        "weight"    : graph.matching_weight,
+        "time"      : t_end - t_begin,
+        "c_gbu"     : decoder.grow_bucket.calls,
+        "c_gbo"     : decoder.grow_boundary.calls,
+        "c_union"   : decoder.union_clusters.calls,
+        "c_find"    : decoder.find_cluster_root.calls,
+        "c_ctd"     : kwargs["eg"].ctd.calls,
+        "c_mac"     : kwargs["eg"].mac.calls
+    }
 
     if qres is not None:
-        qres.put(N_succes)
+        qres.put(output)
     else:
-        return N_succes
+        return output
 
 
 def multiprocess(
@@ -164,15 +182,21 @@ def multiprocess(
     for worker in workers:
         worker.start()
 
-    N_succes = sum([qres.get() for worker in workers])
+    output = dd(int)
+    for worker in workers:
+        for key, value in qres.get().items():
+            output[key] += value
 
     for worker in workers:
         worker.join()
 
-    return N_succes
+    return output
 
 
 class decoder_config(object):
+    '''
+    stores all settings of the decoder
+    '''
     def __init__(self):
 
         self.plot2D = 0
@@ -204,22 +228,22 @@ class decoder_config(object):
 
 if __name__ == "__main__":
 
-    import unionfind as decode
+    import unionfind_evengrow_plugin as decode
     import evengrow_directed as eg
-    import graph_3D as go
+    import graph_2D as go
 
     sim_config = {
         "ltype" : "planar",
         "size"  : 6,
-        "pX"    : 0.1,
-        "pZ"    : 0.1,
+        "pX"    : 0.02,
+        "pZ"    : 0.0,
         "pE"    : 0.0,
-        "pmX"   : 0.1,
-        "pmZ"   : 0.1,
+        "pmX"   : 0.02,
+        "pmZ"   : 0.0,
     }
-    iters = 50
+    iters = 1
 
-    output = single(decoder_config(), decode, go, **sim_config)
-    # output = multiple(iters, decoder_config(), decode, go, **sim_config)
+    # output = single(decoder_config(), decode, go, eg=eg, **sim_config)
+    output = multiple(iters, decoder_config(), decode, go, eg=eg, **sim_config)
 
-    print(output, output/iters)
+    print(output)

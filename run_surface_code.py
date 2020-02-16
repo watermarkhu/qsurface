@@ -1,3 +1,10 @@
+'''
+2020 Mark Shui Hu, QuTech
+
+www.github.com/watermarkhu/toric_code
+_____________________________________________
+
+'''
 from progiter import ProgIter
 import multiprocessing as mp
 from decimal import Decimal as decimal
@@ -30,7 +37,7 @@ def apply_random_seed(seed=None, **kwargs):
 
 def lattice_type(type, config, dec, go, size, **kwargs):
     '''
-    Initilizes the graph and decoder type based on the lattice structure. 
+    Initilizes the graph and decoder type based on the lattice structure.
     '''
     if type == "toric":
         decoder = dec.toric(**config.decoder, **kwargs, plot_config=config.plot)
@@ -124,10 +131,10 @@ def multiple(
         "succes"    : sum(result),
         "weight"    : graph.matching_weight,
         "time"      : t_end - t_begin,
-        "c_gbu"     : decoder.grow_bucket.calls,
-        "c_gbo"     : decoder.grow_boundary.calls,
-        "c_union"   : decoder.union_clusters.calls,
-        "c_find"    : decoder.find_cluster_root.calls,
+        "c_gbu"     : decoder.c_gbu,
+        "c_gbo"     : decoder.c_gbo,
+        "c_union"   : decoder.c_ufu,
+        "c_find"    : decoder.c_uff,
         "c_ctd"     : kwargs["eg"].ctd.calls,
         "c_mac"     : kwargs["eg"].mac.calls
     }
@@ -228,17 +235,17 @@ class decoder_config(object):
 
 if __name__ == "__main__":
 
-    import unionfind_evengrow_plugin as decode
+    import unionfind as decode
     import evengrow_directed as eg
-    import graph_2D as go
+    import graph_3D as go
 
     sim_config = {
         "ltype" : "planar",
         "size"  : 6,
-        "pX"    : 0.02,
+        "pX"    : 0.03,
         "pZ"    : 0.0,
         "pE"    : 0.0,
-        "pmX"   : 0.02,
+        "pmX"   : 0.03,
         "pmZ"   : 0.0,
     }
     iters = 1

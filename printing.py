@@ -1,11 +1,27 @@
+'''
+2020 Mark Shui Hu, QuTech
+
+www.github.com/watermarkhu/toric_code
+_____________________________________________
+
+
+Several functions that are used to print the active state of the graph.
+'''
+
+
 import logging
 import pyparsing as pp
 
+
 def printlog(message, print_message=True, log_message=False):
+    '''
+    Prints the messege to the command window and the log
+    '''
     if print_message:
         print(message)
     if log_message:
         logging.warning(message)
+
 
 def print_graph(graph, clusters=None, prestring="", poststring=None, printmerged=1, include_even=0, return_string=False):
     """
@@ -39,6 +55,9 @@ def print_graph(graph, clusters=None, prestring="", poststring=None, printmerged
 
 
 def len_nonAnsi(string):
+    '''
+    Gets the nonAnsi length of a string, removes additional length of the Ansi formatting of certain strings.
+    '''
 
     ESC = pp.Literal('\x1b')
     integer = pp.Word(pp.nums)
@@ -47,16 +66,14 @@ def len_nonAnsi(string):
     return len(pp.Suppress(escapeSeq).transformString(string))
 
 
-'''
-pptree from https://github.com/clemtoy/pptree
-author: clemtoy
-
-altered to check length of de-ansi-fied string
-which allows to print colored output (ansi formatting)
-'''
-
-
 def print_tree(current_node, childattr='children', nameattr='name', indent='', last='updown'):
+    '''
+    pptree from https://github.com/clemtoy/pptree
+    author: clemtoy
+
+    altered to check length of de-ansi-fied string
+    which allows to print colored output (ansi formatting)
+    '''
 
     if hasattr(current_node, nameattr):
         name = lambda node: getattr(node, nameattr)()

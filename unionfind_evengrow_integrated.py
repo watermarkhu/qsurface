@@ -1,3 +1,10 @@
+'''
+2020 Mark Shui Hu, QuTech
+
+www.github.com/watermarkhu/toric_code
+_____________________________________________
+'''
+
 import unionfind as uf
 import printing as pr
 
@@ -222,6 +229,7 @@ class toric(uf.toric):
                 if self.plot: self.plot.add_edge(edge, active_V)
 
             else:
+                active_V.count, passive_V.count = 0, 0
                 merging.append((active_V, edge, passive_V))
 
         for active_V, edge, passive_V in merging:
@@ -236,7 +244,6 @@ class toric(uf.toric):
 
         for merge_bucket in merge_buckets:
             for active_V, edge, passive_V in merge_bucket:
-                active_V.count, passive_V.count = 0, 0
                 self.fully_grown_edge_choises(active_V, edge, passive_V)
 
 

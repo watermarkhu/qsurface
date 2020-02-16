@@ -1,3 +1,8 @@
+'''
+Decorator classes and metaclasses that are used to keep track certain paraters of the methods and classes used. 
+'''
+
+
 import functools
 import time
 

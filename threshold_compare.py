@@ -1,3 +1,10 @@
+'''
+2020 Mark Shui Hu, QuTech
+
+www.github.com/watermarkhu/toric_code
+_____________________________________________
+'''
+
 import pandas as pd
 import matplotlib.pyplot as plt
 

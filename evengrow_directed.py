@@ -1,35 +1,75 @@
+'''
+2020 Mark Shui Hu, QuTech
+
+www.github.com/watermarkhu/toric_code
+_____________________________________________
+
+Objects and methods for the directed graph version of the evengrow algorithm
+
+A directed graph refers to that each node in the graph has a parameters parent and children.
+During a merge of two tree's, each in a child node, one tree of the two needs to be rerooted in that child node.
+
+merge between M0 and M1:
+
+    R0          R1
+   /  \        /  \
+  N0   M0 --- M1   N1
+
+Reroot T1 in M1:
+
+    R1          M1
+   /  \  --->  /  \
+  N1  M1      R1   N1
+
+Tree after merge:
+
+    R0
+   /  \
+  N0   M0
+        \
+         M1
+          \
+           R1
+            \
+             N1
+
+# TODO: Proper calculation of delay for erasures/empty nodes in the graph
+'''
 from termcolor import colored as cs
 import decorators
 
 class anyon_node(object):
     '''
     Anyon node object - element in the aj-tree
-    var id          id number (loc)
-    var ancestor    ancestor of node in anyontree
-    var e           length of edge connectint to ancestor
-    var children    list of children nodes
-    var s           size, number of growth iterations
-    var g           growth state \ parity of s
-    var p           parity of node
-    var d           delay, iterations to wait
-    var w           waited, iterations already waited
-    var calc_delay  list of children nodes with undefined delay
+
+    type        A for anyon, J for junction, B for boundary, E for empty
+    vertex      the vertex/stab object this node refers to
+    id          id number (loc)
+    ancestor    ancestor of node in anyontree
+    e           length of edge connectint to ancestor
+    children    list of children nodes
+    s           size, number of growth iterations
+    g           growth state \ parity of s
+    p           parity of node
+    d           delay, iterations to wait
+    w           waited, iterations already waited
+    boundary    list of new boundaries to grow
+    calc_delay  list of children nodes with undefined delay
     '''
 
     def __init__(self, vertex):
 
-        self.type = "A"
-        self.vertex = vertex
-        self.id = vertex.sID
-
-        self.ancestor = None
-        self.e = None
-        self.children = []
-        self.s = 0
-        self.p = 0
-        self.d = 0
-        self.w = 0
-        self.boundary = [[], []]
+        self.type       = "A"
+        self.vertex     = vertex
+        self.id         = vertex.sID
+        self.ancestor   = None
+        self.e          = None
+        self.children   = []
+        self.s          = 0
+        self.p          = 0
+        self.d          = 0
+        self.w          = 0
+        self.boundary   = [[], []]
         self.calc_delay = []
 
         '''
@@ -37,7 +77,6 @@ class anyon_node(object):
         Needed to grow node in size once per round for plugin version
         '''
         self.bucket = None
-
 
     @property
     def g(self):
@@ -62,32 +101,34 @@ class anyon_node(object):
 
 class junction_node(anyon_node):
     '''
+    Juntion type node
     inherit all methods from anyon_node
-    add list of anyon-nodes
     '''
-    def __init__(self, id):
-        super().__init__(id)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.type = "J"
 
 
 class boundary_node(anyon_node):
     '''
+    Boundary type node
+    parity is defaulted to 1
     inherit all methods from anyon_node
-    add list of anyon-nodes
     '''
-    def __init__(self, id):
-        super().__init__(id)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.type = "B"
         self.p = 1
 
 
 class empty_node(anyon_node):
     '''
+    Empty type node
     inherit all methods from anyon_node
-    add list of anyon-nodes
+    dis         distance to closest node
     '''
-    def __init__(self, id):
-        super().__init__(id)
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
         self.type = "E"
         self.dis = 0
 
@@ -104,8 +145,13 @@ def make_ancestor_child(node, ac_level=False):
             node.ancestor = None
             node.e = None
 
+
 @decorators.countcalls
 def mac(node, ancestor):
+    '''
+    Separation of make_ancestor_child() in order to use decorator to count calls
+    Putting the decarator on the recursive functions triggers large depth in calls
+    '''
     if ancestor is not None:
         ancestor.children.remove(node)
         ancestor.ancestor = node
@@ -117,7 +163,6 @@ def comp_tree_p_of_node(node):
     '''
     Recursive function to find the parity of a node and its children
     '''
-
     parity = sum([1 - comp_tree_p_of_node(child) for child in node.children]) % 2
 
     if type(node) == anyon_node:
@@ -150,8 +195,13 @@ def comp_tree_d_of_node(node, cluster):
         for child in node.children:
             comp_tree_d_of_node(child, cluster)
 
+
 @decorators.countcalls
 def ctd(node):
+    '''
+    Separation of comp_tree_p_of_node() in order to use decorator to count calls
+    Putting the decarator on the recursive functions triggers large depth in calls
+    '''
     ancestor = node.ancestor
     # size_diff = (node.s + node.g)//2 - (ancestor.s + node.g)//2 + node.e*(-1)**(node.p + 1)
     # support_fix = (node.g + ancestor.g)%2
@@ -160,6 +210,9 @@ def ctd(node):
 
 
 def connect_nodes(ancestor, child, edge):
+    '''
+    Connects two nodes by setting the parent child relationchip between the two
+    '''
     child.ancestor = ancestor
     ancestor.children.append(child)
     child.e = edge
@@ -167,17 +220,17 @@ def connect_nodes(ancestor, child, edge):
 
 def adoption(ac_vertex, pa_vertex, ac_cluster, pa_cluster):
     '''
-    var ac_vertex   merging vertex of base cluster
-    var pa_vertex   merging vertex of grow cluster
+    Union of two anyontrees.
+    ac_vertex   merging vertex of base cluster
+    pa_vertex   merging vertex of grow cluster
     '''
     ac_node, pa_node = ac_vertex.node, pa_vertex.node
     even_after_union = True if ac_cluster.parity % 2 == pa_cluster.parity % 2 else False
-
     '''
-    ac_node:    root of active vertex
-    pa_node:    root of passive vertex
-    an_node:    ancestor node during union
-    ch_node:    child node during union
+    ac_node     root of active vertex
+    pa_node     root of passive vertex
+    an_node     ancestor node during union
+    ch_node     child node during union
 
     even_after_union:       if cluster is even after union, union of trees is done by weighted union
                             else, union is done by always appending even tree to odd tree,
@@ -205,7 +258,10 @@ def adoption(ac_vertex, pa_vertex, ac_cluster, pa_cluster):
 
 
 def new_empty(ac_vertex, pa_vertex, cluster):
-
+    '''
+    New empty node that is the result of error errors.
+    Distance is calculated from this node to the closest non-empty node
+    '''
     pa_vertex.node = empty_node(pa_vertex)
     ac_node, pa_node = ac_vertex.node, pa_vertex.node
 

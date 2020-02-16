@@ -1,3 +1,10 @@
+'''
+2020 Mark Shui Hu, QuTech
+
+www.github.com/watermarkhu/toric_code
+_____________________________________________
+
+'''
 from matplotlib import pyplot as plt
 from run_surface_code import multiprocess
 from collections import defaultdict

@@ -1,10 +1,46 @@
+'''
+2020 Mark Shui Hu, QuTech
+
+www.github.com/watermarkhu/toric_code
+_____________________________________________
+
+Plotting function for the surface/planar uf-lattice.
+A plot_2D object is initialized for a graph_2D graph, which plots onto a 2D axis
+A plot_3D object is initialized for a graph_3D graph, which plots onto a 3D axis
+
+Plot_2D object is inherited by Plot_3D object. Both inherit from the plot_graph_lattice objects.
+Plot colors, linewidths, alpha and scatter sizes are defined in the plot_graph_lattice.plot_2D object.
+Otherwise only minor plotting functions are inherited.
+'''
+
 import matplotlib.pyplot as plt
 import plot_graph_lattice as gp
 import printing as pr
 
 class plot_2D(gp.plot_2D):
+    '''
+    2D axis plot for both toric/planar uf-lattices.
+
+    Plots the anyons as a scatter, and qubits as edges. Each graph round can be dynamically plotted to show the size and form of the clusters.
+
+    Inherits from the plot_graph.lattice.plot_2D object. Uses colors and other plotting parameters defined there. Also inherits the following helper methods:
+
+        draw_plot()
+        legend_circle()
+        draw_line()
+    '''
+
+    '''
+    #########################################################################
+                            Init legend
+    '''
 
     def init_legend(self, x, y, loc="upper right"):
+        '''
+        Initilizes the legend of the plot.
+        The qubits, errors and stabilizers are added.
+        Aditional legend items can be inputted through the items paramter
+        '''
 
         self.ax.set_title("{} uf-lattice".format(self.graph.__class__.__name__))
 
@@ -19,7 +55,15 @@ class plot_2D(gp.plot_2D):
             ncol=1,
     )
 
+        '''
+    #########################################################################
+                            Initialize plot
+    '''
+
     def init_plot(self, z=0):
+        '''
+        Initilizes a 2D plot of torc/planar uf-lattice
+        '''
 
         plt.figure(self.f.number)
         plt.ion()
@@ -49,9 +93,10 @@ class plot_2D(gp.plot_2D):
         self.waitforkeypress()
 
 
-
     def draw_edge0(self, qubit):
-
+        '''
+        Draw lines of the X-edges of the qubit
+        '''
         (type, y0, x0) = qubit.qID
 
         (py1, px1) = (
@@ -77,6 +122,9 @@ class plot_2D(gp.plot_2D):
 
 
     def draw_edge1(self, qubit):
+        '''
+        Draw lines of the Z-edges of the qubit
+        '''
 
         (type, y0, x0) = qubit.qID
 
@@ -109,6 +157,9 @@ class plot_2D(gp.plot_2D):
 
 
     def draw_vertex(self, stab):
+        '''
+        Draws a circle of the stab object
+        '''
 
         (ertype, y, x) = stab.sID
         if ertype == 1:
@@ -130,10 +181,8 @@ class plot_2D(gp.plot_2D):
 
 
     """
-    ________________________________________________________________________________
-
-    main plot functions
-
+    #########################################################################
+                            main plot functions
     """
 
     def plot_edge(self, edge, num, color, alpha):
@@ -146,12 +195,8 @@ class plot_2D(gp.plot_2D):
 
     def plot_removed(self, z=0):
         """
-        :param rem_list         list of edges
         plots the normal edge color over the edges that have been removed during the formation of the tree structure
-
         """
-        plt.sca(self.ax)
-
         for qubit in self.graph.Q[z].values():
             for edge in [qubit.E[0], qubit.E[1]]:
                 if edge.peeled and not edge.matching:
@@ -160,9 +205,9 @@ class plot_2D(gp.plot_2D):
 
 
     def add_edge(self, edge, vertex):
-
-        plt.sca(self.ax)
-
+        '''
+        Plots a recently half-grown or fully-grown edge
+        '''
         if edge.support == 1:
             (ye, xe) = edge.qubit.qID[1:3]
             (yv, xv) = vertex.sID[1:3]
@@ -177,10 +222,8 @@ class plot_2D(gp.plot_2D):
             self.plot_edge(edge, 1, color, 1)
 
     """
-    ________________________________________________________________________________
-
-    stepwise plot functions
-
+    #########################################################################
+                            stepwise plot functions
     """
 
     def plot_edge_step(self, edge, type):
@@ -239,6 +282,25 @@ class plot_2D(gp.plot_2D):
 
 
 class plot_3D(plot_2D, gp.plot_3D):
+    '''
+    3D axis plot for both toric/planar uf-lattices.
+
+    Plots the anyons as a scatter, and qubits as edges. Each graph round can be dynamically plotted to show the size and form of the clusters.
+
+    Inherits from the plot_graph.lattice.plot_2D object. Uses colors and other plotting parameters defined there. Also inherits the following helper methods:
+
+        draw_plot()
+        legend_circle()
+        init_axis()
+        set_axes_equal()
+        draw_line()
+        plot_scatter()
+    '''
+
+    '''
+    #########################################################################
+                            Initalize plot
+    '''
 
     def init_plot(self, *args, **kwargs):
         '''
@@ -300,6 +362,9 @@ class plot_3D(plot_2D, gp.plot_3D):
 
 
     def draw_bridge(self, bridge):
+        '''
+        Draw lines of the vertical edges connecting the layers
+        '''
 
         (ertype, y, x), z = bridge.qID, bridge.z
         if ertype == 1:
@@ -311,8 +376,14 @@ class plot_3D(plot_2D, gp.plot_3D):
 
         bridge.E.pu = [up1, up2]
 
-
+    '''
+    #########################################################################
+                            Plotting functions
+    '''
     def plot_removed(self):
+        """
+        plots the normal edge color over the edges that have been removed during the formation of the tree structure
+        """
         for z in self.graph.Q:
             super().plot_removed(z)
         for z in self.graph.G:
@@ -324,7 +395,9 @@ class plot_3D(plot_2D, gp.plot_3D):
 
 
     def add_edge(self, edge, vertex):
-
+        '''
+        Plots a recently half-grown or fully-grown edge
+        '''
         if edge.support == 1:
             (ye, xe), ze = edge.qubit.qID[1:3], edge.z
             (yv, xv), zv = vertex.sID[1:3], vertex.z

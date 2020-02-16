@@ -1,12 +1,23 @@
+'''
+2020 Mark Shui Hu, QuTech
+
+www.github.com/watermarkhu/toric_code
+_____________________________________________
+'''
+
 import printing as pr
-import decorators
 
 
-class toric(metaclass=decorators.FuncCallCounter):
+class toric(object):
 
     def __init__(self, plot_config=None, *args, **kwargs):
 
         self.plot_config = plot_config
+
+        self.c_gbu = 0
+        self.c_gbo = 0
+        self.c_ufu = 0
+        self.c_uff = 0
 
         for key, value in kwargs.items():
             setattr(self, key, value)
@@ -36,6 +47,8 @@ class toric(metaclass=decorators.FuncCallCounter):
 
         Merges two clusters by updating the parent/child relationship and updating the attributes
         """
+        self.c_ufu += 1
+
         child.parent = parent
         parent.size += child.size
         parent.parity += child.parity
@@ -47,6 +60,8 @@ class toric(metaclass=decorators.FuncCallCounter):
 
         Loops through the cluster tree to find the root cluster of the given cluster. When the parent cluster is not at the root level, the function is started again on the parent cluster. The recursiveness of the function makes sure that at each level the parent is pointed towards the root cluster, furfilling the collapsing rule.
         """
+        self.c_uff += 1
+
         if cluster is not None:
             if (
                 cluster is not cluster.parent
@@ -213,6 +228,8 @@ class toric(metaclass=decorators.FuncCallCounter):
 
     def grow_bucket(self, bucket, bucket_i, *args, **kwargs):
 
+        self.c_gbu += 1
+
         if self.print_steps: self.mstr = {}
         self.fusion, place = [], []  # Initiate Fusion list
 
@@ -244,6 +261,8 @@ class toric(metaclass=decorators.FuncCallCounter):
 
 
     def grow_boundary(self, cluster, *args, **kwargs):
+
+        self.c_gbo += 1
 
         cluster.boundary = [[], cluster.boundary[0]]                # Set boudary
 

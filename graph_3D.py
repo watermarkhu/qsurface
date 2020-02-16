@@ -1,3 +1,27 @@
+'''
+2020 Mark Shui Hu, QuTech
+
+www.github.com/watermarkhu/toric_code
+_____________________________________________
+
+
+We define the unit cell, which contains two qubits, a star operator and plaquette operator.
+
+    |       |
+- Star  -  Q_0 -     also top (T) qubit
+    |       |
+-  Q_1  - Plaq  -    also down (D) qubit
+    |       |
+
+Each cell is indicated by its y and x coordiantes. As such every qubit and stabilizer can by identified by a unique ID number:
+
+Qubits: qID (td, y, x)          Stabilizers: sID (ertype, y, x)
+    Q_0:    (0, y, x)               Star:   (0, y, x)
+    Q_1:    (1, y, x)               Plaq:   (1, y, x)
+
+The 3D graph (toric/planar) is a cubic lattice with many layer of these unit cells.
+'''
+
 import graph_2D as go
 import plot_graph_lattice as pgl
 import plot_unionfind as puf
@@ -5,8 +29,29 @@ import random
 
 
 class toric(go.toric):
+    '''
+    Inherits all the calss variables and methods of graph_2D.toric
 
-    def __init__(self, size, decoder, plot2D, plot3D=0, plot_config={}, *args, **kwargs):
+    Additions:
+        G   dict of qubit-like objects called bridges containing the vertical edges connecting stabs of different layers
+                Key:    sID number
+                Value:  Stab object
+    Replaces:
+        init_uf_plot()
+        apply_and_measure_errors()
+        init_erasure()
+        init_paul()
+        measure_stab()
+        logical_error()
+        count_matching_weight()
+        reset()
+
+    3D graph is initilized by calling the init_graph_layer() method of the parent graph_2D.toric object.
+    From here, we call that method size-1 times again, on each layer of the cubic lattice. Furthermore, qubit-like objects bridges containing vertical edges are added between the layers.
+    Dim dimension is set to 3 and decoder_layer is set to last layer.
+    '''
+
+    def __init__(self, size, decoder, plot2D, plot3D=0, plot_config={}, dim=3, *args, **kwargs):
         super().__init__(size, decoder, *args, **kwargs)
 
         self.dim = 3
@@ -39,39 +84,38 @@ class toric(go.toric):
     '''
     ########################################################################################
 
-                                    Surface code functions
+                                    Surface code methods
 
     ########################################################################################
     '''
 
 
     def apply_and_measure_errors(self, pX, pZ, pE, pmX, pmZ, **kwargs):
+        '''
+        Initilizes errors on the qubits and measures the stabilizers on the graph on each layer of the cubic lattice.
+        '''
 
+        # first layers initilized with measurement error
         for z in self.range[:-1]:
-
             self.init_erasure(pE=pE, z=z)
             self.init_pauli(pX=pX, pZ=pZ, pE=pE, z=z)
             self.measure_stab(pmX=pmX, pmZ=pmZ, z=z)
 
+        # final layer initialized with perfect measurements
         self.init_erasure(pE=pE, z=self.decode_layer)
         self.init_pauli(pX=pX, pZ=pZ, z=self.decode_layer)
         self.measure_stab(pmX=0, pmZ=0, z=self.decode_layer)
 
         if self.gl_plot:
-
             for z in self.range:
                 self.gl_plot.plot_erasures(z)
                 self.gl_plot.plot_errors(z)
                 self.gl_plot.plot_syndrome(z)
-
             self.gl_plot.draw_plot("Errors and syndromes plotted")
 
 
     def init_erasure(self, pE=0, z=0, **kwargs):
         """
-        :param pE           probability of an erasure error
-        :param savefile     toggle to save the errors to a file
-
         Initializes an erasure error with probabilty pE, which will take form as a uniformly chosen pauli X and/or Z error.
         """
 
@@ -80,8 +124,10 @@ class toric(go.toric):
 
         for qubitu in self.Q[z].values():
 
+            # Get qubit state from previous layer
             qubitu.E[0].state, qubitu.E[1].state = (0,0) if z == 0 else (self.Q[z-1][qubitu.qID[:3]].E[n].state for n in range(2))
 
+            # Apply errors
             if random.random() < pE:
                 qubitu.erasure = True
                 rand = random.random()
@@ -96,10 +142,6 @@ class toric(go.toric):
 
     def init_pauli(self, pX=0, pZ=0, pE=0, z=0, **kwargs):
         """
-        :param pX           probability of a Pauli X error
-        :param pZ           probability of a Pauli Z error
-        :param savefile     toggle to save the errors to a file
-
         initates Pauli X and Z errors on the lattice based on the error rates
         """
 
@@ -108,9 +150,11 @@ class toric(go.toric):
 
         for qubitu in self.Q[z].values():
 
+            # Get qubit state from previous layer if not aleady done
             if pE == 0:
                 qubitu.E[0].state, qubitu.E[1].state = (0,0) if z == 0 else (self.Q[z-1][qubitu.qID].E[n].state for n in [0, 1])
 
+            # Apply errors
             if pX != 0 and random.random() < pX:
                 qubitu.E[0].state = 1 - qubitu.E[0].state
             if pZ != 0 and random.random() < pZ:
@@ -119,11 +163,12 @@ class toric(go.toric):
 
     def measure_stab(self, pmX=0, pmZ=0, z=0, **kwargs):
         """
-        The measurement outcomes of the stabilizers, which are the vertices on the self are saved to their corresponding vertex objects. We loop over all vertex objects and over their neighboring edge or qubit objects.
+        The measurement outcomes of the stabilizers, which are the vertices on the self are saved to their corresponding vertex objects.
         """
 
         for stab in self.S[z].values():
 
+            # Get parity of stabilizer
             stab.parity = 0
             for dir in self.dirs:
                 if dir in stab.neighbors:
@@ -131,19 +176,20 @@ class toric(go.toric):
                     if edge.state:
                         stab.parity = 1 - stab.parity
 
+            # Apply measurement error
             pM = pmX if stab.sID[0] == 0 else pmZ
             if pM != 0 and random.random() < pM:
                 stab.parity = 1 - stab.parity
                 stab.mstate = 1
 
+            # Save vertex as anyon if parity different than previous layer
             stabd_state = 0 if z == 0 else self.S[z-1][stab.sID[:3]].parity
             stab.state = 0 if stabd_state == stab.parity else 1
 
 
     def logical_error(self):
         '''
-        Plots a 2D lattice if specified
-        Finds logical error on the last (most recent) z layer
+        Applies logical_error() method of parent graph_2D object on the last layer.
         '''
         if self.plot2D:
             fp = pgl.plot_2D(self, z=self.decode_layer, **self.plot_config)
@@ -155,7 +201,7 @@ class toric(go.toric):
 
     def count_matching_weight(self):
         '''
-        Loops through all qubits on the layer and counts the number of matchings edges
+        Applies count_matching_weight() method of parent graph_2D object on each layer of the cubic lattice. Additionally counts the weight of the edges in the bridge objects present in the 3D graph.
         '''
         for z in self.range:
             super().count_matching_weight(z=z)
@@ -167,12 +213,15 @@ class toric(go.toric):
     '''
     ########################################################################################
 
-                                    Constructor functions
+                                    Constructor methods
 
     ########################################################################################
     '''
 
     def reset(self):
+        '''
+        Applies reset() method of parent graph_2D object. Also resets all the bridge objects present in the 3D graph.
+        '''
         super().reset()
         for layer in self.G.values():
             for bridge in layer.values():
@@ -187,6 +236,13 @@ class toric(go.toric):
 '''
 
 class planar(toric, go.planar):
+    '''
+    Inherits all the calss variables and methods of graph_3D.toric and graph_3D.planar.
+
+    graph_3D.planar -> graph_3D.toric -> graph_2D.planar -> graph_2D.toric
+
+    All super().def() methods in graph_3D.toric now call on graph_2D.planar, such that the planar structure is preserved.
+    '''
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
@@ -199,8 +255,15 @@ class planar(toric, go.planar):
 '''
 
 class Bridge(object):
-    def __init__(self, qID, z=0):
+    '''
+    Qubit-like object that contains a single vertical Edge object that connects Stabs between different layers in the cubic lattice.
 
+    qID         (td, y, x)
+    z           layer of graph to which this stab belongs
+    E           list countaining the two edges of the primal and secundary lattice
+    erasure     placeholder to ensure decoder works
+    '''
+    def __init__(self, qID, z=0):
         self.qID = qID       # (ertype, y, x)
         self.z = z
         self.erasure = 0
@@ -210,4 +273,7 @@ class Bridge(object):
         return "g({},{},{}:{})".format(*self.qID[1:], self.qID[0])
 
     def reset(self):
+        """
+        Changes all iteration paramters to their initial value
+        """
         self.E.reset()

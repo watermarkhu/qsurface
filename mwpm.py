@@ -1,40 +1,44 @@
+'''
+2020 Mark Shui Hu, QuTech
+
+www.github.com/watermarkhu/toric_code
+_____________________________________________
+
+
+The Minimum Weight Perfect Matching decoder
+
+Uses either Kolmogorov's Blossom 5 algorithm in C (requires linux, wsl, or some gcc compiler for windows)
+    or networkx implementation of the same algorithm in python
+
+The C implementation (in folder blossom5) is highly recommended as it evidently much faster than the networkx version.
+'''
 import blossom5.pyMatch as pm
-import decorators
+# import networkx as nx
 
-"""
-:param size:
-:param plot_load:
 
- We define the unit cell, which contains two qubits, a star operator and plaquette operator.
-
-    |       |
-- Star  -  Q_0 -     also top (T) qubit
-    |       |
--  Q_1  - Plaq  -    also down (D) qubit
-    |       |
-
-By doing so, we can define arrays the star and plaquette operators, where their index value define their position
-  on the qubit lattice. For the qubit array, there is an extra dimension to store the two qubits per unit cell.
-
-self.array stores the qubit values and has dimension [XZ_error{0,1}, Top_down{0,1}, size, size]
-Qubit values are either 0 or 1, which is analogous to the -1, and 1 state, respectively
-"""
-
-class toric(metaclass=decorators.FuncCallCounter):
+class toric(object):
+    '''
+    Decodes the toric lattice (2D and 3D).
+    Edges between all anyons are considered.
+    '''
     def __init__(self, *args, **kwargs):
-
         for key, value in kwargs.items():
             setattr(self, key, value)
 
-
     def decode(self):
+        '''
+        Decode functions for the MWPM toric decoder
+        '''
         self.get_matching()
         self.apply_matching()
-
         if self.graph.gl_plot: self.graph.gl_plot.plot_lines(self.matching)
 
 
     def get_stabs(self):
+        '''
+        Returns all anyons in the graph, as well ans their respective anyons on the decode layer.
+        This is the same for a 2D graph, but the most recent layer in the 3D case
+        '''
         verts, decode_verts, plaqs, decode_plaqs = [], [], [], []
         for layer in self.graph.S.values():
             for stab in layer.values():
@@ -49,6 +53,10 @@ class toric(metaclass=decorators.FuncCallCounter):
 
 
     def get_edges(self, anyons):
+        '''
+        Computes all edges and their respective weights between all all nodes that are inputted.
+        Periodic boundary conditions are applied in x and y directions.
+        '''
         edges = []
         for i0, v0 in enumerate(anyons[:-1]):
             (y0, x0), z0 = v0.sID[1:], v0.z
@@ -59,7 +67,6 @@ class toric(metaclass=decorators.FuncCallCounter):
                 wz = abs(z0 - z1)
                 weight = min([wy, self.graph.size - wy]) + min([wx, self.graph.size - wx]) + wz
                 edges.append([i0, i1 + i0 + 1, weight])
-
         return edges
 
 
@@ -68,6 +75,13 @@ class toric(metaclass=decorators.FuncCallCounter):
         Uses the BlossomV algorithm to get the matchings. A list of combinations of all the anyons and their respective weights are feeded to the blossom5 algorithm. To apply the matchings, we walk from each matching vertex to where their paths meet perpendicualarly, flipping the edges on the way over.
         """
         verts, plaqs, d_verts, d_plaqs = self.get_stabs()
+
+        # def get_matching(anyons, d_anyons):
+        #     edges = self.get_edges(anyons)
+        #     for i0, i1, weight in edges:
+        #         nxgraph.add_edge(i0, i1, weight=-weight)
+        #     output = nx.algorithms.matching.max_weight_matching(nxgraph, maxcardinality=True)
+        #     return [[d_anyons[i0], d_anyons[i1]] for i0, i1 in output]
 
         def get_matching(anyons, d_anyons):
             output = pm.getMatching(len(anyons), self.get_edges(anyons))
@@ -81,6 +95,9 @@ class toric(metaclass=decorators.FuncCallCounter):
 
 
     def get_distances(self, V0, V1):
+        '''
+        Computes the distance or number of walks and direction between inputted nodes in x and y directions with periodic boundary conditions
+        '''
         (y0, x0) = V0.sID[1:]
         (y1, x1) = V1.sID[1:]
 
@@ -96,10 +113,11 @@ class toric(metaclass=decorators.FuncCallCounter):
 
 
     def apply_matching(self):
+        '''
+        Applies the matchings returned from the MWPM algorithm by doing a walk between nodes of the matching
+        '''
 
-        for v0, v1, m0, m1 in self.matching:  # Apply the matchings to the graph
-
-            # Get distance between endpoints, take modulo to find min distance
+        for v0, v1, m0, m1 in self.matching:
             dy, yd, dx, xd = self.get_distances(v0, v1)
             xv = self.walk_and_flip(v0, m0, dy, yd)
             self.walk_and_flip(v1, m1, dx, xd)
@@ -110,7 +128,7 @@ class toric(metaclass=decorators.FuncCallCounter):
 
     def walk_and_flip(self, flipnode, matchnode, length, dir):
         '''
-        adds this edge to the matching
+        adds this edge to the matching.
         '''
         for _ in range(length):
             (flipnode, flipedge)    = flipnode.neighbors[dir]
@@ -121,7 +139,7 @@ class toric(metaclass=decorators.FuncCallCounter):
 
     def walk_z_matchings(self, m0, m1, xv):
         '''
-        apply mathings in z direction
+        apply mathings in z direction, only needed for registering the matching weight
         '''
         dz = m0.z - m1.z
         zd = "u" if dz < 0 else "d"
@@ -131,8 +149,17 @@ class toric(metaclass=decorators.FuncCallCounter):
 
 
 class planar(toric):
+    '''
+    Decodes the planar lattice (2D and 3D).
+    Edges between all anyons are considered.
+    Additionally, virtual anyons are added to the boundary, which connect to their main anyons.
+    Edges between all virtual anyons are added with weight zero.
+    '''
 
     def decode(self):
+        '''
+        Decode functions for the MWPM planar decoder
+        '''
         self.get_matching()
         self.remove_virtual()
         self.apply_matching()
@@ -140,6 +167,10 @@ class planar(toric):
 
 
     def get_stabs(self):
+        '''
+        Returns all anyons in the graph, as well as their respective virtual anyons in the boundary, for both their current layer as well as on the decode layer.
+        This is the same for a 2D graph, but the most recent layer in the 3D case
+        '''
         verts, plaqs, tv, tp = [], [], [], []
         dvert, dplaq, dv, dp = [], [], [], []
         for layer in self.graph.S.values():
@@ -173,9 +204,14 @@ class planar(toric):
 
 
     def get_edges(self, anyons):
+        '''
+        Computes all edges and their respective weights between all all anyons that are inputted, between all virtual anyons and between anyons and virtual anyons.
+        '''
 
         edges = []
         mid = len(anyons)//2
+
+        # Add edges between all anyons
         for i0, v0 in enumerate(anyons[:mid-1]):
             (y0, x0), z0 = v0.sID[1:], v0.z
             for i1, v1 in enumerate(anyons[i0 + 1 :mid]):
@@ -186,12 +222,12 @@ class planar(toric):
                 weight = wy + wx + wz
                 edges.append([i0, i1 + i0 + 1, weight])
 
-
+        # Add edges of weight 0 between all virtual anyons
         for i0, v0 in enumerate(anyons[mid:-1], start=mid):
             for i1, v1 in enumerate(anyons[i0 + 1:], start=i0 + 1):
                 edges.append([i0, i1, 0])
 
-
+        # Add edges between virtual anyons and real anyons
         for i in range(mid):
             (type, ys, xs) = anyons[i].sID
             (type, yb, xb) = anyons[mid + i].sID
@@ -202,6 +238,9 @@ class planar(toric):
 
 
     def get_distances(self, V0, V1):
+        '''
+        Computes the distance or number of walks and direction between inputted nodes in x and y directions
+        '''
 
         y0, x0 = V0.sID[1:]
         y1, x1 = V1.sID[1:]
@@ -215,6 +254,9 @@ class planar(toric):
 
 
     def remove_virtual(self):
+        '''
+        Removes matchings between virtual anyons which have weight 0, as they do not account to real machtings.
+        '''
         matching = []
         for V1, V2, V3, V4, in self.matching:
             if not (V1.type == 1 and V2.type == 1):

@@ -1,3 +1,18 @@
+'''
+2020 Mark Shui Hu, QuTech
+
+www.github.com/watermarkhu/toric_code
+_____________________________________________
+
+
+Plotting function for the surface/planar lattice.
+A plot_2D object is initialized for a graph_2D graph, which plots onto a 2D axis
+A plot_3D object is initialized for a graph_3D graph, which plots onto a 3D axis
+
+Plot_2D object is inherited by Plot_3D object. All colors on the plot are defined in the plot_2D oject.
+The plot_unionfind.plot_2D and plot_3D objects are also child objects that uses the same colors and some methods
+'''
+
 from matplotlib import pyplot as plt
 from matplotlib.lines import Line2D
 import printing as pr
@@ -5,6 +20,15 @@ import random
 
 
 class plot_2D:
+    '''
+    2D axis plot for both toric/planar lattices.
+
+    Plots the qubits as cirlces, including the errors that occur on these qubits.
+    Plots the stabilizers, their measurement state and the matching between the stabilizers.
+
+    Many plot parameters, including colors of the plot, linewidths, scatter sizes are defined here.
+
+    '''
 
     def __init__(self, graph, z=0, plot_size=8, line_width=0.5, click=1, **kwargs):
 
@@ -48,20 +72,47 @@ class plot_2D:
 
         self.init_plot(z)
 
+    '''
+    #########################################################################
+                            Helper functions
+    '''
 
     def draw_plot(self, txt=None):
+        '''
+        Blits all changed plotting object onto the figur.e.
+        Optional text is printed, added to the log and shown on the figure
+        '''
         if txt is not None:
             self.text.set_text(txt)
             pr.printlog(txt)
         self.canvas.blit(self.ax.bbox)
         if self.click: self.waitforkeypress()
 
+
     def waitforkeypress(self):
+        '''
+        Pauses the script until user interaction on the plot.
+        Waits for a maximum of 120 seconds.
+        '''
         keyboardClick = False
         while not keyboardClick:
             keyboardClick = plt.waitforbuttonpress(120)
 
+
+    def draw_line(self, X, Y, color="w", lw=2, ls=2, alpha=1, **kwargs):
+        '''
+        Plots a line onto the plot. Exist for default parameters.
+        '''
+        return self.ax.plot(X, Y, c=color, lw=lw, ls=ls, alpha=alpha)[0]
+    '''
+    #########################################################################
+                            Initiliz legend
+    '''
+
     def legend_circle(self, label, mfc=None, marker="o", mec="k", ms=10, color="w", lw=0, mew=2, ls="-"):
+        '''
+        Returns a Line2D, cirlle object that is used on the plot legend.
+        '''
         return Line2D(
             [0],
             [0],
@@ -78,6 +129,11 @@ class plot_2D:
 
 
     def init_legend(self, x, y, items=[], loc="upper right"):
+        '''
+        Initilizes the legend of the plot.
+        The qubits, errors and stabilizers are added.
+        Aditional legend items can be inputted through the items paramter
+        '''
 
         self.ax.set_title("{} lattice".format(self.graph.__class__.__name__))
 
@@ -92,6 +148,10 @@ class plot_2D:
 
         self.ax.legend(handles=self.lh, bbox_to_anchor=(x, y), loc=loc, ncol=1)
 
+    '''
+    #########################################################################
+                            Initilize plot
+    '''
 
     def init_plot(self, z=0):
         '''
@@ -131,10 +191,6 @@ class plot_2D:
         le_err = self.legend_circle("Erasure", mfc="w", marker="$\u25CC$", mec=self.cc, mew=1, ms=12)
         self.init_legend(1.25, 0.95, items=[le_err])
         self.draw_plot("Lattice plotted.")
-
-
-    def draw_line(self, X, Y, color="w", lw=2, ls=2, alpha=1, **kwargs):
-        return self.ax.plot(X, Y, c=color, lw=lw, ls=ls, alpha=alpha)[0]
 
 
     def plot_stab(self, stab, alpha=1):
@@ -180,7 +236,10 @@ class plot_2D:
         )
         self.ax.add_artist(qubit.pg)
 
-
+    '''
+    #########################################################################
+                            Plotting functions
+    '''
     def plot_erasures(self):
         """
         :param erasures         list of locations (TD, y, x) of the erased stab_qubits
@@ -330,8 +389,22 @@ from mpl_toolkits.mplot3d import Axes3D
 
 
 class plot_3D(plot_2D):
+    '''
+    3D axis plot for both toric/planar lattices.
 
+    Plots the qubits as cirlces, including the errors that occur on these qubits.
+    Plots the stabilizers, their measurement state and the matching between the stabilizers.
+    '''
+
+    '''
+    #########################################################################
+                            Helper functions
+    '''
     def draw_plot(self, txt=None):
+        '''
+        Blits all changed plotting object onto the figur.e.
+        Optional text is printed and added to the log.
+        '''
         if txt is not None:
             pr.printlog(txt)
         self.canvas.blit(self.ax.bbox)
@@ -364,6 +437,9 @@ class plot_3D(plot_2D):
 
 
     def init_axis(self, xl, yl, zl, xb, yb, zb):
+        '''
+        Initilizes the 3D axis by removing the background panes, changing the grid tics, alpha and linestyle, setting the labels and title.
+        '''
 
         plt.figure(self.f.number)
         self.canvas = self.f.canvas
@@ -398,6 +474,34 @@ class plot_3D(plot_2D):
         self.ax.zaxis._axinfo["grid"]['alpha'] = 0.2
 
 
+    def draw_line(self, X, Y, Z=0, color="w", lw=2, ls=2, alpha=1, **kwargs):
+        '''
+        Plots a line onto the plot. Exist for default parameters.
+        '''
+        return self.ax.plot(X, Y, zs=Z, c=color, lw=lw, ls=ls, alpha=alpha)[0]
+
+
+    def plot_scatter(self, z):
+        '''
+        Axes3D.scatter objects do not update color using set_color() function after blitting.
+        Workaround is to remove entire scatter object from the plot and plotting a new scatter object with correct colors.
+        '''
+
+        X = self.scatter[z]["X"]
+        Y = self.scatter[z]["Y"]
+        Z = self.scatter[z]['Z']
+        F = self.scatter[z]["fC"]
+        E = self.scatter[z]["eC"]
+
+        if self.scatter[z]["plot"]:
+            self.scatter[z]["plot"].remove()
+
+        self.scatter[z]["plot"] = self.ax.scatter(X, Y, Z, s=self.scatter_size, facecolor=F, edgecolor=E)
+
+    '''
+    #########################################################################
+                            Initilize plot
+    '''
     def init_plot(self, *args, **kwargs):
         '''
         Initializes 3D plot of toric/planar lattice
@@ -457,28 +561,10 @@ class plot_3D(plot_2D):
         self.draw_plot("Lattice plotted.")
 
 
-    def draw_line(self, X, Y, Z=0, color="w", lw=2, ls=2, alpha=1, **kwargs):
-        return self.ax.plot(X, Y, zs=Z, c=color, lw=lw, ls=ls, alpha=alpha)[0]
-
-
-    def plot_scatter(self, z):
-        '''
-        Axes3D.scatter objects do not update color using set_color() function after blitting.
-        Workaround is to remove entire scatter object from the plot and plotting a new scatter object with correct colors.
-        '''
-
-        X = self.scatter[z]["X"]
-        Y = self.scatter[z]["Y"]
-        Z = self.scatter[z]['Z']
-        F = self.scatter[z]["fC"]
-        E = self.scatter[z]["eC"]
-
-        if self.scatter[z]["plot"]:
-            self.scatter[z]["plot"].remove()
-
-        self.scatter[z]["plot"] = self.ax.scatter(X, Y, Z, s=self.scatter_size, facecolor=F, edgecolor=E)
-
-
+    '''
+    #########################################################################
+                            Plotting functions
+    '''
     def plot_errors(self, z, plot_qubits=False):
         '''
         param: z            z/t layer of 3D plot

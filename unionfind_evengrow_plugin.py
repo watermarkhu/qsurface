@@ -7,9 +7,19 @@ _____________________________________________
 '''
 import unionfind as uf
 import printing as pr
+import evengrow_directed as eg
 
 
 class toric(uf.toric):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.eg = eg.eg()
+
+
+    def get_counts(self):
+        super().get_counts()
+        self.eg.get_counts()
+
 
     def cluster_new_vertex(self, cluster, vertex, plot_step=0, *args, **kwargs):
         """
@@ -93,6 +103,8 @@ class toric(uf.toric):
 
     def grow_boundary(self, cluster, bucket_i, *args, **kwargs):
 
+        self.c_gbo += 1
+
         if cluster.root_node.calc_delay and self.print_steps:
             calc_nodes = [node.short_id()
              for node in cluster.root_node.calc_delay]
@@ -150,50 +162,50 @@ class toric(uf.toric):
     ##################################################################################################
     '''
 
-    def fuse_dgvertices(self, *args, **kwargs):
+    def fuse_vertices_degenerate(self, *args, **kwargs):
 
         merging = []
-        for active_V, edge, passive_V in self.fusion:
-            active_C = self.find_cluster_root(active_V.cluster)
-            passive_C = self.find_cluster_root(passive_V.cluster)
+        for aV, edge, pV in self.fusion:
+            aC = self.find_vertex_cluster(aV)
+            pC = self.find_vertex_cluster(pV)
 
             '''
             if:     Fully grown edge. New vertex is on the old boundary. Find new boundary on vertex
             elif:   Edge grown on itself. This cluster is already connected. Cut half-edge
             else:   Clusters merge by weighted union
             '''
-            if passive_C is None:
-                active_C.add_vertex(passive_V)
-                passive_V.node = active_V.node
-                self.cluster_new_vertex(active_C, passive_V, self.plot_growth)
+            if self.edge_growth_choices(edge, aV, pV, aC, pC):
+                aV.count, pV.count = 0, 0
+                merging.append((edge, aV, pV))
 
-            elif passive_C is active_C:
-                edge.support -= 1
-                if self.plot: self.plot.add_edge(edge, active_V)
+        for edge, aV, pV in merging:
+            aV.count += 1
+            pV.count += 1
 
-            else:
-                merging.append((active_V, edge, passive_V))
-
-        for active_V, edge, passive_V in merging:
-            active_V.count += 1
-            passive_V.count += 1
-
-        merge_buckets = [[] for i in range(6)]
+        merge_buckets = [[[] for _ in range(6)] for _ in range(3)]
         for mergevertices in merging:
-            (active_V, edge, passive_V) = mergevertices
-            index = 7 - (active_V.count + passive_V.count)
-            merge_buckets[index].append(mergevertices)
+            edge, aV, pV = mergevertices
+            V_index = 7 - (aV.count + pV.count)
 
-        for merge_bucket in merge_buckets:
-            for active_V, edge, passive_V in merge_bucket:
-                active_V.count, passive_V.count = 0, 0
-                self.fully_grown_edge_choises(active_V, edge, passive_V)
+            if aV.node.p == 0 and pV.node.p == 0:
+                A_index = 0
+            elif aV.node.p == 0 or pV.node.p == 0:
+                A_index = 1
+            else:
+                A_index = 2
+
+            merge_buckets[A_index][V_index].append(mergevertices)
+
+        for A_bucket in merge_buckets:
+            for V_bucket in A_bucket:
+                for items in V_bucket:
+                    self.fully_grown_edge(*items)
 
 
-    def fully_grown_edge_choises(self, active_V, edge, passive_V, *args, **kwargs):
+    def fully_grown_edge(self, edge, aV, pV, *args, **kwargs):
 
-        active_C = self.find_cluster_root(active_V.cluster)
-        passive_C = self.find_cluster_root(passive_V.cluster)
+        aC = self.find_vertex_cluster(aV)
+        pC = self.find_vertex_cluster(pV)
 
         '''
         if:     Fully grown edge. New vertex is on the old boundary. Find new boundary on vertex
@@ -201,29 +213,35 @@ class toric(uf.toric):
         else:   Clusters merge by weighted union
         '''
 
-        if passive_C is None:
-            active_C.add_vertex(passive_V)
-            passive_V.node = active_V.node
-            self.cluster_new_vertex(active_C, passive_V, self.plot_growth)
-
-        elif passive_C is active_C:
-            edge.support -= 1
-            if self.plot: self.plot.add_edge(edge, active_V)
-
-        else:
-            root_node = self.eg.adoption(active_V, passive_V, active_C, passive_C)
-            if passive_C.size < active_C.size:
-                active_C, passive_C = passive_C, active_C
+        if self.edge_growth_choices(edge, aV, pV, aC, pC):
+            root_node = self.eg.adoption(aV, pV, aC, pC)
+            if pC.size < aC.size:
+                aC, pC = pC, aC
             if self.print_steps:
-                if active_C.cID not in self.mstr:
-                    self.mstr[active_C.cID] = pr.print_graph(self.graph, [active_C], return_string=True)
-                if passive_C.cID not in self.mstr:
-                    self.mstr[passive_C.cID] = pr.print_graph(self.graph, [passive_C], return_string=True)
-                self.mstr[passive_C.cID] += "\n" + self.mstr[active_C.cID]
-                self.mstr.pop(active_C.cID)
-            self.union_clusters(passive_C, active_C)
-            passive_C.boundary[0].extend(active_C.boundary[0])
-            passive_C.root_node = root_node
+                if aC.cID not in self.mstr:
+                    self.mstr[aC.cID] = pr.print_graph(self.graph, [aC], return_string=True)
+                if pC.cID not in self.mstr:
+                    self.mstr[pC.cID] = pr.print_graph(self.graph, [pC], return_string=True)
+                self.mstr[pC.cID] += "\n" + self.mstr[aC.cID]
+                self.mstr.pop(aC.cID)
+            self.union_clusters(pC, aC)
+            pC.boundary[0].extend(aC.boundary[0])
+            pC.root_node = root_node
+
+
+    def edge_growth_choices(self, edge, aV, pV, aC, pC):
+
+        union = False
+        if pC is None:
+            aC.add_vertex(pV)
+            pV.node = aV.node
+            self.cluster_new_vertex(aC, pV, self.plot_growth)
+        elif pC is aC:
+            edge.support -= 1
+            if self.plot: self.plot.add_edge(edge, aV)
+        else:
+            union = True
+        return union
 
 
 class planar(uf.planar, toric):
@@ -300,3 +318,25 @@ class planar(uf.planar, toric):
                         vertex.cluster.boundary[0].append((vertex, new_edge, new_vertex))
 
         self.cluster_new_vertex_boundary(new_list)
+
+    '''
+    ##################################################################################################
+
+                                            2(b). Grow clusters fuse
+
+    ##################################################################################################
+    '''
+    def edge_growth_choices(self, edge, aV, pV, aC, pC):
+
+        union = False
+
+        if (aC.on_bound and (pV.type == 1 or (pC is not None and pC.on_bound))) or pC is aC:
+            edge.support -= 1
+            if self.plot: self.plot.add_edge(edge, aV)
+        elif pC is None:
+            aC.add_vertex(pV)
+            pV.node = aV.node
+            self.cluster_new_vertex(aC, pV, self.plot_growth)
+        else:
+            union = True
+        return union

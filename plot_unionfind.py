@@ -236,7 +236,7 @@ class plot_2D(gp.plot_2D):
         if type == "remove":
             c1 = self.cl
             c2 = self.cl
-            text = "❌remove"
+            text = "☒ remove"
             alpha = self.alpha2
         elif type == "confirm":
             c1 = self.cx
@@ -246,7 +246,7 @@ class plot_2D(gp.plot_2D):
         elif type == "peel":
             c1 = self.cl
             c2 = self.cl
-            text = "❌ peeling"
+            text = "☒ peeling"
             alpha = self.alpha2
         elif type == "match":
             c1 = self.cX

@@ -93,6 +93,8 @@ class toric(go.toric):
     def apply_and_measure_errors(self, pX, pZ, pE, pmX, pmZ, **kwargs):
         '''
         Initilizes errors on the qubits and measures the stabilizers on the graph on each layer of the cubic lattice.
+        For the first size-1 layers, measurement errors are applied.
+        For the final layer, perfect measurements are applied to ensure anyon creation.
         '''
 
         # first layers initilized with measurement error
@@ -117,6 +119,7 @@ class toric(go.toric):
     def init_erasure(self, pE=0, z=0, **kwargs):
         """
         Initializes an erasure error with probabilty pE, which will take form as a uniformly chosen pauli X and/or Z error.
+        Qubit states from previous layer are copied to this layer, whereafter erasure error is applied.
         """
 
         if pE == 0:
@@ -129,7 +132,7 @@ class toric(go.toric):
 
             # Apply errors
             if random.random() < pE:
-                qubitu.erasure = True
+                qubitu.erasure = 1
                 rand = random.random()
                 if rand < 0.25:
                     qubitu.E[0].state = 1 - qubitu.E[0].state
@@ -143,6 +146,7 @@ class toric(go.toric):
     def init_pauli(self, pX=0, pZ=0, pE=0, z=0, **kwargs):
         """
         initates Pauli X and Z errors on the lattice based on the error rates
+        Qubit states from previous layer are copied to this layer, whereafter pauli error is applied.
         """
 
         if pX == 0 and pZ == 0:

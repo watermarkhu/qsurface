@@ -9,6 +9,8 @@ from progiter import ProgIter
 import multiprocessing as mp
 from decimal import Decimal as decimal
 from collections import defaultdict as dd
+from pprint import pprint
+import numpy as np
 import random
 import time
 
@@ -21,6 +23,7 @@ def init_random_seed(timestamp=None, worker=0, iteration=0, **kwargs):
         timestamp = time.time()
     seed = "{:.0f}".format(timestamp*10**7) + str(worker) + str(iteration)
     random.seed(decimal(seed))
+    print(seed)
     return seed
 
 
@@ -47,6 +50,12 @@ def lattice_type(type, config, dec, go, size, **kwargs):
         graph = go.planar(size, decoder, plot2D=config.plot2D, plot3D=config.plot3D, plot_config=config.plot)
     return decoder, graph
 
+
+def get_mean_var(list_of_var, str):
+    return {
+        str+"_m": np.mean(list_of_var),
+        str+"_v": np.std(list_of_var)
+    }
 
 def single(
     config,
@@ -75,15 +84,16 @@ def single(
     # Initialize errors
     if seed is None and config.seed is None:
         init_random_seed(worker=worker, iteration=iter)
-    elif seed is None:
-        apply_random_seed(config.seed)
-    elif config.seed is None:
+    elif seed is not None:
         apply_random_seed(seed)
+    elif config.seed is not None:
+        apply_random_seed(config.seed)
 
     graph.apply_and_measure_errors(pX=pX, pZ=pZ, pE=pE, pmX=pmX, pmZ=pmZ)
 
     # Peeling decoder
     graph.decoder.decode()
+    graph.decoder.get_counts()
 
     # Measure logical operator
     graph.count_matching_weight()
@@ -114,8 +124,16 @@ def multiple(
     Runs the peeling decoder for a number of iterations. The graph is reused for speedup.
     """
 
-    if seeds is None:
+    if seeds is None and config.seed is None:
         seeds = [init_random_seed(worker=worker, iteration=iter) for iter in range(iters)]
+
+    elif config.seed is not None:
+        if type(config.seed) == list:
+            seeds = config.seed
+        elif type(config.seed) == int:
+            seeds = [config.seed] * iters
+        else:
+            raise TypeError
 
     decoder, graph = lattice_type(ltype, config, dec, go, size, **kwargs)
 
@@ -131,12 +149,12 @@ def multiple(
         "succes"    : sum(result),
         "weight"    : graph.matching_weight,
         "time"      : t_end - t_begin,
-        "c_gbu"     : decoder.c_gbu,
-        "c_gbo"     : decoder.c_gbo,
-        "c_union"   : decoder.c_ufu,
-        "c_find"    : decoder.c_uff,
-        "c_ctd"     : kwargs["eg"].ctd.calls,
-        "c_mac"     : kwargs["eg"].mac.calls
+        **get_mean_var(decoder.gbu, "gbu"),
+        **get_mean_var(decoder.gbo, "gbo"),
+        **get_mean_var(decoder.ufu, "ufu"),
+        **get_mean_var(decoder.uff, "uff"),
+        **get_mean_var(decoder.eg.ctd, "ctd"),
+        **get_mean_var(decoder.eg.mac, "mac")
     }
 
     if qres is not None:
@@ -206,24 +224,17 @@ class decoder_config(object):
     '''
     def __init__(self):
 
-        self.plot2D = 0
+        self.plot2D = 1
         self.plot3D = 0
-        self.seed = None
-
+        self.seed = 1581967152250592800
         self.decoder = {
-            "random_order"  : 0,
-            "random_traverse":0,
-            "print_steps"   : 0,
+            "dg_connections": 1,
+            "directed_graph": 0,
+            "print_steps"   : 1,
             "plot_find"     : 0,
             "plot_growth"   : 0,
             "plot_peel"     : 0,
             "plot_nodes"    : 0,
-        }
-
-        self.file = {
-            "savefile": 0,
-            "erasure_file": None,
-            "pauli_file": None,
         }
 
         self.plot = {
@@ -235,22 +246,21 @@ class decoder_config(object):
 
 if __name__ == "__main__":
 
-    import unionfind as decode
-    import evengrow_directed as eg
-    import graph_3D as go
+    import unionfind_evengrow_integrated as decode
+    import graph_2D as go
 
     sim_config = {
         "ltype" : "planar",
-        "size"  : 6,
-        "pX"    : 0.03,
+        "size"  : 12,
+        "pX"    : 0.1,
         "pZ"    : 0.0,
         "pE"    : 0.0,
         "pmX"   : 0.03,
         "pmZ"   : 0.0,
     }
-    iters = 1
+    iters = 5000
 
-    # output = single(decoder_config(), decode, go, eg=eg, **sim_config)
-    output = multiple(iters, decoder_config(), decode, go, eg=eg, **sim_config)
+    output = single(decoder_config(), decode, go, **sim_config)
+    # output = multiple(iters, decoder_config(), decode, go, **sim_config)
 
-    print(output)
+    pprint(output)

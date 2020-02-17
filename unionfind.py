@@ -14,13 +14,24 @@ class toric(object):
 
         self.plot_config = plot_config
 
-        self.c_gbu = 0
-        self.c_gbo = 0
-        self.c_ufu = 0
-        self.c_uff = 0
+        self.c_gbu, self.c_gbo, self.c_ufu, self.c_uff = 0, 0, 0, 0
+        self.gbu ,self.gbo, self.ufu, self.uff = [], [], [], []
 
         for key, value in kwargs.items():
             setattr(self, key, value)
+
+        if self.dg_connections:
+            self.fuse_vertices = self.fuse_vertices_degenerate
+        else:
+            self.fuse_vertices = self.fuse_vertices_simple
+
+
+    def get_counts(self):
+        self.gbu.append(self.c_gbu)
+        self.gbo.append(self.c_gbo)
+        self.ufu.append(self.c_ufu)
+        self.uff.append(self.c_uff)
+        self.c_gbu, self.c_gbo, self.c_ufu, self.c_uff = 0, 0, 0, 0
 
 
     def decode(self, *args, **kwargs):
@@ -60,17 +71,27 @@ class toric(object):
 
         Loops through the cluster tree to find the root cluster of the given cluster. When the parent cluster is not at the root level, the function is started again on the parent cluster. The recursiveness of the function makes sure that at each level the parent is pointed towards the root cluster, furfilling the collapsing rule.
         """
-        self.c_uff += 1
 
         if cluster is not None:
-            if (
-                cluster is not cluster.parent
-                and cluster.parent is not cluster.parent.parent
-            ):
+            if cluster is not cluster.parent and cluster.parent is not cluster.parent.parent:
                 cluster.parent = self.find_cluster_root(cluster.parent)
+                self.c_uff += 1
+
             return cluster.parent
         else:
             return None
+
+
+    def find_vertex_cluster(self, vertex):
+
+        cluster = self.find_cluster_root(vertex.cluster)
+
+        if cluster is None:
+            return None
+        else:
+            vertex.cluster = cluster.parent
+            return cluster.parent
+
 
     '''
     ##################################################################################################
@@ -241,10 +262,7 @@ class toric(object):
                 cluster.support = 1 - cluster.support
                 self.grow_boundary(cluster, bucket_i)
 
-                if self.plot_growth: self.plot.draw_plot(str(cluster) + " grown.")
-
         self.fuse_vertices()
-        # self.fuse_dgvertices()
 
         # Put clusters in new buckets. Some will be added double, but will be skipped by the new_boundary check
         for cluster in place:
@@ -290,83 +308,78 @@ class toric(object):
     '''
 
 
-    def fuse_vertices(self, *args, **kwargs):
-        for active_V, edge, passive_V in self.fusion:
-            self.fully_grown_edge_choises(active_V, edge, passive_V)
+    def fuse_vertices_simple(self, *args, **kwargs):
+        for aV, edge, pV in self.fusion:
+            self.fully_grown_edge(edge, aV, pV)
 
 
-    def fuse_dgvertices(self, *args, **kwargs):
+    def fuse_vertices_degenerate(self, *args, **kwargs):
 
         merging = []
-        for active_V, edge, passive_V in self.fusion:
-            active_C = self.find_cluster_root(active_V.cluster)
-            passive_C = self.find_cluster_root(passive_V.cluster)
+        for aV, edge, pV in self.fusion:
+            aC = self.find_vertex_cluster(aV)
+            pC = self.find_vertex_cluster(pV)
 
             '''
             if:     Fully grown edge. New vertex is on the old boundary. Find new boundary on vertex
             elif:   Edge grown on itself. This cluster is already connected. Cut half-edge
             else:   Clusters merge by weighted union
             '''
+            if self.edge_growth_choices(edge, aV, pV, aC, pC):
+                aV.count, pV.count = 0, 0
+                merging.append((edge, aV, pV))
 
-            if passive_C is None:
-                active_C.add_vertex(passive_V)
-                self.cluster_new_vertex(active_C, passive_V, self.plot_growth)
-
-            elif passive_C is active_C:
-                edge.support -= 1
-                if self.plot: self.plot.add_edge(edge, active_V)
-
-            else:
-                merging.append((active_V, edge, passive_V))
-
-        for active_V, edge, passive_V in merging:
-            active_V.count += 1
-            passive_V.count += 1
+        for edge, aV, pV in merging:
+            aV.count += 1
+            pV.count += 1
 
         merge_buckets = [[] for i in range(6)]
         for mergevertices in merging:
-            (active_V, edge, passive_V) = mergevertices
-            index = 7 - (active_V.count + passive_V.count)
+            edge, aV, pV = mergevertices
+            index = 7 - (aV.count + pV.count)
             merge_buckets[index].append(mergevertices)
 
         for merge_bucket in merge_buckets:
-            for active_V, edge, passive_V in merge_bucket:
-                active_V.count, passive_V.count = 0, 0
-                self.fully_grown_edge_choises(active_V, edge, passive_V)
+            for items in merge_bucket:
+                self.fully_grown_edge(*items)
 
 
-    def fully_grown_edge_choises(self, active_V, edge, passive_V, *args, **kwargs):
-
-        active_C = self.find_cluster_root(active_V.cluster)
-        passive_C = self.find_cluster_root(passive_V.cluster)
+    def fully_grown_edge(self, edge, aV, pV, *args, **kwargs):
 
         '''
         if:     Fully grown edge. New vertex is on the old boundary. Find new boundary on vertex
         elif:   Edge grown on itself. This cluster is already connected. Cut half-edge
         else:   Clusters merge by weighted union
         '''
+        aC = self.find_vertex_cluster(aV)
+        pC = self.find_vertex_cluster(pV)
 
-        if passive_C is None:
-            active_C.add_vertex(passive_V)
-            self.cluster_new_vertex(active_C, passive_V, self.plot_growth)
-
-        elif passive_C is active_C:
-            edge.support -= 1
-            if self.plot: self.plot.add_edge(edge, active_V)
-
-        else:
-            if passive_C.size < active_C.size:  # of clusters
-                active_C, passive_C = passive_C, active_C
+        if self.edge_growth_choices(edge, aV, pV, aC, pC):
+            if pC.size < aC.size:  # of clusters
+                aC, pC = pC, aC
             if self.print_steps:                            # Keep track of which clusters are merged into one to print later
-                if active_C.cID not in self.mstr:
-                    self.mstr[active_C.cID] = pr.print_graph(self.graph, [active_C], return_string=True)
-                if passive_C.cID not in self.mstr:
-                    self.mstr[passive_C.cID] = pr.print_graph(self.graph, [passive_C], return_string=True)
-                self.mstr[passive_C.cID] += "\n" + self.mstr[active_C.cID]
-                self.mstr.pop(active_C.cID)
-            self.union_clusters(passive_C, active_C)
-            passive_C.boundary[0].extend(active_C.boundary[0])                      # Combine boundaries
+                if aC.cID not in self.mstr:
+                    self.mstr[aC.cID] = pr.print_graph(self.graph, [aC], return_string=True)
+                if pC.cID not in self.mstr:
+                    self.mstr[pC.cID] = pr.print_graph(self.graph, [pC], return_string=True)
+                self.mstr[pC.cID] += "\n" + self.mstr[aC.cID]
+                self.mstr.pop(aC.cID)
+            self.union_clusters(pC, aC)
+            pC.boundary[0].extend(aC.boundary[0])                      # Combine boundaries
 
+
+    def edge_growth_choices(self, edge, aV, pV, aC, pC):
+
+        union = False
+        if pC is None:
+            aC.add_vertex(pV)
+            self.cluster_new_vertex(aC, pV, self.plot_growth)
+        elif pC is aC:
+            edge.support -= 1
+            if self.plot: self.plot.add_edge(edge, aV)
+        else:
+            union = True
+        return union
 
 
     '''
@@ -385,7 +398,7 @@ class toric(object):
         for layer in self.graph.S.values():
             for vertex in layer.values():
                 if vertex.cluster is not None:
-                    cluster = self.find_cluster_root(vertex.cluster)
+                    cluster = self.find_vertex_cluster(vertex)
                     self.peel_edge(cluster, vertex)
 
         if self.plot and not self.plot_peel:
@@ -406,20 +419,21 @@ class toric(object):
         num_connect = 0
 
         for (NV, NE) in vertex.neighbors.values():
-            if NE.support == 2:
-                new_cluster = self.find_cluster_root(NV.cluster)
-                if new_cluster is cluster and not NE.peeled:
+            if NE.support == 2 and not NE.peeled:
+                new_cluster = self.find_vertex_cluster(NV)
+                if new_cluster is cluster:
                     num_connect += 1
                     edge, new_vertex = NE, NV
-            if num_connect > 1:
-                break
+                if num_connect > 1:
+                    break
 
         if num_connect == 1:
             edge.peeled = True
             if vertex.state:
 
                 if edge.edge_type == 0:
-                    self.matching_edge(edge)
+                    decode_edge = self.graph.Q[self.graph.decode_layer][edge.qubit.qID].E[edge.ertype]
+                    decode_edge.state = not decode_edge.state
 
                 edge.matching = True
                 vertex.state = False
@@ -433,16 +447,6 @@ class toric(object):
             else:
                 if plot: self.plot.plot_edge_step(edge, "peel")
             self.peel_edge(cluster, new_vertex)
-
-
-    def matching_edge(self, edge):
-        '''
-        flips the value of the edge on the decode layer of the lattice
-        '''
-        decode_edge = self.graph.Q[self.graph.decode_layer][edge.qubit.qID].E[edge.ertype]
-        decode_edge.state = not decode_edge.state
-
-
 
 
 class planar(toric):
@@ -561,14 +565,16 @@ class planar(toric):
 
     ##################################################################################################
     '''
+    def edge_growth_choices(self, edge, aV, pV, aC, pC):
 
+        union = False
 
-    def fully_grown_edge_choises(self, active_V, edge, passive_V, *args, **kwargs):
-
-        active_C = self.find_cluster_root(active_V.cluster)
-        passive_C = self.find_cluster_root(passive_V.cluster)
-        if active_C.on_bound and (passive_V.type == 1 or (passive_C is not None and passive_C.on_bound)):
+        if (aC.on_bound and (pV.type == 1 or (pC is not None and pC.on_bound))) or pC is aC:
             edge.support -= 1
-            if self.plot: self.plot.add_edge(edge, active_V)
+            if self.plot: self.plot.add_edge(edge, aV)
+        elif pC is None:
+            aC.add_vertex(pV)
+            self.cluster_new_vertex(aC, pV, self.plot_growth)
         else:
-            super().fully_grown_edge_choises(active_V, edge, passive_V, *args, **kwargs)
+            union = True
+        return union

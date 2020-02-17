@@ -153,6 +153,9 @@ def plot_thresholds(
 
 
 class decoder_config(object):
+    '''
+    stores all settings of the decoder
+    '''
     def __init__(self):
 
         self.plot2D = 0
@@ -160,19 +163,13 @@ class decoder_config(object):
         self.seed = None
 
         self.decoder = {
-            "random_order"  : 0,
-            "random_traverse":0,
+            "dg_connections": 1,
+            "directed_graph": 0,
             "print_steps"   : 0,
             "plot_find"     : 0,
             "plot_growth"   : 0,
             "plot_peel"     : 0,
             "plot_nodes"    : 0,
-        }
-
-        self.file = {
-            "savefile": 0,
-            "erasure_file": None,
-            "pauli_file": None,
         }
 
         self.plot = {
@@ -188,36 +185,33 @@ if __name__ == "__main__":
                     options
     '''
 
-    import unionfind_evengrow_plugin as decoder
-    import evengrow_directed as eg
+    import unionfind_evengrow_integrated as decoder
     import graph_3D as go
 
-    folder = "./"
+    ltype = "planar"
+    lattices = [8, 10]
+    # P = list(np.round(np.linspace(0.096, 0.106, 6), 6))
+    P = list(np.round(np.linspace(0.024, 0.034, 6), 6))
+    Num = 500
+    P_store = 1000
 
     just_plot = 0
     print_data = 1
-    save_result = 1
+    save_result = 0
     data_select = None
     modified_ansatz = 0
     file_name = "toric_3D_uf_test"
     plot_name = file_name
 
-    lattices = [8, 10]
-    P = list(np.round(np.linspace(0.024, 0.034, 1), 6))
-    # P = list(np.round(np.linspace(0.096, 0.106, 6), 6))
-    Num = 1000
-    P_store = 1000
 
     '''
     ############################################
     '''
 
-
-
-
     r = git.Repo()
     hash = r.git.rev_parse(r.head, short=True)
 
+    folder = "./"
     path = file_name if just_plot else hash + "_" + file_name
     file_path = folder + "./data/" + path + ".csv"
     fig_path = folder + "./figures/" + path + ".pdf"
@@ -232,17 +226,7 @@ if __name__ == "__main__":
 
                 print("Calculating for L = ", str(lati), "and p =", str(pi))
 
-                sim_config = {
-                    "ltype" : "toric",
-                    "size"  : lati,
-                    "pX"    : pi,
-                    "pZ"    : 0,
-                    "pE"    : 0,
-                    "pmX"   : pi,
-                    "pmZ"   : 0,
-                }
-
-                output = multiprocess(Num, decoder_config(), decoder, go, eg=eg, **sim_config)
+                output = multiprocess(Num, decoder_config(), decoder, go, pX=pi, pmX=pi, ltype=ltype, size=lati)
                 pprint(dict(output))
                 print()
                 columns = list(output.keys())

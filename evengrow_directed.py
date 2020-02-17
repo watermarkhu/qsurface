@@ -1,3 +1,4 @@
+
 '''
 2020 Mark Shui Hu, QuTech
 
@@ -36,7 +37,6 @@ Tree after merge:
 # TODO: Proper calculation of delay for erasures/empty nodes in the graph
 '''
 from termcolor import colored as cs
-import decorators
 
 class anyon_node(object):
     '''
@@ -133,141 +133,148 @@ class empty_node(anyon_node):
         self.dis = 0
 
 
-def make_ancestor_child(node, ac_level=False):
-    '''
-    Recursive function to reroot an tree in a certain node
-    '''
-    if node is not None:
-        make_ancestor_child(node.ancestor)
-        ancestor = node.ancestor
-        mac(node, ancestor)
-        if ac_level:
-            node.ancestor = None
-            node.e = None
+class eg(object):
+
+    def __init__(self):
+        self.c_mac, self.c_ctd = 0, 0
+        self.mac, self.ctd = [], []
+
+    def get_counts(self):
+        self.mac.append(self.c_mac)
+        self.ctd.append(self.c_ctd)
+        self.c_mac, self.c_ctd = 0, 0
 
 
-@decorators.countcalls
-def mac(node, ancestor):
-    '''
-    Separation of make_ancestor_child() in order to use decorator to count calls
-    Putting the decarator on the recursive functions triggers large depth in calls
-    '''
-    if ancestor is not None:
-        ancestor.children.remove(node)
-        ancestor.ancestor = node
-        ancestor.e = node.e
-        node.children.append(ancestor)
+    def anyon_node(self, vertex):
+        return anyon_node(vertex)
+
+    def boundary_node(self, vertex):
+        return boundary_node(vertex)
 
 
-def comp_tree_p_of_node(node):
-    '''
-    Recursive function to find the parity of a node and its children
-    '''
-    parity = sum([1 - comp_tree_p_of_node(child) for child in node.children]) % 2
+    def make_ancestor_child(self, node, ac_level=False):
+        '''
+        Recursive function to reroot an tree in a certain node
+        '''
+        self.c_mac += 1
 
-    if type(node) == anyon_node:
-        node.p = parity
-        return node.p
+        if node is not None:
+            self.make_ancestor_child(node.ancestor)
+            ancestor = node.ancestor
 
-    elif type(node) == junction_node:
-        node.p = 1 - parity
-        return node.p
+            if ancestor is not None:
+                ancestor.children.remove(node)
+                ancestor.ancestor = node
+                ancestor.e = node.e
+                node.children.append(ancestor)
 
-    else:
-        node.p = 1
-        return node.p
-
-
-def comp_tree_d_of_node(node, cluster):
-    '''
-    Recursive function to find the delay of a node and its children
-    '''
-    node.calc_delay = []
-    node.w = 0
-
-    if node.ancestor is None:
-        for child in node.children:
-            comp_tree_d_of_node(child, cluster)
-    else:
-        ctd(node)
-        if node.d < cluster.mindl:                  # store cluster minimum delay
-            cluster.mindl = node.d
-        for child in node.children:
-            comp_tree_d_of_node(child, cluster)
+            if ac_level:
+                node.ancestor = None
+                node.e = None
 
 
-@decorators.countcalls
-def ctd(node):
-    '''
-    Separation of comp_tree_p_of_node() in order to use decorator to count calls
-    Putting the decarator on the recursive functions triggers large depth in calls
-    '''
-    ancestor = node.ancestor
-    # size_diff = (node.s + node.g)//2 - (ancestor.s + node.g)//2 + node.e*(-1)**(node.p + 1)
-    # support_fix = (node.g + ancestor.g)%2
-    # node.d = ancestor.d + 2 * size_diff - support_fix - 1
-    node.d = ancestor.d + (node.s//2 - ancestor.s//2 + node.e*(-1)**(node.p + 1))
+    def comp_tree_p_of_node(self, node):
+        '''
+        Recursive function to find the parity of a node and its children
+        '''
+        parity = sum([1 - self.comp_tree_p_of_node(child) for child in node.children]) % 2
+
+        if type(node) == anyon_node:
+            node.p = parity
+            return node.p
+
+        elif type(node) == junction_node:
+            node.p = 1 - parity
+            return node.p
+
+        else:
+            node.p = 1
+            return node.p
 
 
-def connect_nodes(ancestor, child, edge):
-    '''
-    Connects two nodes by setting the parent child relationchip between the two
-    '''
-    child.ancestor = ancestor
-    ancestor.children.append(child)
-    child.e = edge
+    def comp_tree_d_of_node(self, node, cluster):
+        '''
+        Recursive function to find the delay of a node and its children
+        '''
+        self.c_ctd += 1
+        node.calc_delay = []
+        node.w = 0
+
+        if node.ancestor is None:
+            for child in node.children:
+                self.comp_tree_d_of_node(child, cluster)
+        else:
+            ancestor = node.ancestor
+            # size_diff = (node.s + node.g)//2 - (ancestor.s + node.g)//2 + node.e*(-1)**(node.p + 1)
+            # support_fix = (node.g + ancestor.g)%2
+            # node.d = ancestor.d + 2 * size_diff - support_fix - 1
+            node.d = ancestor.d + (node.s//2 - ancestor.s//2 + node.e*(-1)**(node.p + 1))
+
+            if node.d < cluster.mindl:                  # store cluster minimum delay
+                cluster.mindl = node.d
+            for child in node.children:
+                self.comp_tree_d_of_node(child, cluster)
 
 
-def adoption(ac_vertex, pa_vertex, ac_cluster, pa_cluster):
-    '''
-    Union of two anyontrees.
-    ac_vertex   merging vertex of base cluster
-    pa_vertex   merging vertex of grow cluster
-    '''
-    ac_node, pa_node = ac_vertex.node, pa_vertex.node
-    even_after_union = True if ac_cluster.parity % 2 == pa_cluster.parity % 2 else False
-    '''
-    ac_node     root of active vertex
-    pa_node     root of passive vertex
-    an_node     ancestor node during union
-    ch_node     child node during union
-
-    even_after_union:       if cluster is even after union, union of trees is done by weighted union
-                            else, union is done by always appending even tree to odd tree,
-                            delay calculation is needed from the child node (of union duo) and descendents
-    '''
-    if (even_after_union and ac_cluster.parity > pa_cluster.parity) or pa_cluster.parity % 2 == 0:
-        root_node, an_node, ch_node = ac_cluster.root_node, ac_node, pa_node
-    else:
-        root_node, an_node, ch_node = pa_cluster.root_node, pa_node, ac_node
-
-    make_ancestor_child(ch_node, True)
-
-    if ac_node.g == 0 and pa_node.s > 1:                             # Connect via new juntion-node
-        pa_vertex.node = junction_node(pa_vertex)
-        connect_nodes(an_node, pa_vertex.node, an_node.s // 2)
-        connect_nodes(pa_vertex.node, ch_node, ch_node.s // 2)
-        calc_delay_node = None if even_after_union else pa_vertex.node
-    else:                                                               # Connect directly
-        connect_nodes(an_node, ch_node, (ac_node.s + pa_node.s) // 2)
-        calc_delay_node = None if even_after_union else ch_node
-
-    root_node.calc_delay.append(calc_delay_node)        # store generator of undefined delay
-
-    return root_node
+    def connect_nodes(self, ancestor, child, edge):
+        '''
+        Connects two nodes by setting the parent child relationchip between the two
+        '''
+        child.ancestor = ancestor
+        ancestor.children.append(child)
+        child.e = edge
 
 
-def new_empty(ac_vertex, pa_vertex, cluster):
-    '''
-    New empty node that is the result of error errors.
-    Distance is calculated from this node to the closest non-empty node
-    '''
-    pa_vertex.node = empty_node(pa_vertex)
-    ac_node, pa_node = ac_vertex.node, pa_vertex.node
+    def adoption(self, ac_vertex, pa_vertex, ac_cluster, pa_cluster):
+        '''
+        Union of two anyontrees.
+        ac_vertex   merging vertex of base cluster
+        pa_vertex   merging vertex of grow cluster
+        '''
+        ac_node, pa_node = ac_vertex.node, pa_vertex.node
+        even_after_union = True if ac_cluster.parity % 2 == pa_cluster.parity % 2 else False
+        '''
+        ac_node     root of active vertex
+        pa_node     root of passive vertex
+        an_node     ancestor node during union
+        ch_node     child node during union
 
-    if ac_node.type == "E":
-        connect_nodes(ac_node, pa_node, 1)
-        pa_node.dis = ac_node.dis + 1
-    else:
-        connect_nodes(ac_node, pa_node, ac_node.s // 2)
-        # cluster.root_node.calc_delay.append(pa_vertex.node)
+        even_after_union:       if cluster is even after union, union of trees is done by weighted union
+                                else, union is done by always appending even tree to odd tree,
+                                delay calculation is needed from the child node (of union duo) and descendents
+        '''
+        if (even_after_union and ac_cluster.parity > pa_cluster.parity) or pa_cluster.parity % 2 == 0:
+            root_node, an_node, ch_node = ac_cluster.root_node, ac_node, pa_node
+        else:
+            root_node, an_node, ch_node = pa_cluster.root_node, pa_node, ac_node
+
+        self.make_ancestor_child(ch_node, True)
+
+        if ac_node.g == 0 and pa_node.s > 1:                             # Connect via new juntion-node
+            pa_vertex.node = junction_node(pa_vertex)
+            self.connect_nodes(an_node, pa_vertex.node, an_node.s // 2)
+            self.connect_nodes(pa_vertex.node, ch_node, ch_node.s // 2)
+            calc_delay_node = None if even_after_union else pa_vertex.node
+        else:                                                               # Connect directly
+            self.connect_nodes(an_node, ch_node, (ac_node.s + pa_node.s) // 2)
+            calc_delay_node = None if even_after_union else ch_node
+
+        root_node.calc_delay.append(calc_delay_node)        # store generator of undefined delay
+
+        return root_node
+
+
+    def new_empty(self, ac_vertex, pa_vertex, cluster):
+        '''
+        New empty node that is the result of error errors.
+        Distance is calculated from this node to the closest non-empty node
+        '''
+        pa_vertex.node = empty_node(pa_vertex)
+        ac_node, pa_node = ac_vertex.node, pa_vertex.node
+
+        if ac_node.type == "E":
+            self.connect_nodes(ac_node, pa_node, 1)
+            pa_node.dis = ac_node.dis + 1
+        else:
+            self.connect_nodes(ac_node, pa_node, ac_node.s // 2)
+            # cluster.root_node.calc_delay.append(pa_vertex.node)

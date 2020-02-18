@@ -13,6 +13,7 @@ from pprint import pprint
 import numpy as np
 import pandas as pd
 import git
+import sys
 import os
 
 
@@ -30,7 +31,9 @@ def plot_thresholds(
     ax1=None,                   # axis object of rescaled fit plot
     styles=[".", "-"]           # linestyles for data and fit
 ):
-    ''' getting data '''
+    '''
+    Plot and fit thresholds for a given dataset. Data is inputted as four lists for L, P, N and t.
+    '''
     if ax0 is None:
         f0, ax0 = plt.subplots()
     if ax1 is None:
@@ -48,7 +51,9 @@ def plot_thresholds(
     for L, P, N, T in zip(fitL, fitp, fitN, fitt):
         LP[L].append([P, N, T])
 
-    ''' Fitting function '''
+    '''
+    Fitting function
+    '''
     def fit_func(PL, pthres, A, B, C, D, nu, mu):
         p, L = PL
         x = (p - pthres) * L ** (1 / nu)
@@ -57,7 +62,9 @@ def plot_thresholds(
         else:
             return A + B * x + C * x ** 2
 
-    ''' Initial parameters for fitting function'''
+    '''
+    Initial parameters for fitting function
+    '''
     g_T, T_m, T_M = (min(fitp) + max(fitp))/2, min(fitp), max(fitp)
     g_A, A_m, A_M = 0, -np.inf, np.inf
     g_B, B_m, B_M = 0, -np.inf, np.inf
@@ -76,7 +83,9 @@ def plot_thresholds(
     par_guess = [g_T, g_A, g_B, g_C, g_D, gnu, gmu]
     bound = [(T_m, A_m, B_m, C_m, D_m, num, mum), (T_M, A_M, B_M, C_M, D_M, nuM, muM)]
 
-    ''' fitting the data '''
+    '''
+    Fitting data
+    '''
     par, pcov = optimize.curve_fit(
         fit_func,
         (fitp, fitL),
@@ -91,7 +100,9 @@ def plot_thresholds(
     print("A=", par[1], "B=", par[2], "C=", par[3])
     print("D=", par[4], "nu=", par[5], "mu=", par[6])
 
-    ''' Plot all results from file (not just current simulation) '''
+    '''
+    Plot all results from file (not just current simulation)
+    '''
     plot_i = {}
     for i, l in enumerate(set(fitL)):
         plot_i[l] = i
@@ -158,13 +169,13 @@ class decoder_config(object):
     '''
     def __init__(self):
 
-        self.plot2D = 0
-        self.plot3D = 0
-        self.seed = None
+        self.plot2D = 0             # Plot 2D lattice and final layer of 3D lattice
+        self.plot3D = 0             # Plot 3D lattice, turn off for large lattices!
+        self.seed = None            # seed or list of seeds with len(seeds) = iterations
 
         self.decoder = {
-            "dg_connections": 1,
-            "directed_graph": 0,
+            "dg_connections": 1,    # Fuse full edges by considering the vertex connectivity degeneracy.
+            "directed_graph": 0,    # Use directed base-tree with parent/child i.s.o. connections for each node
             "print_steps"   : 0,
             "plot_find"     : 0,
             "plot_growth"   : 0,
@@ -188,12 +199,14 @@ if __name__ == "__main__":
     import unionfind_evengrow_integrated as decoder
     import graph_3D as go
 
-    ltype = "planar"
-    lattices = [8, 10]
-    # P = list(np.round(np.linspace(0.096, 0.106, 6), 6))
-    P = list(np.round(np.linspace(0.024, 0.034, 6), 6))
-    Num = 500
+    ltype = "toric"
+    lattices = [44]
+    P = [0.034]
+    # P = list(np.round(np.linspace(0.096, 0.106, 3), 6))
+    # P = list(np.round(np.linspace(0.024, 0.034, 2), 6))
+    Num = 1
     P_store = 1000
+    recursion_depth = 100000
 
     just_plot = 0
     print_data = 1
@@ -203,10 +216,10 @@ if __name__ == "__main__":
     file_name = "toric_3D_uf_test"
     plot_name = file_name
 
-
     '''
     ############################################
     '''
+    sys.setrecursionlimit(recursion_depth)
 
     r = git.Repo()
     hash = r.git.rev_parse(r.head, short=True)
@@ -226,9 +239,9 @@ if __name__ == "__main__":
 
                 print("Calculating for L = ", str(lati), "and p =", str(pi))
 
-                output = multiprocess(Num, decoder_config(), decoder, go, pX=pi, pmX=pi, ltype=ltype, size=lati)
-                pprint(dict(output))
-                print()
+                output = multiprocess(Num, decoder_config(), decoder, go, pX=pi, pmX=pi, ltype=ltype, size=lati, processes=1)
+
+                pprint(dict(output), "\n")
                 columns = list(output.keys())
 
                 if data is None:
@@ -254,8 +267,7 @@ if __name__ == "__main__":
 
     print(data.to_string()) if print_data else None
 
-    ''' Select data to plot '''
-
+    '''Select data to plot'''
     fitL = data.index.get_level_values("L")
     fitp = data.index.get_level_values("p")
     fitN = data.loc[:, "N"].values

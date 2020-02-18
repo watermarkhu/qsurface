@@ -41,8 +41,6 @@ R1: [N1, M1],  N1: [R1],  M1: [R1, M0]
 # TODO: Proper calculation of delay for erasures/empty nodes in the graph
 '''
 
-import decorators
-
 class anyon_node(object):
     '''
     Anyon node object - element in the aj-tree

@@ -295,6 +295,10 @@ class plot_3D(plot_2D, gp.plot_3D):
         set_axes_equal()
         draw_line()
         plot_scatter()
+
+    Method resoluation order is defined as:
+
+    plot_3D -> plot_2D -> plot_graph_lattice.plot_3D -> plot_graph_lattice.plot_2D
     '''
 
     '''

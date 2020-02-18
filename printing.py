@@ -8,7 +8,6 @@ _____________________________________________
 Several functions that are used to print the active state of the graph.
 '''
 
-
 import logging
 import pyparsing as pp
 

@@ -4,6 +4,10 @@
 www.github.com/watermarkhu/toric_code
 _____________________________________________
 
+Contains methods to run a simulated lattice of the surface code.
+The graph type (2D/3D) and decoder (MWPM, unionfind...) are specified and are loaded.
+One can choose to run a simulated lattice for a single, multiple or many (multithreaded) multiple iterations.
+
 '''
 from progiter import ProgIter
 import multiprocessing as mp
@@ -23,7 +27,7 @@ def init_random_seed(timestamp=None, worker=0, iteration=0, **kwargs):
         timestamp = time.time()
     seed = "{:.0f}".format(timestamp*10**7) + str(worker) + str(iteration)
     random.seed(decimal(seed))
-    print(seed)
+    # print(seed)
     return seed
 
 
@@ -137,29 +141,38 @@ def multiple(
 
     decoder, graph = lattice_type(ltype, config, dec, go, size, **kwargs)
 
-    t_begin = time.time()
     result = [
         single(config, dec, go, ltype, size, pX, pZ, pE, pmX, pmZ ,graph, worker, iter, seed, **kwargs)
         for iter, seed in zip(ProgIter(range(iters)), seeds)
     ]
-    t_end = time.time()
-
-    output = {
-        "N"         : iters,
-        "succes"    : sum(result),
-        "weight"    : graph.matching_weight,
-        "time"      : t_end - t_begin,
-        **get_mean_var(decoder.gbu, "gbu"),
-        **get_mean_var(decoder.gbo, "gbo"),
-        **get_mean_var(decoder.ufu, "ufu"),
-        **get_mean_var(decoder.uff, "uff"),
-        **get_mean_var(decoder.eg.ctd, "ctd"),
-        **get_mean_var(decoder.eg.mac, "mac")
-    }
 
     if qres is not None:
+        output = {
+            "N"         : iters,
+            "succes"    : sum(result),
+            "weight"    : graph.matching_weight,
+            "time"      : decoder.time,
+        #     "gbu"       : decoder.gbu,
+        #     "gbo"       : decoder.gbo,
+        #     "ufu"       : decoder.ufu,
+        #     "uff"       : decoder.uff,
+        #     "ctd"       : decoder.eg.ctd,
+        #     "mac"       : decoder.eg.mac,
+        }
         qres.put(output)
     else:
+        output = {
+            "N"         : iters,
+            "succes"    : sum(result),
+            **get_mean_var(graph.matching_weight, "weight"),
+            **get_mean_var(decoder.time, "time"),
+            # **get_mean_var(decoder.gbu, "gbu"),
+            # **get_mean_var(decoder.gbo, "gbo"),
+            # **get_mean_var(decoder.ufu, "ufu"),
+            # **get_mean_var(decoder.uff, "uff"),
+            # **get_mean_var(decoder.eg.ctd, "ctd"),
+            # **get_mean_var(decoder.eg.mac, "mac")
+        }
         return output
 
 
@@ -207,10 +220,20 @@ def multiprocess(
     for worker in workers:
         worker.start()
 
-    output = dd(int)
+    workerlists, output = dd(list), dd(int)
     for worker in workers:
         for key, value in qres.get().items():
-            output[key] += value
+            if type(value) == list:
+                workerlists[key].extend(value)
+            else:
+                output[key] += value
+
+    # from guppy import hpy
+    # h = hpy().heap()
+    # print("\nmememory (MB):", h.size/1000000)
+
+    for key, value in workerlists.items():
+        output.update(get_mean_var(value, key))
 
     for worker in workers:
         worker.join()
@@ -226,11 +249,11 @@ class decoder_config(object):
 
         self.plot2D = 1
         self.plot3D = 0
-        self.seed = 1581967152250592800
+        self.seed = None
         self.decoder = {
-            "dg_connections": 1,
+            "dg_connections": 0,
             "directed_graph": 0,
-            "print_steps"   : 1,
+            "print_steps"   : 0,
             "plot_find"     : 0,
             "plot_growth"   : 0,
             "plot_peel"     : 0,
@@ -246,19 +269,19 @@ class decoder_config(object):
 
 if __name__ == "__main__":
 
-    import unionfind_evengrow_integrated as decode
+    import mwpm as decode
     import graph_2D as go
 
     sim_config = {
-        "ltype" : "planar",
-        "size"  : 12,
+        "ltype" : "toric",
+        "size"  : 6,
         "pX"    : 0.1,
         "pZ"    : 0.0,
         "pE"    : 0.0,
-        "pmX"   : 0.03,
+        "pmX"   : 0.028,
         "pmZ"   : 0.0,
     }
-    iters = 5000
+    iters = 500
 
     output = single(decoder_config(), decode, go, **sim_config)
     # output = multiple(iters, decoder_config(), decode, go, **sim_config)

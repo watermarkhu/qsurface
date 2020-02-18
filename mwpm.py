@@ -4,7 +4,6 @@
 www.github.com/watermarkhu/toric_code
 _____________________________________________
 
-
 The Minimum Weight Perfect Matching decoder
 
 Uses either Kolmogorov's Blossom 5 algorithm in C (requires linux, wsl, or some gcc compiler for windows)
@@ -14,24 +13,31 @@ The C implementation (in folder blossom5) is highly recommended as it evidently 
 '''
 import blossom5.pyMatch as pm
 # import networkx as nx
+import time
 
 
 class toric(object):
     '''
-    Decodes the toric lattice (2D and 3D).
+    MWPM decoder for the toric lattice (2D and 3D).
     Edges between all anyons are considered.
     '''
     def __init__(self, *args, **kwargs):
         for key, value in kwargs.items():
             setattr(self, key, value)
+        self.time = []
 
     def decode(self):
         '''
         Decode functions for the MWPM toric decoder
         '''
+        self.t0 = time.time()
         self.get_matching()
         self.apply_matching()
         if self.graph.gl_plot: self.graph.gl_plot.plot_lines(self.matching)
+
+
+    def get_counts(self):
+        self.time.append(time.time() - self.t0)
 
 
     def get_stabs(self):

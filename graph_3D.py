@@ -30,7 +30,7 @@ import random
 
 class toric(go.toric):
     '''
-    Inherits all the calss variables and methods of graph_2D.toric
+    Inherits all the class variables and methods of graph_2D.toric
 
     Additions:
         G   dict of qubit-like objects called bridges containing the vertical edges connecting stabs of different layers
@@ -80,6 +80,24 @@ class toric(go.toric):
 
     def __repr__(self):
         return f"3D {self.__class__.__name__} graph object"
+
+
+    def count_matching_weight(self):
+        '''
+        Applies count_matching_weight() method of parent graph_2D object on each layer of the cubic lattice. Additionally counts the weight of the edges in the bridge objects present in the 3D graph.
+        '''
+        weight = 0
+        for z in self.range:
+            for qubit in self.Q[z].values():
+                if qubit.E[0].matching == 1:
+                    weight += 1
+                if qubit.E[1].matching == 1:
+                    weight += 1
+        for layer in self.G.values():
+            for bridge in layer.values():
+                if bridge.E.matching:
+                    weight += 1
+        self.matching_weight.append(weight)
 
     '''
     ########################################################################################
@@ -201,18 +219,6 @@ class toric(go.toric):
             self.measure_stab(pmX=0, pmZ=0, z=self.decode_layer)
             fp.plot_syndrome(z=self.decode_layer)
         return super().logical_error(z=self.size-1)
-
-
-    def count_matching_weight(self):
-        '''
-        Applies count_matching_weight() method of parent graph_2D object on each layer of the cubic lattice. Additionally counts the weight of the edges in the bridge objects present in the 3D graph.
-        '''
-        for z in self.range:
-            super().count_matching_weight(z=z)
-        for layer in self.G.values():
-            for bridge in layer.values():
-                if bridge.E.matching:
-                    self.matching_weight += 1
 
     '''
     ########################################################################################

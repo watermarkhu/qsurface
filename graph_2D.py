@@ -53,7 +53,7 @@ class toric(object):
         self.decode_layer = 0
         self.cID = 0
         self.C, self.S, self.Q = {}, {}, {}
-        self.matching_weight = 0
+        self.matching_weight = []
 
         self.init_graph_layer()
 
@@ -71,6 +71,18 @@ class toric(object):
         self.uf_plot = puf.plot_2D(self, **self.plot_config)
         return self.uf_plot
 
+
+    def count_matching_weight(self, z=0):
+        '''
+        Loops through all qubits on the layer and counts the number of matchings edges
+        '''
+        weight = 0
+        for qubit in self.Q[z].values():
+            if qubit.E[0].matching == 1:
+                weight += 1
+            if qubit.E[1].matching == 1:
+                weight += 1
+        self.matching_weight.append(weight)
     '''
     ########################################################################################
 
@@ -187,16 +199,6 @@ class toric(object):
         errorless = True if logical_error == [0, 0, 0, 0] else False
         return logical_error, errorless
 
-
-    def count_matching_weight(self, z=0):
-        '''
-        Loops through all qubits on the layer and counts the number of matchings edges
-        '''
-        for qubit in self.Q[z].values():
-            if qubit.E[0].matching == 1:
-                self.matching_weight += 1
-            if qubit.E[1].matching == 1:
-                self.matching_weight += 1
 
     '''
     ########################################################################################

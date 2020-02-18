@@ -12,9 +12,10 @@ A plot_3D object is initialized for a graph_3D graph, which plots onto a 3D axis
 Plot_2D object is inherited by Plot_3D object. All colors on the plot are defined in the plot_2D oject.
 The plot_unionfind.plot_2D and plot_3D objects are also child objects that uses the same colors and some methods
 '''
-
+from collections import defaultdict as dd
 from matplotlib import pyplot as plt
 from matplotlib.lines import Line2D
+from matplotlib.widgets import Button
 import printing as pr
 import random
 
@@ -68,7 +69,25 @@ class plot_2D:
         self.scatter_size = 200/graph.size
         self.z_distance = 8
 
+        self.history = dd(list)
+        self.iter = 0
+        self.iter_names = ["Initial"]
+        self.iter_plot = -1
+        self.recent = True
+
         self.f = plt.figure(figsize=(self.plot_size, self.plot_size))
+        self.ax = plt.axes([0.05, 0.15, 0.75, 0.8])
+        self.canvas = self.f.canvas
+
+        # self.canvas.mpl_connect('key_press_event', self.press)
+
+        self.prev_button = Button(plt.axes([0.7, 0.05, 0.1, 0.075]), "Previous")
+        self.next_button = Button(plt.axes([0.81, 0.05, 0.1, 0.075]), "Next")
+
+        self.prev_button.on_clicked(self.draw_prev)
+        self.next_button.on_clicked(self.draw_next)
+
+
 
         self.init_plot(z)
 
@@ -77,11 +96,50 @@ class plot_2D:
                             Helper functions
     '''
 
+    def press(self, event):
+        if event.key == "right":
+            self.draw_next()
+        if event.key == "left":
+            self.draw_prev()
+
+    def draw_next(self, event=None):
+
+        if self.iter_plot < self.iter:
+            self.iter_plot += 1
+            text = self.iter_names[self.iter_plot]
+            self.text.set_text(text)
+            for object, changes in self.history[text]:
+                self.change_attributes(object, changes)
+            self.canvas.blit(self.ax.bbox)
+            print("Drawing next: {}".format(text))
+        elif self.iter_plot == self.iter:
+            self.recent = 1
+            print("Can't go further!")
+
+    def draw_prev(self, event=None):
+
+
+        if self.iter_plot >= 1:
+            self.recent = 0
+            self.iter_plot -= 1
+            text = self.iter_names[self.iter_plot]
+            self.text.set_text(text)
+            for object, changes in self.history[text]:
+                self.change_attributes(object, changes)
+            self.canvas.blit(self.ax.bbox)
+
+            print("Drawing previous: {}".format(text))
+        else:
+            print("Can't go back further!")
+
+
+
     def draw_plot(self, txt=None):
         '''
-        Blits all changed plotting object onto the figur.e.
+        Blits all changed plotting object onto the figure.
         Optional text is printed, added to the log and shown on the figure
         '''
+        self.iter_plot += 1
         if txt is not None:
             self.text.set_text(txt)
             pr.printlog(txt)
@@ -94,9 +152,10 @@ class plot_2D:
         Pauses the script until user interaction on the plot.
         Waits for a maximum of 120 seconds.
         '''
-        keyboardClick = False
-        while not keyboardClick:
-            keyboardClick = plt.waitforbuttonpress(120)
+        wait = True
+        while wait:
+            wait = not plt.waitforbuttonpress(-1) and not self.recent
+            print("wait", wait)
 
 
     def draw_line(self, X, Y, color="w", lw=2, ls=2, alpha=1, **kwargs):
@@ -161,19 +220,16 @@ class plot_2D:
         Qubits are plotted with Circle objects
         '''
 
-        plt.figure(self.f.number)
+        plt.sca(self.ax)
 
         # Initiate figure
         plt.ion()
         plt.cla()
         plt.show()
         plt.axis("off")
-        self.ax = self.f.gca()
-        self.canvas = self.f.canvas
         self.ax.invert_yaxis()
         self.ax.set_aspect("equal")
         self.text = self.ax.text(0.5, 0, "", fontsize=10, va ="top", ha="center", transform=self.ax.transAxes)
-
 
         # Plot stabilizers
         for stab in self.graph.S[z].values():
@@ -191,6 +247,8 @@ class plot_2D:
         le_err = self.legend_circle("Erasure", mfc="w", marker="$\u25CC$", mec=self.cc, mew=1, ms=12)
         self.init_legend(1.25, 0.95, items=[le_err])
         self.draw_plot("Lattice plotted.")
+
+
 
 
     def plot_stab(self, stab, alpha=1):
@@ -232,26 +290,58 @@ class plot_2D:
             self.qsize,
             edgecolor=self.cc,
             fill=False,
-            linewidth=self.lw,
+            lw=self.lw,
         )
         self.ax.add_artist(qubit.pg)
+
 
     '''
     #########################################################################
                             Plotting functions
     '''
+
+    def new_attributes(self, object, attr_dict):
+
+        prev, next = {}, {}
+        for key, value in attr_dict.items():
+            old_value = getattr(object, "get_" + key)()
+            if old_value != value:
+                prev[key] = old_value
+                next[key] = value
+
+        self.history[self.iter_names[self.iter - 1]].append([object, prev])
+        self.history[self.iter_names[self.iter]].append([object, next])
+
+        self.change_attributes(object, next)
+
+
+    def change_attributes(self, object, attr_dict):
+
+        for key, value in attr_dict.items():
+            try:
+                getattr(object, "set_" + key)(value)
+            except:
+                print(object)
+                input()
+        self.ax.draw_artist(object)
+
+
     def plot_erasures(self):
         """
         :param erasures         list of locations (TD, y, x) of the erased stab_qubits
         plots an additional blue cicle around the qubits which has been erased
         """
-        plt.sca(self.ax)
+
+        self.iter_names.append("Erasures")
+        self.iter += 1
 
         for qubit in self.graph.Q[0].values():
             qplot = qubit.pg
             if qubit.erasure:
-                qplot.set_linestyle(":")
-                self.ax.draw_artist(qplot)
+
+                self.new_attributes(qplot, dict(linestyle=":"))
+                # qplot.set_linestyle(":")
+                # self.ax.draw_artist(qplot)
 
         self.draw_plot("Erasures plotted.")
 
@@ -261,34 +351,36 @@ class plot_2D:
         :param arrays       array of qubit states
         plots colored circles within the qubits if there is an error
         """
-        plt.sca(self.ax)
+
+        round = "Result" if plot_qubits else "Errors"
+        self.iter_names.append(round)
+        self.iter += 1
 
         for qubit in self.graph.Q[z].values():
             qplot = qubit.pg
             X_error = qubit.E[0].state
             Z_error = qubit.E[1].state
 
-            if X_error and not Z_error:
-                qplot.set_fill(True)
-                qplot.set_facecolor(self.cx)
-                self.ax.draw_artist(qplot)
+            if X_error or Z_error:
 
-            elif Z_error and not X_error:
-                qplot.set_fill(True)
-                qplot.set_facecolor(self.cz)
-                self.ax.draw_artist(qplot)
-
-            elif X_error and Z_error:
-                qplot.set_fill(True)
-                qplot.set_facecolor(self.cy)
-                self.ax.draw_artist(qplot)
+                if X_error and not Z_error:
+                    color = self.cx
+                elif Z_error and not X_error:
+                    color = self.cz
+                else:
+                    color = self.cy
+                # qplot.set_fill(True)
+                # qplot.set_facecolor(color)
+                # self.ax.draw_artist(qplot)
+                self.new_attributes(qplot, dict(fill=1, facecolor=color, edgecolor=self.cc))
 
             else:
                 if plot_qubits:
-                    qplot.set_fill(False)
-                    self.ax.draw_artist(qplot)
+                    # qplot.set_fill(False)
+                    # self.ax.draw_artist(qplot)
+                    self.new_attributes(qplot, dict(fill=0))
 
-        self.draw_plot("Errors plotted.")
+        self.draw_plot("{} plotted.".format(round))
 
 
     def plot_syndrome(self, z=0):
@@ -296,18 +388,18 @@ class plot_2D:
         :param qua_loc      list of quasiparticle/anyon positions (y,x)
         plots the vertices of the anyons on the lattice
         """
-        plt.sca(self.ax)
-        C = [self.cX, self.cZ]
+        self.iter_names.append("Syndromes")
+        self.iter += 1
 
         for stab in self.graph.S[z].values():
             (ertype, yb, xb) = stab.sID
-            gplotlot = stab.pg
             if stab.parity:
                 for dir in self.graph.dirs:
                     if dir in stab.neighbors:
-                        gplotlot = stab.pg[dir]
-                        gplotlot.set_color(C[ertype])
-                        self.ax.draw_artist(gplotlot)
+                        gplot = stab.pg[dir]
+                        self.new_attributes(gplot, dict(color=self.C2[ertype]))
+                        # gplot.set_color(self.C2[ertype])
+                        # self.ax.draw_artist(gplot)
 
         self.draw_plot("Syndromes plotted.")
 
@@ -319,6 +411,8 @@ class plot_2D:
         """
         plt.sca(self.ax)
         P = [1, 3]
+        self.iter_names.append("Matchings")
+        self.iter += 1
 
         for _, _, v0, v1 in matchings:
 
@@ -329,14 +423,17 @@ class plot_2D:
 
             p, ls = P[type], self.LS2[type]
 
-            plt.plot(
+            lplot = plt.plot(
                 [topx * 4 + p, botx * 4 + p],
                 [topy * 4 + p, boty * 4 + p],
                 c=color,
                 lw=self.slw,
                 ls=ls,
                 alpha=self.alpha2
-            )
+            )[0]
+
+            self.history[self.iter_names[self.iter - 1]].append([lplot, dict(visible=0)])
+            self.history[self.iter_names[self.iter]].append([lplot, dict(visible=1)])
 
         self.draw_plot("Matchings plotted.")
 
@@ -351,38 +448,25 @@ class plot_2D:
         optionally, the axis is clear and the final state of the lattice is plotted
         """
 
-        plt.sca(self.ax)
+        self.iter_names.append("Final")
+        self.iter += 1
 
         for qubit in self.graph.Q[0].values():
             qplot = qubit.pg
             X_error = qubit.E[0].matching
             Z_error = qubit.E[1].matching
 
-            if X_error and not Z_error:
-                qplot.set_edgecolor(self.cx)
-                self.ax.draw_artist(qplot)
-
-            elif Z_error and not X_error:
-                qplot.set_edgecolor(self.cz)
-                self.ax.draw_artist(qplot)
-
-            elif X_error and Z_error:
-                qplot.set_edgecolor(self.cy)
-                self.ax.draw_artist(qplot)
-
+            if X_error or Z_error:
+                if X_error and not Z_error:
+                    color = self.cx
+                elif Z_error and not X_error:
+                    color = self.cz
+                else:
+                    color = self.cy
+                self.new_attributes(qplot, dict(edgecolor=color))
 
         self.draw_plot("Corrections plotted.")
-
-        for qubit in self.graph.Q[0].values():
-            qplot = qubit.pg
-            X_error = qubit.E[0].state
-            Z_error = qubit.E[1].state
-            if X_error or Z_error:
-                qplot.set_edgecolor(self.cc)
-                self.ax.draw_artist(qplot)
-
         self.plot_errors(plot_qubits=True)
-        print("Final lattice plotted. Press on the plot to continue")
 
 
 from mpl_toolkits.mplot3d import Axes3D

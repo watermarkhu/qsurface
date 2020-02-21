@@ -127,11 +127,9 @@ class toric(uf.toric):
                 self.cluster_place_bucket(cluster)
                 self.graph.cID += 1
 
-        if self.plot is not None:
-            if not self.plot_find:
-                self.plot.plot_removed()
-            self.plot.draw_plot("Clusters initiated.")
-
+        if self.plot and not self.plot_find:
+            self.plot.plot_removed("Clusters initiated")
+            self.plot.draw_plot()
     '''
     ##################################################################################################
 
@@ -152,7 +150,18 @@ class toric(uf.toric):
         '''
         self.c_gbu += 1
 
-        if self.print_steps: self.mstr = {}
+        if self.print_steps:
+            self.mstr = {}
+            pr.printlog(
+            "\n############################ GROW ############################" + f"\nGrowing bucket {bucket_i} of {self.maxbucket}: {bucket}" + f"\nRemaining buckets: {self.buckets[bucket_i + 1 : self.maxbucket + 1]}, {self.wastebucket}\n"
+            )
+        elif self.plot:
+            print(f"Growing bucket #{bucket_i}/{self.maxbucket}")
+
+        if self.plot and not self.plot_growth:
+            self.plot.new_iter(f"Bucket {bucket_i} grown")
+
+
         self.fusion, self.bound_vertices, place = [], [], [] # Initiate Fusion list
 
         while bucket:  # Loop over all clusters in the current bucket\
@@ -161,9 +170,22 @@ class toric(uf.toric):
             if cluster.bucket == bucket_i and cluster.support == bucket_i % 2:
                 place.append(cluster)
                 cluster.support = 1 - cluster.support
+
+                if self.plot and self.plot_growth and not self.plot_nodes: self.plot.new_iter("bucket {}: {} grown".format(cluster.bucket, cluster))
+
                 self.grow_boundary(cluster, cluster.root_node)
 
-                if self.plot_growth: self.plot.draw_plot(str(cluster) + " grown.")
+                if self.plot and self.plot_growth and not self.plot_nodes:
+                    self.plot.draw_plot()
+
+        if self.plot and not self.plot_growth:
+            self.plot.draw_plot()
+
+        if not place:
+            return
+
+        if self.plot and not self.plot_growth:
+            self.plot.new_iter(f"Bucket {bucket_i} fused")
 
         self.fuse_vertices()
 
@@ -183,7 +205,7 @@ class toric(uf.toric):
                 pr.printlog(f"B:\n{string}\nA:\n{pr.print_graph(self.graph, [self.graph.C[cID]], include_even=1, return_string=True)}\n")
 
         if self.plot and not self.plot_growth:
-            self.plot.draw_plot("Clusters merged")
+            self.plot.draw_plot()
 
 
     def grow_boundary_directed(self, cluster, node, *args, **kwargs):
@@ -206,16 +228,17 @@ class toric(uf.toric):
             print_tree = False
 
         while cluster.root_node.calc_delay:
-
             at_node = cluster.root_node.calc_delay.pop()
             self.eg.comp_tree_p_of_node(at_node)
             self.eg.comp_tree_d_of_node(at_node, cluster)
-
 
         if print_tree:
             pr.print_tree(cluster.root_node, "children", "tree_rep")
 
         if node.d - node.w == cluster.mindl:      # waited enough rounds as delay
+
+            if self.plot and self.plot_nodes: self.plot.new_iter("bucket {}: {}-{} grown".format(cluster.bucket, cluster, node))
+
             node.s += 1
 
             node.boundary = [[], node.boundary[0]]
@@ -234,8 +257,7 @@ class toric(uf.toric):
                         node.boundary[0].append(bound)
 
                     if self.plot: self.plot.add_edge(new_edge, vertex)
-
-            if self.plot and self.plot_nodes: self.plot.draw_plot(str(node) + " grown.")
+            if self.plot and self.plot_nodes: self.plot.draw_plot()
         else:
             node.w += 1
 
@@ -271,6 +293,8 @@ class toric(uf.toric):
             pr.print_tree(cluster.root_node, "children", "tree_rep")
 
         if node.d - node.w == cluster.mindl:      # waited enough rounds as delay
+            if self.plot and self.plot_nodes: self.plot.new_iter("bucket {}: {}-{} grown".format(cluster.bucket, cluster, node))
+
             node.s += 1
 
             node.boundary = [[], node.boundary[0]]
@@ -290,7 +314,7 @@ class toric(uf.toric):
 
                     if self.plot: self.plot.add_edge(new_edge, vertex)
 
-            if self.plot and self.plot_nodes: self.plot.draw_plot(str(node) + " grown.")
+            if self.plot and self.plot_nodes: self.plot.draw_plot()
         else:
             node.w += 1
 
@@ -386,7 +410,10 @@ class toric(uf.toric):
 
         elif pC is aC:
             edge.support -= 1
-            if self.plot: self.plot.add_edge(edge, aV)
+            if self.plot:
+                if self.plot_growth: self.plot.new_iter(str(edge) + " cut")
+                self.plot.add_edge(edge, aV)
+                if self.plot_growth: self.plot.draw_plot()
         else:
             union = True
         return union
@@ -442,7 +469,6 @@ class planar(uf.planar, toric):
         self.cluster_new_vertex_boundary(erasure_bound)
 
         for cluster in bound_clusters:
-
             if cluster.parity == 0:
                 for vertex in self.bound_cluster_vertices[cluster.cID]:
                     vertex.cluster = None
@@ -451,6 +477,10 @@ class planar(uf.planar, toric):
             else:
                 self.graph.C[cluster.cID] = cluster
                 self.cluster_place_bucket(cluster)
+
+        if self.plot and not self.plot_find:
+            self.plot.plot_removed("Boundary clusters initiated")
+            self.plot.draw_plot()
 
 
     def cluster_new_vertex_boundary(self, bound_list, *args, **kwargs):
@@ -509,7 +539,10 @@ class planar(uf.planar, toric):
 
         if (aC.on_bound and (pV.type == 1 or (pC is not None and pC.on_bound))) or pC is aC:
             edge.support -= 1
-            if self.plot: self.plot.add_edge(edge, aV)
+            if self.plot:
+                if self.plot_growth: self.plot.new_iter(str(edge) + " cut")
+                self.plot.add_edge(edge, aV)
+                if self.plot_growth: self.plot.draw_plot()
         elif pC is None:
             aC.add_vertex(pV)
             pV.node = aV.node

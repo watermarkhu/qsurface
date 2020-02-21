@@ -15,7 +15,7 @@ Otherwise only minor plotting functions are inherited.
 
 import matplotlib.pyplot as plt
 import plot_graph_lattice as gp
-import printing as pr
+
 
 class plot_2D(gp.plot_2D):
     '''
@@ -64,22 +64,7 @@ class plot_2D(gp.plot_2D):
         '''
         Initilizes a 2D plot of torc/planar uf-lattice
         '''
-
-        plt.figure(self.f.number)
-        plt.ion()
-        plt.show()
-        plt.axis("off")
-        self.ax = self.f.gca()
-        self.ax.invert_yaxis()
-        self.ax.set_aspect("equal")
-
-        self.canvas = self.f.canvas
-        self.text = self.ax.text(0.5, 0, "", fontsize=10, va ="top", ha="center", transform=self.ax.transAxes)
-
-        # Initate legend
-        self.init_legend(1.25, 0.95)
-
-        # Initate plot
+        plt.sca(self.ax)
         plt.sca(self.ax)
 
         for qubit in self.graph.Q[z].values():
@@ -89,8 +74,8 @@ class plot_2D(gp.plot_2D):
         for stab in self.graph.S[z].values():
             self.draw_vertex(stab)
 
-        pr.printlog("Peeling lattice initiated.")
-        self.waitforkeypress()
+        self.init_legend(1.25, 0.95)
+        self.draw_plot()
 
 
     def draw_edge0(self, qubit):
@@ -193,15 +178,18 @@ class plot_2D(gp.plot_2D):
         self.ax.draw_artist(p_edge)
 
 
-    def plot_removed(self, z=0):
+    def plot_removed(self, name, z=0):
         """
         plots the normal edge color over the edges that have been removed during the formation of the tree structure
         """
+        self.new_iter(name)
+
         for qubit in self.graph.Q[z].values():
             for edge in [qubit.E[0], qubit.E[1]]:
                 if edge.peeled and not edge.matching:
-                    self.plot_edge(edge, 0, self.cl ,self.alpha2)
-                    self.plot_edge(edge, 1, self.cl ,self.alpha2)
+                    self.new_attributes(edge.pu[0], dict(color=self.cl, alpha=self.alpha2))
+                    self.new_attributes(edge.pu[1], dict(color=self.cl, alpha=self.alpha2))
+
 
 
     def add_edge(self, edge, vertex):
@@ -213,13 +201,12 @@ class plot_2D(gp.plot_2D):
             (yv, xv) = vertex.sID[1:3]
             id = 0 if (ye == yv and xe == xv) else 1
             color = self.Cx if edge.ertype ==0 else self.Cz
-            self.plot_edge(edge, id, color, self.alpha)
-            self.plot_edge(edge, 1-id, self.cl ,self.alpha2)
-
+            self.new_attributes(edge.pu[id], dict(color=color, alpha=self.alpha))
+            self.new_attributes(edge.pu[1-id], dict(color=self.cl, alpha=self.alpha2))
         else:
             color = self.cx if edge.ertype == 0 else self.cz
-            self.plot_edge(edge, 0, color, 1)
-            self.plot_edge(edge, 1, color, 1)
+            self.new_attributes(edge.pu[0], dict(color=color, alpha=1), 1)
+            self.new_attributes(edge.pu[1], dict(color=color, alpha=1), 1)
 
     """
     #########################################################################
@@ -254,17 +241,14 @@ class plot_2D(gp.plot_2D):
             text = "☑ matching"
             alpha = 1
 
-        plt.sca(self.ax)
-
-        self.plot_edge(edge, 0, "k", 1)
-        self.plot_edge(edge, 1, "k", 1)
-
         line = text + " edge " + str(edge)
-        self.draw_plot(line)
+        self.new_iter(line)
 
         color = c1 if edge.ertype == 0 else c2
-        self.plot_edge(edge, 0, color, alpha)
-        self.plot_edge(edge, 1, color, alpha)
+        self.new_attributes(edge.pu[0], dict(color=color, alpha=alpha))
+        self.new_attributes(edge.pu[1], dict(color=color, alpha=alpha))
+
+        self.draw_plot()
 
 
     def plot_strip_step_anyon(self, stab):
@@ -272,13 +256,9 @@ class plot_2D(gp.plot_2D):
         plot function for the flips of the anyons
         plots the anyon in white (removal) or normal error edge color (addition)
         """
+        lw = self.lw if stab.state else 0
+        self.new_attributes(stab.pu, dict(linewidth=lw))
 
-        if stab.state:
-            stab.pu.set_linewidth(self.lw)
-        else:
-            stab.pu.set_linewidth(0)
-
-        self.ax.draw_artist(stab.pu)
 
 
 class plot_3D(plot_2D, gp.plot_3D):

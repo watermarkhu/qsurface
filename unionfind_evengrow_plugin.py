@@ -112,10 +112,9 @@ class toric(uf.toric):
                 self.cluster_place_bucket(cluster)
                 self.graph.cID += 1
 
-        if self.plot is not None:
-            if not self.plot_find:
-                self.plot.plot_removed()
-            self.plot.draw_plot("Clusters initiated.")
+        if self.plot and not self.plot_find:
+            self.plot.plot_removed("Clusters initiated")
+            self.plot.draw_plot()
 
 
     '''
@@ -272,7 +271,10 @@ class toric(uf.toric):
             self.cluster_new_vertex(aC, pV, self.plot_growth)
         elif pC is aC:
             edge.support -= 1
-            if self.plot: self.plot.add_edge(edge, aV)
+            if self.plot:
+                if self.plot_growth: self.plot.new_iter(str(edge) + " cut")
+                self.plot.add_edge(edge, aV)
+                if self.plot_growth: self.plot.draw_plot()
         else:
             union = True
         return union
@@ -327,7 +329,6 @@ class planar(uf.planar, toric):
         self.cluster_new_vertex_boundary(erasure_bound)
 
         for cluster in bound_clusters:
-
             if cluster.parity == 0:
                 for vertex in self.bound_cluster_vertices[cluster.cID]:
                     vertex.cluster = None
@@ -337,6 +338,9 @@ class planar(uf.planar, toric):
                 self.graph.C[cluster.cID] = cluster
                 self.cluster_place_bucket(cluster)
 
+        if self.plot and not self.plot_find:
+            self.plot.plot_removed("Boundary clusters found")
+            self.plot.draw_plot()
 
     def cluster_new_vertex_boundary(self, bound_list, *args, **kwargs):
         '''
@@ -395,7 +399,10 @@ class planar(uf.planar, toric):
 
         if (aC.on_bound and (pV.type == 1 or (pC is not None and pC.on_bound))) or pC is aC:
             edge.support -= 1
-            if self.plot: self.plot.add_edge(edge, aV)
+            if self.plot:
+                if self.plot_growth: self.plot.new_iter(str(edge) + " cut")
+                self.plot.add_edge(edge, aV)
+                if self.plot_growth: self.plot.draw_plot()
         elif pC is None:
             aC.add_vertex(pV)
             pV.node = aV.node

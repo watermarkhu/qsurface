@@ -16,6 +16,7 @@ from collections import defaultdict as dd
 from matplotlib import pyplot as plt
 from matplotlib.lines import Line2D
 from matplotlib.widgets import Button
+from pprint import pprint
 import printing as pr
 import random
 
@@ -69,25 +70,31 @@ class plot_2D:
         self.scatter_size = 200/graph.size
         self.z_distance = 8
 
-        self.history = dd(list)
+        self.history = dd(dict)
         self.iter = 0
         self.iter_names = ["Initial"]
         self.iter_plot = -1
-        self.recent = True
+        self.recent = 0
 
         self.f = plt.figure(figsize=(self.plot_size, self.plot_size))
-        self.ax = plt.axes([0.05, 0.15, 0.75, 0.8])
+        plt.ion()
+        plt.cla()
+        plt.show()
+        plt.axis("off")
+        self.ax = plt.axes([0.05, 0.05, 0.75, 0.9])
+        self.ax.invert_yaxis()
+        self.ax.set_aspect("equal")
+        plt.axis("off")
         self.canvas = self.f.canvas
 
-        # self.canvas.mpl_connect('key_press_event', self.press)
-
-        self.prev_button = Button(plt.axes([0.7, 0.05, 0.1, 0.075]), "Previous")
-        self.next_button = Button(plt.axes([0.81, 0.05, 0.1, 0.075]), "Next")
-
+        self.prev_button = Button(plt.axes([0.775, 0.025, 0.1, 0.05]), "Previous")
+        self.next_button = Button(plt.axes([0.9, 0.025, 0.075, 0.05]), "Next")
         self.prev_button.on_clicked(self.draw_prev)
         self.next_button.on_clicked(self.draw_next)
 
-
+        self.ax_text = plt.axes([0.025, 0.025, 0.725, 0.05])
+        plt.axis("off")
+        self.text = self.ax_text.text(0.5, 0.5, "", fontsize=10, va ="center", ha="center", transform=self.ax_text.transAxes)
 
         self.init_plot(z)
 
@@ -95,36 +102,43 @@ class plot_2D:
     #########################################################################
                             Helper functions
     '''
+    def new_iter(self, name):
+        '''
+        Initiates new plot iteration
+        '''
+        self.iter_names.append(name)
+        self.iter += 1
+        self.iter_plot += 1
 
-    def press(self, event):
-        if event.key == "right":
-            self.draw_next()
-        if event.key == "left":
-            self.draw_prev()
 
     def draw_next(self, event=None):
-
+        '''
+        Redraws all changes from next plot iteration onto the plot
+        '''
         if self.iter_plot < self.iter:
             self.iter_plot += 1
             text = self.iter_names[self.iter_plot]
             self.text.set_text(text)
-            for object, changes in self.history[text]:
+            for object, changes in self.history[self.iter_plot].items():
                 self.change_attributes(object, changes)
             self.canvas.blit(self.ax.bbox)
             print("Drawing next: {}".format(text))
+            if self.iter_plot == self.iter:
+                self.recent = 0
         elif self.iter_plot == self.iter:
-            self.recent = 1
             print("Can't go further!")
 
+
     def draw_prev(self, event=None):
-
-
+        '''
+        Redraws all changes from previous plot iteration onto the plot
+        '''
         if self.iter_plot >= 1:
-            self.recent = 0
+            self.recent = 1
             self.iter_plot -= 1
             text = self.iter_names[self.iter_plot]
             self.text.set_text(text)
-            for object, changes in self.history[text]:
+            for object, changes in self.history[self.iter_plot].items():
                 self.change_attributes(object, changes)
             self.canvas.blit(self.ax.bbox)
 
@@ -132,17 +146,71 @@ class plot_2D:
         else:
             print("Can't go back further!")
 
+    # def get_plot_hash(self, object):
+    #
+    #     typename = type(object).__name__
+    #     if typename == "Line2D":
+    #         loc_name = "xydata"
+    #     elif typename == "PathCollection":
+    #         loc_name = "offsets"
+    #     elif typename == "Circle":
+    #         loc_name = "center"
+    #     else:
+    #         raise TypeError("unknown plot type")
+    #     id = (typename, str(plt.getp(object, loc_name)))
+    #     return id
+
+    def new_attributes(self, object, attr_dict, overwrite=False):
+        '''
+        Finds the differences of the plot attributes between this iteration and the previous iterations. All differences are stored as dictionaries in the history variable.
+        Makes sure that all changes are stored correctly and plot attributes are not overwritten if not explicitly defined.
+        '''
+        prev_changes = self.history[self.iter - 1]
+        next_changes = self.history[self.iter]
+
+        prev, next = {}, {}
+
+        if not overwrite or object not in prev_changes:
+            for key, value in attr_dict.items():
+                old_value = plt.getp(object, key)
+                if old_value != value:
+                    prev[key] = old_value
+                    next[key] = value
+        else:
+            old_dict = prev_changes[object]
+            for key, value in attr_dict.items():
+                old_value = old_dict[key] if key in old_dict else plt.getp(object, key)
+                if old_value != value:
+                    prev[key] = old_value
+                    next[key] = value
+        if prev:
+            if overwrite or object not in prev_changes:
+                prev_changes[object] = prev
+            else:
+                prev_changes[object].update(prev)
+
+        if next:
+            next_changes[object] = next
+            self.change_attributes(object, next)
 
 
-    def draw_plot(self, txt=None):
+    def change_attributes(self, object, attr_dict):
+        '''
+        Redraws the attributes from the dictionary onto the plot object
+        '''
+        if attr_dict:
+            plt.setp(object, **attr_dict)
+        self.ax.draw_artist(object)
+
+
+    def draw_plot(self):
         '''
         Blits all changed plotting object onto the figure.
         Optional text is printed, added to the log and shown on the figure
         '''
-        self.iter_plot += 1
-        if txt is not None:
-            self.text.set_text(txt)
-            pr.printlog(txt)
+        txt = self.iter_names[self.iter]
+        self.text.set_text(txt)
+        pr.printlog(txt + " plotted.")
         self.canvas.blit(self.ax.bbox)
         if self.click: self.waitforkeypress()
 
@@ -154,8 +222,7 @@ class plot_2D:
         '''
         wait = True
         while wait:
-            wait = not plt.waitforbuttonpress(-1) and not self.recent
-            print("wait", wait)
+            wait = not plt.waitforbuttonpress(-1) or self.recent
 
 
     def draw_line(self, X, Y, color="w", lw=2, ls=2, alpha=1, **kwargs):
@@ -219,17 +286,7 @@ class plot_2D:
         Stabilizers are plotted with line objects
         Qubits are plotted with Circle objects
         '''
-
         plt.sca(self.ax)
-
-        # Initiate figure
-        plt.ion()
-        plt.cla()
-        plt.show()
-        plt.axis("off")
-        self.ax.invert_yaxis()
-        self.ax.set_aspect("equal")
-        self.text = self.ax.text(0.5, 0, "", fontsize=10, va ="top", ha="center", transform=self.ax.transAxes)
 
         # Plot stabilizers
         for stab in self.graph.S[z].values():
@@ -246,9 +303,7 @@ class plot_2D:
 
         le_err = self.legend_circle("Erasure", mfc="w", marker="$\u25CC$", mec=self.cc, mew=1, ms=12)
         self.init_legend(1.25, 0.95, items=[le_err])
-        self.draw_plot("Lattice plotted.")
-
-
+        self.draw_plot()
 
 
     def plot_stab(self, stab, alpha=1):
@@ -275,7 +330,8 @@ class plot_2D:
             elif dir == "s":
                 X, Y = [x + 1, x + 1], [y + 1, y + 2]
 
-            stab.pg[dir] = self.draw_line(X, Y, Z=zb * self.z_distance, color=self.cl, lw=self.lw, ls=ls, alpha=alpha)
+            line = self.draw_line(X, Y, Z=zb * self.z_distance, color=self.cl, lw=self.lw, ls=ls, alpha=alpha)
+            stab.pg[dir] = line
 
 
     def plot_qubit(self, qubit):
@@ -300,50 +356,19 @@ class plot_2D:
                             Plotting functions
     '''
 
-    def new_attributes(self, object, attr_dict):
-
-        prev, next = {}, {}
-        for key, value in attr_dict.items():
-            old_value = getattr(object, "get_" + key)()
-            if old_value != value:
-                prev[key] = old_value
-                next[key] = value
-
-        self.history[self.iter_names[self.iter - 1]].append([object, prev])
-        self.history[self.iter_names[self.iter]].append([object, next])
-
-        self.change_attributes(object, next)
-
-
-    def change_attributes(self, object, attr_dict):
-
-        for key, value in attr_dict.items():
-            try:
-                getattr(object, "set_" + key)(value)
-            except:
-                print(object)
-                input()
-        self.ax.draw_artist(object)
-
-
     def plot_erasures(self):
         """
         :param erasures         list of locations (TD, y, x) of the erased stab_qubits
         plots an additional blue cicle around the qubits which has been erased
         """
 
-        self.iter_names.append("Erasures")
-        self.iter += 1
+        self.new_iter("Erasure")
 
         for qubit in self.graph.Q[0].values():
             qplot = qubit.pg
             if qubit.erasure:
-
                 self.new_attributes(qplot, dict(linestyle=":"))
-                # qplot.set_linestyle(":")
-                # self.ax.draw_artist(qplot)
-
-        self.draw_plot("Erasures plotted.")
+        self.draw_plot()
 
 
     def plot_errors(self, z=0, plot_qubits=False):
@@ -353,8 +378,7 @@ class plot_2D:
         """
 
         round = "Result" if plot_qubits else "Errors"
-        self.iter_names.append(round)
-        self.iter += 1
+        self.new_iter(round)
 
         for qubit in self.graph.Q[z].values():
             qplot = qubit.pg
@@ -369,18 +393,13 @@ class plot_2D:
                     color = self.cz
                 else:
                     color = self.cy
-                # qplot.set_fill(True)
-                # qplot.set_facecolor(color)
-                # self.ax.draw_artist(qplot)
                 self.new_attributes(qplot, dict(fill=1, facecolor=color, edgecolor=self.cc))
 
             else:
                 if plot_qubits:
-                    # qplot.set_fill(False)
-                    # self.ax.draw_artist(qplot)
                     self.new_attributes(qplot, dict(fill=0))
 
-        self.draw_plot("{} plotted.".format(round))
+        self.draw_plot()
 
 
     def plot_syndrome(self, z=0):
@@ -388,8 +407,7 @@ class plot_2D:
         :param qua_loc      list of quasiparticle/anyon positions (y,x)
         plots the vertices of the anyons on the lattice
         """
-        self.iter_names.append("Syndromes")
-        self.iter += 1
+        self.new_iter("Syndrome")
 
         for stab in self.graph.S[z].values():
             (ertype, yb, xb) = stab.sID
@@ -401,7 +419,7 @@ class plot_2D:
                         # gplot.set_color(self.C2[ertype])
                         # self.ax.draw_artist(gplot)
 
-        self.draw_plot("Syndromes plotted.")
+        self.draw_plot()
 
 
     def plot_lines(self, matchings):
@@ -411,8 +429,7 @@ class plot_2D:
         """
         plt.sca(self.ax)
         P = [1, 3]
-        self.iter_names.append("Matchings")
-        self.iter += 1
+        self.new_iter("Matching")
 
         for _, _, v0, v1 in matchings:
 
@@ -432,10 +449,10 @@ class plot_2D:
                 alpha=self.alpha2
             )[0]
 
-            self.history[self.iter_names[self.iter - 1]].append([lplot, dict(visible=0)])
-            self.history[self.iter_names[self.iter]].append([lplot, dict(visible=1)])
+            self.history[self.iter_names[self.iter - 1]][lplot] = dict(visible=0)
+            self.history[self.iter_names[self.iter]][lplot] = dict(visible=1)
 
-        self.draw_plot("Matchings plotted.")
+        self.draw_plot()
 
 
     def plot_final(self):
@@ -448,8 +465,8 @@ class plot_2D:
         optionally, the axis is clear and the final state of the lattice is plotted
         """
 
-        self.iter_names.append("Final")
-        self.iter += 1
+        plt.sca(self.ax)
+        self.new_iter("Final")
 
         for qubit in self.graph.Q[0].values():
             qplot = qubit.pg
@@ -465,7 +482,7 @@ class plot_2D:
                     color = self.cy
                 self.new_attributes(qplot, dict(edgecolor=color))
 
-        self.draw_plot("Corrections plotted.")
+        self.draw_plot()
         self.plot_errors(plot_qubits=True)
 
 
@@ -484,15 +501,6 @@ class plot_3D(plot_2D):
     #########################################################################
                             Helper functions
     '''
-    def draw_plot(self, txt=None):
-        '''
-        Blits all changed plotting object onto the figur.e.
-        Optional text is printed and added to the log.
-        '''
-        if txt is not None:
-            pr.printlog(txt)
-        self.canvas.blit(self.ax.bbox)
-        if self.click: self.waitforkeypress()
 
     def set_axes_equal(self):
         '''
@@ -524,11 +532,7 @@ class plot_3D(plot_2D):
         '''
         Initilizes the 3D axis by removing the background panes, changing the grid tics, alpha and linestyle, setting the labels and title.
         '''
-
-        plt.figure(self.f.number)
-        self.canvas = self.f.canvas
-        plt.ion()
-        plt.cla()
+        plt.sca(self.ax)
 
         self.ax = plt.axes(projection='3d', label="main")
         self.ax.set_xlabel("X")
@@ -592,7 +596,6 @@ class plot_3D(plot_2D):
         Stabilizers are plotted with Axes3D.line objects
         Qubits are plotted with Axes3D.scatter objects
         '''
-
         self.init_axis(4, 4, self.z_distance, 3, 1, 0)
 
         # Plot stabilizers
@@ -642,7 +645,7 @@ class plot_3D(plot_2D):
         le_zan = self.legend_circle("Z-anyon", marker="*", mfc=self.cZ, mec=self.cZ)
         self.init_legend(1.05, 0.95, items=[le_err, le_xan, le_zan])
         self.set_axes_equal()
-        self.draw_plot("Lattice plotted.")
+        self.draw_plot()
 
 
     '''

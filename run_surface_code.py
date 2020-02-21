@@ -248,16 +248,16 @@ class decoder_config(object):
     def __init__(self):
 
         self.plot2D = 1
-        self.plot3D = 0
-        self.seed = None
+        self.plot3D = 1
+        self.seed = 3
         self.decoder = {
             "dg_connections": 0,
             "directed_graph": 0,
             "print_steps"   : 0,
-            "plot_find"     : 0,
-            "plot_growth"   : 0,
-            "plot_peel"     : 0,
-            "plot_nodes"    : 0,
+            "plot_find"     : 1,
+            "plot_growth"   : 1,
+            "plot_peel"     : 1,
+            "plot_nodes"    : 1,
         }
 
         self.plot = {
@@ -270,12 +270,12 @@ class decoder_config(object):
 if __name__ == "__main__":
 
     import mwpm as decode
-    import graph_2D as go
+    import graph_3D as go
 
     sim_config = {
         "ltype" : "toric",
-        "size"  : 6,
-        "pX"    : 0.1,
+        "size"  : 3,
+        "pX"    : 0.05,
         "pZ"    : 0.0,
         "pE"    : 0.0,
         "pmX"   : 0.028,

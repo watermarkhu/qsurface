@@ -394,6 +394,9 @@ class Cluster(object):
     def __repr__(self):
         return "C" + str(self.cID) + "(" + str(self.size) + ":" + str(self.parity) + ")"
 
+    def __hash__(self):
+        return self.cID
+
     def add_vertex(self, vertex):
         """Adds a stabilizer to a cluster. Also update cluster value of this stabilizer."""
         self.size += 1

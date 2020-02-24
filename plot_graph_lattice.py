@@ -73,7 +73,7 @@ class plot_2D:
         self.history = dd(dict)
         self.iter = 0
         self.iter_names = ["Initial"]
-        self.iter_plot = -1
+        self.iter_plot = 0
         self.recent = 0
 
         self.f = plt.figure(figsize=(self.plot_size, self.plot_size))
@@ -232,7 +232,7 @@ class plot_2D:
         return self.ax.plot(X, Y, c=color, lw=lw, ls=ls, alpha=alpha)[0]
     '''
     #########################################################################
-                            Initiliz legend
+                            Initilize legend
     '''
 
     def legend_circle(self, label, mfc=None, marker="o", mec="k", ms=10, color="w", lw=0, mew=2, ls="-"):
@@ -356,29 +356,47 @@ class plot_2D:
                             Plotting functions
     '''
 
-    def plot_erasures(self):
+    def plot_erasures(self, z=0, draw=True):
         """
         :param erasures         list of locations (TD, y, x) of the erased stab_qubits
         plots an additional blue cicle around the qubits which has been erased
         """
-
-        self.new_iter("Erasure")
+        if z == 0: self.new_iter("Erasure")
 
         for qubit in self.graph.Q[0].values():
             qplot = qubit.pg
+            X_error = qubit.E[0].state
+            Z_error = qubit.E[1].state
+
+            attr_dict = {}
+            if X_error or Z_error:
+                if X_error and not Z_error:
+                    color = self.cx
+                elif Z_error and not X_error:
+                    color = self.cz
+                else:
+                    color = self.cy
+
+                attr_dict.update(dict(fill=1, facecolor=color, edgecolor=self.cc))
+
             if qubit.erasure:
-                self.new_attributes(qplot, dict(linestyle=":"))
-        self.draw_plot()
+                attr_dict.update(dict(linestyle=":"))
+
+            if attr_dict:
+                self.new_attributes(qplot, attr_dict)
+
+        if draw: self.draw_plot()
 
 
-    def plot_errors(self, z=0, plot_qubits=False):
+    def plot_errors(self, z=0, plot_qubits=False, draw=True):
         """
         :param arrays       array of qubit states
         plots colored circles within the qubits if there is an error
         """
 
-        round = "Result" if plot_qubits else "Errors"
-        self.new_iter(round)
+        if z==0:
+            round = "Result" if plot_qubits else "Errors"
+            self.new_iter(round)
 
         for qubit in self.graph.Q[z].values():
             qplot = qubit.pg
@@ -394,20 +412,18 @@ class plot_2D:
                 else:
                     color = self.cy
                 self.new_attributes(qplot, dict(fill=1, facecolor=color, edgecolor=self.cc))
-
             else:
                 if plot_qubits:
                     self.new_attributes(qplot, dict(fill=0))
+        if draw: self.draw_plot()
 
-        self.draw_plot()
 
-
-    def plot_syndrome(self, z=0):
+    def plot_syndrome(self, z=0, draw=True):
         """
         :param qua_loc      list of quasiparticle/anyon positions (y,x)
         plots the vertices of the anyons on the lattice
         """
-        self.new_iter("Syndrome")
+        if z == 0: self.new_iter("Syndrome")
 
         for stab in self.graph.S[z].values():
             (ertype, yb, xb) = stab.sID
@@ -416,10 +432,7 @@ class plot_2D:
                     if dir in stab.neighbors:
                         gplot = stab.pg[dir]
                         self.new_attributes(gplot, dict(color=self.C2[ertype]))
-                        # gplot.set_color(self.C2[ertype])
-                        # self.ax.draw_artist(gplot)
-
-        self.draw_plot()
+        if draw: self.draw_plot()
 
 
     def plot_lines(self, matchings):
@@ -427,7 +440,6 @@ class plot_2D:
         :param results      list of matchings of anyon
         plots strings between the two anyons of each match
         """
-        plt.sca(self.ax)
         P = [1, 3]
         self.new_iter("Matching")
 
@@ -435,22 +447,17 @@ class plot_2D:
 
             color = [random.random() * 0.8 + 0.2 for _ in range(3)]
 
-            (type, topy, topx) = v0.sID
-            (type, boty, botx) = v1.sID
-
+            (type, topy, topx), topz = v0.sID, v0.z
+            (type, boty, botx), botz = v1.sID, v1.z
             p, ls = P[type], self.LS2[type]
 
-            lplot = plt.plot(
-                [topx * 4 + p, botx * 4 + p],
-                [topy * 4 + p, boty * 4 + p],
-                c=color,
-                lw=self.slw,
-                ls=ls,
-                alpha=self.alpha2
-            )[0]
+            X = [topx * 4 + p, botx * 4 + p]
+            Y = [topy * 4 + p, boty * 4 + p]
+            Z = [(topz - .5)*self.z_distance, (botz - .5)*self.z_distance]
+            lplot = self.draw_line(X, Y, Z=Z, color=color, lw=self.slw, ls=ls, alpha=self.alpha2)
 
-            self.history[self.iter_names[self.iter - 1]][lplot] = dict(visible=0)
-            self.history[self.iter_names[self.iter]][lplot] = dict(visible=1)
+            self.history[self.iter - 1][lplot] = dict(visible=0)
+            self.history[self.iter][lplot] = dict(visible=1)
 
         self.draw_plot()
 
@@ -501,13 +508,80 @@ class plot_3D(plot_2D):
     #########################################################################
                             Helper functions
     '''
+    def __init__(self, *args, plot_2D=True, **kwargs):
+        self.patch3d_dict = dd(dict)
+        self.plot_2D = plot_2D
+        super().__init__(*args, **kwargs)
+
+
+    def new_attributes(self, object, attr_dict, overwrite=False):
+        if type(object) == dict:
+
+            prev_changes = self.history[self.iter - 1]
+            next_changes = self.history[self.iter]
+
+            if "key" in object:
+                old_plot = object[object["key"]]
+                
+                current_dict = {
+                    "facecolor": list(plt.getp(old_plot, "facecolor")),
+                    "edgecolor": list(plt.getp(old_plot, "edgecolor")),
+                    "linestyle": plt.getp(old_plot, "linestyle"),
+                }
+
+                for key, value in current_dict.items():
+                    if key not in attr_dict:
+                        attr_dict[key] = value
+
+                prev_changes[old_plot] = dict(visible=1)
+                next_changes[old_plot] = dict(visible=0)
+                plt.setp(old_plot, visible=0)
+
+            attr, name = self.scatter_attr(**attr_dict)
+            new_plot = self.ax.scatter(*object["pos"], **attr)
+            prev_changes[new_plot] = dict(visible=0)
+            next_changes[new_plot] = dict(visible=1)
+            object[name] = new_plot
+            object["key"] = name
+
+        else:
+            super().new_attributes(object, attr_dict, overwrite)
+
+
+    def scatter_attr(self, facecolor=(0,0,0,0), edgecolor=(0,0,0,0), **kwargs):
+
+        attr = {
+            "facecolor" : facecolor,
+            "edgecolor" : edgecolor,
+            "s"         : self.scatter_size,
+        }
+        kwargs.pop("fill", None)
+        attr.update(**kwargs)
+        name = f"{facecolor}-{edgecolor}"
+        return attr, name
+
+
+    def plot_scatter(self, X, Y, Z, **kwargs):
+        '''
+        param: qubit        graph.qubit object
+        Patch.Circle object for each qubit on the lattice
+        '''
+        sattr, key = self.scatter_attr(**kwargs)
+        plot = self.ax.scatter(X, Y, Z, **sattr)
+        self.ax.add_artist(plot)
+        kwargs.update({
+            key     : plot,
+            "key"   : key,
+            "pos"   : (X, Y, Z)
+        })
+        return kwargs
+
 
     def set_axes_equal(self):
         '''
         Sets equal axes for a 3D mplot3d axis.
         Doesn't work fully as intended, as axes still scales in z direction
         '''
-
         x_limits = self.ax.get_xlim3d()
         y_limits = self.ax.get_ylim3d()
         z_limits = self.ax.get_zlim3d()
@@ -569,23 +643,6 @@ class plot_3D(plot_2D):
         return self.ax.plot(X, Y, zs=Z, c=color, lw=lw, ls=ls, alpha=alpha)[0]
 
 
-    def plot_scatter(self, z):
-        '''
-        Axes3D.scatter objects do not update color using set_color() function after blitting.
-        Workaround is to remove entire scatter object from the plot and plotting a new scatter object with correct colors.
-        '''
-
-        X = self.scatter[z]["X"]
-        Y = self.scatter[z]["Y"]
-        Z = self.scatter[z]['Z']
-        F = self.scatter[z]["fC"]
-        E = self.scatter[z]["eC"]
-
-        if self.scatter[z]["plot"]:
-            self.scatter[z]["plot"].remove()
-
-        self.scatter[z]["plot"] = self.ax.scatter(X, Y, Z, s=self.scatter_size, facecolor=F, edgecolor=E)
-
     '''
     #########################################################################
                             Initilize plot
@@ -610,35 +667,12 @@ class plot_3D(plot_2D):
                     self.plot_stab(bound, alpha=self.alpha)
 
         # Plot plot_qubits, store qubit plots in self due to update bug
-        self.scatter = {}
-        for z, layer in self.graph.Q.items():
-            X, Y, i, locs = [], [], 0, {}
+        for layer in self.graph.Q.values():
             for qubit in layer.values():
                 (td, yb, xb) = qubit.qID
-
-                if td == 0:
-                    X.append(xb*4+3)
-                    Y.append(yb*4+1)
-                else:
-                    X.append(xb*4+1)
-                    Y.append(yb*4+3)
-
-                locs[qubit.qID] = i
-                i += 1
-
-            ec = [self.cc for _ in range(len(X))]
-            fc = [self.cc for _ in range(len(X))]
-
-            self.scatter[z] = {
-                "plot"  : None,
-                "locs"  : locs,
-                "X"     : X,
-                "Y"     : Y,
-                "Z"     : z*self.z_distance,
-                "eC"    : ec,
-                "fC"    : fc,
-            }
-            self.plot_scatter(z)
+                X, Y = (xb*4+3, yb*4+1) if td == 0 else (xb*4+1, yb*4+3)
+                Z = qubit.z * self.z_distance
+                qubit.pg = self.plot_scatter(X, Y, Z, facecolor=self.cw, edgecolor=self.cc)
 
         le_err = self.legend_circle("Erasure", mfc=self.cc, mec=self.cE)
         le_xan = self.legend_circle("X-anyon", marker="*", mfc=self.cX, mec=self.cX)
@@ -647,78 +681,10 @@ class plot_3D(plot_2D):
         self.set_axes_equal()
         self.draw_plot()
 
-
     '''
     #########################################################################
                             Plotting functions
     '''
-    def plot_errors(self, z, plot_qubits=False):
-        '''
-        param: z            z/t layer of 3D plot
-        param: plot_qubits  replots all qubits
-        Plots errors by setting colors of Axes3D.scatter objects and plotting using plot_qubits() function
-        '''
-        plt.sca(self.ax)
-        qubits = self.graph.Q[z].values()
-        plocs = self.scatter[z]["locs"]
-
-
-        for qubit in qubits:
-            X_error = qubit.E[0].state
-            Z_error = qubit.E[1].state
-
-            if X_error or Z_error or plot_qubits:
-                loc = plocs[qubit.qID]
-                if X_error and not Z_error:
-                    self.scatter[z]["eC"][loc] = self.cx
-                    self.scatter[z]["fC"][loc] = self.cx
-
-                elif Z_error and not X_error:
-                    self.scatter[z]["eC"][loc] = self.cz
-                    self.scatter[z]["fC"][loc] = self.cz
-
-                elif X_error and Z_error:
-                    self.scatter[z]["eC"][loc] = self.cy
-                    self.scatter[z]["fC"][loc] = self.cy
-
-                elif plot_qubits:
-                    self.scatter[z]["eC"][loc] = self.cc
-                    self.scatter[z]["fC"][loc] = self.cc
-
-        self.plot_scatter(z)
-
-
-    def plot_erasures(self, z):
-        """
-        :param erasures         list of locations (TD, y, x) of the erased stab_qubits
-        plots an additional blue cicle around the qubits which has been erased
-        """
-        plt.sca(self.ax)
-        qubits = self.graph.Q[z].values()
-        plocs = self.scatter[z]["locs"]
-
-        for qubit in qubits:
-            X_error = qubit.E[0].state
-            Z_error = qubit.E[1].state
-            loc = plocs[qubit.qID]
-
-            if X_error and not Z_error:
-                self.scatter[z]["eC"][loc] = self.cx
-                self.scatter[z]["fC"][loc] = self.cx
-
-            elif Z_error and not X_error:
-                self.scatter[z]["eC"][loc] = self.cz
-                self.scatter[z]["fC"][loc] = self.cz
-
-            elif X_error and Z_error:
-                self.scatter[z]["eC"][loc] = self.cy
-                self.scatter[z]["fC"][loc] = self.cy
-
-            if qubit.erasure:
-                self.scatter[z]["eC"][loc] = self.cE
-
-        self.plot_scatter(z)
-
 
     def plot_syndrome(self, z):
         """
@@ -727,59 +693,30 @@ class plot_3D(plot_2D):
         Additionally plots scatter object of anyons, that are now in between stabilizers of different z layers
         """
 
-        plt.sca(self.ax)
+        super().plot_syndrome(z, draw=False)
 
         for stab in self.graph.S[z].values():
             (ertype, yb, xb) = stab.sID
-            gplotlot = stab.pg
-            if stab.parity:
-                for dir in self.graph.dirs:
-                    if dir in stab.neighbors:
-                        gplotlot = stab.pg[dir]
-                        gplotlot.set_color(self.C2[ertype])
-                        self.ax.draw_artist(gplotlot)
 
             if stab.mstate:
                 for dir in self.graph.dirs:
                     if dir in stab.neighbors:
-                        gplotlot = stab.pg[dir]
-                        gplotlot.set_linewidth(2*self.lw)
-                        self.ax.draw_artist(gplotlot)
+                        gplot = stab.pg[dir]
+                        self.new_attributes(gplot, dict(linewidth=2*self.lw))
 
             if stab.state:
                 X, Y, Z = xb * 4 + 1 + 2 *ertype,  yb * 4 + 1 + 2*ertype, (z - 1/2) * self.z_distance
-                stab.ap = self.ax.scatter(X, Y, Z, s=self.scatter_size, c=[self.C2[ertype]], alpha=1, marker="*")
 
+                color = self.C2[ertype]
+                sattr, key = self.scatter_attr(color, color, marker="*")
+                stab.ap = self.ax.scatter(X, Y, Z, **sattr)
 
-    def plot_lines(self, matchings):
-        """
-        :param mathings      list of matchings of anyon
-        plots strings between the two anyons of each match
-        """
+                self.history[self.iter - 1][stab.ap] = dict(visible=0)
+                self.history[self.iter][stab.ap] = dict(visible=1)
 
-        plt.sca(self.ax)
-        P = [0, 2]
-
-        for _, _, v0, v1 in matchings:
-
-            color = [random.random() * 0.8 + 0.2 for _ in range(3)]
-
-            (type, topy, topx), topz = v0.sID, v0.z
-            (type, boty, botx), botz = v1.sID, v1.z
-
-            p, ls = P[type], self.LS2[type]
-
-            self.ax.plot(
-                [topx * 4 + p, botx * 4 + p],
-                [topy * 4 + p, boty * 4 + p],
-                [(topz - .5)*self.z_distance, (botz - .5)*self.z_distance],
-                c=color,
-                lw=self.slw,
-                ls=ls,
-                alpha=self.alpha2
-            )
-
-        self.draw_plot("Matchings plotted.")
 
     def plot_final(self):
-        pass
+        if self.plot_2D:
+            fp = plot_2D(self.graph, z=self.graph.decode_layer, **self.graph.plot_config)
+            fp.new_iter("Final layer errors")
+            fp.plot_errors(z=self.graph.decode_layer, draw=1)

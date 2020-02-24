@@ -78,67 +78,62 @@ class plot_2D(gp.plot_2D):
         self.draw_plot()
 
 
-    def draw_edge0(self, qubit):
+    def get_edge_data(self, ertype, type, y0, x0):
+
+        if ertype == 0:
+            (y1, x1) = (
+                (y0, (x0 + 1) % self.size)
+                if type == 0
+                else ((y0 + 1) % self.size, x0)
+            )
+
+            if y0 == self.size - 1:
+                y0 = self.size if y0 == 0 else y0
+                y1 = self.size if y1 == 0 else y1
+            if x0 == self.size - 1:
+                x0 = self.size if x0 == 0 else x0
+                x1 = self.size if x1 == 0 else x1
+
+            xm, ym = (x0 + x1)/2,  (y0 + y1)/2
+
+        else:
+            (y1, x1) = (
+                (y0, (x0 - 1) % self.size)
+                if type == 1
+                else ((y0 - 1) % self.size, x0)
+            )
+
+            if y0 == 0:
+                y0 = -0.5 if y0 == self.size - 1 else y0 + 0.5
+                y1 = -0.5 if y1 == self.size - 1 else y1 + 0.5
+            else:
+                y0 += 0.5
+                y1 += 0.5
+            if x0 == 0:
+                x0 = -0.5 if x0 == self.size - 1 else x0 + 0.5
+                x1 = -0.5 if x1 == self.size - 1 else x1 + 0.5
+            else:
+                x0 += 0.5
+                x1 += 0.5
+
+            xm, ym = (x0 + x1)/2,  (y0 + y1)/2
+
+        return x0, y0, xm, ym, x1, y1
+
+
+    def draw_edge(self, qubit, ertype):
         '''
         Draw lines of the X-edges of the qubit
         '''
-        (type, y0, x0) = qubit.qID
-
-        (py1, px1) = (
-            (y0, (x0 + 1) % self.size)
-            if type == 0
-            else ((y0 + 1) % self.size, x0)
-        )
-
-        if y0 == self.size - 1:
-            y0 = self.size if y0 == 0 else y0
-            py1 = self.size if py1 == 0 else py1
-        if x0 == self.size - 1:
-            x0 = self.size if x0 == 0 else x0
-            px1 = self.size if px1 == 0 else px1
-
-        pxm, pym = (x0 + px1)/2,  (y0 + py1)/2
-
         color, alpha = (self.C1[0], 1) if qubit.erasure else (self.cl, self.alpha2)
 
-        up1 = self.draw_line([x0,  pxm], [y0,  pym], Z=qubit.z, color=color, lw=self.lw, ls=self.LS[0], alpha=alpha)
-        up2 = self.draw_line([pxm,  px1], [pym,  py1], Z=qubit.z, color=color, lw=self.lw, ls=self.LS[0], alpha=alpha)
-        qubit.E[0].pu = [up1, up2]
-
-
-    def draw_edge1(self, qubit):
-        '''
-        Draw lines of the Z-edges of the qubit
-        '''
-
         (type, y0, x0) = qubit.qID
 
-        (sy1, sx1) = (
-            (y0, (x0 - 1) % self.size)
-            if type == 1
-            else ((y0 - 1) % self.size, x0)
-        )
+        x0, y0, xm, ym, x1, y1 = self.get_edge_data(ertype, type, y0, x0)
 
-        if y0 == 0:
-            y0 = -0.5 if y0 == self.size - 1 else y0 + 0.5
-            sy1 = -0.5 if sy1 == self.size - 1 else sy1 + 0.5
-        else:
-            y0 += 0.5
-            sy1 += 0.5
-        if x0 == 0:
-            x0 = -0.5 if x0 == self.size - 1 else x0 + 0.5
-            sx1 = -0.5 if sx1 == self.size - 1 else sx1 + 0.5
-        else:
-            x0 += 0.5
-            sx1 += 0.5
-
-        sxm, sym = (x0 + sx1)/2,  (y0 + sy1)/2
-
-        color, alpha = (self.C1[1], 1) if qubit.erasure else (self.cl, self.alpha2)
-
-        up1 = self.draw_line([x0,  sxm], [y0,  sym], Z=qubit.z, color=color, lw=self.lw, ls=self.LS[1], alpha=alpha)
-        up2 = self.draw_line([sxm,  sx1], [sym,  sy1], Z=qubit.z, color=color, lw=self.lw, ls=self.LS[1], alpha=alpha)
-        qubit.E[1].pu = [up1, up2]
+        up1 = self.draw_line([x0,  xm], [y0,  ym], Z=qubit.z, color=color, lw=self.lw, ls=self.LS[0], alpha=alpha)
+        up2 = self.draw_line([xm,  x1], [ym,  y1], Z=qubit.z, color=color, lw=self.lw, ls=self.LS[0], alpha=alpha)
+        qubit.E[ertype].pu = [up1, up2]
 
 
     def draw_vertex(self, stab):
@@ -285,6 +280,9 @@ class plot_3D(plot_2D, gp.plot_3D):
     #########################################################################
                             Initalize plot
     '''
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.alpha2 = 0
 
     def init_plot(self, *args, **kwargs):
         '''
@@ -297,59 +295,40 @@ class plot_3D(plot_2D, gp.plot_3D):
 
         for layer in self.graph.Q.values():
             for qubit in layer.values():
-                self.draw_edge0(qubit)
-                self.draw_edge1(qubit)
+                if qubit.erasure:
+                    self.draw_edge(qubit, 0)
+                    self.draw_edge(qubit, 1)
+                else:
+                    qubit.E[0].pu = None
+                    qubit.E[0].pu = None
+
 
         for layer in self.graph.G.values():
             for bridge in layer.values():
-                self.draw_bridge(bridge)
+                bridge.E.pu = None
 
-        self.scatter = {}
-        for z, layer in self.graph.S.items():
-            X, Y, fC, eC, i, stab_locs = [], [], [], [], 0, {}
-
+        for Z, layer in self.graph.S.items():
             for stab in layer.values():
-
                 (ertype, y, x) = stab.sID
-
-                if ertype == 0:
-                    X.append(x)
-                    Y.append(y)
-                else:
-                    X.append(x+.5)
-                    Y.append(y+.5)
-
+                X, Y = (x, y) if ertype == 0 else (x+.5, y+.5)
                 if stab.state:
-                    fC.append(self.C2[ertype] + [1])
-                    eC.append(self.C1[ertype] + [1])
+                    stab.pu = self.plot_scatter(X, Y, Z, facecolor=self.C2[ertype], edgecolor=self.C1[ertype])
                 else:
-                    fC.append([0, 0, 0, 0])
-                    eC.append([0, 0, 0, 0])
-
-                stab_locs[stab.sID] = i
-                i += 1
-
-            self.scatter[z] = {
-                "plot"  : None,
-                "locs"  : stab_locs,
-                "fC"    : fC,
-                "eC"    : eC,
-                "X"     : X,
-                "Y"     : Y,
-                "Z"     : z
-            }
-            self.plot_scatter(z)
+                    stab.pu = {
+                        "pos"       : (X, Y, Z),
+                        "edgecolor" : self.C2[ertype],
+                        "facecolor" : self.C1[ertype]
+                    }
 
         self.init_legend(1.05, 0.95)
         self.set_axes_equal()
-        self.draw_plot("Peeling lattice plotted.")
+        self.draw_plot()
 
 
     def draw_bridge(self, bridge):
         '''
         Draw lines of the vertical edges connecting the layers
         '''
-
         (ertype, y, x), z = bridge.qID, bridge.z
         if ertype == 1:
             y += 0.5
@@ -374,8 +353,8 @@ class plot_3D(plot_2D, gp.plot_3D):
             for bridge in self.graph.G[z].values():
                 edge = bridge.E
                 if edge.peeled and not edge.matching:
-                    self.plot_edge(edge, 0, self.cl ,self.alpha)
-                    self.plot_edge(edge, 1, self.cl ,self.alpha)
+                    self.new_attributes(edge.pu[0], dict(color=self.cl, alpha=self.alpha))
+                    self.new_attributes(edge.pu[1], dict(color=self.cl, alpha=self.alpha))
 
 
     def add_edge(self, edge, vertex):
@@ -386,17 +365,25 @@ class plot_3D(plot_2D, gp.plot_3D):
             (ye, xe), ze = edge.qubit.qID[1:3], edge.z
             (yv, xv), zv = vertex.sID[1:3], vertex.z
 
+            color = self.Cx if edge.ertype == 0 else self.Cz
             if edge.edge_type == 0:
                 id = 0 if (ye == yv and xe == xv) else 1
             else:
                 id = 0 if ze == zv else 1
-            color = self.Cx if edge.ertype ==0 else self.Cz
-            self.plot_edge(edge, id, color, self.alpha)
-            self.plot_edge(edge, 1-id, self.cl, self.alpha2)
+
+            if not edge.pu:
+                if edge.edge_type == 0:
+                    self.draw_edge(edge.qubit, edge.ertype)
+                else:
+                    self.draw_bridge(edge.qubit)
+
+            self.new_attributes(edge.pu[id], dict(color=color, alpha=self.alpha))
+            self.new_attributes(edge.pu[1-id], dict(color=self.cl, alpha=self.alpha2))
+
         else:
             color = self.cx if edge.ertype == 0 else self.cz
-            self.plot_edge(edge, 0, color, 1)
-            self.plot_edge(edge, 1, color, 1)
+            self.new_attributes(edge.pu[0], dict(color=color, alpha=1), 1)
+            self.new_attributes(edge.pu[1], dict(color=color, alpha=1), 1)
 
 
     def plot_strip_step_anyon(self, stab):
@@ -404,14 +391,8 @@ class plot_3D(plot_2D, gp.plot_3D):
         plot function for the flips of the anyons
         plots the anyon in white (removal) or normal error edge color (addition)
         """
-
-        loc = self.scatter[stab.z]["locs"][stab.sID]
-        ertype = stab.sID[0]
-
-
-        if stab.state:
-            self.scatter[stab.z]["eC"][loc] = self.C1[ertype] + [1]
+        lw = self.lw if stab.state else 0
+        if "key" in stab.pu:
+            self.new_attributes(stab.pu, dict(linewidth=lw))
         else:
-            self.scatter[stab.z]["eC"][loc] = [0, 0, 0, 0]
-
-        self.plot_scatter(stab.z)
+            self.new_attributes(stab.pu, dict(edgecolor=self.C1[stab.sID[0]]))

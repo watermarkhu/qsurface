@@ -71,7 +71,7 @@ class toric(go.toric):
 
         self.plot2D = plot2D
         self.plot_config = plot_config
-        self.gl_plot = pgl.plot_3D(self, **plot_config) if plot3D else None
+        self.gl_plot = pgl.plot_3D(self, plot2D=plot2D, **plot_config) if plot3D else None
 
     def init_uf_plot(self):
 
@@ -127,11 +127,17 @@ class toric(go.toric):
         self.measure_stab(pmX=0, pmZ=0, z=self.decode_layer)
 
         if self.gl_plot:
+            if pE != 0:
+                for z in self.range:
+                    self.gl_plot.plot_erasures(z, draw=False)
+                self.gl_plot.draw_plot()
             for z in self.range:
-                self.gl_plot.plot_erasures(z)
-                self.gl_plot.plot_errors(z)
+                self.gl_plot.plot_errors(z, draw=False)
+            self.gl_plot.draw_plot()
+            for z in self.range:
                 self.gl_plot.plot_syndrome(z)
-            self.gl_plot.draw_plot("Errors and syndromes plotted")
+            self.gl_plot.draw_plot()
+
 
 
     def init_erasure(self, pE=0, z=0, **kwargs):
@@ -213,11 +219,6 @@ class toric(go.toric):
         '''
         Applies logical_error() method of parent graph_2D object on the last layer.
         '''
-        if self.plot2D:
-            fp = pgl.plot_2D(self, z=self.decode_layer, **self.plot_config)
-            fp.plot_errors(z=self.decode_layer)
-            self.measure_stab(pmX=0, pmZ=0, z=self.decode_layer)
-            fp.plot_syndrome(z=self.decode_layer)
         return super().logical_error(z=self.size-1)
 
     '''

@@ -255,7 +255,7 @@ class decoder_config(object):
             "directed_graph": 0,
             "print_steps"   : 0,
             "plot_find"     : 1,
-            "plot_growth"   : 1,
+            "plot_growth"   : 0,
             "plot_peel"     : 1,
             "plot_nodes"    : 1,
         }
@@ -269,13 +269,13 @@ class decoder_config(object):
 
 if __name__ == "__main__":
 
-    import mwpm as decode
+    import unionfind as decode
     import graph_3D as go
 
     sim_config = {
         "ltype" : "toric",
-        "size"  : 3,
-        "pX"    : 0.05,
+        "size"  : 6,
+        "pX"    : 0.03,
         "pZ"    : 0.0,
         "pE"    : 0.0,
         "pmX"   : 0.028,

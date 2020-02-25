@@ -41,6 +41,8 @@ R1: [N1, M1],  N1: [R1],  M1: [R1, M0]
 # TODO: Proper calculation of delay for erasures/empty nodes in the graph
 '''
 
+from decorators import debug
+
 class anyon_node(object):
     '''
     Anyon node object - element in the aj-tree
@@ -122,15 +124,9 @@ class empty_node(anyon_node):
 
 class eg(object):
 
+    @debug.init_counters_eg()
     def __init__(self):
-        self.c_mac, self.c_ctd = 0, 0
-        self.mac, self.ctd = [], []
-
-    def get_counts(self):
-        self.mac.append(self.c_mac)
-        self.ctd.append(self.c_ctd)
-        self.c_mac, self.c_ctd = 0, 0
-
+        return
 
     def anyon_node(self, vertex):
         return anyon_node(vertex)
@@ -158,11 +154,11 @@ class eg(object):
             return node.p
 
 
+    @debug.counter(name="c_ctd")
     def comp_tree_d_of_node(self, cluster, node, an_con=None):
         '''
         Recursive function to find the delay of a node and its children
         '''
-        self.c_ctd += 1
         node.calc_delay = []
         node.w = 0
 

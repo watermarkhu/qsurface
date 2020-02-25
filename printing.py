@@ -10,7 +10,7 @@ Several functions that are used to print the active state of the graph.
 
 import logging
 import pyparsing as pp
-
+from pprint import pprint
 
 def printlog(message, print_message=True, log_message=False):
     '''
@@ -21,6 +21,16 @@ def printlog(message, print_message=True, log_message=False):
     if log_message:
         logging.warning(message)
 
+
+def print_configuration(config, iters, **kwargs):
+    print(f"{'_'*75}\n")
+    print(f"OOP surface code simulations\n2020 Mark Shui Hu, QuTech\nwww.github.com/watermarkhu/toric_code\n{'_'*75}\n")
+    print(f"Simulating {iters} iterations")
+    print("using settings:")
+    settings = {key:value for key, value in kwargs.items() if value != 0}
+    pprint(settings)
+    print("\nusing config:")
+    pprint(config)
 
 def print_graph(graph, clusters=None, prestring="", poststring=None, printmerged=1, include_even=0, return_string=False):
     """

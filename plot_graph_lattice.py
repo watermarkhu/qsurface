@@ -32,22 +32,23 @@ class plot_2D:
 
     '''
 
-    def __init__(self, graph, z=0, plot_size=8, line_width=0.5, click=1, **kwargs):
+    def __init__(self, graph, z=0, plot_size=8, **kwargs):
 
         self.size = graph.size
         self.graph = graph
         self.plot_size = plot_size
-        self.click = click
 
         self.qsize = 0.5
         self.qsize2 = 0.25
         self.qsizeE = 0.7
         self.qsizeU = 0.1
-        self.lw = line_width
         self.slw = 2
 
         self.alpha = 0.3
         self.alpha2 = 0.3
+
+        for key, value in kwargs.items():
+            setattr(self, key, value)
 
         # Define colors
         self.cw = [1, 1, 1]
@@ -66,9 +67,6 @@ class plot_2D:
         self.C2 = [self.cX, self.cZ]
         self.LS = ["-", "--"]
         self.LS2 = [":", "--"]
-
-        self.scatter_size = 200/graph.size
-        self.z_distance = 8
 
         self.history = dd(dict)
         self.iter = 0
@@ -146,19 +144,6 @@ class plot_2D:
         else:
             print("Can't go back further!")
 
-    # def get_plot_hash(self, object):
-    #
-    #     typename = type(object).__name__
-    #     if typename == "Line2D":
-    #         loc_name = "xydata"
-    #     elif typename == "PathCollection":
-    #         loc_name = "offsets"
-    #     elif typename == "Circle":
-    #         loc_name = "center"
-    #     else:
-    #         raise TypeError("unknown plot type")
-    #     id = (typename, str(plt.getp(object, loc_name)))
-    #     return id
 
     def new_attributes(self, object, attr_dict, overwrite=False):
         '''
@@ -210,9 +195,9 @@ class plot_2D:
         '''
         txt = self.iter_names[self.iter]
         self.text.set_text(txt)
-        pr.printlog(txt + " plotted.")
+        pr.printlog(f"{txt} plotted.")
         self.canvas.blit(self.ax.bbox)
-        if self.click: self.waitforkeypress()
+        self.waitforkeypress()
 
 
     def waitforkeypress(self):
@@ -267,8 +252,8 @@ class plot_2D:
         le_xer      = self.legend_circle("X-error", mfc=self.cx, mec=self.cx)
         le_zer      = self.legend_circle("Y-error", mfc=self.cz, mec=self.cz)
         le_yer      = self.legend_circle("Z-error", mfc=self.cy, mec=self.cy)
-        le_ver      = self.legend_circle("Vertex", ls="-", lw=self.lw, color=self.cX, mfc=self.cX, mec=self.cX, marker="|")
-        le_pla      = self.legend_circle("Plaquette", ls="--", lw=self.lw, color=self.cZ, mfc=self.cZ, mec=self.cZ, marker="|")
+        le_ver      = self.legend_circle("Vertex", ls="-", lw=self.linewidth, color=self.cX, mfc=self.cX, mec=self.cX, marker="|")
+        le_pla      = self.legend_circle("Plaquette", ls="--", lw=self.linewidth, color=self.cZ, mfc=self.cZ, mec=self.cZ, marker="|")
 
         self.lh = [le_qubit, le_xer, le_zer, le_yer, le_ver, le_pla] + items
 
@@ -330,7 +315,7 @@ class plot_2D:
             elif dir == "s":
                 X, Y = [x + 1, x + 1], [y + 1, y + 2]
 
-            line = self.draw_line(X, Y, Z=zb * self.z_distance, color=self.cl, lw=self.lw, ls=ls, alpha=alpha)
+            line = self.draw_line(X, Y, Z=zb * self.z_distance, color=self.cl, lw=self.linewidth, ls=ls, alpha=alpha)
             stab.pg[dir] = line
 
 
@@ -346,7 +331,7 @@ class plot_2D:
             self.qsize,
             edgecolor=self.cc,
             fill=False,
-            lw=self.lw,
+            lw=self.linewidth,
         )
         self.ax.add_artist(qubit.pg)
 
@@ -508,9 +493,8 @@ class plot_3D(plot_2D):
     #########################################################################
                             Helper functions
     '''
-    def __init__(self, *args, plot_2D=True, **kwargs):
+    def __init__(self, *args, **kwargs):
         self.patch3d_dict = dd(dict)
-        self.plot_2D = plot_2D
         super().__init__(*args, **kwargs)
 
 
@@ -522,7 +506,7 @@ class plot_3D(plot_2D):
 
             if "key" in object:
                 old_plot = object[object["key"]]
-                
+
                 current_dict = {
                     "facecolor": list(plt.getp(old_plot, "facecolor")),
                     "edgecolor": list(plt.getp(old_plot, "edgecolor")),
@@ -702,7 +686,7 @@ class plot_3D(plot_2D):
                 for dir in self.graph.dirs:
                     if dir in stab.neighbors:
                         gplot = stab.pg[dir]
-                        self.new_attributes(gplot, dict(linewidth=2*self.lw))
+                        self.new_attributes(gplot, dict(linewidth=2*self.linewidth))
 
             if stab.state:
                 X, Y, Z = xb * 4 + 1 + 2 *ertype,  yb * 4 + 1 + 2*ertype, (z - 1/2) * self.z_distance
@@ -714,9 +698,5 @@ class plot_3D(plot_2D):
                 self.history[self.iter - 1][stab.ap] = dict(visible=0)
                 self.history[self.iter][stab.ap] = dict(visible=1)
 
-
     def plot_final(self):
-        if self.plot_2D:
-            fp = plot_2D(self.graph, z=self.graph.decode_layer, **self.graph.plot_config)
-            fp.new_iter("Final layer errors")
-            fp.plot_errors(z=self.graph.decode_layer, draw=1)
+        return

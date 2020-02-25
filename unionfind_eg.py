@@ -12,6 +12,7 @@ This impletementation has full integrated the evengrow algorithm, where boundary
 Two decoder classes are defined in this file, toric and planar for their respective lattice types.
 '''
 
+from decorators import debug, plot
 import unionfind as uf
 import printing as pr
 
@@ -48,16 +49,12 @@ class toric(uf.toric):
         else:
             self.grow_boundary = self.grow_boundary_undirected
             import evengrow_undirected as eg
+
         self.eg = eg.eg()
 
+        self.plot_growth = not any([self.plot_bucket, self.plot_cluster, self.plot_node])
 
-    def get_counts(self):
-        '''
-        Appends counter values to list and resets them for new iteration
-        Counts additionaly for evengrow hearistics
-        '''
-        super().get_counts()
-        self.eg.get_counts()
+        print("{}\n\nusing evengrow node-based boundary lists with {} graph".format("_"*75,"directed" if self.directed_graph else "undirected"))
 
     '''
     ##################################################################################################
@@ -105,7 +102,7 @@ class toric(uf.toric):
 
     ##################################################################################################
     '''
-
+    @plot.iter(name="Clusters found", cname="plot_find", dname="plot_removed")
     def find_clusters(self, *args, **kwargs):
         """
         Given a set of erased qubits/edges on a lattice, this functions finds all edges that are connected and sorts them in separate clusters. A single anyon can also be its own cluster.
@@ -127,9 +124,6 @@ class toric(uf.toric):
                 self.cluster_place_bucket(cluster)
                 self.graph.cID += 1
 
-        if self.plot and not self.plot_find:
-            self.plot.plot_removed("Clusters initiated")
-            self.plot.draw_plot()
     '''
     ##################################################################################################
 
@@ -142,90 +136,41 @@ class toric(uf.toric):
     ##################################################################################################
     '''
 
+    @debug.counter(name="c_gbu")
+    @plot.iter_grow_bucket()
     def grow_bucket(self, bucket, bucket_i, *args, **kwargs):
         '''
         Loops over all buckets to grow each bucket iteratively.
         Skips empty buckets during loop and breaks out when the largest bucket has been reached (defined by self.maxbucket)
         Additionally saves boundary edges from vertices to nodes.
         '''
-        self.c_gbu += 1
-
-        if self.print_steps:
-            self.mstr = {}
-            pr.printlog(
-            "\n############################ GROW ############################" + f"\nGrowing bucket {bucket_i} of {self.maxbucket}: {bucket}" + f"\nRemaining buckets: {self.buckets[bucket_i + 1 : self.maxbucket + 1]}, {self.wastebucket}\n"
-            )
-        elif self.plot:
-            print(f"Growing bucket #{bucket_i}/{self.maxbucket}")
-
-        if self.plot and not self.plot_growth:
-            self.plot.new_iter(f"Bucket {bucket_i} grown")
-
-
-        self.fusion, self.bound_vertices, place = [], [], [] # Initiate Fusion list
+        self.fusion, self.bound_vertices, self.place = [], [], [] # Initiate Fusion list
 
         while bucket:  # Loop over all clusters in the current bucket\
-            cluster = self.find_cluster_root(bucket.pop())
+            cluster = self.get_cluster_root(bucket.pop())
 
             if cluster.bucket == bucket_i and cluster.support == bucket_i % 2:
-                place.append(cluster)
+                self.place.append(cluster)
                 cluster.support = 1 - cluster.support
 
-                if self.plot and self.plot_growth and not self.plot_nodes: self.plot.new_iter("bucket {}: {} grown".format(cluster.bucket, cluster))
-
-                self.grow_boundary(cluster, cluster.root_node)
-
-                if self.plot and self.plot_growth and not self.plot_nodes:
-                    self.plot.draw_plot()
-
-        if self.plot and not self.plot_growth:
-            self.plot.draw_plot()
-
-        if not place:
-            return
-
-        if self.plot and not self.plot_growth:
-            self.plot.new_iter(f"Bucket {bucket_i} fused")
-
-        self.fuse_vertices()
-
-        # Save new boundaries from vertices to nodes
-        for vertex in self.bound_vertices:
-            while vertex.new_bound:
-                vertex.node.boundary[0].append(vertex.new_bound.pop())
-
-        # Put clusters in new buckets. Some will be added double, but will be skipped by the new_boundary check
-        for cluster in place:
-            cluster = self.find_cluster_root(cluster)
-            self.cluster_place_bucket(cluster)
-
-        if self.print_steps:
-            pr.printlog("")
-            for cID, string in self.mstr.items():
-                pr.printlog(f"B:\n{string}\nA:\n{pr.print_graph(self.graph, [self.graph.C[cID]], include_even=1, return_string=True)}\n")
-
-        if self.plot and not self.plot_growth:
-            self.plot.draw_plot()
+                self.grow_cluster(cluster, cluster.root_node)
 
 
-    def grow_boundary_directed(self, cluster, node, *args, **kwargs):
+    @plot.iter_grow_cluster()
+    def grow_cluster(self, cluster, root_node):
+        '''
+        Grows the current cluster, exists to have non recusive function
+        '''
+        self.grow_boundary(cluster, root_node)
+
+
+    @debug.counter(name="c_gbo")
+    @plot.iter_grow_boundary_node()
+    def grow_boundary_directed(self, cluster, node, *args, print_tree=0, **kwargs):
         '''
         Grows the boundary list that is stored at the current node using the directed base-tree.
         Fully grown edges are added to the fusion list.
         '''
-        self.c_gbo += 1
-
-        if cluster.root_node.calc_delay and self.print_steps:
-            if type(cluster.root_node.calc_delay) == list:
-                calc_nodes = [node.short_id() for node, edge, ancestor in cluster.root_node.calc_delay]
-                print_tree = False
-            else:
-                calc_nodes = [node.short_id() for node in cluster.root_node.calc_delay]
-                print_tree = True
-            print("Computing delay root {} at nodes {} and children".format(cluster.root_node.short_id(), calc_nodes))
-
-        else:
-            print_tree = False
 
         while cluster.root_node.calc_delay:
             at_node = cluster.root_node.calc_delay.pop()
@@ -235,29 +180,8 @@ class toric(uf.toric):
         if print_tree:
             pr.print_tree(cluster.root_node, "children", "tree_rep")
 
-        if node.d - node.w == cluster.mindl:      # waited enough rounds as delay
-
-            if self.plot and self.plot_nodes: self.plot.new_iter("bucket {}: {}-{} grown".format(cluster.bucket, cluster, node))
-
-            node.s += 1
-
-            node.boundary = [[], node.boundary[0]]
-            while node.boundary[1]:
-
-                bound = node.boundary[1].pop()
-                vertex, new_edge, new_vertex = bound
-
-                if new_edge.support != 2:
-
-                    new_edge.support += 1
-
-                    if new_edge.support == 2:                   # if edge is fully grown
-                        self.fusion.append(bound)               # Append to fusion list
-                    else:
-                        node.boundary[0].append(bound)
-
-                    if self.plot: self.plot.add_edge(new_edge, vertex)
-            if self.plot and self.plot_nodes: self.plot.draw_plot()
+        if node.d - node.w == cluster.mindl:
+            self.grow_node(cluster, node)
         else:
             node.w += 1
 
@@ -265,25 +189,13 @@ class toric(uf.toric):
             self.grow_boundary_directed(cluster, child)
 
 
-    def grow_boundary_undirected(self, cluster, node, ancestor=None, *args, **kwargs):
+    @debug.counter(name="c_gbo")
+    @plot.iter_grow_boundary_node()
+    def grow_boundary_undirected(self, cluster, node, ancestor=None, *args, print_tree=0, **kwargs):
         '''
         Grows the boundary list that is stored at the current node using the directed base-tree.
         Fully grown edges are added to the fusion list.
         '''
-        self.c_gbo += 1
-
-        if cluster.root_node.calc_delay and self.print_steps:
-            if type(cluster.root_node.calc_delay) == list:
-                calc_nodes = [node.short_id() for node, edge, ancestor in cluster.root_node.calc_delay]
-                print_tree = False
-            else:
-                calc_nodes = [node.short_id() for node in cluster.root_node.calc_delay]
-                print_tree = True
-            print("Computing delay root {} at nodes {} and children".format(cluster.root_node.short_id(), calc_nodes))
-
-        else:
-            print_tree = False
-
         while cluster.root_node.calc_delay:
             at_node, at_edge, at_ancestor = cluster.root_node.calc_delay.pop()
             self.eg.comp_tree_p_of_node(at_node, at_ancestor)
@@ -292,29 +204,8 @@ class toric(uf.toric):
         if print_tree:
             pr.print_tree(cluster.root_node, "children", "tree_rep")
 
-        if node.d - node.w == cluster.mindl:      # waited enough rounds as delay
-            if self.plot and self.plot_nodes: self.plot.new_iter("bucket {}: {}-{} grown".format(cluster.bucket, cluster, node))
-
-            node.s += 1
-
-            node.boundary = [[], node.boundary[0]]
-            while node.boundary[1]:
-
-                bound = node.boundary[1].pop()
-                vertex, new_edge, new_vertex = bound
-
-                if new_edge.support != 2:
-
-                    new_edge.support += 1
-
-                    if new_edge.support == 2:                   # if edge is fully grown
-                        self.fusion.append(bound)               # Append to fusion list
-                    else:
-                        node.boundary[0].append(bound)
-
-                    if self.plot: self.plot.add_edge(new_edge, vertex)
-
-            if self.plot and self.plot_nodes: self.plot.draw_plot()
+        if node.d - node.w == cluster.mindl:
+            self.grow_node(cluster, node)
         else:
             node.w += 1
 
@@ -322,6 +213,41 @@ class toric(uf.toric):
             if child is not ancestor:
                 self.grow_boundary_undirected(cluster, child, ancestor=node)
 
+
+    @plot.iter_grow_node()
+    def grow_node(self, cluster, node, *args, **kwargs):
+        node.s += 1
+        node.boundary = [[], node.boundary[0]]
+        while node.boundary[1]:
+            bound = node.boundary[1].pop()
+            vertex, new_edge, new_vertex = bound
+
+            if new_edge.support != 2:
+                new_edge.support += 1
+
+                if new_edge.support == 2:     # if edge is fully grown
+                    self.fusion.append(bound) # Append to fusion list
+                else:
+                    node.boundary[0].append(bound)
+
+                if self.plot: self.plot.add_edge(new_edge, vertex)
+
+
+    @plot.iter_fuse_bucket()
+    def fuse_bucket(self, bucket_i, *args, **kwrags):
+        '''
+        Put clusters in new buckets. Some will be added double, but will be skipped by the new_boundary check
+        '''
+        self.fuse_vertices()
+
+        # Save new boundaries from vertices to nodes
+        for vertex in self.bound_vertices:
+            while vertex.new_bound:
+                vertex.node.boundary[0].append(vertex.new_bound.pop())
+
+        for cluster in self.place:
+            cluster = self.get_cluster_root(cluster)
+            self.cluster_place_bucket(cluster)
 
     '''
     ##################################################################################################
@@ -340,8 +266,8 @@ class toric(uf.toric):
         '''
         merging = []
         for aV, edge, pV in self.fusion:
-            aC = self.find_vertex_cluster(aV)
-            pC = self.find_vertex_cluster(pV)
+            aC = self.get_vertex_cluster(aV)
+            pC = self.get_vertex_cluster(pV)
 
             if self.edge_growth_choices(edge, aV, pV, aC, pC):
                 aV.count, pV.count = 0, 0
@@ -375,8 +301,8 @@ class toric(uf.toric):
         '''
         Performs union of two clusters (belonging to aV and pV vertices) on a fully grown edge if its eligeable. Additionally applies adoption of base-trees, saves root_node of cluster.
         '''
-        aC = self.find_vertex_cluster(aV)
-        pC = self.find_vertex_cluster(pV)
+        aC = self.get_vertex_cluster(aV)
+        pC = self.get_vertex_cluster(pV)
 
         if self.edge_growth_choices(edge, aV, pV, aC, pC):
             root_node = self.eg.adoption(aV, pV, aC, pC)
@@ -411,9 +337,9 @@ class toric(uf.toric):
         elif pC is aC:
             edge.support -= 1
             if self.plot:
-                if self.plot_growth: self.plot.new_iter(str(edge) + " cut")
+                if self.plot_cut: self.plot.new_iter(str(edge) + " cut")
                 self.plot.add_edge(edge, aV)
-                if self.plot_growth: self.plot.draw_plot()
+                if self.plot_cut: self.plot.draw_plot()
         else:
             union = True
         return union
@@ -443,6 +369,7 @@ class planar(uf.planar, toric):
 
     ##################################################################################################
     '''
+    @plot.iter(name="Boundary clusters found", cname="plot_find", dname="plot_removed")
     def find_clusters_boundary(self, *args, **kwargs):
         '''
         For the planar lattice, in the case of erasures connected to the boundary, clusters need to be formed from the boundary, such that the shortest path from an anyon to the boundary is formed within the cluster tree.
@@ -477,10 +404,6 @@ class planar(uf.planar, toric):
             else:
                 self.graph.C[cluster.cID] = cluster
                 self.cluster_place_bucket(cluster)
-
-        if self.plot and not self.plot_find:
-            self.plot.plot_removed("Boundary clusters initiated")
-            self.plot.draw_plot()
 
 
     def cluster_new_vertex_boundary(self, bound_list, *args, **kwargs):
@@ -540,9 +463,9 @@ class planar(uf.planar, toric):
         if (aC.on_bound and (pV.type == 1 or (pC is not None and pC.on_bound))) or pC is aC:
             edge.support -= 1
             if self.plot:
-                if self.plot_growth: self.plot.new_iter(str(edge) + " cut")
+                if self.plot_cut: self.plot.new_iter(str(edge) + " cut")
                 self.plot.add_edge(edge, aV)
-                if self.plot_growth: self.plot.draw_plot()
+                if self.plot_cut: self.plot.draw_plot()
         elif pC is None:
             aC.add_vertex(pV)
             pV.node = aV.node

@@ -14,6 +14,7 @@ The C implementation (in folder blossom5) is highly recommended as it evidently 
 import blossom5.pyMatch as pm
 # import networkx as nx
 import time
+from decorators import debug
 
 
 class toric(object):
@@ -21,23 +22,21 @@ class toric(object):
     MWPM decoder for the toric lattice (2D and 3D).
     Edges between all anyons are considered.
     '''
+    @debug.init_counters_uf()
     def __init__(self, *args, **kwargs):
         for key, value in kwargs.items():
             setattr(self, key, value)
-        self.time = []
+        print(f"{'_'*75}\n\ndecoder type: minimum weight perfect matching (blossom5)")
 
+
+    @debug.get_counters()
     def decode(self):
         '''
         Decode functions for the MWPM toric decoder
         '''
-        self.t0 = time.time()
         self.get_matching()
         self.apply_matching()
         if self.graph.gl_plot: self.graph.gl_plot.plot_lines(self.matching)
-
-
-    def get_counts(self):
-        self.time.append(time.time() - self.t0)
 
 
     def get_stabs(self):

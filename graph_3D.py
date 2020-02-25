@@ -51,15 +51,16 @@ class toric(go.toric):
     Dim dimension is set to 3 and decoder_layer is set to last layer.
     '''
 
-    def __init__(self, size, decoder, plot2D, plot3D=0, plot_config={}, dim=3, *args, **kwargs):
-        super().__init__(size, decoder, *args, **kwargs)
+    def __init__(self, size, decoder, plot_config={}, dim=3, *args, **kwargs):
+
+        plot2D = kwargs.pop("plot2D", 0)
+        super().__init__(size, decoder, *args, plot2D=0, dim=3, **kwargs)
 
         self.dim = 3
         self.decode_layer = self.size - 1
         self.G = {}
 
         for z in range(1, self.size):
-
             self.init_graph_layer(z=z)
             self.G[z] = {}
 
@@ -69,14 +70,18 @@ class toric(go.toric):
                 vU.neighbors["d"] = (vD, bridge.E)
                 vD.neighbors["u"] = (vU, bridge.E)
 
+
+        for key, value in kwargs.items():
+            setattr(self, key, value)
         self.plot2D = plot2D
         self.plot_config = plot_config
-        self.gl_plot = pgl.plot_3D(self, plot2D=plot2D, **plot_config) if plot3D else None
+        self.gl_plot = pgl.plot_3D(self, **plot_config) if self.plot3D else None
+
 
     def init_uf_plot(self):
-
         self.uf_plot = puf.plot_3D(self, **self.plot_config)
         return self.uf_plot
+
 
     def __repr__(self):
         return f"3D {self.__class__.__name__} graph object"
@@ -219,6 +224,10 @@ class toric(go.toric):
         '''
         Applies logical_error() method of parent graph_2D object on the last layer.
         '''
+        if self.plot2D:
+            self.gl2_plot = pgl.plot_2D(self, z=self.decode_layer, **self.plot_config)
+            self.gl2_plot.new_iter("Final layer errors")
+            self.gl2_plot.plot_errors(z=self.decode_layer, draw=1)
         return super().logical_error(z=self.size-1)
 
     '''

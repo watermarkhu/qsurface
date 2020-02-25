@@ -46,8 +46,8 @@ class plot_2D(gp.plot_2D):
 
         le_xv = self.legend_circle("X-vertex", mew=0, mfc=self.cX)
         le_zv = self.legend_circle("Z-vertex", mew=0, mfc=self.cZ)
-        le_xe = self.legend_circle("X-edge", lw=self.lw, color=self.cx, marker=None)
-        le_ze = self.legend_circle("Z-edge", ls="--", lw=self.lw, color=self.cz, marker=None)
+        le_xe = self.legend_circle("X-edge", lw=self.linewidth, color=self.cx, marker=None)
+        le_ze = self.legend_circle("Z-edge", ls="--", lw=self.linewidth, color=self.cz, marker=None)
         self.ax.legend(
             handles=[le_xv, le_zv, le_xe, le_ze],
             bbox_to_anchor=(x, y),
@@ -68,8 +68,8 @@ class plot_2D(gp.plot_2D):
         plt.sca(self.ax)
 
         for qubit in self.graph.Q[z].values():
-            self.draw_edge0(qubit)
-            self.draw_edge1(qubit)
+            self.draw_edge(qubit, 0)
+            self.draw_edge(qubit, 1)
 
         for stab in self.graph.S[z].values():
             self.draw_vertex(stab)
@@ -131,8 +131,8 @@ class plot_2D(gp.plot_2D):
 
         x0, y0, xm, ym, x1, y1 = self.get_edge_data(ertype, type, y0, x0)
 
-        up1 = self.draw_line([x0,  xm], [y0,  ym], Z=qubit.z, color=color, lw=self.lw, ls=self.LS[0], alpha=alpha)
-        up2 = self.draw_line([xm,  x1], [ym,  y1], Z=qubit.z, color=color, lw=self.lw, ls=self.LS[0], alpha=alpha)
+        up1 = self.draw_line([x0,  xm], [y0,  ym], Z=qubit.z, color=color, lw=self.linewidth, ls=self.LS[ertype], alpha=alpha)
+        up2 = self.draw_line([xm,  x1], [ym,  y1], Z=qubit.z, color=color, lw=self.linewidth, ls=self.LS[ertype], alpha=alpha)
         qubit.E[ertype].pu = [up1, up2]
 
 
@@ -146,7 +146,7 @@ class plot_2D(gp.plot_2D):
             y += 0.5
             x += 0.5
 
-        fill, lw = (1, self.lw) if stab.state else (0,0)
+        fill, lw = (1, self.linewidth) if stab.state else (0,0)
 
         stab.pu = plt.Circle(
             (x, y),
@@ -173,18 +173,15 @@ class plot_2D(gp.plot_2D):
         self.ax.draw_artist(p_edge)
 
 
-    def plot_removed(self, name, z=0):
+    def plot_removed(self, z=0):
         """
         plots the normal edge color over the edges that have been removed during the formation of the tree structure
         """
-        self.new_iter(name)
-
         for qubit in self.graph.Q[z].values():
             for edge in [qubit.E[0], qubit.E[1]]:
                 if edge.peeled and not edge.matching:
-                    self.new_attributes(edge.pu[0], dict(color=self.cl, alpha=self.alpha2))
-                    self.new_attributes(edge.pu[1], dict(color=self.cl, alpha=self.alpha2))
-
+                    self.new_attributes(edge.pu[0], dict(color=self.cl, alpha=self.alpha2), 1)
+                    self.new_attributes(edge.pu[1], dict(color=self.cl, alpha=self.alpha2), 1)
 
 
     def add_edge(self, edge, vertex):
@@ -251,7 +248,7 @@ class plot_2D(gp.plot_2D):
         plot function for the flips of the anyons
         plots the anyon in white (removal) or normal error edge color (addition)
         """
-        lw = self.lw if stab.state else 0
+        lw = self.linewidth if stab.state else 0
         self.new_attributes(stab.pu, dict(linewidth=lw))
 
 
@@ -300,7 +297,7 @@ class plot_3D(plot_2D, gp.plot_3D):
                     self.draw_edge(qubit, 1)
                 else:
                     qubit.E[0].pu = None
-                    qubit.E[0].pu = None
+                    qubit.E[1].pu = None
 
 
         for layer in self.graph.G.values():
@@ -334,8 +331,8 @@ class plot_3D(plot_2D, gp.plot_3D):
             y += 0.5
             x += 0.5
 
-        up1 = self.draw_line([x,  x], [y,  y], Z=[z, z-.5], color=self.cl, lw=self.lw, ls=self.LS[ertype], alpha=self.alpha2)
-        up2 = self.draw_line([x,  x], [y,  y], Z=[z-.5, z-1], color=self.cl, lw=self.lw, ls=self.LS[ertype], alpha=self.alpha2)
+        up1 = self.draw_line([x,  x], [y,  y], Z=[z, z-.5], color=self.cl, lw=self.linewidth, ls=self.LS[ertype], alpha=self.alpha2)
+        up2 = self.draw_line([x,  x], [y,  y], Z=[z-.5, z-1], color=self.cl, lw=self.linewidth, ls=self.LS[ertype], alpha=self.alpha2)
 
         bridge.E.pu = [up1, up2]
 
@@ -353,8 +350,8 @@ class plot_3D(plot_2D, gp.plot_3D):
             for bridge in self.graph.G[z].values():
                 edge = bridge.E
                 if edge.peeled and not edge.matching:
-                    self.new_attributes(edge.pu[0], dict(color=self.cl, alpha=self.alpha))
-                    self.new_attributes(edge.pu[1], dict(color=self.cl, alpha=self.alpha))
+                    self.new_attributes(edge.pu[0], dict(color=self.cl, alpha=self.alpha2))
+                    self.new_attributes(edge.pu[1], dict(color=self.cl, alpha=self.alpha2))
 
 
     def add_edge(self, edge, vertex):
@@ -391,7 +388,7 @@ class plot_3D(plot_2D, gp.plot_3D):
         plot function for the flips of the anyons
         plots the anyon in white (removal) or normal error edge color (addition)
         """
-        lw = self.lw if stab.state else 0
+        lw = self.linewidth if stab.state else 0
         if "key" in stab.pu:
             self.new_attributes(stab.pu, dict(linewidth=lw))
         else:

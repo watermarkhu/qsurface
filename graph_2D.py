@@ -44,7 +44,7 @@ class toric(object):
                         Value:  Qubit object with two Edge objects
     matching_weight total length of edges in the matching
     """
-    def __init__(self, size, decoder, plot2D=0, plot_config={}, dim=2, *args, **kwargs):
+    def __init__(self, size, decoder, plot_config={}, dim=2, *args, **kwargs):
         self.dim = dim
         self.size = size
         self.range = range(size)
@@ -57,9 +57,12 @@ class toric(object):
 
         self.init_graph_layer()
 
-        self.plot2D = plot2D
+        for key, value in kwargs.items():
+            setattr(self, key, value)
         self.plot_config = plot_config
-        self.gl_plot = pgl.plot_2D(self, **plot_config) if plot2D else None
+        print(f"{'_'*75}\n\ngraph type: {dim}D {self.__class__.__name__}\n{'_'*75}\n")
+        self.gl_plot = pgl.plot_2D(self, **plot_config) if self.plot2D else None
+
 
     def __repr__(self):
         return f"2D {self.__class__.__name__} graph object with"

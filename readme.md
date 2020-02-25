@@ -27,6 +27,8 @@ Though this repository, several non-standard python libraries are used, which ca
 * scipy
 * numpy
 * pandas
+* decimal
+* progiter
 
 **printing and info**
 * pprint

@@ -6,7 +6,7 @@ _____________________________________________
 
 '''
 from matplotlib import pyplot as plt
-from run_surface_code import multiprocess
+from run_surface_code import multiprocess, decoder_config
 from collections import defaultdict
 from scipy import optimize
 from pprint import pprint
@@ -163,32 +163,6 @@ def plot_thresholds(
     ax1.set_ylabel("Modified succces probability")
 
 
-class decoder_config(object):
-    '''
-    stores all settings of the decoder
-    '''
-    def __init__(self):
-
-        self.plot2D = 0             # Plot 2D lattice and final layer of 3D lattice
-        self.plot3D = 0             # Plot 3D lattice, turn off for large lattices!
-        self.seed = None            # seed or list of seeds with len(seeds) = iterations
-
-        self.decoder = {
-            "dg_connections": 1,    # Fuse full edges by considering the vertex connectivity degeneracy.
-            "directed_graph": 0,    # Use directed base-tree with parent/child i.s.o. connections for each node
-            "print_steps"   : 0,
-            "plot_find"     : 0,
-            "plot_growth"   : 0,
-            "plot_peel"     : 0,
-            "plot_nodes"    : 0,
-        }
-
-        self.plot = {
-            "plot_size"     : 6,
-            "line_width"    : 1.5,
-            "plotstep_click": 1,
-        }
-
 if __name__ == "__main__":
 
     '''
@@ -239,7 +213,7 @@ if __name__ == "__main__":
 
                 print("Calculating for L = ", str(lati), "and p =", str(pi))
 
-                output = multiprocess(Num, decoder_config(), decoder, go, pX=pi, pmX=pi, ltype=ltype, size=lati, processes=1)
+                output = multiprocess(Num, decoder_config(), decoder, go, pX=pi, pmX=pi, ltype=ltype, size=lati)
 
                 pprint(dict(output), "\n")
                 columns = list(output.keys())

@@ -291,7 +291,11 @@ class Bridge(object):
         self.E = go.Edge(self, ertype=qID[0], edge_type=1, z=z)
 
     def __repr__(self):
-        return "g({},{},{}:{})".format(*self.qID[1:], self.qID[0])
+        errortype = "X" if self.qID[0] == 0 else "Z"
+        return "g{}({},{}:{})".format(errortype, *self.qID[1:], self.z)
+
+    def picker(self):
+        return self.__repr__()
 
     def reset(self):
         """

@@ -13,7 +13,6 @@ Two decoder classes are defined in this file, toric and planar for their respect
 
 from decorators import debug, plot
 import printing as pr
-import time
 
 
 class toric(object):
@@ -157,6 +156,7 @@ class toric(object):
                         self.cluster_new_vertex(cluster, new_vertex, plot_step)
                     else:  # cycle detected, peel edge
                         new_edge.peeled = True
+                        print(new_edge)
                         if self.plot and plot_step:
                             self.plot.plot_edge_step(new_edge, "remove")
             else:
@@ -374,7 +374,7 @@ class toric(object):
             aC.add_vertex(pV)
             self.cluster_new_vertex(aC, pV, self.plot_growth)
         elif pC is aC:
-            edge.support -= 2
+            edge.support = 0
             if self.plot:
                 if self.plot_cut: self.plot.new_iter(str(edge) + " cut")
                 self.plot.add_edge(edge, aV)
@@ -391,7 +391,7 @@ class toric(object):
 
     ##################################################################################################
     '''
-    @plot.iter(name="Clusters peeled", cname="plot_peel", dname="plot_removed")
+    @plot.iter_peel_clusters()
     def peel_clusters(self, *args, **kwargs):
         """
         Loops overal all vertices to find pendant vertices which are selected from peeling using {peel_edge}
@@ -609,7 +609,7 @@ class planar(toric):
         union = False
 
         if (aC.on_bound and (pV.type == 1 or (pC is not None and pC.on_bound))) or pC is aC:
-            edge.support -= 2
+            edge.support = 0
             if self.plot:
                 if self.plot_cut: self.plot.new_iter(str(edge) + " cut")
                 self.plot.add_edge(edge, aV)

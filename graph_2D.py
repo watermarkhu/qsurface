@@ -155,7 +155,6 @@ class toric(object):
         """
         initates Pauli X and Z errors on the lattice based on the error rates
         """
-
         for qubit in self.Q[0].values():
             if pX != 0 and random.random() < pX:
                 qubit.E[0].state = 1
@@ -450,6 +449,9 @@ class Stab(object):
         type = "X" if self.sID[0] == 0 else "Z"
         return "v{}({},{}|{})".format(type, *self.sID[1:], self.z)
 
+    def picker(self):
+        return "{}-{}-{}".format(self.__repr__(), self.node, self.cluster)
+
     def reset(self):
         """
         Changes all iteration paramters to their initial value
@@ -499,6 +501,9 @@ class Qubit(object):
     def __repr__(self):
         return "q({},{}:{}|{})".format(*self.qID[1:], self.qID[0], self.z)
 
+    def picker(self):
+        return self.__repr__()
+
     def reset(self):
         """
         Changes all iteration parameters to their default value
@@ -533,11 +538,11 @@ class Edge(object):
         self.qubit      = qubit
         self.ertype     = ertype
         self.z          = z
-        self.cluster    = None
         self.state      = 0
         self.support    = 0
         self.peeled     = 0
         self.matching   = 0
+
 
     def __repr__(self):
         if self.edge_type == 0:
@@ -547,11 +552,13 @@ class Edge(object):
         errortype = "X" if self.ertype == 0 else "Z"
         return "e{}{}({},{}|{})".format(errortype, orientation, *self.qubit.qID[1:], self.z)
 
+    def picker(self):
+        return "{}-{}".format(self.__repr__(), self.qubit)
+
     def reset(self):
         """
         Changes all iteration paramters to their initial value
         """
-        self.cluster    = None
         self.state      = 0
         self.support    = 0
         self.peeled     = 0

@@ -77,14 +77,16 @@ class toric(uf.toric):
                 if new_edge.support == 0 and not new_edge.peeled:
                     # if edge not already traversed
                     if new_vertex.cluster is None:  # if no cycle detected
+
                         new_edge.support = 2
                         cluster.add_vertex(new_vertex)
                         self.eg.new_empty(vertex, new_vertex, cluster)
 
                         if self.plot and plot_step:
                             self.plot.plot_edge_step(new_edge, "confirm")
-                        self.cluster_new_vertex(cluster, vertex, plot_step)
+                        self.cluster_new_vertex(cluster, new_vertex, plot_step)
                     else:  # cycle detected, peel edge
+
                         new_edge.peeled = True
                         if self.plot and plot_step:
                             self.plot.plot_edge_step(new_edge, "remove")
@@ -333,7 +335,7 @@ class toric(uf.toric):
             self.bound_vertices.append(pV)
 
         elif pC is aC:
-            edge.support -= 1
+            edge.support = 0
             if self.plot:
                 if self.plot_cut: self.plot.new_iter(str(edge) + " cut")
                 self.plot.add_edge(edge, aV)
@@ -459,7 +461,7 @@ class planar(uf.planar, toric):
         union = False
 
         if (aC.on_bound and (pV.type == 1 or (pC is not None and pC.on_bound))) or pC is aC:
-            edge.support -= 1
+            edge.support = 0
             if self.plot:
                 if self.plot_cut: self.plot.new_iter(str(edge) + " cut")
                 self.plot.add_edge(edge, aV)

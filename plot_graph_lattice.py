@@ -16,7 +16,7 @@ The plot_unionfind.plot_2D and plot_3D objects are also child objects that uses 
 from collections import defaultdict as dd
 from matplotlib import pyplot as plt
 from matplotlib.lines import Line2D
-from matplotlib.widgets import Button
+from matplotlib.widgets import Button, RadioButtons
 import printing as pr
 import random
 
@@ -43,6 +43,7 @@ class plot_2D:
         self.qsizeE = 0.7
         self.qsizeU = 0.1
         self.slw = 2
+        self.pick = 5
 
         self.alpha = 0.3
         self.alpha2 = 0.3
@@ -84,17 +85,23 @@ class plot_2D:
         self.ax.set_aspect("equal")
         plt.axis("off")
         self.canvas = self.f.canvas
+        self.canvas.callbacks.connect('pick_event', self.on_pick)
 
-        self.prev_button = Button(plt.axes([0.775, 0.025, 0.1, 0.05]), "Previous")
+
+        self.prev_button = Button(plt.axes([0.75, 0.025, 0.125, 0.05]), "Previous")
         self.next_button = Button(plt.axes([0.9, 0.025, 0.075, 0.05]), "Next")
         self.prev_button.on_clicked(self.draw_prev)
         self.next_button.on_clicked(self.draw_next)
 
-        self.ax_text = plt.axes([0.025, 0.025, 0.725, 0.05])
+        self.ax_text = plt.axes([0.025, 0.025, 0.7, 0.05])
         plt.axis("off")
         self.text = self.ax_text.text(0.5, 0.5, "", fontsize=10, va ="center", ha="center", transform=self.ax_text.transAxes)
-
         self.init_plot(z)
+
+
+    def on_pick(self, event):
+        artist = event.artist
+        print("picked", artist.object.picker())
 
     '''
     #########################################################################
@@ -155,9 +162,19 @@ class plot_2D:
 
         prev, next = {}, {}
 
+        def get_nested(value):
+            if type(value) == list and type(value[0]) == list:
+                return get_nested(value[0])
+            else:
+                return value
+
         if not overwrite or object not in prev_changes:
             for key, value in attr_dict.items():
                 old_value = plt.getp(object, key)
+
+                if type(old_value).__name__ == "ndarray":
+                    old_value = get_nested(old_value.tolist())
+
                 if old_value != value:
                     prev[key] = old_value
                     next[key] = value
@@ -317,6 +334,7 @@ class plot_2D:
 
             line = self.draw_line(X, Y, Z=zb * self.z_distance, color=self.cl, lw=self.linewidth, ls=ls, alpha=alpha)
             stab.pg[dir] = line
+            line.object = stab
 
 
     def plot_qubit(self, qubit):
@@ -332,8 +350,10 @@ class plot_2D:
             edgecolor=self.cc,
             fill=False,
             lw=self.linewidth,
+            picker=self.pick,
         )
         self.ax.add_artist(qubit.pg)
+        qubit.pg.object = qubit
 
 
     '''
@@ -542,12 +562,10 @@ class plot_3D(plot_2D):
                 next_changes[old_plot] = dict(visible=0)
                 plt.setp(old_plot, visible=0)
 
-            attr, name = self.scatter_attr(**attr_dict)
-            new_plot = self.ax.scatter(*object["pos"], **attr)
+            pdict, new_plot = self.plot_scatter(*object["pos"], pdict=object, **attr_dict)
+
             prev_changes[new_plot] = dict(visible=0)
             next_changes[new_plot] = dict(visible=1)
-            object[name] = new_plot
-            object["key"] = name
 
         else:
             super().new_attributes(object, attr_dict, overwrite)
@@ -570,20 +588,29 @@ class plot_3D(plot_2D):
         return attr, name
 
 
-    def plot_scatter(self, X, Y, Z, **kwargs):
+    def plot_scatter(self, X, Y, Z, object=None, pdict=None, **kwargs):
         '''
         param: qubit        graph.qubit object
         Patch.Circle object for each qubit on the lattice
         '''
         sattr, key = self.scatter_attr(**kwargs)
-        plot = self.ax.scatter(X, Y, Z, **sattr)
-        self.ax.add_artist(plot)
-        kwargs.update({
-            key     : plot,
-            "key"   : key,
-            "pos"   : (X, Y, Z)
-        })
-        return kwargs
+        plot = self.ax.scatter(X, Y, Z, **sattr, picker=True)
+
+        if object:
+            plot.object = object
+
+        if not pdict:
+            pdict = {
+                key     : plot,
+                "key"   : key,
+                "pos"   : (X, Y, Z)
+            }
+        else:
+            pdict.update({
+                key     : plot,
+                "key"   : key
+            })
+        return pdict, plot
 
 
     def set_axes_equal(self):
@@ -681,7 +708,8 @@ class plot_3D(plot_2D):
                 (td, yb, xb) = qubit.qID
                 X, Y = (xb*4+3, yb*4+1) if td == 0 else (xb*4+1, yb*4+3)
                 Z = qubit.z * self.z_distance
-                qubit.pg = self.plot_scatter(X, Y, Z, facecolor=self.cw, edgecolor=self.cc)
+                pdict, plot = self.plot_scatter(X, Y, Z, object=qubit, facecolor=self.cw, edgecolor=self.cc)
+                qubit.pg = pdict
 
         le_err = self.legend_circle("Erasure", mfc=self.cc, mec=self.cE)
         le_xan = self.legend_circle("X-anyon", marker="*", mfc=self.cX, mec=self.cX)
@@ -717,8 +745,7 @@ class plot_3D(plot_2D):
                 X, Y, Z = xb * 4 + 1 + 2 *ertype,  yb * 4 + 1 + 2*ertype, (z - 1/2) * self.z_distance
 
                 color = self.C2[ertype]
-                sattr, key = self.scatter_attr(color, color, marker="*")
-                stab.ap = self.ax.scatter(X, Y, Z, **sattr)
+                stab.ap = self.ax.scatter(X, Y, Z, facecolor=color, edgecolor=color, marker="*")
 
                 self.history[self.iter - 1][stab.ap] = dict(visible=0)
                 self.history[self.iter][stab.ap] = dict(visible=1)

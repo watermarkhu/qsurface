@@ -93,6 +93,7 @@ class plot(object):
             return wrapper_repeat
         return decorator_repeat
 
+
     def iter_grow_cluster():
         def decorator_repeat(func):
             @functools.wraps(func)
@@ -102,6 +103,24 @@ class plot(object):
                 value = func(self, cluster, *args, **kwargs)
 
                 if self.plot and self.plot_cluster:
+                    self.plot.draw_plot()
+                return value
+            return wrapper_repeat
+        return decorator_repeat
+
+    def iter_peel_clusters():
+        '''
+        General type plot iter decorator
+        '''
+        def decorator_repeat(func):
+            @functools.wraps(func)
+            def wrapper_repeat(self, *args, **kwargs):
+                if self.plot:
+                    self.plot.new_iter("Clusters peeled")
+                value = func(self, *args, **kwargs)
+                if self.plot:
+                    if not self.plot_peel:
+                        self.plot.plot_removed()
                     self.plot.draw_plot()
                 return value
             return wrapper_repeat

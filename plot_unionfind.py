@@ -64,15 +64,22 @@ class plot_2D(gp.plot_2D):
         '''
         Initilizes a 2D plot of torc/planar uf-lattice
         '''
-        plt.sca(self.ax)
-        plt.sca(self.ax)
+        plt.sca(self.ax)        
 
         for qubit in self.graph.Q[z].values():
-            self.draw_edge(qubit, 0)
-            self.draw_edge(qubit, 1)
+            if qubit.erasure:
+                self.draw_edge(qubit, 0)
+                self.draw_edge(qubit, 1)
+            else:
+                qubit.E[0].pu = None
+                qubit.E[1].pu = None
 
         for stab in self.graph.S[z].values():
-            self.draw_vertex(stab)
+
+            if stab.state:
+                self.draw_vertex(stab)
+            else:
+                stab.pu = None
 
         self.init_legend(1.25, 0.95)
         self.draw_plot()
@@ -125,7 +132,7 @@ class plot_2D(gp.plot_2D):
         '''
         Draw lines of the X-edges of the qubit
         '''
-        color, alpha = (self.C1[0], 1) if qubit.erasure else (self.cl, self.alpha2)
+        color, alpha = (self.C1[ertype], 1) if qubit.erasure else (self.cl, self.alpha2)
 
         (type, y0, x0) = qubit.qID
 
@@ -133,6 +140,7 @@ class plot_2D(gp.plot_2D):
 
         up1 = self.draw_line([x0,  xm], [y0,  ym], Z=qubit.z, color=color, lw=self.linewidth, ls=self.LS[ertype], alpha=alpha)
         up2 = self.draw_line([xm,  x1], [ym,  y1], Z=qubit.z, color=color, lw=self.linewidth, ls=self.LS[ertype], alpha=alpha)
+        up1.object = up2.object = qubit.E[ertype]
         qubit.E[ertype].pu = [up1, up2]
 
 
@@ -146,18 +154,18 @@ class plot_2D(gp.plot_2D):
             y += 0.5
             x += 0.5
 
-        fill, lw = (1, self.linewidth) if stab.state else (0,0)
+        fc, lw = (self.C2[ertype], self.linewidth) if stab.state else (None ,0)
 
-        stab.pu = plt.Circle(
-            (x, y),
-            self.qsizeU,
-            facecolor=self.C2[ertype],
+        stab.pu = plt.scatter(
+            x, y,
+            s = self.scatter_size,
+            facecolor=fc,
             linewidth=lw,
             edgecolor=self.C1[ertype],
-            fill=fill,
-            zorder=10
+            zorder=10,
+            picker = self.pick
         )
-        self.ax.add_artist(stab.pu)
+        stab.pu.object = stab
 
 
     """
@@ -189,6 +197,9 @@ class plot_2D(gp.plot_2D):
         Plots a recently half-grown or fully-grown edge
         '''
         if edge.support == 1:
+            if not edge.pu:
+                self.draw_edge(edge.qubit, edge.ertype)
+
             (ye, xe) = edge.qubit.qID[1:3]
             (yv, xv) = vertex.sID[1:3]
             id = 0 if (ye == yv and xe == xv) else 1
@@ -200,8 +211,8 @@ class plot_2D(gp.plot_2D):
             self.new_attributes(edge.pu[0], dict(color=color, alpha=1), 1)
             self.new_attributes(edge.pu[1], dict(color=color, alpha=1), 1)
         else:
-            self.new_attributes(edge.pu[0], dict(color=self.cw, alpha=self.alpha2), 1)
-            self.new_attributes(edge.pu[1], dict(color=self.cw, alpha=self.alpha2), 1)
+            self.new_attributes(edge.pu[0], dict(color=self.cw, alpha=0), 1)
+            self.new_attributes(edge.pu[1], dict(color=self.cw, alpha=0), 1)
 
     """
     #########################################################################
@@ -252,7 +263,13 @@ class plot_2D(gp.plot_2D):
         plots the anyon in white (removal) or normal error edge color (addition)
         """
         lw = self.linewidth if stab.state else 0
-        self.new_attributes(stab.pu, dict(linewidth=lw))
+        if not stab.pu:
+            self.draw_vertex(stab)
+            self.new_attributes(stab.pu, dict(linewidth=lw, facecolor=[1,1,1,0]))
+        else:
+            self.new_attributes(stab.pu, dict(linewidth=lw))
+
+
 
 
 
@@ -282,7 +299,7 @@ class plot_3D(plot_2D, gp.plot_3D):
     '''
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.alpha2 = 0
+        self.alpha2 = 0.01
 
     def init_plot(self, *args, **kwargs):
         '''
@@ -302,7 +319,6 @@ class plot_3D(plot_2D, gp.plot_3D):
                     qubit.E[0].pu = None
                     qubit.E[1].pu = None
 
-
         for layer in self.graph.G.values():
             for bridge in layer.values():
                 bridge.E.pu = None
@@ -312,7 +328,7 @@ class plot_3D(plot_2D, gp.plot_3D):
                 (ertype, y, x) = stab.sID
                 X, Y = (x, y) if ertype == 0 else (x+.5, y+.5)
                 if stab.state:
-                    stab.pu = self.plot_scatter(X, Y, Z, facecolor=self.C2[ertype], edgecolor=self.C1[ertype])
+                    stab.pu = self.plot_scatter(X, Y, Z, object=stab, facecolor=self.C2[ertype], edgecolor=self.C1[ertype])
                 else:
                     stab.pu = {
                         "pos"       : (X, Y, Z),
@@ -336,6 +352,7 @@ class plot_3D(plot_2D, gp.plot_3D):
 
         up1 = self.draw_line([x,  x], [y,  y], Z=[z, z-.5], color=self.cl, lw=self.linewidth, ls=self.LS[ertype], alpha=self.alpha2)
         up2 = self.draw_line([x,  x], [y,  y], Z=[z-.5, z-1], color=self.cl, lw=self.linewidth, ls=self.LS[ertype], alpha=self.alpha2)
+        up1.object = up2.object = bridge
 
         bridge.E.pu = [up1, up2]
 
@@ -385,8 +402,8 @@ class plot_3D(plot_2D, gp.plot_3D):
             self.new_attributes(edge.pu[0], dict(color=color, alpha=1), 1)
             self.new_attributes(edge.pu[1], dict(color=color, alpha=1), 1)
         else:
-            self.new_attributes(edge.pu[0], dict(color=self.cw, alpha=self.alpha2), 1)
-            self.new_attributes(edge.pu[1], dict(color=self.cw, alpha=self.alpha2), 1)
+            self.new_attributes(edge.pu[0], dict(color=self.cw, alpha=0), 1)
+            self.new_attributes(edge.pu[1], dict(color=self.cw, alpha=0), 1)
 
 
 

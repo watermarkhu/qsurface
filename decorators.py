@@ -1,3 +1,15 @@
+'''
+2020 Mark Shui Hu, QuTech
+
+www.github.com/watermarkhu/oop_surface_code
+_____________________________________________
+
+Contains decorator classes and method for:
+* de cluttering the main methods from plotting and printing functions
+* debugging and counters for method calls
+
+'''
+
 import functools
 import time
 import printing as pr

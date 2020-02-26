@@ -14,3 +14,4 @@ data/
 logs/
 anim/
 .idea/
+!requirements.txt

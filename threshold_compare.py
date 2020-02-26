@@ -1,7 +1,7 @@
 '''
 2020 Mark Shui Hu, QuTech
 
-www.github.com/watermarkhu/toric_code
+www.github.com/watermarkhu/oop_surface_code
 _____________________________________________
 '''
 

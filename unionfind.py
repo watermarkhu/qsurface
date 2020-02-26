@@ -1,7 +1,7 @@
 '''
 2020 Mark Shui Hu, QuTech
 
-www.github.com/watermarkhu/toric_code
+www.github.com/watermarkhu/oop_surface_code
 _____________________________________________
 
 The Union-Find decoder as described by arXiv:1709.06218v1
@@ -39,9 +39,6 @@ class toric(object):
         else:
             self.fuse_vertices = self.fuse_vertices_simple
 
-        print(f"{'_'*75}\n\ndecoder type: unionfind")
-        if self.dg_connections:
-            print(f"{'_'*75}\n\nusing dg_connections pre-union processing")
 
     @debug.get_counters()
     def decode(self, *args, **kwargs):
@@ -377,7 +374,7 @@ class toric(object):
             aC.add_vertex(pV)
             self.cluster_new_vertex(aC, pV, self.plot_growth)
         elif pC is aC:
-            edge.support -= 1
+            edge.support -= 2
             if self.plot:
                 if self.plot_cut: self.plot.new_iter(str(edge) + " cut")
                 self.plot.add_edge(edge, aV)
@@ -612,7 +609,7 @@ class planar(toric):
         union = False
 
         if (aC.on_bound and (pV.type == 1 or (pC is not None and pC.on_bound))) or pC is aC:
-            edge.support -= 1
+            edge.support -= 2
             if self.plot:
                 if self.plot_cut: self.plot.new_iter(str(edge) + " cut")
                 self.plot.add_edge(edge, aV)

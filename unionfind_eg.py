@@ -1,7 +1,7 @@
 '''
 2020 Mark Shui Hu, QuTech
 
-www.github.com/watermarkhu/toric_code
+www.github.com/watermarkhu/oop_surface_code
 _____________________________________________
 
 The Union-Find decoder as described by arXiv:1709.06218v1, altered to support evengrow
@@ -53,8 +53,6 @@ class toric(uf.toric):
         self.eg = eg.eg()
 
         self.plot_growth = not any([self.plot_bucket, self.plot_cluster, self.plot_node])
-
-        print("{}\n\nusing evengrow node-based boundary lists with {} graph".format("_"*75,"directed" if self.directed_graph else "undirected"))
 
     '''
     ##################################################################################################

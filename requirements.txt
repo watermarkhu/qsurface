@@ -1,0 +1,9 @@
+matplotlib
+scipy
+numpy
+pandas
+progiter
+pprint
+git-python
+pyparsing
+termcolor

@@ -2,7 +2,7 @@
 '''
 2020 Mark Shui Hu, QuTech
 
-www.github.com/watermarkhu/toric_code
+www.github.com/watermarkhu/oop_surface_code
 _____________________________________________
 
 Objects and methods for the directed graph version of the evengrow algorithm

@@ -1,7 +1,7 @@
 '''
 2020 Mark Shui Hu, QuTech
 
-www.github.com/watermarkhu/toric_code
+www.github.com/watermarkhu/oop_surface_code
 _____________________________________________
 
 
@@ -20,6 +20,7 @@ Qubits: qID (td, y, x)          Stabilizers: sID (ertype, y, x)
     Q_1:    (1, y, x)               Plaq:   (1, y, x)
 
 The 3D graph (toric/planar) is a cubic lattice with many layer of these unit cells.
+
 '''
 
 import graph_2D as go

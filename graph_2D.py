@@ -1,7 +1,7 @@
 '''
 2020 Mark Shui Hu, QuTech
 
-www.github.com/watermarkhu/toric_code
+www.github.com/watermarkhu/oop_surface_code
 _____________________________________________
 
 We define the unit cell, which contains two qubits, a star operator and plaquette operator.
@@ -60,7 +60,6 @@ class toric(object):
         for key, value in kwargs.items():
             setattr(self, key, value)
         self.plot_config = plot_config
-        print(f"{'_'*75}\n\ngraph type: {dim}D {self.__class__.__name__}\n{'_'*75}\n")
         self.gl_plot = pgl.plot_2D(self, **plot_config) if self.plot2D else None
 
 

@@ -1,7 +1,7 @@
 '''
 2020 Mark Shui Hu, QuTech
 
-www.github.com/watermarkhu/toric_code
+www.github.com/watermarkhu/oop_surface_code
 _____________________________________________
 
 
@@ -23,14 +23,13 @@ def printlog(message, print_message=True, log_message=False):
 
 
 def print_configuration(config, iters, **kwargs):
-    print(f"{'_'*75}\n")
-    print(f"OOP surface code simulations\n2020 Mark Shui Hu, QuTech\nwww.github.com/watermarkhu/toric_code\n{'_'*75}\n")
     print(f"Simulating {iters} iterations")
     print("using settings:")
     settings = {key:value for key, value in kwargs.items() if value != 0}
     pprint(settings)
     print("\nusing config:")
     pprint(config)
+    print()
 
 def print_graph(graph, clusters=None, prestring="", poststring=None, printmerged=1, include_even=0, return_string=False):
     """

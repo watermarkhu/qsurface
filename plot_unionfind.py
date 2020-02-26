@@ -1,7 +1,7 @@
 '''
 2020 Mark Shui Hu, QuTech
 
-www.github.com/watermarkhu/toric_code
+www.github.com/watermarkhu/oop_surface_code
 _____________________________________________
 
 Plotting function for the surface/planar uf-lattice.
@@ -180,8 +180,8 @@ class plot_2D(gp.plot_2D):
         for qubit in self.graph.Q[z].values():
             for edge in [qubit.E[0], qubit.E[1]]:
                 if edge.peeled and not edge.matching:
-                    self.new_attributes(edge.pu[0], dict(color=self.cl, alpha=self.alpha2), 1)
-                    self.new_attributes(edge.pu[1], dict(color=self.cl, alpha=self.alpha2), 1)
+                    self.new_attributes(edge.pu[0], dict(color=self.cl, alpha=self.alpha2))
+                    self.new_attributes(edge.pu[1], dict(color=self.cl, alpha=self.alpha2))
 
 
     def add_edge(self, edge, vertex):
@@ -195,10 +195,13 @@ class plot_2D(gp.plot_2D):
             color = self.Cx if edge.ertype ==0 else self.Cz
             self.new_attributes(edge.pu[id], dict(color=color, alpha=self.alpha))
             self.new_attributes(edge.pu[1-id], dict(color=self.cl, alpha=self.alpha2))
-        else:
+        elif edge.support == 2:
             color = self.cx if edge.ertype == 0 else self.cz
             self.new_attributes(edge.pu[0], dict(color=color, alpha=1), 1)
             self.new_attributes(edge.pu[1], dict(color=color, alpha=1), 1)
+        else:
+            self.new_attributes(edge.pu[0], dict(color=self.cw, alpha=self.alpha2), 1)
+            self.new_attributes(edge.pu[1], dict(color=self.cw, alpha=self.alpha2), 1)
 
     """
     #########################################################################
@@ -377,10 +380,14 @@ class plot_3D(plot_2D, gp.plot_3D):
             self.new_attributes(edge.pu[id], dict(color=color, alpha=self.alpha))
             self.new_attributes(edge.pu[1-id], dict(color=self.cl, alpha=self.alpha2))
 
-        else:
+        elif edge.support == 2:
             color = self.cx if edge.ertype == 0 else self.cz
             self.new_attributes(edge.pu[0], dict(color=color, alpha=1), 1)
             self.new_attributes(edge.pu[1], dict(color=color, alpha=1), 1)
+        else:
+            self.new_attributes(edge.pu[0], dict(color=self.cw, alpha=self.alpha2), 1)
+            self.new_attributes(edge.pu[1], dict(color=self.cw, alpha=self.alpha2), 1)
+
 
 
     def plot_strip_step_anyon(self, stab):

@@ -1,12 +1,12 @@
 '''
 2020 Mark Shui Hu, QuTech
 
-www.github.com/watermarkhu/toric_code
+www.github.com/watermarkhu/oop_surface_code
 _____________________________________________
 
 '''
 from matplotlib import pyplot as plt
-from run_surface_code import multiprocess, decoder_config
+from run_oopsc import multiprocess, default_config
 from collections import defaultdict
 from scipy import optimize
 from pprint import pprint
@@ -213,7 +213,7 @@ if __name__ == "__main__":
 
                 print("Calculating for L = ", str(lati), "and p =", str(pi))
 
-                output = multiprocess(Num, decoder_config(), decoder, go, pX=pi, pmX=pi, ltype=ltype, size=lati)
+                output = multiprocess(lati, decoder, go, default_config(), Num, pX=pi, pmX=pi, ltype=ltype, debug=1)
 
                 pprint(dict(output), "\n")
                 columns = list(output.keys())

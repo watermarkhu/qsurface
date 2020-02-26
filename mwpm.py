@@ -1,7 +1,7 @@
 '''
 2020 Mark Shui Hu, QuTech
 
-www.github.com/watermarkhu/toric_code
+www.github.com/watermarkhu/oop_surface_code
 _____________________________________________
 
 The Minimum Weight Perfect Matching decoder
@@ -26,7 +26,6 @@ class toric(object):
     def __init__(self, *args, **kwargs):
         for key, value in kwargs.items():
             setattr(self, key, value)
-        print(f"{'_'*75}\n\ndecoder type: minimum weight perfect matching (blossom5)")
 
 
     @debug.get_counters()

@@ -1,7 +1,7 @@
 '''
 2020 Mark Shui Hu, QuTech
 
-www.github.com/watermarkhu/toric_code
+www.github.com/watermarkhu/oop_surface_code
 _____________________________________________
 
 
@@ -11,12 +11,12 @@ A plot_3D object is initialized for a graph_3D graph, which plots onto a 3D axis
 
 Plot_2D object is inherited by Plot_3D object. All colors on the plot are defined in the plot_2D oject.
 The plot_unionfind.plot_2D and plot_3D objects are also child objects that uses the same colors and some methods
+
 '''
 from collections import defaultdict as dd
 from matplotlib import pyplot as plt
 from matplotlib.lines import Line2D
 from matplotlib.widgets import Button
-from pprint import pprint
 import printing as pr
 import random
 
@@ -499,6 +499,27 @@ class plot_3D(plot_2D):
 
 
     def new_attributes(self, object, attr_dict, overwrite=False):
+        '''
+        Change plot object attributes
+
+        The 3D plot currently implements a workaround for issue in set_color for Patch3DCollection (scatter) in matplotlib
+        https://github.com/matplotlib/matplotlib/issues/13035
+        https://github.com/matplotlib/matplotlib/pull/10489
+        https://github.com/matplotlib/matplotlib/pull/10797
+
+        Now upon a color change in a 3D scatter object, we apply visible = 0 on the old object and draw a new scatter in the same location.
+        These scatter objects are stored as a dictionary of objects. which can be recognized by its type.
+        scatter = dict(
+            loc = coordindates_of_object,
+            key = current_plot_object_key,
+            object1_key = object1,
+            object2_key = object2,
+            .
+            .
+        )
+        Now when iterating through the plot iterations, we find whether the desired version of the plot exists (object_key). If it exists, we swap the visibility. If not, we make a new plot object and add it to the dictionary.
+        '''
+
         if type(object) == dict:
 
             prev_changes = self.history[self.iter - 1]
@@ -533,6 +554,10 @@ class plot_3D(plot_2D):
 
 
     def scatter_attr(self, facecolor=(0,0,0,0), edgecolor=(0,0,0,0), **kwargs):
+        '''
+        Part of workarond of Patch3DCollection set_color issue
+        Returns attribute dict of new plot and a key identifyer for these attributes
+        '''
 
         attr = {
             "facecolor" : facecolor,

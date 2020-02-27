@@ -158,7 +158,8 @@ class toric(go.toric):
         for qubitu in self.Q[z].values():
 
             # Get qubit state from previous layer
-            qubitu.E[0].state, qubitu.E[1].state = (0,0) if z == 0 else (self.Q[z-1][qubitu.qID[:3]].E[n].state for n in range(2))
+            if z != 0:
+                qubitu.E[0].state, qubitu.E[1].state = (self.Q[z-1][qubitu.qID[:3]].E[n].state for n in range(2))
 
             # Apply errors
             if random.random() < pE:
@@ -185,8 +186,8 @@ class toric(go.toric):
         for qubitu in self.Q[z].values():
 
             # Get qubit state from previous layer if not aleady done
-            if pE == 0:
-                qubitu.E[0].state, qubitu.E[1].state = (0,0) if z == 0 else (self.Q[z-1][qubitu.qID].E[n].state for n in [0, 1])
+            if pE == 0 and z != 0:
+                qubitu.E[0].state, qubitu.E[1].state = (self.Q[z-1][qubitu.qID].E[n].state for n in [0, 1])
 
             # Apply errors
             if pX != 0 and random.random() < pX:
@@ -226,7 +227,7 @@ class toric(go.toric):
         Applies logical_error() method of parent graph_2D object on the last layer.
         '''
         if self.plot2D:
-            self.gl2_plot = pgl.plot_2D(self, z=self.decode_layer, **self.plot_config)
+            self.gl2_plot = pgl.plot_2D(self, z=self.decode_layer, from3D=1, **self.plot_config)
             self.gl2_plot.new_iter("Final layer errors")
             self.gl2_plot.plot_errors(z=self.decode_layer, draw=1)
         return super().logical_error(z=self.size-1)

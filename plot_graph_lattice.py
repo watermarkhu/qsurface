@@ -18,6 +18,7 @@ from matplotlib import pyplot as plt
 from matplotlib.lines import Line2D
 from matplotlib.widgets import Button, RadioButtons
 import printing as pr
+from time import time
 import random
 
 
@@ -32,20 +33,16 @@ class plot_2D:
 
     '''
 
-    def __init__(self, graph, z=0, plot_size=8, **kwargs):
+    def __init__(self, graph, z=0, from3D=0, **kwargs):
 
         self.size = graph.size
         self.graph = graph
-        self.plot_size = plot_size
+        self.from3D = from3D
 
-        self.qsize = 0.5
-        self.qsize2 = 0.25
-        self.qsizeE = 0.7
-        self.qsizeU = 0.1
-        self.slw = 2
+        self.qsize = 0.15
         self.pick = 5
 
-        self.alpha = 0.3
+        self.alpha = 0.4
         self.alpha2 = 0.3
 
         for key, value in kwargs.items():
@@ -80,32 +77,99 @@ class plot_2D:
         plt.cla()
         plt.show()
         plt.axis("off")
-        self.ax = plt.axes([0.05, 0.05, 0.75, 0.9])
-        self.ax.invert_yaxis()
+        self.ax = plt.axes([0.075, 0.1, 0.7, 0.85])
         self.ax.set_aspect("equal")
-        plt.axis("off")
+
         self.canvas = self.f.canvas
         self.canvas.callbacks.connect('pick_event', self.on_pick)
-
 
         self.prev_button = Button(plt.axes([0.75, 0.025, 0.125, 0.05]), "Previous")
         self.next_button = Button(plt.axes([0.9, 0.025, 0.075, 0.05]), "Next")
         self.prev_button.on_clicked(self.draw_prev)
         self.next_button.on_clicked(self.draw_next)
+        self.rax = plt.axes([0.9, 0.1, 0.075, 0.125])
+        self.radio_button = RadioButtons(self.rax, ("info", "X", "Z", "E"))
 
         self.ax_text = plt.axes([0.025, 0.025, 0.7, 0.05])
         plt.axis("off")
         self.text = self.ax_text.text(0.5, 0.5, "", fontsize=10, va ="center", ha="center", transform=self.ax_text.transAxes)
+
         self.init_plot(z)
+
+        self.radio_button.set_active(0)
+        plt.setp(self.rax, visible=0)
 
 
     def on_pick(self, event):
+        '''
+        Pick event handler for the plots
+        Normally prints some info about the nodes on the plot.
+        In the initial round, the user can opt to manually add extra errors onto the lattice.
+        '''
         artist = event.artist
-        print("picked", artist.object.picker())
+        radiovalue = self.radio_button.value_selected
+
+        if radiovalue == "info":
+            print("picked", artist.object.picker())
+        else:
+            qubit = artist.object
+
+            '''
+            Need to calculate time between pick events due to 3d_scatter workaround. When switching between plot objects in the workaround, we swap the visibility and also the picker attribute from None to True. However, the pick event is somehow stored for some period, such that after the swap of the picker attribute, a second pick event is registered. We therefore wait 0.1 seconds between pick events.
+            '''
+            prev_time = getattr(qubit, "pick_time", None)
+            qubit.pick_time = time()
+            if prev_time and qubit.pick_time - prev_time < 0.1:
+                return
+
+            if radiovalue == "X":
+                qubit.E[0].state = not qubit.E[0].state
+            elif radiovalue == "Z":
+                qubit.E[1].state = not qubit.E[1].state
+            elif radiovalue == "E":
+                qubit.erasure = not qubit.erasure
+
+            attr_dict = self.get_error_attr(qubit)
+
+            if not attr_dict:
+                attr_dict = dict(fill=0, facecolor=self.cw)
+
+            if qubit.erasure:
+                attr_dict.update(dict(linestyle=":"))
+            else:
+                attr_dict.update(dict(linestyle="-"))
+
+            if attr_dict:
+                self.new_attributes(qubit.pg, attr_dict)
 
     '''
     #########################################################################
-                            Helper functions
+                            Waiting funtions
+    '''
+    def draw_plot(self):
+        '''
+        Blits all changed plotting object onto the figure.
+        Optional text is printed, added to the log and shown on the figure
+        '''
+        txt = self.iter_names[self.iter]
+        self.text.set_text(txt)
+        pr.printlog(f"{txt} plotted.")
+        self.canvas.blit(self.ax.bbox)
+        self.waitforkeypress()
+
+
+    def waitforkeypress(self):
+        '''
+        Pauses the script until user interaction on the plot.
+        Waits for a maximum of 120 seconds.
+        '''
+        wait = True
+        while wait:
+            wait = not plt.waitforbuttonpress(-1) or self.recent
+
+    '''
+    #########################################################################
+                            Playback funtions
     '''
     def new_iter(self, name):
         '''
@@ -152,6 +216,27 @@ class plot_2D:
             print("Can't go back further!")
 
 
+    '''
+    #########################################################################
+                            Change attribute functions
+    '''
+    def get_nested_np_color(self, array):
+        '''
+        Get nested color and makes np.array, which is sometimes but not at all times used for color values, to a list.
+        '''
+        def get_nested(value):
+            if type(value) == list and type(value[0]) == list:
+                return get_nested(value[0])
+            else:
+                return value
+        if type(array).__name__ == "ndarray":
+            return get_nested(array.tolist())
+        elif type(array) == list:
+            return get_nested(array)
+        else:
+            return array
+
+
     def new_attributes(self, object, attr_dict, overwrite=False):
         '''
         Finds the differences of the plot attributes between this iteration and the previous iterations. All differences are stored as dictionaries in the history variable.
@@ -162,18 +247,11 @@ class plot_2D:
 
         prev, next = {}, {}
 
-        def get_nested(value):
-            if type(value) == list and type(value[0]) == list:
-                return get_nested(value[0])
-            else:
-                return value
-
         if not overwrite or object not in prev_changes:
             for key, value in attr_dict.items():
-                old_value = plt.getp(object, key)
 
-                if type(old_value).__name__ == "ndarray":
-                    old_value = get_nested(old_value.tolist())
+                value = self.get_nested_np_color(value)
+                old_value = self.get_nested_np_color(plt.getp(object, key))
 
                 if old_value != value:
                     prev[key] = old_value
@@ -181,7 +259,8 @@ class plot_2D:
         else:
             old_dict = prev_changes[object]
             for key, value in attr_dict.items():
-                old_value = old_dict[key] if key in old_dict else plt.getp(object, key)
+                value = self.get_nested_np_color(value)
+                old_value = old_dict[key] if key in old_dict else self.get_nested_np_color(plt.getp(object, key))
                 if old_value != value:
                     prev[key] = old_value
                     next[key] = value
@@ -204,39 +283,10 @@ class plot_2D:
             plt.setp(object, **attr_dict)
         self.ax.draw_artist(object)
 
-
-    def draw_plot(self):
-        '''
-        Blits all changed plotting object onto the figure.
-        Optional text is printed, added to the log and shown on the figure
-        '''
-        txt = self.iter_names[self.iter]
-        self.text.set_text(txt)
-        pr.printlog(f"{txt} plotted.")
-        self.canvas.blit(self.ax.bbox)
-        self.waitforkeypress()
-
-
-    def waitforkeypress(self):
-        '''
-        Pauses the script until user interaction on the plot.
-        Waits for a maximum of 120 seconds.
-        '''
-        wait = True
-        while wait:
-            wait = not plt.waitforbuttonpress(-1) or self.recent
-
-
-    def draw_line(self, X, Y, color="w", lw=2, ls=2, alpha=1, **kwargs):
-        '''
-        Plots a line onto the plot. Exist for default parameters.
-        '''
-        return self.ax.plot(X, Y, c=color, lw=lw, ls=ls, alpha=alpha)[0]
     '''
     #########################################################################
-                            Initilize legend
+                            Initilize axes
     '''
-
     def legend_circle(self, label, mfc=None, marker="o", mec="k", ms=10, color="w", lw=0, mew=2, ls="-"):
         '''
         Returns a Line2D, cirlle object that is used on the plot legend.
@@ -276,6 +326,20 @@ class plot_2D:
 
         self.ax.legend(handles=self.lh, bbox_to_anchor=(x, y), loc=loc, ncol=1)
 
+
+    def init_axis(self, min, max):
+        '''
+        Initilizes the 2D axis by settings axis limits, flipping y axis and removing the axis border
+        '''
+        plt.grid(alpha = self.alpha2, ls=":", lw=self.linewidth)
+        self.ax.set_xlim(min, max)
+        self.ax.set_ylim(min, max)
+        self.ax.invert_yaxis()
+        self.ax.spines["top"].set_visible(False)
+        self.ax.spines["right"].set_visible(False)
+        self.ax.spines["bottom"].set_visible(False)
+        self.ax.spines["left"].set_visible(False)
+
     '''
     #########################################################################
                             Initilize plot
@@ -289,10 +353,11 @@ class plot_2D:
         Qubits are plotted with Circle objects
         '''
         plt.sca(self.ax)
+        self.init_axis(-.25, self.size-.25)
 
         # Plot stabilizers
         for stab in self.graph.S[z].values():
-            self.plot_stab(stab, alpha=self.alpha2)
+            self.plot_stab(stab, alpha=self.alpha)
 
         # Plot open boundaries if exists
         if hasattr(self.graph, 'B'):
@@ -304,8 +369,20 @@ class plot_2D:
             self.plot_qubit(qubit)
 
         le_err = self.legend_circle("Erasure", mfc="w", marker="$\u25CC$", mec=self.cc, mew=1, ms=12)
-        self.init_legend(1.25, 0.95, items=[le_err])
-        self.draw_plot()
+        self.init_legend(1.3, 0.95, items=[le_err])
+
+        if not self.from3D:
+            self.draw_plot()
+    '''
+    #########################################################################
+                            Helper plot funtions
+    '''
+
+    def draw_line(self, X, Y, color="w", lw=2, ls=2, alpha=1, **kwargs):
+        '''
+        Plots a line onto the plot. Exist for default parameters.
+        '''
+        return self.ax.plot(X, Y, c=color, lw=lw, ls=ls, alpha=alpha)[0]
 
 
     def plot_stab(self, stab, alpha=1):
@@ -315,22 +392,21 @@ class plot_2D:
         Plots stabilizers as line objects.
         Loop over layer neighbor keys to ensure compatibility with planar/toric lattices
         '''
-        (type, yb, xb), zb = stab.sID, stab.z
-        y, x = yb * 4, xb * 4
-        y += 2*type
-        x += 2*type
+        (type, y, x), zb = stab.sID, stab.z
+        y += .5*type
+        x += .5*type
         ls = "-" if type == 0 else "--"
 
         stab.pg = {}
         for dir in [dir for dir in self.graph.dirs if dir in stab.neighbors]:
             if dir == "w":
-                X, Y = [x + 0, x + 1], [y + 1, y + 1]
+                X, Y = [x -.25, x + 0], [y + 0, y + 0]
             elif dir == "e":
-                X, Y = [x + 1, x + 2], [y + 1, y + 1]
+                X, Y = [x + 0, x + .25], [y + 0, y + 0]
             elif dir == "n":
-                X, Y = [x + 1, x + 1], [y + 0, y + 1]
+                X, Y = [x + 0, x + 0], [y -.25, y + 0]
             elif dir == "s":
-                X, Y = [x + 1, x + 1], [y + 1, y + 2]
+                X, Y = [x + 0, x + 0], [y + 0, y + .25]
 
             line = self.draw_line(X, Y, Z=zb * self.z_distance, color=self.cl, lw=self.linewidth, ls=ls, alpha=alpha)
             stab.pg[dir] = line
@@ -343,7 +419,7 @@ class plot_2D:
         Patch.Circle object for each qubit on the lattice
         '''
         (td, yb, xb) = qubit.qID
-        X, Y = (xb*4+3, yb*4+1) if td == 0 else (xb*4+1, yb*4+3)
+        X, Y = (xb+.5, yb) if td == 0 else (xb, yb+.5)
         qubit.pg = plt.Circle(
             (X, Y),
             self.qsize,
@@ -360,6 +436,25 @@ class plot_2D:
     #########################################################################
                             Plotting functions
     '''
+    def get_error_attr(self, qubit):
+        '''
+        returns plot attributes of a qubit plot if there is an pauli error
+        '''
+        X_error = qubit.E[0].state
+        Z_error = qubit.E[1].state
+
+        attr_dict = {}
+        if X_error or Z_error:
+            if X_error and not Z_error:
+                color = self.cx
+            elif Z_error and not X_error:
+                color = self.cz
+            else:
+                color = self.cy
+            attr_dict.update(dict(fill=1, facecolor=color, edgecolor=self.cc))
+        return attr_dict
+
+
 
     def plot_erasures(self, z=0, draw=True):
         """
@@ -370,19 +465,8 @@ class plot_2D:
 
         for qubit in self.graph.Q[0].values():
             qplot = qubit.pg
-            X_error = qubit.E[0].state
-            Z_error = qubit.E[1].state
 
-            attr_dict = {}
-            if X_error or Z_error:
-                if X_error and not Z_error:
-                    color = self.cx
-                elif Z_error and not X_error:
-                    color = self.cz
-                else:
-                    color = self.cy
-
-                attr_dict.update(dict(fill=1, facecolor=color, edgecolor=self.cc))
+            attr_dict = self.get_error_attr(qubit)
 
             if qubit.erasure:
                 attr_dict.update(dict(linestyle=":"))
@@ -405,21 +489,15 @@ class plot_2D:
 
         for qubit in self.graph.Q[z].values():
             qplot = qubit.pg
-            X_error = qubit.E[0].state
-            Z_error = qubit.E[1].state
 
-            if X_error or Z_error:
+            attr_dict = self.get_error_attr(qubit)
 
-                if X_error and not Z_error:
-                    color = self.cx
-                elif Z_error and not X_error:
-                    color = self.cz
-                else:
-                    color = self.cy
-                self.new_attributes(qplot, dict(fill=1, facecolor=color, edgecolor=self.cc))
-            else:
-                if plot_qubits:
-                    self.new_attributes(qplot, dict(fill=0))
+            if not attr_dict and plot_qubits:
+                attr_dict = dict(fill=0, facecolor=self.cw)
+
+            if attr_dict:
+                self.new_attributes(qplot, attr_dict)
+
         if draw: self.draw_plot()
 
 
@@ -445,7 +523,7 @@ class plot_2D:
         :param results      list of matchings of anyon
         plots strings between the two anyons of each match
         """
-        P = [1, 3]
+        P = [0, .5]
         self.new_iter("Matching")
 
         for _, _, v0, v1 in matchings:
@@ -456,10 +534,10 @@ class plot_2D:
             (type, boty, botx), botz = v1.sID, v1.z
             p, ls = P[type], self.LS2[type]
 
-            X = [topx * 4 + p, botx * 4 + p]
-            Y = [topy * 4 + p, boty * 4 + p]
+            X = [topx + p, botx + p]
+            Y = [topy + p, boty + p]
             Z = [(topz - .5)*self.z_distance, (botz - .5)*self.z_distance]
-            lplot = self.draw_line(X, Y, Z=Z, color=color, lw=self.slw, ls=ls, alpha=self.alpha2)
+            lplot = self.draw_line(X, Y, Z=Z, color=color, lw=self.linewidth, ls=ls, alpha=self.alpha2)
 
             self.history[self.iter - 1][lplot] = dict(visible=0)
             self.history[self.iter][lplot] = dict(visible=1)
@@ -517,7 +595,10 @@ class plot_3D(plot_2D):
         self.patch3d_dict = dd(dict)
         super().__init__(*args, **kwargs)
 
-
+    '''
+    #########################################################################
+                            Change attribute functions
+    '''
     def new_attributes(self, object, attr_dict, overwrite=False):
         '''
         Change plot object attributes
@@ -549,8 +630,8 @@ class plot_3D(plot_2D):
                 old_plot = object[object["key"]]
 
                 current_dict = {
-                    "facecolor": list(plt.getp(old_plot, "facecolor")),
-                    "edgecolor": list(plt.getp(old_plot, "edgecolor")),
+                    "facecolor": self.get_nested_np_color(plt.getp(old_plot, "facecolor")),
+                    "edgecolor": self.get_nested_np_color(plt.getp(old_plot, "edgecolor")),
                     "linestyle": plt.getp(old_plot, "linestyle"),
                 }
 
@@ -558,61 +639,24 @@ class plot_3D(plot_2D):
                     if key not in attr_dict:
                         attr_dict[key] = value
 
-                prev_changes[old_plot] = dict(visible=1)
-                next_changes[old_plot] = dict(visible=0)
+
+                prev_changes[old_plot] = dict(visible=1, picker=self.pick)
+                next_changes[old_plot] = dict(visible=0, picker=None)
                 plt.setp(old_plot, visible=0)
+                plt.setp(old_plot, picker=None)
 
             pdict, new_plot = self.plot_scatter(*object["pos"], pdict=object, **attr_dict)
 
-            prev_changes[new_plot] = dict(visible=0)
-            next_changes[new_plot] = dict(visible=1)
+            prev_changes[new_plot] = dict(visible=0, picker=None)
+            next_changes[new_plot] = dict(visible=1, picker=True)
 
         else:
             super().new_attributes(object, attr_dict, overwrite)
 
-
-    def scatter_attr(self, facecolor=(0,0,0,0), edgecolor=(0,0,0,0), **kwargs):
-        '''
-        Part of workarond of Patch3DCollection set_color issue
-        Returns attribute dict of new plot and a key identifyer for these attributes
-        '''
-
-        attr = {
-            "facecolor" : facecolor,
-            "edgecolor" : edgecolor,
-            "s"         : self.scatter_size,
-        }
-        kwargs.pop("fill", None)
-        attr.update(**kwargs)
-        name = f"{facecolor}-{edgecolor}"
-        return attr, name
-
-
-    def plot_scatter(self, X, Y, Z, object=None, pdict=None, **kwargs):
-        '''
-        param: qubit        graph.qubit object
-        Patch.Circle object for each qubit on the lattice
-        '''
-        sattr, key = self.scatter_attr(**kwargs)
-        plot = self.ax.scatter(X, Y, Z, **sattr, picker=True)
-
-        if object:
-            plot.object = object
-
-        if not pdict:
-            pdict = {
-                key     : plot,
-                "key"   : key,
-                "pos"   : (X, Y, Z)
-            }
-        else:
-            pdict.update({
-                key     : plot,
-                "key"   : key
-            })
-        return pdict, plot
-
-
+    '''
+    #########################################################################
+                            Initilize axis
+    '''
     def set_axes_equal(self):
         '''
         Sets equal axes for a 3D mplot3d axis.
@@ -638,7 +682,7 @@ class plot_3D(plot_2D):
         self.ax.set_zlim3d([z_middle - plot_radius, z_middle + plot_radius])
 
 
-    def init_axis(self, xl, yl, zl, xb, yb, zb):
+    def init_axis(self, min, max, zl):
         '''
         Initilizes the 3D axis by removing the background panes, changing the grid tics, alpha and linestyle, setting the labels and title.
         '''
@@ -657,9 +701,13 @@ class plot_3D(plot_2D):
         self.ax.w_zaxis.line.set_color((0, 0, 0, 0.1))
 
         ticks = [str(i) for i in range(self.size)]
-        self.ax.set_xticks([i*xl + xb for i in range(self.size)])
-        self.ax.set_yticks([i*yl + yb for i in range(self.size)])
-        self.ax.set_zticks([i*zl + zb for i in range(self.size)])
+
+        self.ax.set_xlim(min, max)
+        self.ax.set_ylim(min, max)
+        self.ax.set_zlim(0, self.size*zl)
+        self.ax.set_xticks([i for i in range(self.size)])
+        self.ax.set_yticks([i for i in range(self.size)])
+        self.ax.set_zticks([i*zl for i in range(self.size)])
         self.ax.set_xticklabels(ticks)
         self.ax.set_yticklabels(ticks)
         self.ax.set_zticklabels(ticks)
@@ -671,14 +719,6 @@ class plot_3D(plot_2D):
         self.ax.yaxis._axinfo["grid"]['alpha'] = 0.2
         self.ax.zaxis._axinfo["grid"]['alpha'] = 0.2
 
-
-    def draw_line(self, X, Y, Z=0, color="w", lw=2, ls=2, alpha=1, **kwargs):
-        '''
-        Plots a line onto the plot. Exist for default parameters.
-        '''
-        return self.ax.plot(X, Y, zs=Z, c=color, lw=lw, ls=ls, alpha=alpha)[0]
-
-
     '''
     #########################################################################
                             Initilize plot
@@ -689,7 +729,7 @@ class plot_3D(plot_2D):
         Stabilizers are plotted with Axes3D.line objects
         Qubits are plotted with Axes3D.scatter objects
         '''
-        self.init_axis(4, 4, self.z_distance, 3, 1, 0)
+        self.init_axis(-.25, self.size-.25, self.z_distance)
 
         # Plot stabilizers
         for layer in self.graph.S.values():
@@ -706,7 +746,7 @@ class plot_3D(plot_2D):
         for layer in self.graph.Q.values():
             for qubit in layer.values():
                 (td, yb, xb) = qubit.qID
-                X, Y = (xb*4+3, yb*4+1) if td == 0 else (xb*4+1, yb*4+3)
+                X, Y = (xb+.5, yb) if td == 0 else (xb, yb+.5)
                 Z = qubit.z * self.z_distance
                 pdict, plot = self.plot_scatter(X, Y, Z, object=qubit, facecolor=self.cw, edgecolor=self.cc)
                 qubit.pg = pdict
@@ -717,6 +757,63 @@ class plot_3D(plot_2D):
         self.init_legend(1.05, 0.95, items=[le_err, le_xan, le_zan])
         self.set_axes_equal()
         self.draw_plot()
+
+    '''
+    #########################################################################
+                            Helper plot funtions
+    '''
+    def scatter_attr(self, facecolor=(0,0,0,0), edgecolor=(0,0,0,0), **kwargs):
+        '''
+        Part of workarond of Patch3DCollection set_color issue
+        Returns attribute dict of new plot and a key identifyer for these attributes
+        '''
+
+        attr = {
+            "facecolor" : facecolor,
+            "edgecolor" : edgecolor,
+            "s"         : self.scatter_size,
+        }
+        kwargs.pop("fill", None)
+        attr.update(**kwargs)
+        name = f"{facecolor[:3]}-{edgecolor[:3]}"
+        return attr, name
+
+
+    def plot_scatter(self, X, Y, Z, object=None, pdict=None, **kwargs):
+        '''
+        param: qubit        graph.qubit object
+        Patch.Circle object for each qubit on the lattice
+        '''
+        sattr, key = self.scatter_attr(**kwargs)
+
+        if object:
+            plot = self.ax.scatter(X, Y, Z, **sattr, picker=True)
+            plot.object = object
+            pdict = {
+                key     : plot,
+                "key"   : key,
+                "pos"   : (X, Y, Z),
+                "object": object,
+            }
+        else:
+            if key in pdict:
+                plot = pdict[key]
+                plt.setp(plot, visible=1)
+                plt.setp(plot, picker=True)
+            else:
+                plot = self.ax.scatter(X, Y, Z, **sattr, picker=True)
+                plot.object = pdict["object"]
+                pdict[key] = plot
+            pdict["key"] = key
+
+        return pdict, plot
+
+
+    def draw_line(self, X, Y, Z=0, color="w", lw=2, ls=2, alpha=1, **kwargs):
+        '''
+        Plots a line onto the plot. Exist for default parameters.
+        '''
+        return self.ax.plot(X, Y, zs=Z, c=color, lw=lw, ls=ls, alpha=alpha)[0]
 
     '''
     #########################################################################
@@ -742,7 +839,7 @@ class plot_3D(plot_2D):
                         self.new_attributes(gplot, dict(linewidth=2*self.linewidth))
 
             if stab.state:
-                X, Y, Z = xb * 4 + 1 + 2 *ertype,  yb * 4 + 1 + 2*ertype, (z - 1/2) * self.z_distance
+                X, Y, Z = xb + .5*ertype,  yb + .5*ertype, (z - 1/2) * self.z_distance
 
                 color = self.C2[ertype]
                 stab.ap = self.ax.scatter(X, Y, Z, facecolor=color, edgecolor=color, marker="*")

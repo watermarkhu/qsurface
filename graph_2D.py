@@ -44,7 +44,7 @@ class toric(object):
                         Value:  Qubit object with two Edge objects
     matching_weight total length of edges in the matching
     """
-    def __init__(self, size, decoder, plot_config={}, dim=2, *args, **kwargs):
+    def __init__(self, size, decoder, *args, plot_config={}, dim=2, **kwargs):
         self.dim = dim
         self.size = size
         self.range = range(size)
@@ -450,7 +450,12 @@ class Stab(object):
         return "v{}({},{}|{})".format(type, *self.sID[1:], self.z)
 
     def picker(self):
-        return "{}-{}-{}".format(self.__repr__(), self.node, self.cluster)
+        cluster = self.cluster.parent if self.cluster else None
+        if self.node:
+            return "{}-{}-{}".format(self.__repr__(), self.node.tree_rep(), cluster)
+        else:
+            return "{}-{}".format(self.__repr__(), cluster)
+
 
     def reset(self):
         """

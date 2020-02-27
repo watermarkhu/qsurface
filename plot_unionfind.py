@@ -64,7 +64,9 @@ class plot_2D(gp.plot_2D):
         '''
         Initilizes a 2D plot of torc/planar uf-lattice
         '''
-        plt.sca(self.ax)        
+        plt.sca(self.ax)
+        self.init_axis(0, self.size)
+        plt.setp(self.rax, visible=0)
 
         for qubit in self.graph.Q[z].values():
             if qubit.erasure:
@@ -308,7 +310,8 @@ class plot_3D(plot_2D, gp.plot_3D):
         Qubits are plotted with Axes3D.scatter objects
         '''
 
-        self.init_axis(1, 1, 1, 0, 0, 0)
+        self.init_axis(0, self.size, 1)
+        plt.setp(self.rax, visible=0)
 
         for layer in self.graph.Q.values():
             for qubit in layer.values():

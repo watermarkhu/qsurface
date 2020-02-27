@@ -41,6 +41,7 @@ R1: [N1, M1],  N1: [R1],  M1: [R1, M0]
 # TODO: Proper calculation of delay for erasures/empty nodes in the graph
 '''
 
+from termcolor import colored as cs
 from decorators import debug
 
 class anyon_node(object):
@@ -85,7 +86,8 @@ class anyon_node(object):
         return self.__repr__()
 
     def tree_rep(self):
-        return self.__repr__()
+        color_id = cs(self.s, "red") + cs(self.p, "magenta") + cs(self.d, "cyan") + cs(self.w, "green")
+        return self.short_id() + color_id
 
 
 class junction_node(anyon_node):

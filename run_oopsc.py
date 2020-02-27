@@ -327,6 +327,8 @@ if __name__ == "__main__":
         ["-pmz", "--measurez", "store", "Measurement Y error rate", dict(type=float, default=0, metavar="")],
         ["-pe", "--erasure", "store", "Erasure", dict(type=float, default=0, metavar="")],
         ["-s", "--seeds", "store", "seeds for the simulations (verbose)", dict(type=int, nargs='*', metavar="")],
+        ["-f2d", "--force2D", "store_true", "force 2D lattice", dict()],
+        ["-f3d", "--force3D", "store_true", "force 3D lattice", dict()],
     ]
 
     decoder_arguments = [
@@ -349,7 +351,7 @@ if __name__ == "__main__":
         ["-ps", "--plot_size", "store", "size of plotting window", dict(type=int, default=6, metavar="")],
         ["-lw", "--linewidth", "store", "size of plotting window", dict(type=float, default=1.5, metavar="")],
         ["-ss", "--scatter_size", "store", "size of 3D plot scatter", dict(type=int, default=30, metavar="")],
-        ["-zd", "--z_distance", "store", "distance between z layers in 3D plot", dict(type=int, default=8, metavar="")],
+        ["-zd", "--z_distance", "store", "distance between z layers in 3D plot", dict(type=int, default=2, metavar="")],
     ]
 
     def add_args(parser, group_name, description, args):
@@ -368,6 +370,8 @@ if __name__ == "__main__":
     multi   = args.pop("multithreading")
     size    = args.pop("lattice_size")
     debug   = args.pop("debug")
+    f2d     = args.pop("force2D")
+    f3d     = args.pop("force3D")
 
     config = dict(
         ltype   = args.pop("lattice_type"),
@@ -396,7 +400,7 @@ if __name__ == "__main__":
             print(f"{'_'*75}\n\nusing dg_connections pre-union processing")
 
 
-    if config["measurex"] == 0 and config["measurez"] == 0:
+    if (not f3d and config["measurex"] == 0 and config["measurez"] == 0) or f2d:
         import graph_2D as go
         print(f"{'_'*75}\n\ngraph type: 2D {config['ltype']}\n{'_'*75}\n")
     else:

@@ -26,6 +26,7 @@ class toric(object):
         Counters for decoder specific heuristics are initialized.
         Decoder options, defined in kwargs are stored as class variables.
         '''
+        self.type = "unionfind"
         self.plot_config = plot_config
 
         for key, value in kwargs.items():

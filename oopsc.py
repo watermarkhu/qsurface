@@ -285,7 +285,7 @@ def default_config(**kwargs):
         plot_cluster   = 0,
         plot_cut       = 0,
         plot_peel      = 0,
-        plot_nodes     = 0,
+        plot_node      = 0,
         plot_size      = 6,
         linewidth      = 1.5,
         scatter_size   = 30,
@@ -299,6 +299,14 @@ def default_config(**kwargs):
     return config
 
 
+def add_args(parser, args, group_name=None, description=None):
+
+    if group_name:
+        parser = parser.add_argument_group(group_name, description)
+    for sid, lid, action, help, kwargs in args:
+        parser.add_argument(sid, lid, action=action, help=help, **kwargs)
+
+
 if __name__ == "__main__":
 
     import argparse
@@ -306,7 +314,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         prog="OOPSC",
         description="simulation of surface code using mwpm/uf/eg decoder",
-        usage='%(prog)s [-h] L'
+        usage='%(prog)s [-h/--help] L (lattice_size)'
     )
 
     parser.add_argument("lattice_size",
@@ -317,57 +325,54 @@ if __name__ == "__main__":
     )
 
     sim_arguments = [
-        ["-i", "--iters", "store", "number of iterations", dict(type=int, default=1, metavar="")],
-        ["-l", "--lattice_type", "store", "type of lattice", dict(type=str, choices=["toric", "planar"], default="toric", metavar="")],
-        ["-d", "--decoder", "store", "type of decoder {mwpm/uf/eg}", dict(type=str, choices=["mwpm", "uf", "eg"], default="eg", metavar="")],
-        ["-m", "--multithreading", "store_true", "use multithreading", dict()],
-        ["-px", "--paulix", "store", "Pauli X error rate", dict(type=float, default=0, metavar="")],
-        ["-pz", "--pauliz", "store", "Pauli Y error rate", dict(type=float, default=0, metavar="")],
-        ["-pmx", "--measurex", "store", "Measurement X error rate", dict(type=float, default=0, metavar="")],
-        ["-pmz", "--measurez", "store", "Measurement Y error rate", dict(type=float, default=0, metavar="")],
-        ["-pe", "--erasure", "store", "Erasure", dict(type=float, default=0, metavar="")],
-        ["-s", "--seeds", "store", "seeds for the simulations (verbose)", dict(type=int, nargs='*', metavar="")],
-        ["-f2d", "--force2D", "store_true", "force 2D lattice", dict()],
-        ["-f3d", "--force3D", "store_true", "force 3D lattice", dict()],
+        ["-i", "--iters", "store", "number of iterations - int", dict(type=int, default=1, metavar="")],
+        ["-l", "--lattice_type", "store", "type of lattice - {toric/planar}", dict(type=str, choices=["toric", "planar"], default="toric", metavar="")],
+        ["-d", "--decoder", "store", "type of decoder - {mwpm/uf/eg}", dict(type=str, choices=["mwpm", "uf", "eg"], default="eg", metavar="")],
+        ["-px", "--paulix", "store", "Pauli X error rate - float {0,1}", dict(type=float, default=0, metavar="")],
+        ["-pz", "--pauliz", "store", "Pauli Y error rate - float {0,1}", dict(type=float, default=0, metavar="")],
+        ["-pmx", "--measurex", "store", "Measurement X error rate - float {0,1}", dict(type=float, default=0, metavar="")],
+        ["-pmz", "--measurez", "store", "Measurement Y error rate - float {0,1}", dict(type=float, default=0, metavar="")],
+        ["-pe", "--erasure", "store", "Erasure - float {0,1}", dict(type=float, default=0, metavar="")],
+        ["-s", "--seeds", "store", "seeds for the simulations - verbose list", dict(type=int, nargs='*', metavar="")],
+        ["-mt", "--multithreading", "store_true", "use multithreading - toggle", dict()],
+        ["-nt", "--threads", "store", "number of threads (defaults to available # logical cores) - int", dict(type=int, metavar="")],
+        ["-f2d", "--force2D", "store_true", "force 2D lattice - toggle", dict()],
+        ["-f3d", "--force3D", "store_true", "force 3D lattice - toggle", dict()],
     ]
 
     decoder_arguments = [
-        ["-dgc", "--dg_connections", "store_true", "use dg_connections pre-union processing", dict()],
-        ["-dg", "--directed_graph", "store_true", "use directed graph for evengrow", dict()],
-        ["-db", "--debug", "store_true", "enable debugging hearistics", dict()]
+        ["-dgc", "--dg_connections", "store_true", "use dg_connections pre-union processing - toggle", dict()],
+        ["-dg", "--directed_graph", "store_true", "use directed graph for evengrow - toggle", dict()],
+        ["-db", "--debug", "store_true", "enable debugging hearistics - toggle", dict()]
     ]
 
     plot_arguments = [
-        ["-p2d", "--plot2D", "store_true", "plot 2D lattice", dict()],
-        ["-p3d", "--plot3D", "store_true", "plot 3D lattice", dict()],
-        ["-puf", "--plotUF", "store_true", "plot uf-lattice", dict()],
-        ["-pr", "--print_steps", "store_true", "print all debug info", dict()],
-        ["-pf", "--plot_find", "store_true", "plot find cluster routine sequenctially", dict()],
-        ["-pb", "--plot_bucket", "store_true", "plot growth routine by bucket", dict()],
-        ["-pc", "--plot_cluster", "store_true", "plot growth routine by cluster", dict()],
-        ["-pn", "--plot_node", "store_true", "plot growth routine by node", dict()],
-        ["-pk", "--plot_cut", "store_true", "plot removed edges of cluster cycles", dict()],
-        ["-pp", "--plot_peel", "store_true", "plot the peeling of edges sequentially", dict()],
-        ["-ps", "--plot_size", "store", "size of plotting window", dict(type=int, default=6, metavar="")],
-        ["-lw", "--linewidth", "store", "size of plotting window", dict(type=float, default=1.5, metavar="")],
-        ["-ss", "--scatter_size", "store", "size of 3D plot scatter", dict(type=int, default=30, metavar="")],
-        ["-zd", "--z_distance", "store", "distance between z layers in 3D plot", dict(type=int, default=2, metavar="")],
+        ["-p2d", "--plot2D", "store_true", "plot 2D lattice - toggle", dict()],
+        ["-p3d", "--plot3D", "store_true", "plot 3D lattice - toggle", dict()],
+        ["-puf", "--plotUF", "store_true", "plot uf-lattice - toggle", dict()],
+        ["-pr", "--print_steps", "store_true", "print all debug info - toggle", dict()],
+        ["-pf", "--plot_find", "store_true", "plot find cluster routine sequenctially - toggle", dict()],
+        ["-pb", "--plot_bucket", "store_true", "plot growth routine by bucket - toggle", dict()],
+        ["-pc", "--plot_cluster", "store_true", "plot growth routine by cluster - toggle", dict()],
+        ["-pn", "--plot_node", "store_true", "plot growth routine by node - toggle", dict()],
+        ["-pk", "--plot_cut", "store_true", "plot removed edges of cluster cycles - toggle", dict()],
+        ["-pp", "--plot_peel", "store_true", "plot the peeling of edges sequentially - toggle", dict()],
+        ["-ps", "--plot_size", "store", "size of plotting window - int", dict(type=int, default=6, metavar="")],
+        ["-lw", "--linewidth", "store", "width of line plots - int/float", dict(type=float, default=1.5, metavar="")],
+        ["-ss", "--scatter_size", "store", "size of 3D plot scatter - int/float", dict(type=int, default=30, metavar="")],
+        ["-zd", "--z_distance", "store", "distance between z layers in 3D plot - int/float", dict(type=int, default=2, metavar="")],
     ]
 
-    def add_args(parser, group_name, description, args):
-        group = parser.add_argument_group(group_name, description)
-        for sid, lid, action, help, kwargs in args:
-            group.add_argument(sid, lid, action=action, help=help, **kwargs)
-
-    add_args(parser, "simulation", "arguments for simulation", sim_arguments)
-    add_args(parser, "decoder", "arguments for decoder", decoder_arguments)
-    add_args(parser, "figure", "arguments for plotting", plot_arguments)
+    add_args(parser, sim_arguments, "simulation", "arguments for simulation")
+    add_args(parser, decoder_arguments, "decoder", "arguments for decoder")
+    add_args(parser, plot_arguments, "figure", "arguments for plotting")
 
 
     args=vars(parser.parse_args())
     decoder = args.pop("decoder")
     iters   = args.pop("iters")
     multi   = args.pop("multithreading")
+    threads = args.pop("threads")
     size    = args.pop("lattice_size")
     debug   = args.pop("debug")
     f2d     = args.pop("force2D")
@@ -413,6 +418,6 @@ if __name__ == "__main__":
     elif not multi:
         output = multiple(size, decode, go, args, iters, debug=debug, **config)
     else:
-        output = multiprocess(size, decode, go, args, iters, debug=debug, **config)
+        output = multiprocess(size, decode, go, args, iters, debug=debug, processes=threads, **config)
 
     pprint(output)

@@ -27,8 +27,8 @@ def print_configuration(config, iters, **kwargs):
     print("using settings:")
     settings = {key:value for key, value in kwargs.items() if value != 0}
     pprint(settings)
-    print("\nusing config:")
-    pprint(config)
+    # print("\nusing config:")
+    # pprint(config)
     print()
 
 def print_graph(graph, clusters=None, prestring="", poststring=None, printmerged=1, include_even=0, return_string=False):

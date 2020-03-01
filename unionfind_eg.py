@@ -43,6 +43,7 @@ class toric(uf.toric):
         Decoder options, defined in kwargs are stored as class variables.
         '''
         super().__init__(*args, **kwargs)
+        self.type = "evengrow"
         if self.directed_graph:
             self.grow_boundary = self.grow_boundary_directed
             import evengrow_directed as eg

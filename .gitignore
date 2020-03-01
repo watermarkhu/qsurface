@@ -12,6 +12,6 @@ errors/
 figures/
 data/
 logs/
-anim/
+batch/
 .idea/
 !requirements.txt

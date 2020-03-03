@@ -175,12 +175,37 @@ class debug(object):
             @functools.wraps(func)
             def wrapper_repeat(self, *args, **kwargs):
                 value = func(self, *args, **kwargs)
+
+                self.counters = dict(
+                    gbu = 0,
+                    gbo = 0,
+                    ufu = 0,
+                    uff = 0,
+                )
                 self.c_gbu, self.c_gbo, self.c_ufu, self.c_uff = 0, 0, 0, 0
-                self.gbu ,self.gbo, self.ufu, self.uff, self.time = [], [], [], [], []
-                self.mac, self.ctd = [], []
+
+                self.clist = dict(
+                    time = [],
+                    gbu = [],
+                    gbo = [],
+                    ufu = [],
+                    uff = [],
+                    mac = [],
+                    ctd = [],
+                )
                 return value
             return wrapper_repeat
         return decorator_repeat
+
+
+    def reset_counters(graph):
+        '''
+        Reset counter list of a graph
+        '''
+        graph.matching_weight = []
+        for key in graph.decoder.clist:
+            graph.decoder.clist[key] = []
+
 
     def init_counters_eg():
         '''
@@ -190,6 +215,10 @@ class debug(object):
             @functools.wraps(func)
             def wrapper_repeat(self, *args, **kwargs):
                 value = func(self, *args, **kwargs)
+                self.counters = dict(
+                    mac = 0,
+                    ctd = 0
+                )
                 self.c_mac, self.c_ctd = 0, 0
                 return value
             return wrapper_repeat
@@ -202,8 +231,7 @@ class debug(object):
         def decorator_repeat(func):
             @functools.wraps(func)
             def wrapper_repeat(self, *args, **kwargs):
-                counter = getattr(self, name)
-                setattr(self, name, counter + 1)
+                self.counters[name] += 1
                 value = func(self, *args, **kwargs)
                 return value
             return wrapper_repeat
@@ -221,17 +249,16 @@ class debug(object):
 
                 value = func(self, *args, **kwargs)
 
-                self.time.append(time.time() - self.t0)
-                self.gbu.append(self.c_gbu)
-                self.gbo.append(self.c_gbo)
-                self.ufu.append(self.c_ufu)
-                self.uff.append(self.c_uff)
-                self.c_gbu, self.c_gbo, self.c_ufu, self.c_uff = 0, 0, 0, 0
+                self.clist["time"].append(time.time() - self.t0)
+
+                for key, value in self.counters.items():
+                    self.clist[key].append(value)
+                    self.counters[key] = 0
 
                 if hasattr(self, "eg"):
-                    self.mac.append(self.eg.c_mac)
-                    self.ctd.append(self.eg.c_ctd)
-                    self.eg.c_mac, self.eg.c_ctd = 0, 0
+                    for key, value in self.eg.counters.items():
+                        self.clist[key].append(value)
+                        self.eg.counters[key] = 0
 
                 return value
             return wrapper_repeat

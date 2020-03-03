@@ -137,7 +137,7 @@ class toric(uf.toric):
     ##################################################################################################
     '''
 
-    @debug.counter(name="c_gbu")
+    @debug.counter(name="gbu")
     @plot.iter_grow_bucket()
     def grow_bucket(self, bucket, bucket_i, *args, **kwargs):
         '''
@@ -165,7 +165,7 @@ class toric(uf.toric):
         self.grow_boundary(cluster, root_node)
 
 
-    @debug.counter(name="c_gbo")
+    @debug.counter(name="gbo")
     @plot.iter_grow_boundary_node()
     def grow_boundary_directed(self, cluster, node, *args, print_tree=0, **kwargs):
         '''
@@ -190,7 +190,7 @@ class toric(uf.toric):
             self.grow_boundary_directed(cluster, child)
 
 
-    @debug.counter(name="c_gbo")
+    @debug.counter(name="gbo")
     @plot.iter_grow_boundary_node()
     def grow_boundary_undirected(self, cluster, node, ancestor=None, *args, print_tree=0, **kwargs):
         '''

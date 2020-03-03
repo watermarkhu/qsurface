@@ -59,7 +59,7 @@ class toric(object):
     ##################################################################################################
     '''
 
-    @debug.counter(name="c_ufu")
+    @debug.counter(name="ufu")
     def union_clusters(self, parent, child, *args, **kwargs):
         """
         Merges two clusters by updating the parent/child relationship and updating the attributes
@@ -69,7 +69,7 @@ class toric(object):
         parent.size += child.size
         parent.parity += child.parity
 
-    @debug.counter(name="c_uff")
+    @debug.counter(name="uff")
     def find(self, cluster):
         '''
         Find parent of cluster. Applies path compression.
@@ -239,7 +239,7 @@ class toric(object):
                 pr.print_graph(self.graph, printmerged=0)
 
 
-    @debug.counter(name="c_gbu")
+    @debug.counter(name="gbu")
     @plot.iter_grow_bucket()
     def grow_bucket(self, bucket, bucket_i, *args, **kwargs):
         '''
@@ -255,7 +255,7 @@ class toric(object):
                 self.grow_boundary(cluster, bucket_i)
 
 
-    @debug.counter(name="c_gbo")
+    @debug.counter(name="gbo")
     @plot.iter_grow_boundary()
     def grow_boundary(self, cluster, *args, **kwargs):
         '''

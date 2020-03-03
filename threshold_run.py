@@ -5,10 +5,12 @@ www.github.com/watermarkhu/oop_surface_code
 _____________________________________________
 
 '''
-from oopsc import multiple, multiprocess, default_config
+
+import oopsc
 from threshold_plot import plot_thresholds
 from threshold_fit import fit_data
 from pprint import pprint
+import multiprocessing as mp
 import numpy as np
 import pandas as pd
 import git, sys, os
@@ -36,7 +38,7 @@ def run_thresholds(
     '''
     ############################################
     '''
-    run_oopsc = multiprocess if multithreading else multiple
+    run_oopsc = oopsc.multiprocess if multithreading else oopsc.multiple
 
     if measurement_error:
         import graph_3D as go
@@ -49,26 +51,49 @@ def run_thresholds(
     if not plot_title:
         plot_title = full_name
 
+
     if not os.path.exists(folder):
+        os.makedirs(folder)
+
+    if kwargs.pop("subfolder"):
         os.makedirs(folder + "/data/", exist_ok=True)
         os.makedirs(folder + "/figures/", exist_ok=True)
+        file_path = folder + "/data/" + full_name + ".csv"
+        fig_path = folder + "/figures/" + full_name + ".pdf"
+    else:
+        file_path = folder + "/" + full_name + ".csv"
+        fig_path = folder + "/" + full_name + ".pdf"
 
-    file_path = folder + "/data/" + full_name + ".csv"
-    fig_path = folder + "/figures/" + full_name + ".pdf"
+    progressbar = kwargs.pop("progressbar")
 
     data = None
     int_P = [int(p*P_store) for p in perror]
+    config = oopsc.default_config(**kwargs)
 
     # Simulate and save results to file
     for lati in lattices:
+
+        if multithreading:
+            if threads is None:
+                threads = mp.cpu_count()
+            graph = [oopsc.lattice_type(lattice_type, config, decoder, go, lati) for _ in range(threads)]
+        else:
+            graph = oopsc.lattice_type(lattice_type, config, decoder, go, lati)
+
         for pi, int_p in zip(perror, int_P):
 
             print("Calculating for L = ", str(lati), "and p =", str(pi))
 
-            oopsc_args = dict(paulix=pi, lattice_type=lattice_type, debug=debug, processes=threads)
+            oopsc_args = dict(
+                paulix=pi,
+                lattice_type=lattice_type,
+                debug=debug,
+                processes=threads,
+                progressbar=progressbar
+            )
             if measurement_error:
                 oopsc_args.update(measurex=pi)
-            output = run_oopsc(lati, decoder, go, default_config(**kwargs), iters, **oopsc_args)
+            output = run_oopsc(lati, config, iters, graph=graph, **oopsc_args)
 
             pprint(dict(output))
             print("")
@@ -144,16 +169,17 @@ if __name__ == "__main__":
         ["-me", "--measurement_error", "store_true", "enable measurement error (2+1D) - toggle", dict()],
         ["-mt", "--multithreading", "store_true", "use multithreading - toggle", dict()],
         ["-nt", "--threads", "store", "number of threads", dict(type=int, metavar="")],
-
         ["-ma", "--modified_ansatz", "store_true", "use modified ansatz - toggle", dict()],
         ["-s", "--save_result", "store_true", "save results - toggle", dict()],
         ["-sp", "--show_plot", "store_true", "show plot - toggle", dict()],
         ["-fn", "--file_name", "store", "plot filename - toggle", dict(default="thres", metavar="")],
         ["-pt", "--plot_title", "store", "plot filename - toggle", dict(default="", metavar="")],
         ["-f", "--folder", "store", "base folder path - toggle", dict(default="./", metavar="")],
+        ["-sf", "--subfolder", "store_true", "store figures and data in subfolders - toggle", dict()],
+        ["-pb", "--progressbar", "store_true", "enable progressbar - toggle", dict()],
         ["-dgc", "--dg_connections", "store_true", "use dg_connections pre-union processing - toggle", dict()],
         ["-dg", "--directed_graph", "store_true", "use directed graph for evengrow - toggle", dict()],
-        ["-db", "--debug", "store_true", "enable debugging hearistics - toggle", dict()]
+        ["-db", "--debug", "store_true", "enable debugging hearistics - toggle", dict()],
     ]
 
     add_args(parser, key_arguments)

@@ -156,7 +156,7 @@ class eg(object):
             return node.p
 
 
-    @debug.counter(name="c_ctd")
+    @debug.counter(name="ctd")
     def comp_tree_d_of_node(self, cluster, node, an_con=None):
         '''
         Recursive function to find the delay of a node and its children

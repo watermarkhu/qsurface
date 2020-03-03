@@ -11,6 +11,7 @@ One can choose to run a simulated lattice for a single, multiple or many (multit
 '''
 from progiter import ProgIter
 import multiprocessing as mp
+from decorators import debug as db
 from decimal import Decimal as decimal
 from collections import defaultdict as dd
 from pprint import pprint
@@ -53,7 +54,7 @@ def lattice_type(type, config, dec, go, size, **kwargs):
     elif type == "planar":
         decoder = dec.planar(**config, plot_config=config, **kwargs)
         graph = go.planar(size, decoder, **config, plot_config=config, **kwargs)
-    return decoder, graph
+    return graph
 
 
 def get_mean_var(list_of_var, str):
@@ -68,8 +69,6 @@ def get_mean_var(list_of_var, str):
 
 def single(
     size,
-    dec,
-    go,
     config,
     ltype="toric",
     paulix=0,
@@ -77,6 +76,8 @@ def single(
     erasure=0,
     measurex=0,
     measurez=0,
+    dec=None,
+    go=None,
     graph=None,
     worker=0,
     iter=0,
@@ -91,7 +92,7 @@ def single(
     # Initialize lattice
     if graph is None:
         pr.print_configuration(config, 1, size=size, pX=paulix, pZ=pauliz, pE=erasure, pmX=measurex, pmZ=measurez)
-        decoder, graph = lattice_type(ltype, config, dec, go, size, **kwargs)
+        graph = lattice_type(ltype, config, dec, go, size, **kwargs)
 
     # Initialize errors
     if seed is None and not config["seeds"]:
@@ -119,15 +120,14 @@ def single(
         if debug:
             output.update(dict(
                 weight  = graph.matching_weight[0],
-                time    = decoder.time,
-                gbu     = decoder.gbu,
-                gbo     = decoder.gbo,
-                ufu     = decoder.ufu,
-                uff     = decoder.uff,
-                ctd     = decoder.ctd,
-                mac     = decoder.mac,
+                time    = graph.decoder.time,
+                gbu     = graph.decoder.gbu,
+                gbo     = graph.decoder.gbo,
+                ufu     = graph.decoder.ufu,
+                uff     = graph.decoder.uff,
+                ctd     = graph.decoder.ctd,
+                mac     = graph.decoder.mac,
             ))
-
     else:
         output = correct
 
@@ -136,8 +136,6 @@ def single(
 
 def multiple(
     size,
-    dec,
-    go,
     config,
     iters,
     ltype="toric",
@@ -146,10 +144,14 @@ def multiple(
     erasure=0,
     measurex=0,
     measurez=0,
+    dec=None,
+    go=None,
+    graph=None,
     qres=None,
     worker=0,
     seeds=None,
     called=True,
+    progressbar=True,
     debug=False,
     **kwargs
 ):
@@ -159,18 +161,29 @@ def multiple(
 
     if qres is None:
         pr.print_configuration(config, iters, size=size, paulix=paulix, pauliz=pauliz, erasure=erasure, measurex=measurex, measurez=measurez)
+    if graph is None:
+        graph = lattice_type(ltype, config, dec, go, size, **kwargs)
 
     if seeds is None and not config["seeds"]:
         seeds = [init_random_seed(worker=worker, iteration=iter) for iter in range(iters)]
     elif not config["seeds"]:
         seeds = config["seeds"]
 
-    decoder, graph = lattice_type(ltype, config, dec, go, size, **kwargs)
+    options = dict(
+        ltype=ltype,
+        paulix=paulix,
+        pauliz=pauliz,
+        erasure=erasure,
+        measurex=measurex,
+        measurez=measurez,
+        graph=graph,
+        worker=worker,
+        called=0,
+        debug=debug,
+    )
 
-    result = [
-        single(size, dec, go, config, ltype, paulix, pauliz, erasure, measurex, measurez ,graph, worker, iter, seed, 0, debug, **kwargs)
-        for iter, seed in zip(ProgIter(range(iters)), seeds)
-    ]
+    zipped = zip(ProgIter(range(iters)), seeds) if progressbar else zip(range(iters), seeds)
+    result = [single(size, config, iter=iter, seed=seed, **options, **kwargs) for iter, seed in zipped]
 
     if called:
         output = dict(
@@ -178,16 +191,10 @@ def multiple(
             succes  = sum(result)
         )
         if debug:
-            output.update(dict(
-                **get_mean_var(graph.matching_weight, "weight"),
-                **get_mean_var(decoder.time, "time"),
-                **get_mean_var(decoder.gbu, "gbu"),
-                **get_mean_var(decoder.gbo, "gbo"),
-                **get_mean_var(decoder.ufu, "ufu"),
-                **get_mean_var(decoder.uff, "uff"),
-                **get_mean_var(decoder.ctd, "ctd"),
-                **get_mean_var(decoder.mac, "mac")
-            ))
+            output.update(**get_mean_var(graph.matching_weight, "weight"))
+            for key, value in graph.decoder.clist.items():
+                output.update(**get_mean_var(value, key))
+            db.reset_counters(graph)
         return output
     else:
         output = dict(
@@ -195,25 +202,19 @@ def multiple(
             succes    = sum(result),
         )
         if debug:
-            output.update(dict(
-                weight    = graph.matching_weight,
-                time      = decoder.time,
-                gbu       = decoder.gbu,
-                gbo       = decoder.gbo,
-                ufu       = decoder.ufu,
-                uff       = decoder.uff,
-                ctd       = decoder.ctd,
-                mac       = decoder.mac,
-            ))
+            output.update(weight = graph.matching_weight)
+            output.update(**graph.decoder.clist)
+            db.reset_counters(graph)
         qres.put(output)
 
 
 def multiprocess(
         size,
-        dec,
-        go,
         config,
         iters,
+        dec=None,
+        go=None,
+        graph=None,
         processes=None,
         debug=False,
         **kwargs
@@ -232,12 +233,24 @@ def multiprocess(
     # Initiate processes
     qres = mp.Queue()
     workers = []
-    for i in range(processes):
+
+    options = dict(
+        dec=dec,
+        go=go,
+        qres=qres,
+        called=0,
+        debug=debug
+    )
+
+    if graph is None or len(graph) != processes:
+        graph = [None]*processes
+
+    for i, g in enumerate(graph):
         workers.append(
             mp.Process(
                 target=multiple,
-                args=(size, dec, go, config, process_iters),
-                kwargs=dict(qres=qres, worker=i, called=0, debug=debug, **kwargs),
+                args=(size, config, process_iters),
+                kwargs=dict(worker=i, graph=g, **options, **kwargs),
             )
         )
     print("Starting", processes, "workers.")
@@ -414,10 +427,10 @@ if __name__ == "__main__":
 
 
     if iters == 1:
-        output = single(size, decode, go, args, debug=debug, **config)
+        output = single(size, args, dec=decode, go=go, debug=debug, **config)
     elif not multi:
-        output = multiple(size, decode, go, args, iters, debug=debug, **config)
+        output = multiple(size, args, iters, dec=decode, go=go, debug=debug, **config)
     else:
-        output = multiprocess(size, decode, go, args, iters, debug=debug, processes=threads, **config)
+        output = multiprocess(size, args, iters, dec=decode, go=go, debug=debug, processes=threads, **config)
 
     pprint(output)

@@ -146,7 +146,7 @@ class eg(object):
     def boundary_node(self, vertex):
         return boundary_node(vertex)
 
-    @debug.counter(name="c_mac")
+    @debug.counter(name="mac")
     def make_ancestor_child(self, node, ac_level=False):
         '''
         Recursive function to reroot an tree in a certain node
@@ -184,7 +184,7 @@ class eg(object):
             node.p = 1
             return node.p
 
-    @debug.counter(name="c_ctd")
+    @debug.counter(name="ctd")
     def comp_tree_d_of_node(self, node, cluster):
         '''
         Recursive function to find the delay of a node and its children

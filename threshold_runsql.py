@@ -7,17 +7,65 @@ _____________________________________________
 '''
 
 import oopsc
-from threshold_plot import plot_thresholds
-from threshold_fit import fit_data
-from pprint import pprint
 import multiprocessing as mp
 import numpy as np
 import pandas as pd
 import git, sys, os
+import sqlalchemy
+
+def connect_database(database, table_name):
+    database_username = 'root'
+    database_password = 'Guess20.Located.Oil...'
+    database_ip       = '104.199.14.242'
+    database_name     = database
+    database_connection = sqlalchemy.create_engine('mysql+pymysql://{0}:{1}@{2}/{3}'.format(database_username, database_password, database_ip, database_name))
+
+    create_table = (
+        "CREATE TABLE `{}` ("
+        "`id` int NOT NULL AUTO_INCREMENT,"
+        "`L` int NOT NULL,"
+        "`p` decimal(6,6) NOT NULL,"
+        "`N` int NOT NULL,"
+        "`succes` int NOT NULL,"
+        "`weight_m` float NOT NULL,"
+        "`weight_v` float NOT NULL,"
+        "`time_m` float NOT NULL,"
+        "`time_v` float NOT NULL,"
+        "`gbu_m` float NOT NULL,"
+        "`gbu_v` float NOT NULL,"
+        "`gbo_m` float NOT NULL,"
+        "`gbo_v` float NOT NULL,"
+        "`ufu_m` float NOT NULL,"
+        "`ufu_v` float NOT NULL,"
+        "`uff_m` float NOT NULL,"
+        "`uff_v` float NOT NULL,"
+        "`mac_m` float NOT NULL,"
+        "`mac_v` float NOT NULL,"
+        "`ctd_m` float NOT NULL,"
+        "`ctd_v` float NOT NULL,"
+        " PRIMARY KEY (`id`)"
+        ")".format(table_name)
+    )
+    con = database_connection.connect()
+    trans = con.begin()
+    con.execute(create_table)
+    trans.commit()
+    return con
+
+
+def insert_database(con, table_name, data):
+    columns = ', '.join("`{}`".format(s) for s in data)
+    values = ', '.join(str(s) for s in data.values())
+    query = "INSERT INTO `{}` ({}) VALUES ({}) ".format(table_name, columns, values)
+    trans = con.begin()
+    con.execute(query)
+    trans.commit()
 
 
 def run_thresholds(
         decoder,
+        sql_database,
+        batchnumber,
         lattice_type="toric",
         lattices = [],
         perror = [],
@@ -59,16 +107,19 @@ def run_thresholds(
         os.makedirs(folder + "/data/", exist_ok=True)
         os.makedirs(folder + "/figures/", exist_ok=True)
         file_path = folder + "/data/" + full_name + ".csv"
-        fig_path = folder + "/figures/" + full_name + ".pdf"
+        # fig_path = folder + "/figures/" + full_name + ".pdf"
     else:
         file_path = folder + "/" + full_name + ".csv"
-        fig_path = folder + "/" + full_name + ".pdf"
+        # fig_path = folder + "/" + full_name + ".pdf"
 
     progressbar = kwargs.pop("progressbar")
 
     data = None
     int_P = [int(p*P_store) for p in perror]
     config = oopsc.default_config(**kwargs)
+
+    table = "t_{}".format(batchnumber)
+    con = connect_database(sql_database, table)
 
     # Simulate and save results to file
     for lati in lattices:
@@ -95,8 +146,9 @@ def run_thresholds(
                 oopsc_args.update(measurex=pi)
             output = run_oopsc(lati, config, iters, graph=graph, **oopsc_args)
 
-            pprint(dict(output))
-            print("")
+
+            sql_data = dict(L=lati, p=pi, **output)
+            insert_database(con, table, sql_data)
 
             if data is None:
                 if os.path.exists(file_path):
@@ -120,15 +172,7 @@ def run_thresholds(
             if save_result:
                 data.to_csv(file_path)
 
-    print(data.to_string())
-
-    par = fit_data(data, modified_ansatz)
-
-    if show_plot:
-        plot_thresholds(data, file_name, fig_path, modified_ansatz, save_result=save_result, par=par)
-
-    if save_result:
-        data.to_csv(file_path)
+    con.close()
 
 
 if __name__ == "__main__":
@@ -140,6 +184,20 @@ if __name__ == "__main__":
         prog="threshold_run",
         description="run a threshold computation",
         usage='%(prog)s [-h/--help] decoder lattice_type iters -l [..] -p [..] (lattice_size)'
+    )
+
+    parser.add_argument("sql_database",
+        action="store",
+        type=str,
+        help="sql database name",
+        metavar="sql",
+    )
+
+    parser.add_argument("batchnumber",
+        action="store",
+        type=int,
+        help="batch number",
+        metavar="batch",
     )
 
     parser.add_argument("decoder",
@@ -188,8 +246,11 @@ if __name__ == "__main__":
     add_args(parser, pos_arguments, "positional", "range of L and p values")
     add_args(parser, key_arguments)
 
+
     args=vars(parser.parse_args())
     decoder = args.pop("decoder")
+    batchnumber = args.pop("batchnumber")
+    sql_database = args.pop("sql_database")
 
 
     if decoder == "mwpm":
@@ -206,4 +267,5 @@ if __name__ == "__main__":
         if args["dg_connections"]:
             print(f"{'_'*75}\n\nusing dg_connections pre-union processing")
 
-    run_thresholds(decode, **args)
+
+    run_thresholds(decode, sql_database, batchnumber, **args)

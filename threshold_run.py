@@ -122,7 +122,7 @@ def run_thresholds(
 
     print(data.to_string())
 
-    par = fit_data(data, modified_ansatz)
+    par = fit_data(data, modified_ansatz, P_store)
 
     if show_plot:
         plot_thresholds(data, file_name, fig_path, modified_ansatz, save_result=save_result, par=par)

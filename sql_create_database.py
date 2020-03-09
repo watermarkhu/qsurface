@@ -2,7 +2,7 @@ import mysql.connector
 from mysql.connector import Error
 
 
-def create_connection(host_name, user_name, user_password, database=None):
+def create_connection(host_name=None, user_name=None, user_password=None, database=None):
     connection = None
     try:
         if not host_name:
@@ -40,7 +40,6 @@ def new_database(host_name, user_name, user_password, database_name):
     connection = create_connection(host_name, user_name, user_password)
     create_database(connection, database_name)
     connection.close()
-
 
 
 if __name__ == "__main__":

@@ -3,17 +3,21 @@ import numpy as np
 import pandas as pd
 
 
-def read_data(file_path):
+def read_data(file_path, lattices=None):
     try:
         data = pd.read_csv(file_path, header=0)
-        return data.set_index(["L", "p"])
+        data = data.set_index(["L", "p"])
+        if lattices is None:
+            return data
+        else:
+            return data.loc[lattices]
 
     except FileNotFoundError:
         print("File not found")
-        exit()
+        quit()
 
 
-def get_data(data, data_select=None, P_store=1000):
+def get_data(data, data_select=None, P_store=1):
 
     fitL = data.index.get_level_values("L")
     fitp = data.index.get_level_values("p")
@@ -54,9 +58,9 @@ def fit_func_m(PL, pthres, A, B, C, D, nu, mu):
     return A + B * x + C * x ** 2 + D * L ** (-1 / mu)
 
 
-def fit_data(data, modified_ansatz=False, data_select=None):
+def fit_data(data, modified_ansatz=False, data_select=None, P_store=1):
 
-    fitL, fitp, fitN, fitt = get_data(data, data_select)
+    fitL, fitp, fitN, fitt = get_data(data, data_select, P_store)
 
     '''
     Initial parameters for fitting function
@@ -128,5 +132,5 @@ if __name__ == "__main__":
     add_args(parser, key_arguments)
     args=vars(parser.parse_args())
 
-    data = read_data(args.pop("folder") + "data/" + args.pop("file_name") + ".csv")
+    data = read_data(args.pop("folder") + "data/" + args.pop("file_name") + ".csv", args.pop("lattices"))
     fit_data(data, **args)

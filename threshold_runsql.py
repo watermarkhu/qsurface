@@ -7,21 +7,24 @@ _____________________________________________
 '''
 
 import oopsc
-import multiprocessing as mp
 import numpy as np
 import pandas as pd
 import git, sys, os
 import sqlalchemy
 
-def connect_database(database, table_name):
+
+def connect_database(database):
     database_username = 'root'
     database_password = 'Guess20.Located.Oil...'
     database_ip       = '104.199.14.242'
     database_name     = database
     database_connection = sqlalchemy.create_engine('mysql+pymysql://{0}:{1}@{2}/{3}'.format(database_username, database_password, database_ip, database_name))
+    return database_connection.connect()
 
+
+def create_table(con, table_name):
     create_table = (
-        "CREATE TABLE `{}` ("
+        "CREATE TABLE IF NOT EXISTS `{}` ("
         "`id` int NOT NULL AUTO_INCREMENT,"
         "`L` int NOT NULL,"
         "`p` decimal(6,6) NOT NULL,"
@@ -46,11 +49,9 @@ def connect_database(database, table_name):
         " PRIMARY KEY (`id`)"
         ")".format(table_name)
     )
-    con = database_connection.connect()
     trans = con.begin()
     con.execute(create_table)
     trans.commit()
-    return con
 
 
 def insert_database(con, table_name, data):
@@ -62,6 +63,13 @@ def insert_database(con, table_name, data):
     trans.commit()
 
 
+def check_row_exists(con, tablename, L, p):
+    query = f"SELECT 1 FROM {tablename} WHERE L = {L} AND p = {p}"
+    result = con.execute(query)
+    row = result.fetchall()
+    return bool(row)
+
+
 def run_thresholds(
         decoder,
         sql_database,
@@ -71,8 +79,6 @@ def run_thresholds(
         perror = [],
         iters = 0,
         measurement_error=False,
-        multithreading=False,
-        threads=None,
         modified_ansatz=False,
         save_result=True,
         file_name="thres",
@@ -86,7 +92,6 @@ def run_thresholds(
     '''
     ############################################
     '''
-    run_oopsc = oopsc.multiprocess if multithreading else oopsc.multiple
 
     if measurement_error:
         import graph_3D as go
@@ -119,19 +124,19 @@ def run_thresholds(
     config = oopsc.default_config(**kwargs)
 
     table = "t_{}".format(batchnumber)
-    con = connect_database(sql_database, table)
+    con = connect_database(sql_database)
+    create_table(con, table)
 
     # Simulate and save results to file
     for lati in lattices:
 
-        if multithreading:
-            if threads is None:
-                threads = mp.cpu_count()
-            graph = [oopsc.lattice_type(lattice_type, config, decoder, go, lati) for _ in range(threads)]
-        else:
-            graph = oopsc.lattice_type(lattice_type, config, decoder, go, lati)
+
+        graph = oopsc.lattice_type(lattice_type, config, decoder, go, lati)
 
         for pi, int_p in zip(perror, int_P):
+
+            if check_row_exists(con, table, lati, pi):
+                continue
 
             print("Calculating for L = ", str(lati), "and p =", str(pi))
 
@@ -139,13 +144,11 @@ def run_thresholds(
                 paulix=pi,
                 lattice_type=lattice_type,
                 debug=debug,
-                processes=threads,
                 progressbar=progressbar
             )
             if measurement_error:
                 oopsc_args.update(measurex=pi)
-            output = run_oopsc(lati, config, iters, graph=graph, **oopsc_args)
-
+            output = oopsc.multiple(lati, config, iters, graph=graph, worker=batchnumber, **oopsc_args)
 
             sql_data = dict(L=lati, p=pi, **output)
             insert_database(con, table, sql_data)
@@ -228,8 +231,6 @@ if __name__ == "__main__":
 
     key_arguments = [
         ["-me", "--measurement_error", "store_true", "enable measurement error (2+1D) - toggle", dict()],
-        ["-mt", "--multithreading", "store_true", "use multithreading - toggle", dict()],
-        ["-nt", "--threads", "store", "number of threads", dict(type=int, metavar="")],
         ["-ma", "--modified_ansatz", "store_true", "use modified ansatz - toggle", dict()],
         ["-s", "--save_result", "store_true", "save results - toggle", dict()],
         ["-sp", "--show_plot", "store_true", "show plot - toggle", dict()],

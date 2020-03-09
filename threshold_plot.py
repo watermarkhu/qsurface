@@ -6,6 +6,21 @@ from threshold_fit import get_data, get_fit_func, fit_data, read_data
 
 '''Select data to plot'''
 
+def plot_style(ax, title=None, xlabel=None, ylabel=None, **kwargs):
+    ax.grid(color='w', linestyle='-', linewidth=2)
+    ax.set_title(title)
+    ax.set_xlabel(xlabel)
+    ax.set_ylabel(ylabel)
+    for key, arg in kwargs.items():
+        func = getattr(ax, f"set_{key}")
+        func(arg)
+    ax.patch.set_facecolor('0.95')
+    ax.spines["top"].set_visible(False)
+    ax.spines["right"].set_visible(False)
+    ax.spines["bottom"].set_visible(False)
+    ax.spines["left"].set_visible(False)
+
+
 def plot_thresholds(
     data,
     plot_title="",               # Plot title
@@ -17,7 +32,7 @@ def plot_thresholds(
     ax0=None,                   # axis object of error fit plot
     ax1=None,                   # axis object of rescaled fit plot
     par=None,
-
+    lattices=None,
 ):
 
     styles=[".", "-"]           # linestyles for data and fit
@@ -46,15 +61,16 @@ def plot_thresholds(
     for L, P, N, T in zip(fitL, fitp, fitN, fitt):
         LP[L].append([P, N, T])
 
-    plot_i = {}
-    for i, l in enumerate(set(fitL)):
-        plot_i[l] = i
+    if lattices is None:
+        lattices = sorted(set(fitL))
 
-    for lati in sorted(set(fitL)):
+    colors = {lati:f"C{i%10}" for i, lati in enumerate(lattices)}
+
+    for i, lati in enumerate(lattices):
         fp, fN, fs = map(list, zip(*sorted(LP[lati], key=lambda k: k[0])))
         ft = [si / ni for si, ni in zip(fs, fN)]
         ax0.plot(
-            [q * 100 for q in fp], ft, styles[0], color="C" + str(plot_i[lati] % 10), ms=5
+            [q * 100 for q in fp], ft, styles[0], color=colors[lati], ms=5
         )
         X = np.linspace(min(fp), max(fp), plotn)
         ax0.plot(
@@ -62,7 +78,7 @@ def plot_thresholds(
             [fit_func((x, lati), *par) for x in X],
             "-",
             label="L = {}".format(lati),
-            color="C" + str(plot_i[lati] % 10),
+            color=colors[lati],
             lw=1.5,
             alpha=0.6,
             ls=styles[1],
@@ -78,33 +94,32 @@ def plot_thresholds(
         textcoords="offset points",
         fontsize=8,
     )
-    ax0.set_title("Threshold of " + plot_title)
-    ax0.set_xlabel("probability of Pauli X error (%)")
-    ax0.set_ylabel("decoding success rate")
+
+    plot_style(ax0, "Threshold of " + plot_title, "probability of Pauli X error (%)", "decoding success rate")
     ax0.legend()
 
     ''' Plot using the rescaled error rate'''
 
     for L, p, N, t in zip(fitL, fitp, fitN, fitt):
-        if modified_ansatz:
-            plt.plot(
-                (p - par[0]) * L ** (1 / par[5]),
-                t / N - par[4] * L ** (-1 / par[6]),
-                ".",
-                color="C" + str(plot_i[L] % 10),
-            )
-        else:
-            plt.plot(
-                (p - par[0]) * L ** (1 / par[5]),
-                t / N,
-                ".",
-                color="C" + str(plot_i[L] % 10),
-            )
+        if L in lattices:
+            if modified_ansatz:
+                plt.plot(
+                    (p - par[0]) * L ** (1 / par[5]),
+                    t / N - par[4] * L ** (-1 / par[6]),
+                    ".",
+                    color=colors[L],
+                )
+            else:
+                plt.plot(
+                    (p - par[0]) * L ** (1 / par[5]),
+                    t / N,
+                    ".",
+                    color=colors[L],
+                )
     x = np.linspace(*plt.xlim(), plotn)
     ax1.plot(x, par[1] + par[2] * x + par[3] * x ** 2, "--", color="C0", alpha=0.5)
-    ax1.set_xlabel("Rescaled error rate")
-    ax1.set_ylabel("Modified succces probability")
 
+    plot_style(ax1, "Modified curve " + plot_title, "Rescaled error rate", "Modified succces probability")
 
     if show_plot:
         plt.show()
@@ -133,6 +148,7 @@ if __name__ == "__main__":
 
     key_arguments = [
         ["-ds", "--data_select", "store", "selective plot data - {even/odd}", dict(type=str, choices=["even", "odd"], metavar="")],
+        ["-l", "--lattices", "store", "lattice sizes - verbose list int", dict(type=int, nargs='*', metavar="")],
         ["-ma", "--modified_ansatz", "store_true", "use modified ansatz - toggle", dict()],
         ["-s", "--save_result", "store_true", "save results - toggle", dict()],
         ["-pt", "--plot_title", "store", "plot filename - toggle", dict(default="")],
@@ -144,6 +160,6 @@ if __name__ == "__main__":
 
     folder = args.pop("folder")
     name = args.pop("file_name")
-    data = read_data(folder + "data/" + name + ".csv")
+    data = read_data(folder + "data/" + name + ".csv", args.pop("lattices"))
     fig_path = folder + "figures/" + name + ".pdf"
-    plot_thresholds(data, **args)
+    plot_thresholds(data, fig_path=fig_path, **args)

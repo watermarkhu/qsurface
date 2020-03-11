@@ -69,7 +69,7 @@ def fit_data(data, modified_ansatz=False, data_select=None, P_store=1):
     g_A, A_m, A_M = 0, -np.inf, np.inf
     g_B, B_m, B_M = 0, -np.inf, np.inf
     g_C, C_m, C_M = 0, -np.inf, np.inf
-    gnu, num, nuM = 1.46, 1.2, 1.6
+    gnu, num, nuM = 0.974, 0.8, 1.2
 
     D_m, D_M = -2, 2
     mum, muM = 0, 3

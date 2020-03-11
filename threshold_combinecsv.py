@@ -1,27 +1,35 @@
 import pandas as pd
-from threshold_runsql import connect_database
 from progiter import ProgIter
+import os
 
+database = "eg_planar_3d_test"
 
+def get_data(folder, output):
 
-def get_data(database, tables):
-    con = connect_database(database)
 
     print("reading data...")
     data = []
-    for i in ProgIter(range(tables)):
-        data.append(pd.read_sql_table("t_{}".format(i), con).drop(["id"], axis=1).set_index(["L", "p"]))
+
+    onlyfiles = [f for f in os.listdir(folder) if os.path.isfile(os.path.join(folder, f))]
+
+    for file_path in ProgIter(onlyfiles):
+        path = folder + file_path
+        try:
+            df = pd.read_csv(path, header=0)
+            data.append(df.set_index(["L", "p"]))
+        except:
+            print("cound not read {}".format(path))
 
     cdata = data[0]
 
     print("processing data...")
-    for i in ProgIter(range(1, tables)):
+    for i in ProgIter(range(1, len(data))):
         pdata = data[i]
 
         for j in range(len(pdata)):
             prow = pdata.iloc[j,:]
             if prow.name not in cdata.index:
-                cdata.append(prow)
+                cdata = cdata.append(prow)
             else:
                 crow = cdata.loc[prow.name]
                 cN, pN = crow["N"], prow["N"]
@@ -40,7 +48,7 @@ def get_data(database, tables):
 
     print("saving data...")
     cdata = cdata.sort_index()
-    cdata.to_csv("./data/cartesius_{}.csv".format(database))
+    cdata.to_csv(output)
 
 
 if __name__ == "__main__":
@@ -48,22 +56,22 @@ if __name__ == "__main__":
     import argparse
 
     parser = argparse.ArgumentParser(
-        prog="mysql datagetter",
-        description="saves a mysql database",
+        prog="csvCombiner",
+        description="combines csv output files",
     )
 
-    parser.add_argument("database",
+    parser.add_argument("folder",
         action="store",
         type=str,
-        help="name of database",
-        metavar="dn",
+        help="directory of csv outputs",
+        metavar="folder",
     )
 
-    parser.add_argument("tables",
+    parser.add_argument("output",
         action="store",
-        type=int,
-        help="number of tables",
-        metavar="tables",
+        type=str,
+        help="output, needs to add file ex.",
+        metavar="output",
     )
 
     args=vars(parser.parse_args())

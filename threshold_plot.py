@@ -96,6 +96,7 @@ def plot_thresholds(
     )
 
     plot_style(ax0, "Threshold of " + plot_title, "probability of Pauli X error (%)", "decoding success rate")
+    ax0.set_ylim(0.5, 1)
     ax0.legend()
 
     ''' Plot using the rescaled error rate'''

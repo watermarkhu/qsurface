@@ -216,6 +216,7 @@ def multiprocess(
         go=None,
         graph=None,
         processes=None,
+        node=0,
         debug=False,
         **kwargs
     ):
@@ -245,7 +246,7 @@ def multiprocess(
     if graph is None or len(graph) != processes:
         graph = [None]*processes
 
-    for i, g in enumerate(graph):
+    for i, g in enumerate(graph, int(node*processes)):
         workers.append(
             mp.Process(
                 target=multiple,

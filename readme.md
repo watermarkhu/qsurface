@@ -129,6 +129,7 @@ After installation of WSL, one needs to do a few more steps in order to display 
 1. Download a X-server such as [Xming](https://sourceforge.net/projects/xming/) or [VcsXrv](https://sourceforge.net/projects/vcxsrv/) (recommended).
 2. Check your WSL version. Open a Powershell or CMD window and input `wsl -l -v`.
 3. If your WSL version is 1, set `export DISPLAY=localhost:0.0` (add to `~/.bashrc` to make permanent). If you WSL is version 2, set `export DISPLAY=$(cat /etc/resolv.conf | grep nameserver | awk '{print $2}'):0` and add `-ac` to your X-server startup commands.
+4. Make sure that your firewall is not blocking any connections to WSL. This can be done by the following PowerShell script `Set-NetFirewallProfile -Name public -DisabledInterfaceAliases "vEthernet (WSL)`. 
 
 ### Linux/WSL
 Make sure to install tkinter via `sudo apt-get update` and `sudo apt-get install python3-tk`.

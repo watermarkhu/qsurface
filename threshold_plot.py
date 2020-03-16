@@ -24,11 +24,11 @@ def plot_style(ax, title=None, xlabel=None, ylabel=None, **kwargs):
 def plot_thresholds(
     data,
     plot_title="",               # Plot title
-    fig_path="",
+    output="",
     modified_ansatz=False,
-    data_select=False,
+    latts=[],
+    probs=[],
     show_plot=True,             # show plotted figure
-    save_result=True,
     ax0=None,                   # axis object of error fit plot
     ax1=None,                   # axis object of rescaled fit plot
     par=None,
@@ -42,15 +42,16 @@ def plot_thresholds(
     apply fit and get parameter
     '''
     if par is None:
-        par = fit_data(data, modified_ansatz, data_select)
+        (fitL, fitp, fitN, fitt), par = fit_data(data, modified_ansatz, latts, probs)
+    else:
+        fitL, fitp, fitN, fitt = get_data(data, latts, probs)
+
 
     fit_func = get_fit_func(modified_ansatz)
 
     '''
     Plot and fit thresholds for a given dataset. Data is inputted as four lists for L, P, N and t.
     '''
-
-    fitL, fitp, fitN, fitt = get_data(data, data_select)
 
     if ax0 is None:
         f0, ax0 = plt.subplots()
@@ -125,14 +126,15 @@ def plot_thresholds(
     if show_plot:
         plt.show()
 
-    if save_result:
-        f0.savefig(fig_path, transparent=True, format="pdf", bbox_inches="tight")
+    if output:
+        if output [-4:] != ".pdf": output += ".pdf"
+        f0.savefig(output, transparent=True, format="pdf", bbox_inches="tight")
 
 
 if __name__ == "__main__":
 
     import argparse
-    from oopsc import add_args
+    from oopsc import add_kwargs
 
     parser = argparse.ArgumentParser(
         prog="threshold_fit",
@@ -143,24 +145,20 @@ if __name__ == "__main__":
     parser.add_argument("file_name",
         action="store",
         type=str,
-        help="file name of csv data (without extension)",
+        help="file name of csv data (with extension)",
         metavar="file_name",
     )
 
     key_arguments = [
-        ["-ds", "--data_select", "store", "selective plot data - {even/odd}", dict(type=str, choices=["even", "odd"], metavar="")],
-        ["-l", "--lattices", "store", "lattice sizes - verbose list int", dict(type=int, nargs='*', metavar="")],
+        ["-p", "--probs", "store", "p items to plot - verbose list", dict(type=float, nargs='*', metavar="")],
+        ["-l", "--latts", "store", "L items to plot - verbose list", dict(type=float, nargs='*', metavar="")],
         ["-ma", "--modified_ansatz", "store_true", "use modified ansatz - toggle", dict()],
-        ["-s", "--save_result", "store_true", "save results - toggle", dict()],
-        ["-pt", "--plot_title", "store", "plot filename - toggle", dict(default="")],
-        ["-f", "--folder", "store", "base folder path - toggle", dict(default="./")],
+        ["-o", "--output", "store", "output file name", dict(type=str, default="", metavar="")],
+        ["-pt", "--plot_title", "store", "plot filename", dict(type=str, default="", metavar="")],
     ]
 
-    add_args(parser, key_arguments)
+    add_kwargs(parser, key_arguments)
     args=vars(parser.parse_args())
 
-    folder = args.pop("folder")
-    name = args.pop("file_name")
-    data = read_data(folder + "data/" + name + ".csv", args.pop("lattices"))
-    fig_path = folder + "figures/" + name + ".pdf"
-    plot_thresholds(data, fig_path=fig_path, **args)
+    data = read_data(args.pop("file_name"))
+    plot_thresholds(data, **args)

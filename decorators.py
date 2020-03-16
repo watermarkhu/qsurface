@@ -245,11 +245,12 @@ class debug(object):
         def decorator_repeat(func):
             @functools.wraps(func)
             def wrapper_repeat(self, *args, **kwargs):
-                self.t0 = time.time()
+
+                t0 = time.process_time()
 
                 value = func(self, *args, **kwargs)
 
-                self.clist["time"].append(time.time() - self.t0)
+                self.clist["time"].append(time.process_time() - t0)
 
                 for key, value in self.counters.items():
                     self.clist[key].append(value)

@@ -313,7 +313,12 @@ def default_config(**kwargs):
     return config
 
 
-def add_args(parser, args, group_name=None, description=None):
+def add_args(parser, args):
+    for name, action, type, help, metavar in args:
+        parser.add_argument(name, action=action, type=type, help=help, metavar=metavar)
+
+
+def add_kwargs(parser, args, group_name=None, description=None):
 
     if group_name:
         parser = parser.add_argument_group(group_name, description)
@@ -377,9 +382,9 @@ if __name__ == "__main__":
         ["-zd", "--z_distance", "store", "distance between z layers in 3D plot - int/float", dict(type=int, default=2, metavar="")],
     ]
 
-    add_args(parser, sim_arguments, "simulation", "arguments for simulation")
-    add_args(parser, decoder_arguments, "decoder", "arguments for decoder")
-    add_args(parser, plot_arguments, "figure", "arguments for plotting")
+    add_kwargs(parser, sim_arguments, "simulation", "arguments for simulation")
+    add_kwargs(parser, decoder_arguments, "decoder", "arguments for decoder")
+    add_kwargs(parser, plot_arguments, "figure", "arguments for plotting")
 
 
     args=vars(parser.parse_args())

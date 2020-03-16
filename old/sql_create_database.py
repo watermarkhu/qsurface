@@ -45,7 +45,7 @@ def new_database(host_name, user_name, user_password, database_name):
 if __name__ == "__main__":
 
     import argparse
-    from oopsc import add_args
+    from oopsc import add_kwargs
 
     parser = argparse.ArgumentParser(
         prog="mysql creator",
@@ -65,6 +65,6 @@ if __name__ == "__main__":
         ["-pw", "--user_password", "store", "login password", dict(metavar="")]
         ]
 
-    add_args(parser, key_arguments)
+    add_kwargs(parser, key_arguments)
     args=vars(parser.parse_args())
     new_database(**args)

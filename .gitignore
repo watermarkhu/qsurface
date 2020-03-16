@@ -7,6 +7,12 @@
 *.pkl
 *.csv
 *.txt
+
+.python-version
+
+Simulations
+Simulations/
+
 __pycache__/
 errors/
 figures/

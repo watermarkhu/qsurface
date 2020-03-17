@@ -16,7 +16,6 @@ def writeline(path, worker, line, type="a"):
         return
     f = open(file, type)
     f.write(line + "\n")
-    # print(line)
     f.close()
 
 
@@ -44,6 +43,7 @@ def get_columns():
         "ctd_v",
     ]
     return columns
+
 
 def connect_database(database):
     database_username = 'root'
@@ -103,8 +103,8 @@ def check_row_exists(con, tablename, L, p):
 
 
 def multiple(
-    sql_database,
     path,
+    database,
     graph,
     size,
     config,
@@ -146,20 +146,24 @@ def multiple(
 
     data = dict(L=size, p=paulix, **output)
 
+    print(",".join([str(x) for x in data.values()]))
+
     # Write to csv file
-    values = [str(data[key]) for key in get_columns()]
-    writeline(path, worker, ",".join(values))
+    if path:
+        values = [str(data[key]) for key in get_columns()]
+        writeline(path, worker, ",".join(values))
 
     # Save to SQL database
-    table = f"N{worker}"
-    con = connect_database(sql_database)
-    insert_database(con, table, data)
-    con.close()
+    if database:
+        table = f"N{worker}"
+        con = connect_database(database)
+        insert_database(con, table, data)
+        con.close()
 
 
 def multiprocess(
         path,
-        sql_database,
+        database,
         graph,
         size,
         config,
@@ -179,7 +183,7 @@ def multiprocess(
         workers.append(
             mp.Process(
                 target=multiple,
-                args=(sql_database, path, g, size, config, process_iters),
+                args=(path, database, g, size, config, process_iters),
                 kwargs=dict(worker=i, **kwargs),
             )
         )
@@ -194,7 +198,6 @@ def multiprocess(
 
 def run_thresholds(
         decoder,
-        sql_database,
         node=0,
         lattice_type="toric",
         lattices = [],
@@ -202,7 +205,8 @@ def run_thresholds(
         iters = 0,
         processes=1,
         measurement_error=False,
-        output="./",
+        database="",
+        outputfolder="",
         P_store=1000,
         debug=False,
         **kwargs
@@ -227,16 +231,20 @@ def run_thresholds(
 
 
     # Create output files
-    path = output + "/" + sql_database + "N"
-    for i, _ in enumerate(range(processes), node*processes):
-        writeline(path, i, ",".join(get_columns()), type="w")
+    if outputfolder:
+        path = outputfolder + "/" + database + "N"
+        for i, _ in enumerate(range(processes), node*processes):
+            writeline(path, i, ",".join(get_columns()), type="w")
+    else:
+        path = ""
 
     # Create SQL tables
-    con = connect_database(sql_database)
-    for i in range(processes):
-        p = i + node*processes
-        create_table(con, f"N{p}")
-    con.close()
+    if database:
+        con = connect_database(database)
+        for i in range(processes):
+            p = i + node*processes
+            create_table(con, f"N{p}")
+        con.close()
 
 
     # Simulate and save results to file
@@ -257,7 +265,7 @@ def run_thresholds(
             if measurement_error:
                 oopsc_args.update(measurex=pi)
 
-            multiprocess(path, sql_database, graph, lati, config, iters, processes, node, **oopsc_args)
+            multiprocess(path, database, graph, lati, config, iters, processes, node, **oopsc_args)
 
 
 if __name__ == "__main__":
@@ -272,7 +280,6 @@ if __name__ == "__main__":
     )
 
     args = [
-        ["sql_database", "store", str, "sql database name", "sql"],
         ["node", "store", int, "node number", "node"],
         ["processes", "store", int, "number of processes", "processes"],
         ["decoder", "store", str, "type of decoder - {mwpm/uf/eg}", "d"],
@@ -288,6 +295,8 @@ if __name__ == "__main__":
     ]
 
     key_arguments = [
+        ["-sql", "--database", "store", "sql database name", dict(type=str, default="", metavar="")],
+        ["-of", "--outputfolder", "store", "output folder", dict(type=str, default="", metavar="")],
         ["-me", "--measurement_error", "store_true", "enable measurement error (2+1D) - toggle", dict()],
         ["-pb", "--progressbar", "store_true", "enable progressbar - toggle", dict()],
         ["-dgc", "--dg_connections", "store_true", "use dg_connections pre-union processing - toggle", dict()],
@@ -300,8 +309,6 @@ if __name__ == "__main__":
 
     args=vars(parser.parse_args())
     decoder = args.pop("decoder")
-    sql_database = args.pop("sql_database")
-
 
     if decoder == "mwpm":
         import mwpm as decode
@@ -318,4 +325,4 @@ if __name__ == "__main__":
             print(f"{'_'*75}\n\nusing dg_connections pre-union processing")
 
 
-    run_thresholds(decode, sql_database, **args)
+    run_thresholds(decode, **args)

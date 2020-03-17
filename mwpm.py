@@ -160,12 +160,12 @@ class planar(toric):
     Additionally, virtual anyons are added to the boundary, which connect to their main anyons.
     Edges between all virtual anyons are added with weight zero.
     '''
-
+    
+    @debug.get_counters()
     def decode(self):
         '''
         Decode functions for the MWPM planar decoder
         '''
-        self.t0 = time.time()
         self.get_matching()
         self.remove_virtual()
         self.apply_matching()

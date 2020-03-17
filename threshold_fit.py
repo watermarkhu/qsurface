@@ -26,13 +26,12 @@ def get_data(data, latts, probs, P_store=1):
 
     fitdata = [[] for i in range(4)]
     for L, P, N, t in zip(fitL, fitp, fitN, fitt):
-        p = P/P_store
+        p = round(float(P)/P_store, 6)
         if all([N != 0, not latts or L in latts, not probs or p in probs]):
             fitdata[0].append(L)
             fitdata[1].append(p)
             fitdata[2].append(N)
             fitdata[3].append(t)
-
 
     return fitdata[0], fitdata[1], fitdata[2], fitdata[3]
 

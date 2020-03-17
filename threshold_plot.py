@@ -1,5 +1,6 @@
 from collections import defaultdict
 import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
 import numpy as np
 from threshold_fit import get_data, get_fit_func, fit_data, read_data
 
@@ -21,6 +22,10 @@ def plot_style(ax, title=None, xlabel=None, ylabel=None, **kwargs):
     ax.spines["left"].set_visible(False)
 
 
+def get_markers():
+    return ["o", "s", "v", "D", "p", "^", "h", "X", "<", "P", "*", ">", "H", "d", 4, 5, 6, 7, 8, 9, 10, 11]
+
+
 def plot_thresholds(
     data,
     plot_title="",               # Plot title
@@ -33,6 +38,9 @@ def plot_thresholds(
     ax1=None,                   # axis object of rescaled fit plot
     par=None,
     lattices=None,
+    ms=5,
+    ymax=1,
+    ymin=0.5,
 ):
 
     styles=[".", "-"]           # linestyles for data and fit
@@ -66,24 +74,42 @@ def plot_thresholds(
         lattices = sorted(set(fitL))
 
     colors = {lati:f"C{i%10}" for i, lati in enumerate(lattices)}
+    markerlist = get_markers()
+    markers = {lati: markerlist[i%len(markerlist)] for i, lati in enumerate(lattices)}
+    legend = []
 
     for i, lati in enumerate(lattices):
         fp, fN, fs = map(list, zip(*sorted(LP[lati], key=lambda k: k[0])))
         ft = [si / ni for si, ni in zip(fs, fN)]
         ax0.plot(
-            [q * 100 for q in fp], ft, styles[0], color=colors[lati], ms=5
+            [q * 100 for q in fp], ft, styles[0],
+            color=colors[lati],
+            marker=markers[lati],
+            ms=ms,
+            fillstyle="none",
         )
         X = np.linspace(min(fp), max(fp), plotn)
         ax0.plot(
             [x * 100 for x in X],
             [fit_func((x, lati), *par) for x in X],
             "-",
-            label="L = {}".format(lati),
             color=colors[lati],
             lw=1.5,
             alpha=0.6,
             ls=styles[1],
         )
+
+        legend.append(Line2D(
+            [0],
+            [0],
+            ls=styles[1],
+            label="L = {}".format(lati),
+            color=colors[lati],
+            marker=markers[lati],
+            ms=ms,
+            fillstyle="none"
+        ))
+
 
     DS = fit_func((par[0], 20), *par)
 
@@ -97,8 +123,8 @@ def plot_thresholds(
     )
 
     plot_style(ax0, "Threshold of " + plot_title, "probability of Pauli X error (%)", "decoding success rate")
-    ax0.set_ylim(0.5, 1)
-    ax0.legend()
+    ax0.set_ylim(ymin, ymax)
+    ax0.legend(handles=legend, loc="lower left", ncol=2)
 
     ''' Plot using the rescaled error rate'''
 
@@ -110,6 +136,9 @@ def plot_thresholds(
                     t / N - par[4] * L ** (-1 / par[6]),
                     ".",
                     color=colors[L],
+                    marker=markers[L],
+                    ms=ms,
+                    fillstyle="none",
                 )
             else:
                 plt.plot(
@@ -117,9 +146,13 @@ def plot_thresholds(
                     t / N,
                     ".",
                     color=colors[L],
+                    marker=markers[L],
+                    ms=ms,
+                    fillstyle="none",
                 )
     x = np.linspace(*plt.xlim(), plotn)
     ax1.plot(x, par[1] + par[2] * x + par[3] * x ** 2, "--", color="C0", alpha=0.5)
+    ax1.legend(handles=legend, loc="lower left", ncol=2)
 
     plot_style(ax1, "Modified curve " + plot_title, "Rescaled error rate", "Modified succces probability")
 
@@ -155,6 +188,9 @@ if __name__ == "__main__":
         ["-ma", "--modified_ansatz", "store_true", "use modified ansatz - toggle", dict()],
         ["-o", "--output", "store", "output file name", dict(type=str, default="", metavar="")],
         ["-pt", "--plot_title", "store", "plot filename", dict(type=str, default="", metavar="")],
+        ["-ymin", "--ymin", "store", "limit yaxis min", dict(type=float, default=0.5, metavar="")],
+        ["-ymax", "--ymax", "store", "limit yaxis max", dict(type=float, default=1, metavar="")],
+
     ]
 
     add_kwargs(parser, key_arguments)

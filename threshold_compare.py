@@ -8,10 +8,12 @@ _____________________________________________
 import matplotlib.pyplot as plt
 from threshold_fit import read_data
 from matplotlib.lines import Line2D
-from threshold_plot import plot_style
+from threshold_plot import plot_style, get_markers
 
 
-def plot_compare(csv_names, xaxis, probs, latts, feature, plot_error, dim, xm, output, **kwargs):
+def plot_compare(csv_names, xaxis, probs, latts, feature, plot_error, dim, xm, ms, output, **kwargs):
+
+    markers = get_markers()
 
     xchoice = dict(p="p", P="p", l="L", L="L")
     ychoice = dict(p="L", P="L", l="p", L="p")
@@ -42,8 +44,9 @@ def plot_compare(csv_names, xaxis, probs, latts, feature, plot_error, dim, xm, o
 
         ls = linestyles[i%len(linestyles)]
 
-        for ylabel in ylabels:
+        for j, ylabel in enumerate(ylabels):
 
+            marker = markers[j % len(markers)]
             color = colors[ylabel]
 
             d = df.loc[df.index.get_level_values(ychoice) == ylabel]
@@ -66,9 +69,9 @@ def plot_compare(csv_names, xaxis, probs, latts, feature, plot_error, dim, xm, o
                 X = [x**dim for x in X]
 
             if i == 0:
-                plt.plot(X, Y, ls=ls, c=color, label=f"{ychoice}={ylabel}")
+                plt.plot(X, Y, ls=ls, c=color, marker=marker, ms=ms, fillstyle="none", label=f"{ychoice}={ylabel}")
             else:
-                plt.plot(X, Y, ls=ls, c=color)
+                plt.plot(X, Y, ls=ls, c=color, marker=marker, ms=ms, fillstyle="none")
 
             if plot_error and f"{feature}_v" in d:
                 E = list(d.loc[:, f"{feature}_v"])
@@ -96,8 +99,8 @@ if __name__ == "__main__":
     from oopsc import add_kwargs
 
     parser = argparse.ArgumentParser(
-        prog="mysql creator",
-        description="creates a mysql database",
+        prog="threshold_compare",
+        description="can compare thresholds and other paramters of different sims",
     )
 
     parser.add_argument("feature",
@@ -121,6 +124,7 @@ if __name__ == "__main__":
         ["-e", "--plot_error", "store_true", "plot standard deviation - toggle", dict()],
         ["-a", "--average", "store_true", "average p - toggle", dict()],
         ["-d", "--dim", "store", "dimension", dict(type=int, default=1, metavar="")],
+        ["-ms", "--ms", "store", "markersize", dict(type=int, default=5, metavar="")],
         ["-m", "--xm", "store", "x axis multiplier", dict(type=int, default=1, metavar="")],
         ["-o", "--output", "store", "output file name", dict(type=str, default="", metavar="")],
     ]

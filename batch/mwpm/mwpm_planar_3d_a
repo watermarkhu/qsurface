@@ -1,0 +1,24 @@
+#!/bin/bash
+
+i=$1
+iter=$2
+
+name=mwpm_toric_2d
+shared=/scratch-shared/tmp.zp8w9ZGXKp
+folder=$TMPDIR
+
+mkdir -p $shared/$name
+# folder=$HOME
+
+cd $folder
+git clone https://github.com/watermarkhu/oop_surface_code
+
+cd oop_surface_code
+git checkout batch
+
+cd blossom5
+make
+
+cd ..
+# pyenv local 3.7.4
+python threshold_batchsql.py $i 24 mwpm planar $iter -l 8 10 12 14 16 18 -p 0.026 0.0265 0.027 0.0275 0.028 0.0285 0.029 0.0295 0.03 0.0305 0.031 0.0315 0.032 -sql $name -of $shared/$name -me -db

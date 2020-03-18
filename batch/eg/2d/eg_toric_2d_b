@@ -1,0 +1,20 @@
+#!/bin/bash
+#SBATCH --constraint=haswell -N 4 -t 4:00:00
+
+module load 2019
+module load Python/3.7.5-foss-2018b
+
+name=eg_toric_2d
+nodes=4
+iters=28800
+shared=/scratch-shared/tmp.zp8w9ZGXKp
+
+let iter=$iters/$nodes
+mkdir -p $shared/$name
+
+for (( i=0; i<$nodes; i++)); do
+(
+srun -N 1 python $HOME/oop_surface_code/threshold_batchsql.py $i 24 eg toric $iter -l 80 88 96 -p 0.0995 0.1005 0.1015 0.1025 0.1035 -sql $name -of $shared/$name -db
+)&
+done
+wait

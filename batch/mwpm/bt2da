@@ -1,0 +1,17 @@
+#!/bin/bash
+#SBATCH --constraint=haswell -N 4 -t 7:00:00
+
+module load 2019
+module load Python/3.7.5-foss-2018b
+
+nodes=4
+iters=52800
+
+let iter=$iters/$nodes
+
+for (( i=0; i<$nodes; i++)); do
+(
+srun -N 1 bash $HOME/scripts/mwpm_toric_2d_a $i $iter
+)&
+done
+wait

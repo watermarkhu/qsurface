@@ -1,0 +1,21 @@
+#!/bin/bash
+#SBATCH --constraint=haswell -N 4 -t 6:00:00
+
+module load 2019
+module load Python/3.7.5-foss-2018b
+
+name=eg_planar_3d
+nodes=4
+iters=33600
+shared=/scratch-shared/tmp.zp8w9ZGXKp
+
+let iter=$iters/$nodes
+
+mkdir -p $shared/$name
+
+for (( i=0; i<$nodes; i++)); do
+(
+srun -N 1 python $HOME/oop_surface_code/threshold_batchsql.py $i 24 eg planar $iter -l 40 44 -p 0.025 0.02533 0.02567 0.026 0.02633 0.02667 0.027 0.02733 0.02767 0.028 -sql $name -of $shared/$name -me -db
+)&
+done
+wait

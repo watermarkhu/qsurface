@@ -1,0 +1,20 @@
+#!/bin/bash
+#SBATCH --constraint=haswell -N 4 -t 20:00:00
+
+module load 2019
+module load Python/3.7.5-foss-2018b
+
+name=uf_toric_2d
+nodes=4
+iters=96000
+shared=/scratch-shared/tmp.zp8w9ZGXKp
+
+let iter=$iters/$nodes
+mkdir -p $shared/$name
+
+for (( i=0; i<$nodes; i++)); do
+(
+srun -N 1 python $HOME/oop_surface_code/threshold_batchsql.py $i 24 uf toric $iter -l 8 16 24 32 40 48 56 64 72 80 88 96 104 112 120 128 -p 0.098 0.09833 0.09867 0.099 0.09933 0.09967 0.1 0.10033 0.10067 0.101 0.10133 0.10167 0.102 -sql $name -of $shared/$name -db
+)&
+done
+wait

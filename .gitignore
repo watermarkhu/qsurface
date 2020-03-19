@@ -18,7 +18,6 @@ errors/
 figures/
 data/
 logs/
-batch/
 srun_test/
 .idea/
 !requirements.txt

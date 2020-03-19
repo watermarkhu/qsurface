@@ -11,7 +11,7 @@ def read_data(file_path):
 
     except FileNotFoundError:
         print("File not found")
-        quit()
+        exit()
 
 
 def get_data(data, latts, probs, P_store=1):

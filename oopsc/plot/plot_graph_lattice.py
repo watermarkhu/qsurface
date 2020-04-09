@@ -17,7 +17,7 @@ from collections import defaultdict as dd
 from matplotlib import pyplot as plt
 from matplotlib.lines import Line2D
 from matplotlib.widgets import Button, RadioButtons
-import printing as pr
+from ..info import printing as pr
 from time import time
 import random
 

@@ -12,8 +12,7 @@ Contains decorator classes and method for:
 
 import functools
 import time
-import printing as pr
-
+from . import printing as pr
 
 class plot(object):
     '''
@@ -207,7 +206,7 @@ class debug(object):
             graph.decoder.clist[key] = []
 
 
-    def init_counters_eg():
+    def init_counters_bb():
         '''
         Initializes counters for evengrow classes
         '''

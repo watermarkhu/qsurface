@@ -103,7 +103,7 @@ def fit_data(data, modified_ansatz=False, latts=[], probs=[], P_store=1):
 if __name__ == "__main__":
 
     import argparse
-    from oopsc import add_kwargs
+    from run_oopsc import add_kwargs
 
     parser = argparse.ArgumentParser(
         prog="threshold_fit",

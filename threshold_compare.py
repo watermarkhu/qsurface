@@ -165,7 +165,7 @@ def plot_compare(csv_names, xaxis, probs, latts, feature, plot_error, dim, xm, m
 if __name__ == "__main__":
 
     import argparse
-    from oopsc import add_kwargs
+    from run_oopsc import add_kwargs
 
     parser = argparse.ArgumentParser(
         prog="threshold_compare",

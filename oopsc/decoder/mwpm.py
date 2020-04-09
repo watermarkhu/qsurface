@@ -11,10 +11,8 @@ Uses either Kolmogorov's Blossom 5 algorithm in C (requires linux, wsl, or some 
 
 The C implementation (in folder blossom5) is highly recommended as it evidently much faster than the networkx version.
 '''
-import blossom5.pyMatch as pm
-# import networkx as nx
-import time
-from decorators import debug
+from .blossom5 import pyMatch as pm
+from ..info.decorators import debug
 
 
 class toric(object):
@@ -160,7 +158,7 @@ class planar(toric):
     Additionally, virtual anyons are added to the boundary, which connect to their main anyons.
     Edges between all virtual anyons are added with weight zero.
     '''
-    
+
     @debug.get_counters()
     def decode(self):
         '''

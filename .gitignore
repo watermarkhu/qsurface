@@ -10,6 +10,8 @@
 
 .python-version
 
+simulations
+simulations/
 Simulations
 Simulations/
 
@@ -20,4 +22,5 @@ data/
 logs/
 srun_test/
 .idea/
+.python-version
 !requirements.txt

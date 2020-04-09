@@ -20,8 +20,8 @@ Qubits: qID (td, y, x)          Stabilizers: sID (ertype, y, x)
 
 The 2D graph (toric/planar) is a square lattice with 1 layer of these unit cells.
 '''
-import plot_graph_lattice as pgl
-import plot_unionfind as puf
+from ..plot import plot_graph_lattice as pgl
+from ..plot import plot_unionfind as puf
 import random
 
 

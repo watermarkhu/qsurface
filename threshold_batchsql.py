@@ -114,8 +114,8 @@ def multiple(
     debug=True,
     **kwargs
 ):
-    from oopsc import init_random_seed, single, get_mean_var
-    from decorators import debug as db
+    from oopsc.oopsc import init_random_seed, single, get_mean_var
+    from oopsc.debug.decorators import debug as db
 
 
     """
@@ -218,16 +218,16 @@ def run_thresholds(
     import oopsc
 
     if measurement_error:
-        import graph_3D as go
+        from oopsc.graph import graph_3D as go
     else:
-        import graph_2D as go
+        from oopsc.graph import graph_2D as go
 
     sys.setrecursionlimit(100000)
 
     progressbar = kwargs.pop("progressbar")
 
     int_P = [int(p*P_store) for p in perror]
-    config = oopsc.default_config(**kwargs)
+    config = oopsc.oopsc.default_config(**kwargs)
 
 
     # Create output files
@@ -250,7 +250,7 @@ def run_thresholds(
     # Simulate and save results to file
     for lati in lattices:
 
-        graph = [oopsc.lattice_type(lattice_type, config, decoder, go, lati) for _ in range(processes)]
+        graph = [oopsc.oopsc.lattice_type(lattice_type, config, decoder, go, lati) for _ in range(processes)]
 
         for pi, int_p in zip(perror, int_P):
 
@@ -271,7 +271,7 @@ def run_thresholds(
 if __name__ == "__main__":
 
     import argparse
-    from oopsc import add_args, add_kwargs
+    from run_oopsc import add_args, add_kwargs
 
     parser = argparse.ArgumentParser(
         prog="threshold_run",
@@ -282,7 +282,7 @@ if __name__ == "__main__":
     args = [
         ["node", "store", int, "node number", "node"],
         ["processes", "store", int, "number of processes", "processes"],
-        ["decoder", "store", str, "type of decoder - {mwpm/uf/eg}", "d"],
+        ["decoder", "store", str, "type of decoder - {mwpm/uf/ufbb}", "d"],
         ["lattice_type", "store", str, "type of lattice - {toric/planar}", "lt"],
         ["iters", "store", int, "number of iterations - int", "i"],
     ]
@@ -300,7 +300,7 @@ if __name__ == "__main__":
         ["-me", "--measurement_error", "store_true", "enable measurement error (2+1D) - toggle", dict()],
         ["-pb", "--progressbar", "store_true", "enable progressbar - toggle", dict()],
         ["-dgc", "--dg_connections", "store_true", "use dg_connections pre-union processing - toggle", dict()],
-        ["-dg", "--directed_graph", "store_true", "use directed graph for evengrow - toggle", dict()],
+        ["-dg", "--directed_graph", "store_true", "use directed graph for balanced bloom - toggle", dict()],
         ["-db", "--debug", "store_true", "enable debugging hearistics - toggle", dict()],
     ]
 
@@ -311,18 +311,17 @@ if __name__ == "__main__":
     decoder = args.pop("decoder")
 
     if decoder == "mwpm":
-        import mwpm as decode
+        from oopsc.decoder import mwpm as decode
         print(f"{'_'*75}\n\ndecoder type: minimum weight perfect matching (blossom5)")
     elif decoder == "uf":
-        import unionfind as decode
-        print(f"{'_'*75}\n\ndecoder type: unionfind")
+        from oopsc.decoder import uf as decode
+        print(f"{'_'*75}\n\ndecoder type: union-find")
         if args["dg_connections"]:
             print(f"{'_'*75}\n\nusing dg_connections pre-union processing")
-    elif decoder == "eg":
-        import unionfind_eg as decode
-        print("{}\n\ndecoder type: unionfind evengrow with {} graph".format("_"*75,"directed" if args["directed_graph"] else "undirected"))
+    elif decoder == "ufbb":
+        import ufbb as decode
+        print("{}\n\ndecoder type: union-find balanced bloom with {} graph".format("_"*75,"directed" if args["directed_graph"] else "undirected"))
         if args["dg_connections"]:
             print(f"{'_'*75}\n\nusing dg_connections pre-union processing")
-
 
     run_thresholds(decode, **args)

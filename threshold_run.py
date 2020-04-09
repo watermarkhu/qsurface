@@ -38,12 +38,12 @@ def run_thresholds(
     '''
     ############################################
     '''
-    run_oopsc = oopsc.multiprocess if multithreading else oopsc.multiple
+    run_oopsc = oopsc.oopsc.multiprocess if multithreading else oopsc.oopsc.multiple
 
     if measurement_error:
-        import graph_3D as go
+        from oopsc.graph import graph_3D as go
     else:
-        import graph_2D as go
+        from oopsc.graph import graph_2D as go
 
     sys.setrecursionlimit(100000)
     r = git.Repo(os.path.dirname(__file__))
@@ -68,7 +68,7 @@ def run_thresholds(
 
     data = None
     int_P = [int(p*P_store) for p in perror]
-    config = oopsc.default_config(**kwargs)
+    config = oopsc.oopsc.default_config(**kwargs)
 
     # Simulate and save results to file
     for lati in lattices:
@@ -76,9 +76,9 @@ def run_thresholds(
         if multithreading:
             if threads is None:
                 threads = mp.cpu_count()
-            graph = [oopsc.lattice_type(lattice_type, config, decoder, go, lati) for _ in range(threads)]
+            graph = [oopsc.oopsc.lattice_type(lattice_type, config, decoder, go, lati) for _ in range(threads)]
         else:
-            graph = oopsc.lattice_type(lattice_type, config, decoder, go, lati)
+            graph = oopsc.oopsc.lattice_type(lattice_type, config, decoder, go, lati)
 
         for pi, int_p in zip(perror, int_P):
 
@@ -134,7 +134,7 @@ def run_thresholds(
 if __name__ == "__main__":
 
     import argparse
-    from oopsc import add_args, add_kwargs
+    from run_oopsc import add_args, add_kwargs
 
     parser = argparse.ArgumentParser(
         prog="threshold_run",
@@ -143,12 +143,12 @@ if __name__ == "__main__":
     )
 
     args = [
-        ["decoder", "store", str, "type of decoder - {mwpm/uf/eg}", "d"],
+        ["decoder", "store", str, "type of decoder - {mwpm/uf/ufbb}", "d"],
         ["lattice_type", "store", str, "type of lattice - {toric/planar}", "lt"],
         ["iters", "store", int, "number of iterations - int", "i"],
     ]
     add_args(parser, args)
-    
+
     pos_arguments= [
         ["-l", "--lattices", "store", "lattice sizes - verbose list int", dict(type=int, nargs='*', metavar="", required=True)],
         ["-p", "--perror", "store", "error rates - verbose list float", dict(type=float, nargs='*', metavar="", required=True)],
@@ -167,7 +167,7 @@ if __name__ == "__main__":
         ["-sf", "--subfolder", "store_true", "store figures and data in subfolders - toggle", dict()],
         ["-pb", "--progressbar", "store_true", "enable progressbar - toggle", dict()],
         ["-dgc", "--dg_connections", "store_true", "use dg_connections pre-union processing - toggle", dict()],
-        ["-dg", "--directed_graph", "store_true", "use directed graph for evengrow - toggle", dict()],
+        ["-dg", "--directed_graph", "store_true", "use directed graph for balanced bloom - toggle", dict()],
         ["-db", "--debug", "store_true", "enable debugging hearistics - toggle", dict()],
     ]
 
@@ -177,18 +177,17 @@ if __name__ == "__main__":
     args=vars(parser.parse_args())
     decoder = args.pop("decoder")
 
-
     if decoder == "mwpm":
         import mwpm as decode
         print(f"{'_'*75}\n\ndecoder type: minimum weight perfect matching (blossom5)")
     elif decoder == "uf":
-        import unionfind as decode
-        print(f"{'_'*75}\n\ndecoder type: unionfind")
+        import uf as decode
+        print(f"{'_'*75}\n\ndecoder type: union-find")
         if args["dg_connections"]:
             print(f"{'_'*75}\n\nusing dg_connections pre-union processing")
-    elif decoder == "eg":
-        import unionfind_eg as decode
-        print("{}\n\ndecoder type: unionfind evengrow with {} graph".format("_"*75,"directed" if args["directed_graph"] else "undirected"))
+    elif decoder == "ufbb":
+        import ufbb as decode
+        print("{}\n\ndecoder type: union-find balanced bloom with {} graph".format("_"*75,"directed" if args["directed_graph"] else "undirected"))
         if args["dg_connections"]:
             print(f"{'_'*75}\n\nusing dg_connections pre-union processing")
 

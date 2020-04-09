@@ -27,7 +27,7 @@ def get_markers():
 
 
 def plot_thresholds(
-    csv_names,
+    data,
     plot_title="",               # Plot title
     output="",
     modified_ansatz=False,

@@ -92,7 +92,7 @@ def plot_compare(csv_names, xaxis, probs, latts, feature, plot_error, dim, xm, m
         ylabels = sorted(list(ylabels))
 
 
-    colors = {ind: f"C{i}" for i, ind in enumerate(ylabels)}
+    colors = {ind: f"C{i%10}" for i, ind in enumerate(ylabels)}
 
     xset = set()
     for i, df in enumerate(data):

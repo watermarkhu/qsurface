@@ -12,8 +12,7 @@ Contains decorator classes and method for:
 
 import functools
 import time
-import printing as pr
-
+from . import printing as pr
 
 class plot(object):
     '''
@@ -207,7 +206,7 @@ class debug(object):
             graph.decoder.clist[key] = []
 
 
-    def init_counters_eg():
+    def init_counters_bb():
         '''
         Initializes counters for evengrow classes
         '''
@@ -245,11 +244,12 @@ class debug(object):
         def decorator_repeat(func):
             @functools.wraps(func)
             def wrapper_repeat(self, *args, **kwargs):
-                self.t0 = time.time()
+
+                t0 = time.process_time()
 
                 value = func(self, *args, **kwargs)
 
-                self.clist["time"].append(time.time() - self.t0)
+                self.clist["time"].append(time.process_time() - t0)
 
                 for key, value in self.counters.items():
                     self.clist[key].append(value)

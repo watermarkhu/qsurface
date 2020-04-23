@@ -5,17 +5,9 @@ www.github.com/watermarkhu/oop_surface_code
 _____________________________________________
 
 '''
-
-from threshold.threshold import simulation
+from oopsc.threshold import sim_thresholds
 import argparse
-
-
-def add_args(parser, args, group_name=None, description=None):
-
-    if group_name:
-        parser = parser.add_argument_group(group_name, description)
-    for sid, lid, action, help, kwargs in args:
-        parser.add_argument(sid, lid, action=action, help=help, **kwargs)
+from run_oopsc import add_args
 
 
 parser = argparse.ArgumentParser(
@@ -84,4 +76,4 @@ elif decoder == "ufbb":
     if args["dg_connections"]:
         print(f"{'_'*75}\n\nusing dg_connections pre-union processing")
 
-simulation(decode, **args)
+sim_thresholds(decode, **args)

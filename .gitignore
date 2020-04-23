@@ -16,3 +16,4 @@ batch/
 .idea/
 .python-version
 !requirements.txt
+simulations

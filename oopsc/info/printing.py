@@ -31,6 +31,7 @@ def print_configuration(config, iters, **kwargs):
     # pprint(config)
     print()
 
+
 def print_graph(graph, clusters=None, prestring="", poststring=None, printmerged=1, include_even=0, return_string=False):
     """
     :param clusters     either None or a list of clusters

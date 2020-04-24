@@ -57,7 +57,6 @@ key_arguments = [
 ]
 
 add_args(parser, key_arguments)
-
 args=vars(parser.parse_args())
 decoder = args.pop("decoder")
 

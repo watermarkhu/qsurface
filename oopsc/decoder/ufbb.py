@@ -37,7 +37,7 @@ class toric(uf.toric):
         fully_grown_edge()          Joint of base-trees, save root_node of cluster
         edge_growth_choices()       Copy cluster node to new vertices
     '''
-    def __init__(self, *args, **kwargs):
+    def __init__(self, *args, fbloom=.5, **kwargs):
         '''
         Optionally acceps config dict which contains plotting options.
         Counters for decoder specific heuristics are initialized.
@@ -47,12 +47,12 @@ class toric(uf.toric):
         self.type = "ufbb"
         if self.directed_graph:
             self.grow_boundary = self.grow_boundary_directed
-            from ..balancedbloom import directed as bb
+            from .balancedbloom import directed as bb
         else:
             self.grow_boundary = self.grow_boundary_undirected
-            from ..balancedbloom import undirected as bb
+            from .balancedbloom import undirected as bb
 
-        self.bb = bb.bb()
+        self.bb = bb.nodeset(fbloom)
 
         self.plot_growth = not any([self.plot_bucket, self.plot_cluster, self.plot_node])
 

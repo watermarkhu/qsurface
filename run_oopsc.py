@@ -42,6 +42,7 @@ if __name__ == "__main__":
     ]
 
     decoder_arguments = [
+        ["-fb", "--fbloom", "store", "pdc minimization paramter fbloom - float {0,1}",  dict(type=float, default=0.5, metavar="")],
         ["-dgc", "--dg_connections", "store_true", "use dg_connections pre-union processing - toggle", dict()],
         ["-dg", "--directed_graph", "store_true", "use directed graph for balanced bloom - toggle", dict()],
         ["-db", "--debug", "store_true", "enable debugging hearistics - toggle", dict()]

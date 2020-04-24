@@ -13,6 +13,7 @@ The C implementation (in folder blossom5) is highly recommended as it evidently 
 '''
 from .blossom5 import pyMatch as pm
 from ..info.decorators import debug
+import time
 
 
 class toric(object):

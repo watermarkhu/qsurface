@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 import numpy as np
-from ..threshold_fit import get_data, get_fit_func, fit_data, read_data
+from threshold_fit import get_data, get_fit_func, fit_data, read_data
 
 def plot_style(ax, title=None, xlabel=None, ylabel=None, **kwargs):
     ax.grid(linestyle=':', linewidth=.5)

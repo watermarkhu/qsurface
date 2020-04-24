@@ -24,3 +24,4 @@ srun_test/
 .idea/
 .python-version
 !requirements.txt
+simulations

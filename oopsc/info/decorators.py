@@ -131,7 +131,7 @@ class plot(object):
             @functools.wraps(func)
             def wrapper_repeat(self, cluster, node, *args, **kwargs):
                 if cluster.root_node.calc_delay and self.print_steps:
-                    if type(cluster.root_node.calc_delay) == list:
+                    if type(cluster.root_node.calc_delay[0]) == list:
                         calc_nodes = [node.short_id() for node, edge, ancestor in cluster.root_node.calc_delay]
                         print_tree = False
                     else:

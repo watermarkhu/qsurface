@@ -65,7 +65,7 @@ class plot_2D(gp.plot_2D):
         Initilizes a 2D plot of torc/planar uf-lattice
         '''
         plt.sca(self.ax)
-        self.init_axis(0, self.size)
+        self.init_axis(0-.2, self.size+.2)
         plt.setp(self.rax, visible=0)
 
         for qubit in self.graph.Q[z].values():

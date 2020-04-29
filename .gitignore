@@ -15,5 +15,6 @@ logs/
 batch/
 .idea/
 .python-version
+.vscode/
 !requirements.txt
 simulations

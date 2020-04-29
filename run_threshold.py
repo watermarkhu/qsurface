@@ -45,15 +45,16 @@ key_arguments = [
     ["-nt", "--threads", "store", "number of threads", dict(type=int, metavar="")],
     ["-ma", "--modified_ansatz", "store_true", "use modified ansatz - toggle", dict()],
     ["-s", "--save_result", "store_true", "save results - toggle", dict()],
-    ["-sp", "--show_plot", "store_true", "show plot - toggle", dict()],
     ["-fn", "--file_name", "store", "plot filename - toggle", dict(default="thres", metavar="")],
+    ["-sp", "--show_plot", "store_true", "show plot - toggle", dict()],
     ["-pt", "--plot_title", "store", "plot filename - toggle", dict(default="", metavar="")],
     ["-f", "--folder", "store", "base folder path - toggle", dict(default="./", metavar="")],
     ["-sf", "--subfolder", "store_true", "store figures and data in subfolders - toggle", dict()],
     ["-pb", "--progressbar", "store_true", "enable progressbar - toggle", dict()],
+    ["-fb", "--fbloom", "store", "pdc minimization parameter fbloom - float {0,1}",  dict(type=float, default=0.5, metavar="")],
     ["-dgc", "--dg_connections", "store_true", "use dg_connections pre-union processing - toggle", dict()],
     ["-dg", "--directed_graph", "store_true", "use directed graph for evengrow - toggle", dict()],
-    ["-db", "--debug", "store_true", "enable debugging hearistics - toggle", dict()],
+    ["-db", "--debug", "store_true", "enable debugging heuristics - toggle", dict()],
 ]
 
 add_args(parser, key_arguments)

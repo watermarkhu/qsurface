@@ -228,8 +228,10 @@ def sim_thresholds(
         show_plot=False,
         plot_title=None,
         folder = "./",
+        subfolder=False,
         P_store=1000,
         debug=False,
+        progressbar=False,
         **kwargs
         ):
     '''
@@ -253,11 +255,10 @@ def sim_thresholds(
     if not plot_title:
         plot_title = full_name
 
-
     if not os.path.exists(folder):
         os.makedirs(folder)
 
-    if kwargs.pop("subfolder"):
+    if subfolder:
         os.makedirs(folder + "/data/", exist_ok=True)
         os.makedirs(folder + "/figures/", exist_ok=True)
         file_path = folder + "/data/" + full_name + ".csv"
@@ -265,8 +266,6 @@ def sim_thresholds(
     else:
         file_path = folder + "/" + full_name + ".csv"
         fig_path = folder + "/" + full_name + ".pdf"
-
-    progressbar = kwargs.pop("progressbar")
 
     data = None
     int_P = [int(p*P_store) for p in perror]

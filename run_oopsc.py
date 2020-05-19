@@ -28,7 +28,7 @@ if __name__ == "__main__":
     sim_arguments = [
         ["-i", "--iters", "store", "number of iterations - int", dict(type=int, default=1, metavar="")],
         ["-l", "--lattice_type", "store", "type of lattice - {toric/planar}", dict(type=str, choices=["toric", "planar"], default="toric", metavar="")],
-        ["-d", "--decoder", "store", "type of decoder - {mwpm/uf/ufbb}", dict(type=str, choices=["mwpm", "uf", "ufbb"], default="ufbb", metavar="")],
+        ["-d", "--decoder", "store", "type of decoder - {mwpm/uf_uwg/uf/ufbb}", dict(type=str, choices=["mwpm", "uf_uwg", "uf", "ufbb"], default="ufbb", metavar="")],
         ["-px", "--paulix", "store", "Pauli X error rate - float {0,1}", dict(type=float, default=0, metavar="")],
         ["-pz", "--pauliz", "store", "Pauli Y error rate - float {0,1}", dict(type=float, default=0, metavar="")],
         ["-pmx", "--measurex", "store", "Measurement X error rate - float {0,1}", dict(type=float, default=0, metavar="")],
@@ -95,16 +95,21 @@ if __name__ == "__main__":
     if decoder == "mwpm":
         from oopsc.decoder import mwpm as decode
         print(f"{'_'*75}\n\ndecoder type: minimum weight perfect matching (blossom5)")
-    elif decoder == "uf":
-        from oopsc.decoder import uf as decode
-        print(f"{'_'*75}\n\ndecoder type: unionfind")
+    elif decoder[:2] == "uf":
+        if  decoder == "uf":
+            from oopsc.decoder import uf as decode
+            print(f"{'_'*75}\n\ndecoder type: unionfind")
+        elif decoder == "ufbb":
+            from oopsc.decoder import ufbb as decode
+            print("{}\n\ndecoder type: unionfind balanced bloom with {} graph".format(
+                "_"*75, "directed" if config["directed_graph"] else "undirected"))
+        elif decoder == "uf_uwg":
+            from oopsc.decoder import uf_uwg as decode
+            print(f"{'_'*75}\n\ndecoder type: unionfind unweighted growth")
+            
         if config["dg_connections"]:
             print(f"{'_'*75}\n\nusing dg_connections pre-union processing")
-    elif decoder == "ufbb":
-        from oopsc.decoder import ufbb as decode
-        print("{}\n\ndecoder type: unionfind balanced bloom with {} graph".format("_"*75,"directed" if config["directed_graph"] else "undirected"))
-        if config["dg_connections"]:
-            print(f"{'_'*75}\n\nusing dg_connections pre-union processing")
+
 
 
     if (not f3d and kwargs["measurex"] == 0 and kwargs["measurez"] == 0) or f2d:

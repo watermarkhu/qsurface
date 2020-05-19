@@ -61,7 +61,7 @@ def fit_func_m(PL, pthres, A, B, C, D, nu, mu):
 
 def fit_thresholds(data, modified_ansatz=False, data_select=None):
 
-    fitL, fitp, fitN, fitt = get_data(data, data_select)
+    fitL, fitp, fitN, fitt = get_data(data, data_select, 1)
 
     '''
     Initial parameters for fitting function
@@ -113,14 +113,14 @@ def plot_thresholds(
     modified_ansatz=False,
     data_select=False,
     show_plot=True,             # show plotted figure
-    save_result=True,
-    ax0=None,                   # axis object of error fit plot
-    ax1=None,                   # axis object of rescaled fit plot
+    save_result=False,
+    f0=None,                   # axis object of error fit plot
+    f1=None,                   # axis object of rescaled fit plot
     par=None,
+    styles=[".", "-"]           # linestyles for data and fit
 
 ):
 
-    styles=[".", "-"]           # linestyles for data and fit
     plotn=1000                  # number of points on x axis
 
     '''
@@ -135,12 +135,16 @@ def plot_thresholds(
     Plot and fit thresholds for a given dataset. Data is inputted as four lists for L, P, N and t.
     '''
 
-    fitL, fitp, fitN, fitt = get_data(data, data_select)
+    fitL, fitp, fitN, fitt = get_data(data, data_select, 1)
 
-    if ax0 is None:
+    if f0 is None:
         f0, ax0 = plt.subplots()
-    if ax1 is None:
+    else:
+        ax0 = f0.axes[0]
+    if f1 is None:
         f1, ax1 = plt.subplots()
+    else:
+        ax1 = f1.axes[0]
 
     LP = defaultdict(list)
     for L, P, N, T in zip(fitL, fitp, fitN, fitt):
@@ -170,7 +174,9 @@ def plot_thresholds(
 
     DS = fit_func((par[0], 20), *par)
 
-    ax0.axvline(par[0] * 100, ls="dotted", color="k", alpha=0.5)
+    print(par[0])
+
+    # ax0.axvline(par[0] * 100, ls="dotted", color="k", alpha=0.5)
     ax0.annotate(
         "$p_t$ = {}%, DS = {:.2f}".format(str(round(100 * par[0], 2)), DS),
         (par[0] * 100, DS),
@@ -178,10 +184,10 @@ def plot_thresholds(
         textcoords="offset points",
         fontsize=8,
     )
-    ax0.set_title("Threshold of " + plot_title)
+    ax0.set_title(plot_title)
     ax0.set_xlabel("probability of Pauli X error (%)")
     ax0.set_ylabel("decoding success rate")
-    ax0.legend()
+    ax0.legend(ncol=2, loc="lower left")
 
     ''' Plot using the rescaled error rate'''
 
@@ -205,12 +211,14 @@ def plot_thresholds(
     ax1.set_xlabel("Rescaled error rate")
     ax1.set_ylabel("Modified succces probability")
 
-
     if show_plot:
+        f0.tight_layout()
         plt.show()
 
     if save_result:
         f0.savefig(fig_path, transparent=True, format="pdf", bbox_inches="tight")
+
+    return f0, f1
 
 
 def sim_thresholds(
@@ -237,6 +245,7 @@ def sim_thresholds(
     '''
     ############################################
     '''
+
     run_oopsc = oopsc.multiprocess if multithreading else oopsc.multiple
 
     if measurement_error:

@@ -18,3 +18,4 @@ batch/
 .vscode/
 !requirements.txt
 simulations
+cartesiusdata

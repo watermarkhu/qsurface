@@ -23,5 +23,7 @@ logs/
 srun_test/
 .idea/
 .python-version
+.vscode/
 !requirements.txt
 simulations
+cartesiusdata

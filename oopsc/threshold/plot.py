@@ -42,8 +42,8 @@ def plot_thresholds(
     latts=[],
     probs=[],
     show_plot=True,             # show plotted figure
-    ax0=None,                   # axis object of error fit plot
-    ax1=None,                   # axis object of rescaled fit plot
+    f0=None,                   # axis object of error fit plot
+    f1=None,                   # axis object of rescaled fit plot
     par=None,
     lattices=None,
     ms=5,
@@ -71,10 +71,14 @@ def plot_thresholds(
     Plot and fit thresholds for a given dataset. Data is inputted as four lists for L, P, N and t.
     '''
 
-    if ax0 is None:
+    if f0 is None:
         f0, ax0 = plt.subplots()
-    if ax1 is None:
+    else:
+        ax0 = f0.axes[0]
+    if f1 is None:
         f1, ax1 = plt.subplots()
+    else:
+        ax1 = f1.axes[0]
 
     LP = defaultdict(list)
     for L, P, N, T in zip(fitL, fitp, fitN, fitt):
@@ -173,6 +177,7 @@ def plot_thresholds(
         if output [-4:] != ".pdf": output += ".pdf"
         f0.savefig(output, transparent=True, format="pdf", bbox_inches="tight")
 
+    return f0, f1
 
 class npolylogn(object):
     def func(self, N, A, B, C):

@@ -35,7 +35,7 @@ if __name__ == "__main__":
     sim_arguments = [
         ["-i", "--iters", "store", "number of iterations - int", dict(type=int, default=1, metavar="")],
         ["-l", "--lattice_type", "store", "type of lattice - {toric/planar}", dict(type=str, choices=["toric", "planar"], default="toric", metavar="")],
-        ["-d", "--decoder", "store", "type of decoder - {mwpm/uf/ufbb}", dict(type=str, choices=["mwpm", "uf", "ufbb"], default="ufbb", metavar="")],
+        ["-d", "--decoder", "store", "type of decoder - {mwpm/uf_uwg/uf/ufbb}", dict(type=str, choices=["mwpm", "uf_uwg", "uf", "ufbb"], default="ufbb", metavar="")],
         ["-px", "--paulix", "store", "Pauli X error rate - float {0,1}", dict(type=float, default=0, metavar="")],
         ["-pz", "--pauliz", "store", "Pauli Y error rate - float {0,1}", dict(type=float, default=0, metavar="")],
         ["-pmx", "--measurex", "store", "Measurement X error rate - float {0,1}", dict(type=float, default=0, metavar="")],
@@ -78,23 +78,23 @@ if __name__ == "__main__":
     add_kwargs(parser, plot_arguments, "figure", "arguments for plotting")
 
 
-    args=vars(parser.parse_args())
-    decoder = args.pop("decoder")
-    iters   = args.pop("iters")
-    multi   = args.pop("multithreading")
-    threads = args.pop("threads")
-    size    = args.pop("lattice_size")
-    debug   = args.pop("debug")
-    f2d     = args.pop("force2D")
-    f3d     = args.pop("force3D")
+    config=vars(parser.parse_args())
+    decoder = config.pop("decoder")
+    iters   = config.pop("iters")
+    multi   = config.pop("multithreading")
+    threads = config.pop("threads")
+    size    = config.pop("lattice_size")
+    debug   = config.pop("debug")
+    f2d     = config.pop("force2D")
+    f3d     = config.pop("force3D")
 
-    config = dict(
-        ltype   = args.pop("lattice_type"),
-        paulix      = args.pop("paulix"),
-        pauliz      = args.pop("pauliz"),
-        erasure      = args.pop("erasure"),
-        measurex     = args.pop("measurex"),
-        measurez     = args.pop("measurez"),
+    kwargs = dict(
+        ltype   = config.pop("lattice_type"),
+        paulix      = config.pop("paulix"),
+        pauliz      = config.pop("pauliz"),
+        erasure      = config.pop("erasure"),
+        measurex     = config.pop("measurex"),
+        measurez     = config.pop("measurez"),
     )
 
     print(f"{'_'*75}\n")
@@ -103,31 +103,36 @@ if __name__ == "__main__":
     if decoder == "mwpm":
         from oopsc.decoder import mwpm as decode
         print(f"{'_'*75}\n\ndecoder type: minimum weight perfect matching (blossom5)")
-    elif decoder == "uf":
-        from oopsc.decoder import uf as decode
-        print(f"{'_'*75}\n\ndecoder type: unionfind")
-        if args["dg_connections"]:
-            print(f"{'_'*75}\n\nusing dg_connections pre-union processing")
-    elif decoder == "ufbb":
-        from oopsc.decoder import ufbb as decode
-        print("{}\n\ndecoder type: unionfind balanced bloom with {} graph".format("_"*75,"directed" if args["directed_graph"] else "undirected"))
-        if args["dg_connections"]:
+    elif decoder[:2] == "uf":
+        if  decoder == "uf":
+            from oopsc.decoder import uf as decode
+            print(f"{'_'*75}\n\ndecoder type: unionfind")
+        elif decoder == "ufbb":
+            from oopsc.decoder import ufbb as decode
+            print("{}\n\ndecoder type: unionfind balanced bloom with {} graph".format(
+                "_"*75, "directed" if config["directed_graph"] else "undirected"))
+        elif decoder == "uf_uwg":
+            from oopsc.decoder import uf_uwg as decode
+            print(f"{'_'*75}\n\ndecoder type: unionfind unweighted growth")
+            
+        if config["dg_connections"]:
             print(f"{'_'*75}\n\nusing dg_connections pre-union processing")
 
 
-    if (not f3d and config["measurex"] == 0 and config["measurez"] == 0) or f2d:
+
+    if (not f3d and kwargs["measurex"] == 0 and kwargs["measurez"] == 0) or f2d:
         from oopsc.graph import graph_2D as go
-        print(f"{'_'*75}\n\ngraph type: 2D {config['ltype']}\n{'_'*75}\n")
+        print(f"{'_'*75}\n\ngraph type: 2D {kwargs['ltype']}\n{'_'*75}\n")
     else:
         from oopsc.graph import graph_3D as go
-        print(f"{'_'*75}\n\ngraph type: 3D {config['ltype']}\n{'_'*75}\n")
+        print(f"{'_'*75}\n\ngraph type: 3D {kwargs['ltype']}\n{'_'*75}\n")
 
 
     if iters == 1:
-        output = single(size, args, dec=decode, go=go, debug=debug, **config)
+        output = single(size, config, dec=decode, go=go, debug=debug, **kwargs)
     elif not multi:
-        output = multiple(size, args, iters, dec=decode, go=go, debug=debug, **config)
+        output = multiple(size, config, iters, dec=decode, go=go, debug=debug, **kwargs)
     else:
-        output = multiprocess(size, args, iters, dec=decode, go=go, debug=debug, processes=threads, **config)
+        output = multiprocess(size, config, iters, dec=decode, go=go, debug=debug, processes=threads, **kwargs)
 
     pprint(output)

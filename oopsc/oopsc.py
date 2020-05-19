@@ -289,13 +289,13 @@ def default_config(**kwargs):
     '''
     config = dict(
         seeds          = [],
+        fbloom         = 0.5,
+        dg_connections = 0,
+        directed_graph = 0,
+        print_steps    = 0,
         plot2D         = 0,
         plot3D         = 0,
         plotUF         = 0,
-        dg_connections = 0,
-        directed_graph = 0,
-        fbloom         = 0.5,
-        print_steps    = 0,
         plot_find      = 0,
         plot_bucket    = 0,
         plot_cluster   = 0,

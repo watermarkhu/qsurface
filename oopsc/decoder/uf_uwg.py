@@ -45,17 +45,18 @@ class toric(uf.toric):
         
         Place cluster in new bucket if 
         """
-        if cluster.parity % 2 == 1 and cluster.bucket == 0:
-            self.new_bucket.append(cluster)
+        if (cluster.parity % 2 == 1 and not cluster.on_bound) and cluster.bucket == 0:
+            self.buckets[-1].append(cluster)
+            cluster.bucket = 1
 
 
     def init_buckets(self):
         '''
         initializes buckets for bucket growth
         '''
-        self.new_bucket = []
+        self.buckets = [[]]
         self.maxbucket = -1
-
+        self.wastebucket = "unknown in uf_uwg"
 
     @plot.iter(name="Clusters grown", cname="plot_growth", flip=False)
     def grow_clusters(self, start_bucket=0, *args, **kwargs):
@@ -67,17 +68,11 @@ class toric(uf.toric):
             pr.print_graph(self.graph)
 
         bucket_i = 0
-        while self.new_bucket:
-
-            bucket, self.new_bucket = self.new_bucket, []
-
+        while self.buckets[-1]:
+            bucket = self.buckets[-1]
+            self.buckets.append([])
             self.grow_bucket(bucket, bucket_i)
-            self.fuse_vertices()
-
-            for cluster in bucket:
-                cluster = self.get_cluster_root(cluster)
-                self.cluster_place_bucket(cluster)
-                cluster.bucket == 1
+            self.fuse_bucket(bucket_i)
 
             if self.print_steps:
                 pr.print_graph(self.graph, printmerged=0)
@@ -91,10 +86,13 @@ class toric(uf.toric):
         Grows the clusters which are contained in the current bucket.
         Skips the cluster if it is already contained in a higher bucket or if the support parameters does not equal the current bucket support
         '''
-        self.fusion = []
+        self.place, self.fusion = [], []
         for cluster in bucket:
-            cluster.bucket = 0
-            self.grow_boundary(cluster, bucket_i)
+            cluster = self.get_cluster_root(cluster)
+            if cluster.bucket == 1:
+                self.place.append(cluster)
+                self.grow_boundary(cluster)
+                cluster.bucket = 0
 
 class planar(uf.planar, toric):
     pass

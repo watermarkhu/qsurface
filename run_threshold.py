@@ -5,9 +5,9 @@ www.github.com/watermarkhu/oop_surface_code
 _____________________________________________
 
 '''
-from oopsc.threshold import sim_thresholds
 import argparse
-from run_oopsc import add_args
+from run_oopsc import add_args, add_kwargs
+from oopsc.threshold.sim import sim_thresholds
 
 
 parser = argparse.ArgumentParser(
@@ -16,27 +16,11 @@ parser = argparse.ArgumentParser(
     usage='%(prog)s [-h/--help] decoder lattice_type iters -l [..] -p [..] (lattice_size)'
 )
 
-parser.add_argument("decoder",
-    action="store",
-    type=str,
-    help="type of decoder - {mwpm/uf_uwg/uf/ufbb}",
-    metavar="d",
-    choices=["mwpm", "uf_uwg", "uf", "ufbb"]
-)
-
-parser.add_argument("lattice_type",
-    action="store",
-    type=str,
-    help="type of lattice - {toric/planar}",
-    metavar="lt",
-)
-
-parser.add_argument("iters",
-    action="store",
-    type=int,
-    help="number of iterations - int",
-    metavar="i",
-)
+arguments = [
+    ["decoder", "store", str, "type of decoder - {mwpm/uf_uwg/uf/ufbb}", "d", dict(choices=["mwpm", "uf_uwg", "uf", "ufbb"])],
+    ["lattice_type", "store", str, "type of lattice - {toric/planar}", "lt", dict()],
+    ["iters", "store", int, "number of iterations - int", "i", dict()]
+]
 
 key_arguments = [
     ["-l", "--lattices", "store", "lattice sizes - verbose list int", dict(type=int, nargs='*', metavar="", required=True)],
@@ -44,13 +28,9 @@ key_arguments = [
     ["-me", "--measurement_error", "store_true", "enable measurement error (2+1D) - toggle", dict()],
     ["-mt", "--multithreading", "store_true", "use multithreading - toggle", dict()],
     ["-nt", "--threads", "store", "number of threads", dict(type=int, metavar="")],
-    ["-ma", "--modified_ansatz", "store_true", "use modified ansatz - toggle", dict()],
     ["-s", "--save_result", "store_true", "save results - toggle", dict()],
-    ["-fn", "--file_name", "store", "plot filename - toggle", dict(default="thres", metavar="")],
-    ["-sp", "--show_plot", "store_true", "show plot - toggle", dict()],
-    ["-pt", "--plot_title", "store", "plot filename - toggle", dict(default="", metavar="")],
-    ["-f", "--folder", "store", "base folder path - toggle", dict(default="./", metavar="")],
-    ["-sf", "--subfolder", "store_true", "store figures and data in subfolders - toggle", dict()],
+    ["-fn", "--file_name", "store", "plot filename", dict(default="thres", metavar="")],
+    ["-f", "--folder", "store", "base folder path - toggle", dict(default=".", metavar="")],
     ["-pb", "--progressbar", "store_true", "enable progressbar - toggle", dict()],
     ["-fb", "--fbloom", "store", "pdc minimization parameter fbloom - float {0,1}",  dict(type=float, default=0.5, metavar="")],
     ["-dgc", "--dg_connections", "store_true", "use dg_connections pre-union processing - toggle", dict()],
@@ -58,7 +38,8 @@ key_arguments = [
     ["-db", "--debug", "store_true", "enable debugging heuristics - toggle", dict()],
 ]
 
-add_args(parser, key_arguments)
+add_args(parser, arguments)
+add_kwargs(parser, key_arguments)
 args=vars(parser.parse_args())
 decoder = args.pop("decoder")
 

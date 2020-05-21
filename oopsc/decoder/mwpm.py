@@ -165,7 +165,6 @@ class planar(toric):
         '''
         Decode functions for the MWPM planar decoder
         '''
-        self.t0 = time.time()
         self.get_matching()
         self.remove_virtual()
         self.apply_matching()

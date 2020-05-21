@@ -1,13 +1,25 @@
+'''
+2020 Mark Shui Hu, QuTech
+
+www.github.com/watermarkhu/oop_surface_code
+_____________________________________________
+
+'''
 import argparse
 from pprint import pprint
 from oopsc.oopsc import single, multiple, multiprocess
 
 
-def add_args(parser, config, group_name=None, description=None):
+def add_args(parser, args):
+    for name, action, type, help, metavar, kwargs in args:
+        parser.add_argument(name, action=action, type=type, help=help, metavar=metavar, **kwargs)
+
+
+def add_kwargs(parser, args, group_name=None, description=None):
 
     if group_name:
         parser = parser.add_argument_group(group_name, description)
-    for sid, lid, action, help, kwargs in config:
+    for sid, lid, action, help, kwargs in args:
         parser.add_argument(sid, lid, action=action, help=help, **kwargs)
 
 
@@ -18,12 +30,7 @@ if __name__ == "__main__":
         usage='%(prog)s [-h/--help] L (lattice_size)'
     )
 
-    parser.add_argument("lattice_size",
-        action="store",
-        type=int,
-        help="size of the lattce",
-        metavar="L",
-    )
+    arguments = [["lattice_size", "store", int, "size of the lattce", "L", dict()]]
 
     sim_arguments = [
         ["-i", "--iters", "store", "number of iterations - int", dict(type=int, default=1, metavar="")],
@@ -65,9 +72,10 @@ if __name__ == "__main__":
         ["-zd", "--z_distance", "store", "distance between z layers in 3D plot - int/float", dict(type=int, default=2, metavar="")],
     ]
 
-    add_args(parser, sim_arguments, "simulation", "arguments for simulation")
-    add_args(parser, decoder_arguments, "decoder", "arguments for decoder")
-    add_args(parser, plot_arguments, "figure", "arguments for plotting")
+    add_args(parser, arguments)
+    add_kwargs(parser, sim_arguments, "simulation", "arguments for simulation")
+    add_kwargs(parser, decoder_arguments, "decoder", "arguments for decoder")
+    add_kwargs(parser, plot_arguments, "figure", "arguments for plotting")
 
 
     config=vars(parser.parse_args())

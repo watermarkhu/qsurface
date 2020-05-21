@@ -172,7 +172,7 @@ class nodeset(object):
             ancestor, edge = an_con
             size_diff = (node.s + node.g)//2 - (ancestor.s + node.g)//2 + edge*(-1)**(node.p + 1)
             support_fix = (node.g + ancestor.g)%2
-            node.d = ancestor.d + int(2*self.fbloom*size_diff) - support_fix 
+            node.d = ancestor.d + int(2*self.fbloom*size_diff) - support_fix
             # node.d = ancestor.d + (node.s//2 - ancestor.s//2 + edge*(-1)**(node.p + 1))
 
             if node.d < cluster.mindl:                  # store cluster minimum delay

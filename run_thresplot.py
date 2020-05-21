@@ -6,8 +6,8 @@ _____________________________________________
 
 '''
 import argparse
-from run_oopsc import add_args
-from oopsc.threshold import read_data, plot_thresholds
+from run_oopsc import add_args, add_kwargs
+from oopsc.threshold.plot import plot_thresholds
 
 
 parser = argparse.ArgumentParser(
@@ -16,26 +16,20 @@ parser = argparse.ArgumentParser(
     usage='%(prog)s [-h/--help] file_name'
 )
 
-parser.add_argument("file_name",
-    action="store",
-    type=str,
-    help="file name of csv data (without extension)",
-    metavar="file_name",
-)
+arguments = [["file_name", "store", str, "file name of csv data (without extension)", "file_name", dict()]]
 
 key_arguments = [
-    ["-ds", "--data_select", "store", "selective plot data - {even/odd}", dict(type=str, choices=["even", "odd"], metavar="")],
+    ["-p", "--probs", "store", "p items to plot - verbose list", dict(type=float, nargs='*', metavar="")],
+    ["-l", "--latts", "store", "L items to plot - verbose list", dict(type=float, nargs='*', metavar="")],
     ["-ma", "--modified_ansatz", "store_true", "use modified ansatz - toggle", dict()],
-    ["-s", "--save_result", "store_true", "save results - toggle", dict()],
-    ["-pt", "--plot_title", "store", "plot filename - toggle", dict(default="")],
-    ["-f", "--folder", "store", "base folder path - toggle", dict(default="./")],
+    ["-o", "--output", "store", "output file name", dict(type=str, default="", metavar="")],
+    ["-pt", "--plot_title", "store", "plot filename", dict(type=str, default="", metavar="")],
+    ["-ymin", "--ymin", "store", "limit yaxis min", dict(type=float, default=0.5, metavar="")],
+    ["-ymax", "--ymax", "store", "limit yaxis max", dict(type=float, default=1, metavar="")],
+
 ]
 
-add_args(parser, key_arguments)
+add_args(parser, arguments)
+add_kwargs(parser, key_arguments)
 args=vars(parser.parse_args())
-
-folder = args.pop("folder")
-name = args.pop("file_name")
-data = read_data(folder + name)
-fig_path = folder + "figures/" + name + ".pdf"
-plot_thresholds(data, **args)
+plot_thresholds(**args)

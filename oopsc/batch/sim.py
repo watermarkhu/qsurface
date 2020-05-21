@@ -23,7 +23,7 @@ def multiple(
     **kwargs
 ):
     from ..oopsc import init_random_seed, single, get_mean_var
-    from ..debug.decorators import debug as db
+    from ..info.decorators import debug as db
 
 
     """
@@ -122,7 +122,7 @@ def sim_thresholds(
     '''
     ############################################
     '''
-    from ..oopsc import default_config, lattice_type
+    from ..oopsc import default_config, lattice_type as makegraph
     if measurement_error:
         from ..graph import graph_3D as go
     else:
@@ -156,7 +156,7 @@ def sim_thresholds(
     # Simulate and save results to file
     for lati in lattices:
 
-        graph = [lattice_type(lattice_type, config, decoder, go, lati) for _ in range(processes)]
+        graph = [makegraph(lattice_type, config, decoder, go, lati) for _ in range(processes)]
 
         for pi, int_p in zip(perror, int_P):
 

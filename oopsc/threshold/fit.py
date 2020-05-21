@@ -29,7 +29,7 @@ def fit_func_m(PL, pthres, A, B, C, D, nu, mu):
     return A + B * x + C * x ** 2 + D * L ** (-1 / mu)
 
 
-def fit_thresholds(data, modified_ansatz=False, latts=[], probs=[], P_store=1000):
+def fit_thresholds(data, modified_ansatz=False, latts=[], probs=[], P_store=1):
 
     fitL, fitp, fitN, fitt = get_data(data, latts, probs, P_store)
 
@@ -41,7 +41,6 @@ def fit_thresholds(data, modified_ansatz=False, latts=[], probs=[], P_store=1000
     g_B, B_m, B_M = 0, -np.inf, np.inf
     g_C, C_m, C_M = 0, -np.inf, np.inf
     gnu, num, nuM = 0.974, 0.8, 1.2
-
     D_m, D_M = -2, 2
     mum, muM = 0, 3
 

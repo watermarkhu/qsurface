@@ -54,7 +54,7 @@ def sim_thresholds(
         threads=None,
         save_result=True,
         file_name="thres",
-        folder = "./",
+        folder = ".",
         P_store=1000,
         debug=False,
         **kwargs
@@ -139,4 +139,5 @@ def sim_thresholds(
     print(data.to_string())
 
     if save_result:
+        print("file saved to {}".format(file_path))
         data.to_csv(file_path)

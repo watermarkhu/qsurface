@@ -49,13 +49,11 @@ def plot_thresholds(
     ms=5,
     ymax=1,
     ymin=0.5,
+    styles=[".", "-"],           # linestyles for data and fit
+    plotn=1000                  # number of points on x axis
 ):
 
-    styles=[".", "-"]           # linestyles for data and fit
-    plotn=1000                  # number of points on x axis
-
     data = read_data(file_name)
-
     '''
     apply fit and get parameter
     '''
@@ -127,7 +125,7 @@ def plot_thresholds(
 
     DS = fit_func((par[0], 20), *par)
 
-    ax0.axvline(par[0] * 100, ls="dotted", color="k", alpha=0.5)
+    # ax0.axvline(par[0] * 100, ls="dotted", color="k", alpha=0.5)
     ax0.annotate(
         "$p_t$ = {}%, DS = {:.2f}".format(str(round(100 * par[0], 2)), DS),
         (par[0] * 100, DS),
@@ -136,7 +134,7 @@ def plot_thresholds(
         fontsize=8,
     )
 
-    plot_style(ax0, "Threshold of " + plot_title, "probability of Pauli X error (%)", "decoding success rate")
+    plot_style(ax0, plot_title, "probability of Pauli X error (%)", "decoding success rate")
     ax0.set_ylim(ymin, ymax)
     ax0.legend(handles=legend, loc="lower left", ncol=2)
 

@@ -331,7 +331,7 @@ class plot_2D:
         '''
         Initilizes the 2D axis by settings axis limits, flipping y axis and removing the axis border
         '''
-        plt.grid(alpha = self.alpha2, ls=":", lw=self.linewidth)
+        # plt.grid(alpha = self.alpha2, ls=":", lw=self.linewidth)
         self.ax.set_xlim(min, max)
         self.ax.set_ylim(min, max)
         self.ax.invert_yaxis()
@@ -339,7 +339,7 @@ class plot_2D:
         self.ax.spines["right"].set_visible(False)
         self.ax.spines["bottom"].set_visible(False)
         self.ax.spines["left"].set_visible(False)
-
+        plt.axis("off")
     '''
     #########################################################################
                             Initilize plot

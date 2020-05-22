@@ -441,6 +441,7 @@ class Stab(object):
         self.state      = 0
         self.mstate     = 0
         self.cluster    = None
+        self.forest     = 0
         self.tree       = 0
         self.node       = None
         self.new_bound  = []
@@ -465,6 +466,7 @@ class Stab(object):
         self.mstate     = 0
         self.parity     = 0
         self.cluster    = None
+        self.forest     = 0
         self.tree       = 0
         self.node       = None
 
@@ -547,6 +549,7 @@ class Edge(object):
         self.support    = 0
         self.peeled     = 0
         self.matching   = 0
+        self.forest     = 0
 
 
     def __repr__(self):
@@ -568,3 +571,4 @@ class Edge(object):
         self.support    = 0
         self.peeled     = 0
         self.matching   = 0
+        self.forest     = 0

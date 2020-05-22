@@ -19,7 +19,7 @@ parser = argparse.ArgumentParser(
 args = [
     ["node", "store", int, "node number", "node", dict()],
     ["processes", "store", int, "number of processes", "processes", dict()],
-    ["decoder", "store", str, "type of decoder - {mwpm/uf_uwg/uf/ufbb}", "d", dict(choices=["mwpm", "uf_uwg", "uf", "ufbb"])],
+    ["decoder", "store", str, "type of decoder - {mwpm/uf_uwg/uf/ufbb}", "d", dict()],
     ["lattice_type", "store", str, "type of lattice - {toric/planar}", "lt", dict()],
     ["iters", "store", int, "number of iterations - int", "i", dict()],
 ]
@@ -46,22 +46,16 @@ add_kwargs(parser, key_arguments)
 args=vars(parser.parse_args())
 decoder = args.pop("decoder")
 
-if decoder == "mwpm":
-    from oopsc.decoder import mwpm as decode
-    print(f"{'_'*75}\n\ndecoder type: minimum weight perfect matching (blossom5)")
-elif decoder[:2] == "uf":
-    if decoder == "uf":
-        from oopsc.decoder import uf as decode
-        print(f"{'_'*75}\n\ndecoder type: unionfind")
-    elif decoder == "ufbb":
-        from oopsc.decoder import ufbb as decode
-        print("{}\n\ndecoder type: unionfind balanced bloom with {} graph".format(
-            "_"*75, "directed" if args["directed_graph"] else "undirected"))
-    elif decoder == "uf_uwg":
-        from oopsc.decoder import uf_uwg as decode
-        print(f"{'_'*75}\n\ndecoder type: unionfind unweighted growth")
-    if args["dg_connections"]:
-        print(f"{'_'*75}\n\nusing dg_connections pre-union processing")
+decoders = __import__("oopsc.decoder", fromlist=[decoder])
+decode = getattr(decoders, decoder)
 
+decoder_names = {
+    "mwpm":     "minimum weight perfect matching (blossom5)",
+    "uf":       "union-find",
+    "uf_uwg":   "union-find non weighted growth",
+    "ufbb":     "union-find balanced bloom"
+}
+decoder_name = decoder_names[decoder] if decoder in decoder_names else decoder
+print(f"{'_'*75}\n\ndecoder type: " + decoder_name)
 
 sim_thresholds(decode, **args)

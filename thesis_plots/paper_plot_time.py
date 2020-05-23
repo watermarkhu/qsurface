@@ -1,9 +1,10 @@
+import sys
+sys.path.insert(0, '..')
 
 import matplotlib.pyplot as plt
-from threshold_fit import read_data
+from oopsc.threshold.sim import read_data
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
-
 
 def plot_style(ax, title=None, xlabel=None, ylabel=None, **kwargs):
     ax.grid(linestyle=':', linewidth=.5)
@@ -56,7 +57,6 @@ def plot_compare(ax, color, csv_names, xaxis, probs, latts, feature, dim, **kwar
 
         indices = [round(x, 6) for x in df.index.get_level_values(ychoice)]
         ls = linestyles[i%len(linestyles)]
-
 
         Y = []
 
@@ -111,9 +111,9 @@ plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
 # ]
 # plot_compare(ax, csv_names, "l", [], [], "time", 3)
 Lrange = [8, 10, 12, 14, 16, 18, 20, 22, 24, 28, 32, 36, 40]
-plot_compare(ax, "C3", ["simulations/cartesius/data/mwpm_toric_3d.csv"], "l", [0.027, 0.028, 0.029, 0.03, 0.031], Lrange, "time", 3)
-plot_compare(ax, "C0", ["simulations/cartesius/data/uf_toric_3d.csv"], "l", [0.025, 0.026, 0.027, 0.028, 0.029], Lrange, "time", 3)
-plot_compare(ax, "C2", ["simulations/cartesius/data/eg_toric_3d.csv"], "l", [0.02733, 0.02767, 0.02833, 0.02867, 0.02933, 0.02967], Lrange, "time", 3)
+plot_compare(ax, "C3", ["../cartesiusdata/data/mwpm_toric_3d.csv"], "l", [0.027, 0.028, 0.029, 0.03, 0.031], Lrange, "time", 3)
+plot_compare(ax, "C0", ["../cartesiusdata/data/uf_toric_3d.csv"], "l", [0.025, 0.026, 0.027, 0.028, 0.029], Lrange, "time", 3)
+plot_compare(ax, "C2", ["../cartesiusdata/data/eg_toric_3d.csv"], "l", [0.02733, 0.02767, 0.02833, 0.02867, 0.02933, 0.02967], Lrange, "time", 3)
 
 
 legend_elements = [
@@ -127,5 +127,6 @@ plot_style(ax, "", "System size (N qubits)", "Average time per iteration")
 
 
 ax.add_artist(plt.legend(handles=legend_elements, loc="upper right"))
+plt.title("Running time")
 plt.show()
-f.savefig("time.pdf", transparent=True, format="pdf")
+# f.savefig("time.pdf", transparent=True, format="pdf")

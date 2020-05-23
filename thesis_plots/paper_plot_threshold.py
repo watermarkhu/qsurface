@@ -1,9 +1,14 @@
+import sys
+sys.path.insert(0, '..')
+
 from collections import defaultdict
 import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 import numpy as np
-from threshold_fit import get_data, get_fit_func, fit_data, read_data
+from oopsc.threshold.sim import get_data, read_data
+from oopsc.threshold.fit import get_fit_func, fit_thresholds
+
 
 def plot_style(ax, title=None, xlabel=None, ylabel=None, **kwargs):
     ax.grid(linestyle=':', linewidth=.5)
@@ -43,7 +48,7 @@ def plot_thresholds(
     apply fit and get parameter
     '''
     if par is None:
-        (fitL, fitp, fitN, fitt), par = fit_data(data, modified_ansatz, latts, probs)
+        (fitL, fitp, fitN, fitt), par = fit_thresholds(data, modified_ansatz, latts, probs)
     else:
         fitL, fitp, fitN, fitt = get_data(data, latts, probs)
 
@@ -109,24 +114,24 @@ plt.rc('ytick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
 plt.rc('legend', fontsize=SMALL_SIZE)    # legend fontsize
 plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
 
-# Lrange = [8, 16, 24, 32, 40, 48]
-# mwdata = read_data("simulations/cartesius/data/mwpm_toric_2d.csv")
-# plot_thresholds(mwdata, "C3", 0.65, ax0=ax, latts=Lrange)
-# ufdata = read_data("simulations/cartesius/data/uf_toric_2d.csv")
-# plot_thresholds(ufdata, "C0", 0.65, ax0=ax, latts=Lrange)
-# bbdata = read_data("simulations/cartesius/data/eg_toric_2d.csv")
-# plot_thresholds(bbdata, "C2", 0.640, ax0=ax, latts=Lrange, probs=[round(0.099 + i*0.0005, 5) for i in range(11)])
-# plot_style(ax, "", "Probability of Pauli X error (%)", "Decoding success rate")
-
-
-Lrange = [8, 12, 16, 20]
-mwdata = read_data("simulations/cartesius/data/mwpm_toric_3d.csv")
-plot_thresholds(mwdata, "C3", 0.78, ax0=ax, latts=Lrange)
-ufdata = read_data("simulations/cartesius/data/uf_toric_3d.csv")
-plot_thresholds(ufdata, "C0", 0.78, ax0=ax, latts=Lrange)
-bbdata = read_data("simulations/cartesius/data/eg_toric_3d.csv")
-plot_thresholds(bbdata, "C2", 0.78, ax0=ax, latts=Lrange, probs=[round(0.027 + i*0.001/3, 5) for i in range(10)])
+Lrange = [8, 16, 24, 32, 40, 48]
+mwdata = read_data("../cartesiusdata/data/mwpm_toric_2d.csv")
+plot_thresholds(mwdata, "C3", 0.65, ax0=ax, latts=Lrange)
+ufdata = read_data("../cartesiusdata/data/uf_toric_2d.csv")
+plot_thresholds(ufdata, "C0", 0.65, ax0=ax, latts=Lrange)
+bbdata = read_data("../cartesiusdata/data/eg_toric_2d.csv")
+plot_thresholds(bbdata, "C2", 0.640, ax0=ax, latts=Lrange, probs=[round(0.099 + i*0.0005, 5) for i in range(11)])
 plot_style(ax, "", "Probability of Pauli X error (%)", "Decoding success rate")
+
+
+# Lrange = [8, 12, 16, 20]
+# mwdata = read_data("../cartesiusdata/data/mwpm_toric_3d.csv")
+# plot_thresholds(mwdata, "C3", 0.78, ax0=ax, latts=Lrange)
+# ufdata = read_data("../cartesiusdata/data/uf_toric_3d.csv")
+# plot_thresholds(ufdata, "C0", 0.78, ax0=ax, latts=Lrange)
+# bbdata = read_data("../cartesiusdata/data/eg_toric_3d.csv")
+# plot_thresholds(bbdata, "C2", 0.78, ax0=ax, latts=Lrange, probs=[round(0.027 + i*0.001/3, 5) for i in range(10)])
+# plot_style(ax, "", "Probability of Pauli X error (%)", "Decoding success rate")
 
 
 markerlist = get_markers()
@@ -152,6 +157,6 @@ legend_elements = [
 ax.add_artist(plt.legend(handles=legend, loc="upper right"))
 ax.add_artist(plt.legend(handles=legend_elements, loc="lower left"))
 
-
+plt.title("Threshold")
 plt.show()
-f.savefig("threshold.pdf", transparent=True, format="pdf")
+# f.savefig("threshold.pdf", transparent=True, format="pdf")

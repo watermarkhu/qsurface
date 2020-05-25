@@ -331,12 +331,13 @@ class plot_3D(plot_2D, gp.plot_3D):
                 (ertype, y, x) = stab.sID
                 X, Y = (x, y) if ertype == 0 else (x+.5, y+.5)
                 if stab.state:
-                    stab.pu = self.plot_scatter(X, Y, Z, object=stab, facecolor=self.C2[ertype], edgecolor=self.C1[ertype])
+                    (stab.pu, _) = self.plot_scatter(X, Y, Z, object=stab, facecolor=self.C2[ertype], edgecolor=self.C1[ertype])
                 else:
                     stab.pu = {
                         "pos"       : (X, Y, Z),
                         "edgecolor" : self.C2[ertype],
-                        "facecolor" : self.C1[ertype]
+                        "facecolor" : self.C1[ertype],
+                        "object"    : stab
                     }
 
         self.init_legend(1.05, 0.95)
@@ -410,13 +411,27 @@ class plot_3D(plot_2D, gp.plot_3D):
 
 
 
+    # def plot_strip_step_anyon(self, stab):
+    #     """
+    #     plot function for the flips of the anyons
+    #     plots the anyon in white (removal) or normal error edge color (addition)
+    #     """
+    #     lw = self.linewidth if stab.state else 0
+
+    #     if "key" not in stab.pu:
+    #         self.new_attributes(stab.pu, dict(linewidth=lw))
+    #     else:
+    #         self.new_attributes(stab.pu, dict(edgecolor=self.C1[stab.sID[0]]))
+
+
     def plot_strip_step_anyon(self, stab):
         """
         plot function for the flips of the anyons
         plots the anyon in white (removal) or normal error edge color (addition)
         """
         lw = self.linewidth if stab.state else 0
-        if "key" in stab.pu:
-            self.new_attributes(stab.pu, dict(linewidth=lw))
+        if "key" not in stab.pu:
+            self.new_attributes(stab.pu, dict(linewidth=lw, edgecolor=stab.pu["facecolor"]))
         else:
-            self.new_attributes(stab.pu, dict(edgecolor=self.C1[stab.sID[0]]))
+            self.new_attributes(stab.pu, dict(linewidth=lw, edgecolor=[1,1,1,0]))
+

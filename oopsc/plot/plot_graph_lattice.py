@@ -237,7 +237,7 @@ class plot_2D:
             return array
 
 
-    def new_attributes(self, object, attr_dict, overwrite=False):
+    def new_attributes(self, obj, attr_dict, overwrite=False):
         '''
         Finds the differences of the plot attributes between this iteration and the previous iterations. All differences are stored as dictionaries in the history variable.
         Makes sure that all changes are stored correctly and plot attributes are not overwritten if not explicitly defined.
@@ -247,32 +247,32 @@ class plot_2D:
 
         prev, next = {}, {}
 
-        if not overwrite or object not in prev_changes:
+        if not overwrite or obj not in prev_changes:
             for key, value in attr_dict.items():
 
                 value = self.get_nested_np_color(value)
-                old_value = self.get_nested_np_color(plt.getp(object, key))
+                old_value = self.get_nested_np_color(plt.getp(obj, key))
 
                 if old_value != value:
                     prev[key] = old_value
                     next[key] = value
         else:
-            old_dict = prev_changes[object]
+            old_dict = prev_changes[obj]
             for key, value in attr_dict.items():
                 value = self.get_nested_np_color(value)
-                old_value = old_dict[key] if key in old_dict else self.get_nested_np_color(plt.getp(object, key))
+                old_value = old_dict[key] if key in old_dict else self.get_nested_np_color(plt.getp(obj, key))
                 if old_value != value:
                     prev[key] = old_value
                     next[key] = value
         if prev:
-            if overwrite or object not in prev_changes:
-                prev_changes[object] = prev
+            if overwrite or obj not in prev_changes:
+                prev_changes[obj] = prev
             else:
-                prev_changes[object].update(prev)
+                prev_changes[obj].update(prev)
 
         if next:
-            next_changes[object] = next
-            self.change_attributes(object, next)
+            next_changes[obj] = next
+            self.change_attributes(obj, next)
 
 
     def change_attributes(self, object, attr_dict):
@@ -639,7 +639,6 @@ class plot_3D(plot_2D):
                     if key not in attr_dict:
                         attr_dict[key] = value
 
-
                 prev_changes[old_plot] = dict(visible=1, picker=self.pick)
                 next_changes[old_plot] = dict(visible=0, picker=None)
                 plt.setp(old_plot, visible=0)
@@ -765,7 +764,7 @@ class plot_3D(plot_2D):
     def scatter_attr(self, facecolor=(0,0,0,0), edgecolor=(0,0,0,0), **kwargs):
         '''
         Part of workarond of Patch3DCollection set_color issue
-        Returns attribute dict of new plot and a key identifyer for these attributes
+        Returns attribute dict of new plot and a key identifier for these attributes
         '''
 
         attr = {

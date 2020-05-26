@@ -84,6 +84,7 @@ class plot_2D(gp.plot_2D):
                 stab.pu = None
 
         self.init_legend(1.25, 0.95)
+        self.canvas.draw()
         self.draw_plot()
 
 
@@ -342,6 +343,7 @@ class plot_3D(plot_2D, gp.plot_3D):
 
         self.init_legend(1.05, 0.95)
         self.set_axes_equal()
+        self.canvas.draw()
         self.draw_plot()
 
 

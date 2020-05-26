@@ -370,7 +370,8 @@ class plot_2D:
 
         le_err = self.legend_circle("Erasure", mfc="w", marker="$\u25CC$", mec=self.cc, mew=1, ms=12)
         self.init_legend(1.3, 0.95, items=[le_err])
-
+        
+        self.canvas.draw()
         if not self.from3D:
             self.draw_plot()
     '''
@@ -755,6 +756,7 @@ class plot_3D(plot_2D):
         le_zan = self.legend_circle("Z-anyon", marker="*", mfc=self.cZ, mec=self.cZ)
         self.init_legend(1.05, 0.95, items=[le_err, le_xan, le_zan])
         self.set_axes_equal()
+        self.canvas.draw()
         self.draw_plot()
 
     '''

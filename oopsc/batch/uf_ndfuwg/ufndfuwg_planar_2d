@@ -4,7 +4,7 @@
 module load 2019
 module load Python/3.7.5-foss-2018b
 
-name=ufuwg_toric_2d
+name=ufndfuwg_planar_2d
 nodes=4
 iters=96000
 shared=/scratch-shared/tmp.4MrYmgXnYZ
@@ -14,7 +14,7 @@ mkdir -p $shared/$name
 
 for (( i=0; i<$nodes; i++)); do
 (
-srun -N 1 python $HOME/oop_surface_code/run_threshold_sqlbatch.py $i 24 uf_uwg toric $iter -l 8 16 24 32 40 48 56 64 -p 0.096 0.0965 0.097 0.0975 0.098 0.0985 0.099 0.0995 0.01 -of $shared/$name -db
+srun -N 1 python $HOME/oop_surface_code/run_threshold_sqlbatch.py $i 24 uf_ndf_uwg planar $iter -l 8 16 24 32 40 48 56 64 -p 0.096 0.0965 0.097 0.0975 0.098 0.0985 0.099 0.0995 0.01 -of $shared/$name -db
 )&
 done
 wait

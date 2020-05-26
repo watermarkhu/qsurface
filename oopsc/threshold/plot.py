@@ -124,6 +124,7 @@ def plot_thresholds(
 
 
     DS = fit_func((par[0], 20), *par)
+    print("DS = {}".format(DS))
 
     # ax0.axvline(par[0] * 100, ls="dotted", color="k", alpha=0.5)
     ax0.annotate(

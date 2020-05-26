@@ -14,7 +14,7 @@ mkdir -p $shared/$name
 
 for (( i=0; i<$nodes; i++)); do
 (
-srun -N 1 python $HOME/oop_surface_code/run_threshold_sqlbatch.py $i 24 uf planar $iter -l 8 12 16 20 24 28 32 36 40 -p 0.025 0.0255 0.026 0.0265 0.027 0.0275 0.028 0.0285 0.029 -of $shared/$name -me -db
+srun -N 1 python $HOME/oop_surface_code/run_threshold_sqlbatch.py $i 24 uf_uwg planar $iter -l 8 12 16 20 24 28 32 36 -p 0.025 0.0255 0.026 0.0265 0.027 0.0275 0.028 0.0285 0.029 -of $shared/$name -me -db
 )&
 done
 wait

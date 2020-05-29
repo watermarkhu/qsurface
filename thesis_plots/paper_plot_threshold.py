@@ -91,14 +91,14 @@ def plot_thresholds(
 
     ax0.fill_between(xval,y1,y2, facecolor=color, alpha=0.3)
 
-    ax0.axvline(par[0] * 100, ls="dotted", color="k", alpha=0.5)
-    ax0.annotate(
-        "{}%".format(str(round(100 * par[0], 2))),
-        (par[0] * 100 - 0.02, height),
-        xytext=(10, 10),
-        textcoords="offset points",
-        fontsize=12,
-    )
+    # ax0.axvline(par[0] * 100, ls="dotted", color="k", alpha=0.5)
+    # ax0.annotate(
+    #     "{}%".format(str(round(100 * par[0], 2))),
+    #     (par[0] * 100 - 0.02, height),
+    #     xytext=(10, 10),
+    #     textcoords="offset points",
+    #     fontsize=12,
+    # )
 
 
 f, ax = plt.subplots()
@@ -115,21 +115,21 @@ plt.rc('legend', fontsize=SMALL_SIZE)    # legend fontsize
 plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
 
 Lrange = [8, 16, 24, 32, 40, 48]
-mwdata = read_data("../cartesiusdata/data/mwpm_toric_2d.csv")
+mwdata = read_data("../cartesiusdata/mwpm_toric_2d.csv")
 plot_thresholds(mwdata, "C3", 0.65, ax0=ax, latts=Lrange)
-ufdata = read_data("../cartesiusdata/data/uf_toric_2d.csv")
+ufdata = read_data("../cartesiusdata/dbuf_toric_2d.csv")
 plot_thresholds(ufdata, "C0", 0.65, ax0=ax, latts=Lrange)
-bbdata = read_data("../cartesiusdata/data/eg_toric_2d.csv")
+bbdata = read_data("../cartesiusdata/ufbb_toric_2d.csv")
 plot_thresholds(bbdata, "C2", 0.640, ax0=ax, latts=Lrange, probs=[round(0.099 + i*0.0005, 5) for i in range(11)])
 plot_style(ax, "", "Probability of Pauli X error (%)", "Decoding success rate")
 
 
 # Lrange = [8, 12, 16, 20]
-# mwdata = read_data("../cartesiusdata/data/mwpm_toric_3d.csv")
+# mwdata = read_data("../cartesiusdata/mwpm_toric_3d.csv")
 # plot_thresholds(mwdata, "C3", 0.78, ax0=ax, latts=Lrange)
-# ufdata = read_data("../cartesiusdata/data/uf_toric_3d.csv")
+# ufdata = read_data("../cartesiusdata/dbuf_toric_3d.csv")
 # plot_thresholds(ufdata, "C0", 0.78, ax0=ax, latts=Lrange)
-# bbdata = read_data("../cartesiusdata/data/eg_toric_3d.csv")
+# bbdata = read_data("../cartesiusdata/eg_toric_3d.csv")
 # plot_thresholds(bbdata, "C2", 0.78, ax0=ax, latts=Lrange, probs=[round(0.027 + i*0.001/3, 5) for i in range(10)])
 # plot_style(ax, "", "Probability of Pauli X error (%)", "Decoding success rate")
 

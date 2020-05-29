@@ -17,45 +17,11 @@ import math
 from oopsc.threshold.fit import fit_thresholds, get_fit_func
 from oopsc.threshold.sim import get_data, read_data
 
-
-def plot_style(ax, title=None, xlabel=None, ylabel=None, **kwargs):
-    ax.grid(color='w', linestyle='-', linewidth=2)
-    ax.set_title(title)
-    ax.set_xlabel(xlabel)
-    ax.set_ylabel(ylabel)
-    for key, arg in kwargs.items():
-        func = getattr(ax, f"set_{key}")
-        func(arg)
-    ax.patch.set_facecolor('0.95')
-    ax.spines["top"].set_visible(False)
-    ax.spines["right"].set_visible(False)
-    ax.spines["bottom"].set_visible(False)
-    ax.spines["left"].set_visible(False)
+from thesis_style import *
 
 
-def get_markers():
-    return ["o", "s", "v", "D", "p", "^", "h", "X", "<", "P", "*", ">", "H", "d", 4, 5, 6, 7, 8, 9, 10, 11]
-
-
-def get_colors():
-    return {
-        "UF-xW-xDF":    "C0",
-        "UF-W-xDF":     "C1",   
-        "UF-xW-DF":     "C2",
-        "UF-W-DF":      "C3",
-        "MWPM":         "C4",
-        "UF-BB":        "C8",
-    }
-
-def get_linestyles():
-     return {
-        "UF-xW-xDF":    "--",
-        "UF-W-xDF":     ":",   
-        "UF-xW-DF":     "-.",
-        "UF-W-DF":      (0, (5, 1)),
-        "MWPM":         "-",
-        "UF-BB":        (0, (3, 1, 1, 1, 1, 1)),
-    }
+def get_csvdir(names):
+    return ["../cartesiusdata/{}.csv".format(n) for n in names]
 
 
 def plot_compare(
@@ -69,6 +35,8 @@ def plot_compare(
     dim=1,
     xm=1, 
     ms=5,
+    normy=None,
+    yname="",
     output="", 
     fitname="", 
     **kwargs
@@ -121,8 +89,8 @@ def plot_compare(
             # color = colors[ylabel]
             color = colors[name]
 
-            if name == "MWPM":
-                ylabel = 0.1
+            if name == "MWPM" and normy is not None:
+                ylabel = normy
 
             d = df.loc[[x == ylabel for x in indices]]
             index = [round(v, 6) for v in d.index.get_level_values(xchoice)]
@@ -177,13 +145,16 @@ def plot_compare(
     plt.xticks(xticks, xnames)
     L1 = plt.legend(handles=leg1, loc="upper left")
     plt.gca().add_artist(L1)
-    # L2 = plt.legend(handles=leg2, loc="upper left", ncol=3)
-    # plt.gca().add_artist(L2)
+    if len(probs) > 1:
+        L2 = plt.legend(handles=leg2, loc="upper left", ncol=3)
+        plt.gca().add_artist(L2)
 
-    plot_style(plt.gca(), "Comparison of {}".format(
-        feature), xchoice, "{} count".format(feature))
-    plt.title("Comparison of matching weight")
+    plot_style(plt.gca(), "", xchoice, yname)
+    # plt.title("Comparison of matching weight")
+    plt.tight_layout()
 
+    if output:
+        plt.savefig("/home/watermarkhu/mep/mep-thesis/pgfplots/{}.pgf".format(output))
     plt.show()
 
 
@@ -198,6 +169,8 @@ def plot_compare2(
     dim=1,
     xm=1,
     ms=5,
+    normy=None,
+    yname="",
     output="",
     fitname="",
     **kwargs
@@ -252,8 +225,8 @@ def plot_compare2(
             # color = colors[ylabel]
             color = colors[name]
 
-            if i == 0:
-                ylabel = 0.1
+            if i == 0 and normy is not None:
+                ylabel = normy
 
             d = df.loc[[x == ylabel for x in indices]]
             index = [round(v, 6) for v in d.index.get_level_values(xchoice)]
@@ -275,9 +248,9 @@ def plot_compare2(
 
             if i == 0:
                 Ynorm = Y
-                continue
-            else:
-                Y = [y1-y2 for y1, y2 in zip(Y,Ynorm)]
+                marker="None"
+
+            Y = [y1-y2 for y1, y2 in zip(Y,Ynorm)]
 
             # print(ylabel, X, Y)
             #
@@ -314,60 +287,47 @@ def plot_compare2(
     plt.xticks(xticks, xnames)
     L1 = plt.legend(handles=leg1, loc="upper left")
     plt.gca().add_artist(L1)
-    # L2 = plt.legend(handles=leg2, loc="upper left", ncol=3)
-    # plt.gca().add_artist(L2)
 
-    plot_style(plt.gca(), "Comparison of {}".format(
-        feature), xchoice, "{} count".format(feature))
-    plt.title("Comparison of matching weight, normalized to MWPM")
+    if len(probs) > 1:
+        L2 = plt.legend(handles=leg2, loc="upper left", ncol=3)
+        plt.gca().add_artist(L2)
 
+    plot_style(plt.gca(), "", xchoice, yname)
+    # plt.title("Comparison of matching weight, normalized to MWPM")
+    plt.tight_layout()
+    if output:
+        plt.savefig("/home/watermarkhu/mep/mep-thesis/pgfplots/{}.pgf".format(output))
     plt.show()
 
 
 
-l = [8+i*8 for i in range(8)]
-
-names = [
-    "../cartesiusdata/data/ufndfuwg_toric_2d.csv",
-    "../cartesiusdata/data/ufndf_toric_2d.csv",
-    "../cartesiusdata/data/ufuwg_toric_2d.csv",
-    "../cartesiusdata/data/uf_toric_2d.csv",
-    "../cartesiusdata/data/mwpm_toric_2d.csv"
-]
-plot_compare(["UF-xW-xDF", "UF-W-xDF", "UF-xW-DF", "UF-W-DF", "MWPM"], names, "l", [0.098], l, "weight", dim=2)
-names = [
-    "../cartesiusdata/data/mwpm_toric_2d.csv",
-    "../cartesiusdata/data/ufndfuwg_toric_2d.csv",
-    "../cartesiusdata/data/ufndf_toric_2d.csv",
-    "../cartesiusdata/data/ufuwg_toric_2d.csv",
-    "../cartesiusdata/data/uf_toric_2d.csv",
-]
-plot_compare2(["MWPM", "UF-xW-xDF", "UF-W-xDF", "UF-xW-DF", "UF-W-DF"], names, "l", [0.098], l, "weight", dim=2)
-
-names = [
-    "../cartesiusdata/data/uf_toric_2d.csv",
-    "../cartesiusdata/data/eg_toric_2d.csv",
-    "../cartesiusdata/data/mwpm_toric_2d.csv"
-]
-plot_compare(["UF-W-DF","UF-BB","MWPM"], names, "l", [0.098], l, "weight", dim=2)
 
 
-names = [
-    "../cartesiusdata/data/mwpm_toric_2d.csv",
-    "../cartesiusdata/data/uf_toric_2d.csv",
-    "../cartesiusdata/data/eg_toric_2d.csv",
-]
-plot_compare2(["MWPM", "UF-W-DF", "UF-BB"],
-              names, "l", [0.098], l, "weight", dim=2)
+# names = [
+#     "data/uf_toric_2d",
+#     "data/ufbb_toric_2d",
+#     "data/mwpm_toric_2d"
+# ]
+# plot_compare(["DBUF","UF-BB","MWPM"], names, "l", [0.098], l, "weight", dim=2)
 
 
-names = [
-    "../cartesiusdata/data/mwpm_toric_2d.csv",
-    "../cartesiusdata/data/ufndfuwg_toric_2d.csv",
-    "../cartesiusdata/data/ufndf_toric_2d.csv",
-    "../cartesiusdata/data/ufuwg_toric_2d.csv",
-    "../cartesiusdata/data/uf_toric_2d.csv",
-    "../cartesiusdata/data/eg_toric_2d.csv",
-]
-plot_compare2(["MWPM", "UF-xW-xDF", "UF-W-xDF", "UF-xW-DF", "UF-W-DF", "UF-BB"],
-              names, "l", [0.098], l, "weight", dim=2)
+# names = [
+#     "data/mwpm_toric_2d",
+#     "data/uf_toric_2d",
+#     "data/ufbb_toric_2d",
+# ]
+# plot_compare2(["MWPM", "DBUF", "UF-BB"],
+#               names, "l", [0.098], l, "weight", dim=2)
+
+
+# names = [
+#     "data/mwpm_toric_2d",
+#     "data/suf_toric_2d",
+#     "data/duf_toric_2d",
+#     "data/sbuf_toric_2d",
+#     "data/uf_toric_2d",
+#     "data/ufbb_toric_2d",
+# ]
+# plot_compare2(["MWPM", "SUF", "DUF", "SBUF", "DBUF", "UF-BB"],
+#               names, "l", [0.098], l, "weight", dim=2)
+

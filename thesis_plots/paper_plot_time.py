@@ -105,15 +105,15 @@ plt.rc('ytick', labelsize=SMALL_SIZE)    # fontsize of the tick labels
 plt.rc('legend', fontsize=SMALL_SIZE)    # legend fontsize
 plt.rc('figure', titlesize=BIGGER_SIZE)  # fontsize of the figure title
 # csv_names =[
-#     # "simulations/cartesius/data/mwpm_toric_3d.csv",
-#     # "simulations/cartesius/data/uf_toric_3d.csv",
-#     "simulations/cartesius/data/eg_toric_3d.csv",
+#     # "simulations/cartesius/mwpm_toric_3d.csv",
+#     # "simulations/cartesius/dbuf_toric_3d.csv",
+#     "simulations/cartesius/ufbb_toric_3d.csv",
 # ]
 # plot_compare(ax, csv_names, "l", [], [], "time", 3)
 Lrange = [8, 10, 12, 14, 16, 18, 20, 22, 24, 28, 32, 36, 40]
-plot_compare(ax, "C3", ["../cartesiusdata/data/mwpm_toric_3d.csv"], "l", [0.027, 0.028, 0.029, 0.03, 0.031], Lrange, "time", 3)
-plot_compare(ax, "C0", ["../cartesiusdata/data/uf_toric_3d.csv"], "l", [0.025, 0.026, 0.027, 0.028, 0.029], Lrange, "time", 3)
-plot_compare(ax, "C2", ["../cartesiusdata/data/eg_toric_3d.csv"], "l", [0.02733, 0.02767, 0.02833, 0.02867, 0.02933, 0.02967], Lrange, "time", 3)
+plot_compare(ax, "C3", ["../cartesiusdata/mwpm_toric_3d.csv"], "l", [0.027, 0.028, 0.029, 0.03, 0.031], Lrange, "time", 3)
+plot_compare(ax, "C0", ["../cartesiusdata/dbuf_toric_3d.csv"], "l", [0.025, 0.026, 0.027, 0.028, 0.029], Lrange, "time", 3)
+plot_compare(ax, "C2", ["../cartesiusdata/ufbb_toric_3d.csv"], "l", [0.02733, 0.02767, 0.02833, 0.02867, 0.02933, 0.02967], Lrange, "time", 3)
 
 
 legend_elements = [

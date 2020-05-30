@@ -43,7 +43,7 @@ class anyon_node(object):
     '''
     Anyon node object - element in the aj-tree
 
-    type        A for anyon, J for junction, B for boundary, E for empty
+    type        A for anyon, J for linking, B for boundary, E for empty
     vertex      the vertex/stab object this node refers to
     id          id number (loc)
     ancestor    ancestor of node in anyontree
@@ -101,9 +101,9 @@ class anyon_node(object):
         return self.short_id() + color_id
 
 
-class junction_node(anyon_node):
+class linking_node(anyon_node):
     '''
-    Juntion type node
+    Linking type node
     inherit all methods from anyon_node
     '''
     def __init__(self, *args, **kwargs):
@@ -177,7 +177,7 @@ class nodeset(object):
             node.p = parity
             return node.p
 
-        elif type(node) == junction_node:
+        elif type(node) == linking_node:
             node.p = 1 - parity
             return node.p
 

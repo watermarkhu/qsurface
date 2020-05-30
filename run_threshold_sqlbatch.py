@@ -34,7 +34,10 @@ key_arguments = [
     ["-of", "--outputfolder", "store", "output folder", dict(type=str, default="", metavar="")],
     ["-me", "--measurement_error", "store_true", "enable measurement error (2+1D) - toggle", dict()],
     ["-pb", "--progressbar", "store_true", "enable progressbar - toggle", dict()],
-    ["-dgc", "--dg_connections", "store_true", "use dg_connections pre-union processing - toggle", dict()],
+    ["-fb", "--fbloom", "store",
+        "pdc minimization parameter fbloom - float {0,1}",  dict(type=float, default=0.5, metavar="")],
+    ["-dgc", "--dg_connections", "store_true",
+        "use dg_connections pre-union processing - toggle", dict()],
     ["-dg", "--directed_graph", "store_true", "use directed graph for balanced bloom - toggle", dict()],
     ["-db", "--debug", "store_true", "enable debugging hearistics - toggle", dict()],
 ]

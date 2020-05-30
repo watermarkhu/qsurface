@@ -91,9 +91,9 @@ class anyon_node(object):
         return self.short_id() + color_id
 
 
-class junction_node(anyon_node):
+class linking_node(anyon_node):
     '''
-    Juntion type node
+    Linking type node
     inherit all methods from anyon_node
     '''
     def __init__(self, *args, **kwargs):
@@ -148,7 +148,7 @@ class nodeset(object):
             node.p = parity
             return node.p
 
-        elif type(node) == junction_node:
+        elif type(node) == linking_node:
             node.p = 1 - parity
             return node.p
 
@@ -217,7 +217,7 @@ class nodeset(object):
         calc_delay_node = None if even_after_union else ch_node
 
         if ac_node.g == 0 and pa_node.s > 1:                             # Connect via new juntion-node
-            pa_vertex.node = junction_node(pa_vertex)
+            pa_vertex.node = linking_node(pa_vertex)
             an_edge = an_node.s // 2
             self.connect_nodes(pa_vertex.node, an_node, an_edge)
             self.connect_nodes(pa_vertex.node, ch_node, ch_node.s // 2)

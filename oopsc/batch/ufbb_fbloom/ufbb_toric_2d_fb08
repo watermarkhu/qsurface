@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH -N 4 -t 20:00:00
+#SBATCH -N 4 -t 6:00:00
 
 module load 2019
 module load Python/3.7.5-foss-2018b

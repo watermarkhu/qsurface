@@ -25,12 +25,13 @@ def plot(
     idx="",
     latts=[],
     probs=[],
+    modified_ansatz=False,
     f0=None,                   # axis object of error fit plot
     lattices=None,
     ms=4,
     style="-",           # linestyles for data and fit
     plotn=1000,                  # number of points on x axis
-    leg=False
+    leg=True
 ):
 
     data = read_data(file_name)
@@ -38,9 +39,9 @@ def plot(
     apply fit and get parameter
     '''
     (fitL, fitp, fitN, fitt), par = fit_thresholds(
-        data, False, latts, probs)
+        data, modified_ansatz, latts, probs)
 
-    fit_func = get_fit_func(False)
+    fit_func = get_fit_func(modified_ansatz)
 
     '''
     Plot and fit thresholds for a given dataset. Data is inputted as four lists for L, P, N and t.
@@ -121,7 +122,7 @@ def plot(
     legend_entry = Line2D([0], [0], ls=style, color='k', label=idx)
     return f0, legend_entry
 
-def plot_ufbb(
+def plot_sequential(
     file_name,
     idx="",
     latts=[],
@@ -267,9 +268,9 @@ def plot_multiple(locs, names=None, styles=["-"], showleg=True, **kwargs):
     for (loc, name, style) in zip(locs, names, styles):
         data = "/home/watermarkhu/mep/oop_surface_code/cartesiusdata/{}.csv".format(loc)
         if style == "-":
-            f, leg = plot(data, idx=name, style=style, leg=True, f0=f, **kwargs)
-        else:
             f, leg = plot(data, idx=name, style=style, f0=f, **kwargs)
+        else:
+            f, leg = plot(data, idx=name, style=style, leg=False, f0=f, **kwargs)
         artists.append(leg)
 
     if showleg:

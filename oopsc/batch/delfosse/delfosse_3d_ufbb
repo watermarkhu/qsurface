@@ -1,0 +1,20 @@
+#!/bin/bash
+#SBATCH -N 4 -t 20:00:00
+
+module load 2019
+module load Python/3.7.5-foss-2018b
+
+name=delfosse_3d_ufbb
+nodes=4
+iters=96000
+shared=/scratch-shared/tmp.4MrYmgXnYZ
+
+let iter=$iters/$nodes
+mkdir -p $shared/$name
+
+for (( i=0; i<$nodes; i++)); do
+(
+srun -N 1 python $HOME/oop_surface_code/run_threshold_sqlbatch.py $i 24 ufbb toric $iter -l 6 10 14 18 -p 0.024 0.0245 0.025 0.0255 0.026 0.0265 0.027 0.0275 0.028 -of $shared/$name -db -me
+)&
+done
+wait

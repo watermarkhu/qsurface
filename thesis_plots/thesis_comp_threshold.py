@@ -76,7 +76,7 @@ def plot_thresholds(
 
 def comp_thresholds(Lrange, type, decoders=[], thdata=[]):
 
-    f, ax = plt.subplots()
+    f, ax = plt.subplots(tight_layout=True)
 
     colordict = get_colors()
     legend_elements = []
@@ -108,7 +108,8 @@ def comp_thresholds(Lrange, type, decoders=[], thdata=[]):
             color="k"
         ))
 
-    ax.add_artist(plt.legend(handles=legend, ncol=2, loc="lower left", **legend_style()))
+    ax.add_artist(plt.legend(handles=legend, ncol=2, loc="lower left",
+                             **legend_style(), title=r"$L$", title_fontsize=8))
     ax.add_artist(plt.legend(handles=legend_elements, loc="upper right"))
 
     return f

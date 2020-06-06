@@ -1,0 +1,20 @@
+#!/bin/bash
+#SBATCH -N 4 -t 20:00:00
+
+module load 2019
+module load Python/3.7.5-foss-2018b
+
+name=delfosse_2d_dbuf
+nodes=4
+iters=96000
+shared=/scratch-shared/tmp.4MrYmgXnYZ
+
+let iter=$iters/$nodes
+mkdir -p $shared/$name
+
+for (( i=0; i<$nodes; i++)); do
+(
+srun -N 1 python $HOME/oop_surface_code/run_threshold_sqlbatch.py $i 24 dbuf toric $iter -l 10 18 26 34 -p 0.092 0.093 0.094 0.095 0.096 0.097 0.098 0.099 0.1 0.101 0.102 0.103 0.104 0.105 -of $shared/$name -db
+)&
+done
+wait

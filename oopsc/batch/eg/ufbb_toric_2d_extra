@@ -1,0 +1,20 @@
+#!/bin/bash
+#SBATCH -N 4 -t 12:00:00
+
+module load 2019
+module load Python/3.7.5-foss-2018b
+
+name=ufbb_toric_3d_extra
+nodes=4
+iters=11520
+shared=/scratch-shared/tmp.4MrYmgXnYZ
+
+let iter=$iters/$nodes
+mkdir -p $shared/$name
+
+for (( i=0; i<$nodes; i++)); do
+(
+srun -N 1 python $HOME/oop_surface_code/run_threshold_sqlbatch.py $i 24 ufbb toric $iter -l 40 44 -p 0.027 0.02733 0.02767 0.028 0.02833 0.02867 0.029 0.02933 0.02967 0.03 -of $shared/$name -db -me
+)&
+done
+wait

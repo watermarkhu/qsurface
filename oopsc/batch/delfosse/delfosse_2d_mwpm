@@ -1,0 +1,17 @@
+#!/bin/bash
+#SBATCH -N 4 -t 20:00:00
+
+module load 2019
+module load Python/3.7.5-foss-2018b
+
+nodes=4
+iters=96000
+
+let iter=$iters/$nodes
+
+for (( i=0; i<$nodes; i++)); do
+(
+srun -N 1 bash $HOME/scripts/delfosse/b_mwpm_2d $i $iter
+)&
+done
+wait

@@ -7,8 +7,8 @@ from compare_heuristics import latex_style
 
 latex_style(0.5, 1)
 
-save = False
-show = True
+save = 1
+show = 0
 
 #DBUF
 output = "dbuf_toric_2d"
@@ -24,15 +24,15 @@ print("\n{}".format(output))
 fig, ax = plot_multiple([output], latts=[8+8*i for i in range(8)])
 if save: fig.savefig("/home/watermarkhu/mep/mep-thesis/pgfplots/threshold_{}.pgf".format(output))
 
-output = "dbuf_toric_2d_large"
-print("\n{}".format(output))
-fig, ax = plot_multiple([output], latts=[72+8*i for i in range(8)])
-if save: fig.savefig("/home/watermarkhu/mep/mep-thesis/pgfplots/threshold_{}.pgf".format(output))
+# output = "dbuf_toric_2d_large"
+# print("\n{}".format(output))
+# fig, ax = plot_multiple([output], latts=[72+8*i for i in range(8)])
+# if save: fig.savefig("/home/watermarkhu/mep/mep-thesis/pgfplots/threshold_{}.pgf".format(output))
 
-output = "dbuf_planar_2d_large"
-print("\n{}".format(output))
-fig, ax = plot_multiple([output], latts=[72+8*i for i in range(8)])
-if save: fig.savefig("/home/watermarkhu/mep/mep-thesis/pgfplots/threshold_{}.pgf".format(output))
+# output = "dbuf_planar_2d_large"
+# print("\n{}".format(output))
+# fig, ax = plot_multiple([output], latts=[72+8*i for i in range(8)])
+# if save: fig.savefig("/home/watermarkhu/mep/mep-thesis/pgfplots/threshold_{}.pgf".format(output))
 
 
 output = "dbuf_toric_3d"
@@ -46,5 +46,5 @@ fig, ax = plot_multiple([output], latts=[8+4*i for i in range(8)])
 if save: fig.savefig("/home/watermarkhu/mep/mep-thesis/pgfplots/threshold_{}.pgf".format(output))
 
 
-if show():
+if show:
     plt.show()       

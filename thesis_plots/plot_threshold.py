@@ -116,7 +116,7 @@ def plot(
     plot_style(ax0, "", r" $ p_X $", r"$k_C$")
     if leg:
         legend = plt.legend(handles=legend, loc="lower left", ncol=2,
-                            markerscale=1, fontsize="small", columnspacing=0, labelspacing=0.2, handletextpad=0, numpoints=1)
+                            markerscale=1, fontsize="small", columnspacing=0, labelspacing=0.2, handletextpad=0, numpoints=1, title=r"$L$", title_fontsize=8)
         ax0.add_artist(legend)
 
     legend_entry = Line2D([0], [0], ls=style, color='k', label=idx)
@@ -131,6 +131,8 @@ def plot_sequential(
     ms=4,
     style="-",           # linestyles for data and fit
     plotn=1000,                  # number of points on x axis
+    axes = None,
+    ylabel=True,
 ):
 
 
@@ -156,8 +158,11 @@ def plot_sequential(
     Plot and fit thresholds for a given dataset. Data is inputted as four lists for L, P, N and t.
     '''
 
-    f0, ax0 = plt.subplots(tight_layout=True)
-    f1, ax1 = plt.subplots(tight_layout=True)
+    if axes is None:
+        f0, ax0 = plt.subplots(tight_layout=True)
+        f1, ax1 = plt.subplots(tight_layout=True)
+    else:
+        ((f0, ax0), (f1, ax1)) = axes
 
     LP = defaultdict(list)
     for L, P, N, T in zip(fitL, fitp, fitN, fitt):
@@ -240,17 +245,24 @@ def plot_sequential(
         pth = par[0]
         kc = fit_func((pth, 20), *par)
         thresholds.append([pth, kc, colors[lati], markers[laty]])
-        plt.plot(pth, kc, color=colors[lati],
+        ax1.plot(pth, kc, color=colors[lati],
                  marker=markers[laty], ms=ms)
 
 
     pname = r"$p_{th}$"
     kname = r"$k_C$"
 
-    plot_style(ax0, "", r" $ p_X $", r"$k_C$")
-    ax0.legend(handles=leg1, loc="lower left", ncol=2, **legend_style())
-    plot_style(ax1, "", r" $ p_X $", r"$k_C$")
-    ax1.legend(handles=leg2, loc="upper right", ncol=2, **legend_style())
+    if ylabel:
+        plot_style(ax0, "", r" $ p_X $", r"$k_C$")
+        plot_style(ax1, "", r" $ p_X $", r"$k_C$")
+    else:
+        plot_style(ax0, "", r" $ p_X $")
+        plot_style(ax1, "", r" $ p_X $")
+
+    ax0.legend(handles=leg1, loc="lower left", ncol=3, **
+               legend_style(), title=r"$L$", title_fontsize=8)
+    ax1.legend(handles=leg2, ncol=2, **
+               legend_style(), title=r"$L_1,L_2$", title_fontsize=8)
 
     return f0, f1, thresholds
 

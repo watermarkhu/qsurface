@@ -1,0 +1,24 @@
+#!/bin/bash
+
+i=$1
+iter=$2
+
+name=delfosse_2d_mwpm
+shared=/scratch-shared/tmp.4MrYmgXnYZ
+folder=$TMPDIR
+
+mkdir -p $shared/$name
+# folder=$HOME
+
+cd $folder
+git clone https://github.com/watermarkhu/OpenSurfaceSim
+
+cd OpenSurfaceSim
+git checkout batch
+
+cd oopsc/decoder/blossom5
+make
+
+cd ../../..
+# pyenv local 3.7.4
+python run_threshold_sqlbatch.py $i 24 mwpm toric $iter -l 10 18 26 34 -p 0.092 0.093 0.094 0.095 0.096 0.097 0.098 0.099 0.1 0.101 0.102 0.103 0.104 0.105 -of $shared/$name -db

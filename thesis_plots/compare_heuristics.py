@@ -250,7 +250,7 @@ def plot_compare2(
                 Ynorm = Y
                 marker="None"
 
-            Y = [y1-y2 for y1, y2 in zip(Y,Ynorm)]
+            Y = [y1/y2 for y1, y2 in zip(Y,Ynorm)]
 
             # print(ylabel, X, Y)
             #
@@ -285,11 +285,11 @@ def plot_compare2(
     xnames = [round(x*xm, 3) for x in xnames]
 
     plt.xticks(xticks, xnames)
-    L1 = plt.legend(handles=leg1, loc="upper left")
+    L1 = plt.legend(handles=leg1) #, loc="center right", bbox_to_anchor=(1, 0.2))
     plt.gca().add_artist(L1)
 
     if len(probs) > 1:
-        L2 = plt.legend(handles=leg2, loc="upper left", ncol=3)
+        L2 = plt.legend(handles=leg2, ncol=3)
         plt.gca().add_artist(L2)
 
     plot_style(plt.gca(), "", xchoice, yname)

@@ -7,8 +7,8 @@ from compare_heuristics import latex_style
 
 latex_style(0.5, 1)
 
-save = False
-show = True
+save = 1
+show = 0
 
 # #SBUF
 output = "sbuf_toric_2d"
@@ -33,5 +33,5 @@ if save: fig.savefig("/home/watermarkhu/mep/mep-thesis/pgfplots/threshold_{}.pgf
 
 
 
-if show():
+if show:
     plt.show()       

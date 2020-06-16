@@ -128,4 +128,4 @@ if __name__ == "__main__":
     else:
         output = multiprocess(size, config, iters, dec=decode, go=go, debug=debug, processes=threads, **kwargs)
 
-    pprint(output)
+    # pprint(output)

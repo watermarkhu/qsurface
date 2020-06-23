@@ -8,23 +8,12 @@
 *.csv
 *.txt
 
-.python-version
-
 simulations
-simulations/
 Simulations
-Simulations/
+cartesiusdata
 
 __pycache__/
-errors/
-figures/
-data/
-logs/
-srun_test/
-batch/
 .idea/
 .python-version
 .vscode/
 !requirements.txt
-simulations
-cartesiusdata

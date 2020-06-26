@@ -81,47 +81,46 @@ if __name__ == "__main__":
     threads = config.pop("threads")
     size    = config.pop("lattice_size")
     debug   = config.pop("debug")
-    f2d     = config.pop("force2D")
-    f3d     = config.pop("force3D")
 
     kwargs = dict(
-        ltype   = config.pop("lattice_type"),
+        code   = config.pop("lattice_type"),
         paulix      = config.pop("paulix"),
         pauliz      = config.pop("pauliz"),
         erasure      = config.pop("erasure"),
         measurex     = config.pop("measurex"),
         measurez     = config.pop("measurez"),
+        f2d     = config.pop("force2D"),
+        f3d     = config.pop("force3D")
     )
 
-    print(f"{'_'*75}\n")
-    print(f"OpenSurfaceSim\n2020 Mark Shui Hu\nwww.github.com/watermarkhu/OpenSurfaceSim")
+    # print(f"{'_'*75}\n")
+    # print(f"OpenSurfaceSim\n2020 Mark Shui Hu\nwww.github.com/watermarkhu/OpenSurfaceSim")
 
-    decoders = __import__("simulator.decoder", fromlist=[decoder])
-    decode = getattr(decoders, decoder)
+    # decoders = __import__("simulator.decoder", fromlist=[decoder])
+    # decode = getattr(decoders, decoder)
 
-    decoder_names = {
-        "mwpm":     "minimum weight perfect matching (blossom5)",
-        "uf":       "union-find",
-        "uf_uwg":   "union-find non weighted growth",
-        "ufbb":     "union-find balanced bloom"
-    }
-    decoder_name = decoder_names[decoder] if decoder in decoder_names else decoder
-    print(f"{'_'*75}\n\ndecoder type: " + decoder_name)
+    # decoder_names = {
+    #     "mwpm":     "minimum weight perfect matching (blossom5)",
+    #     "uf":       "union-find",
+    #     "uf_uwg":   "union-find non weighted growth",
+    #     "ufbb":     "union-find balanced bloom"
+    # }
+    # decoder_name = decoder_names[decoder] if decoder in decoder_names else decoder
+    # print(f"{'_'*75}\n\ndecoder type: " + decoder_name)
 
 
-    if (not f3d and kwargs["measurex"] == 0 and kwargs["measurez"] == 0) or f2d:
-        from simulator.graph import graph_2D as go
-        print(f"{'_'*75}\n\ngraph type: 2D {kwargs['ltype']}\n{'_'*75}\n")
-    else:
-        from simulator.graph import graph_3D as go
-        print(f"{'_'*75}\n\ngraph type: 3D {kwargs['ltype']}\n{'_'*75}\n")
-
+    # if (not f3d and kwargs["measurex"] == 0 and kwargs["measurez"] == 0) or f2d:
+    #     from simulator.graph import graph_2D as go
+    #     print(f"{'_'*75}\n\ngraph type: 2D {kwargs['code']}\n{'_'*75}\n")
+    # else:
+    #     from simulator.graph import graph_3D as go
+    #     print(f"{'_'*75}\n\ngraph type: 3D {kwargs['code']}\n{'_'*75}\n")
 
     if iters == 1:
-        output = single(size, config, dec=decode, go=go, debug=debug, **kwargs)
+        output = single(size, config, dec=decoder, debug=debug, **kwargs)
     elif not multi:
-        output = multiple(size, config, iters, dec=decode, go=go, debug=debug, **kwargs)
+        output = multiple(size, config, iters, dec=decoder, debug=debug, **kwargs)
     else:
-        output = multiprocess(size, config, iters, dec=decode, go=go, debug=debug, processes=threads, **kwargs)
+        output = multiprocess(size, config, iters, dec=decoder, debug=debug, processes=threads, **kwargs)
 
-    # pprint(output)
+    pprint(output)

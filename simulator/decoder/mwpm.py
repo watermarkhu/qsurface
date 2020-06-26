@@ -21,6 +21,7 @@ class toric(object):
     @debug.init_counters_uf()
     def __init__(self, *args, **kwargs):
         self.type = "mwpm"
+        self.name = "Minimum-Weight Perfect Matching (networkx)"
         for key, value in kwargs.items():
             setattr(self, key, value)
 

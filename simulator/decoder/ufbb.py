@@ -45,6 +45,7 @@ class toric(uf.toric):
         '''
         super().__init__(*args, **kwargs)
         self.type = "ufbb"
+        self.name = "Union-Find Balanced-Bloom"
         if self.directed_graph:
             self.grow_boundary = self.grow_boundary_directed
             from .balancedbloom import directed as bb

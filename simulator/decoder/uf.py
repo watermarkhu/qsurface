@@ -28,6 +28,7 @@ class toric(object):
         Decoder options, defined in kwargs are stored as class variables.
         '''
         self.type = "uf"
+        self.name = "Dynamic-forst Bucket Union-Find"
         self.plot_config = plot_config
 
         for key, value in kwargs.items():

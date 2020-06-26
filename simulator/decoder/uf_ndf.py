@@ -30,6 +30,7 @@ class toric(uf.toric):
         '''
         super().__init__(*args, **kwargs)
         self.type = "uf_ndf"
+        self.name = "Static-forest Bucket Union-Find"
 
 
     def edge_growth_choices(self, edge, aV, pV, aC, pC):

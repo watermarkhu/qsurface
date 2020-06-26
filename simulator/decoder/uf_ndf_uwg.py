@@ -30,6 +30,7 @@ class toric(uf_ndf.toric, uf_uwg.toric):
         '''
         super().__init__(*args, **kwargs)
         self.type = "uf_ndf_uwg"
+        self.name = "Static-forest Union-Find"
 
 class planar(uf_ndf.planar, uf_uwg.planar, toric):
     pass

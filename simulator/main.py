@@ -18,6 +18,7 @@ from .info.decorators import debug as db
 import numpy as np
 import random
 import time
+from simulator.helper import sim_setup
 
 
 def init_random_seed(timestamp=None, worker=0, iteration=0, **kwargs):
@@ -43,12 +44,23 @@ def apply_random_seed(seed=None, **kwargs):
     random.seed(seed)
 
 
-def lattice_type(type, config, dec, go, size, **kwargs):
+def lattice_type(code, config, dec, go, size, **kwargs):
     '''
     Initilizes the graph and decoder type based on the lattice structure.
     '''
-    decoder = getattr(dec, type)(**config, **kwargs)
-    graph = getattr(go, type)(size, decoder, **config, **kwargs)
+
+    if type(dec) == str:
+        try:
+            decoders = __import__("simulator.decoder", fromlist=[dec])
+            dec = getattr(decoders, dec)
+        except:
+            print("Decoder type invlid")
+    try:
+        decoder = getattr(dec, code)(**config, **kwargs)
+    except:
+        print("Graph type not defined in decoder class")
+
+    graph = getattr(go, code)(size, decoder, **config, **kwargs)
     return graph
 
 
@@ -65,14 +77,14 @@ def get_mean_var(list_of_var, str):
 def single(
     size,
     config,
-    ltype="toric",
+    code="toric",
     paulix=0,
     pauliz=0,
     erasure=0,
     measurex=0,
     measurez=0,
     dec=None,
-    go=None,
+    # go=None,
     graph=None,
     worker=0,
     iter=0,
@@ -87,7 +99,8 @@ def single(
     # Initialize lattice
     if graph is None:
         pr.print_configuration(config, 1, size=size, pX=paulix, pZ=pauliz, pE=erasure, pmX=measurex, pmZ=measurez)
-        graph = lattice_type(ltype, config, dec, go, size, **kwargs)
+        graph = sim_setup(code, config, dec, size, measurex, measurez, **kwargs)
+
 
     # Initialize errors
     if seed is None and not config["seeds"]:
@@ -136,14 +149,13 @@ def multiple(
     size,
     config,
     iters,
-    ltype="toric",
+    code="toric",
     paulix=0,
     pauliz=0,
     erasure=0,
     measurex=0,
     measurez=0,
     dec=None,
-    go=None,
     graph=None,
     qres=None,
     worker=0,
@@ -160,7 +172,8 @@ def multiple(
     if qres is None:
         pr.print_configuration(config, iters, size=size, paulix=paulix, pauliz=pauliz, erasure=erasure, measurex=measurex, measurez=measurez)
     if graph is None:
-        graph = lattice_type(ltype, config, dec, go, size, **kwargs)
+        graph = sim_setup(code, config, dec, size, measurex, measurez, **kwargs)
+
 
     if seeds is None and not config["seeds"]:
         seeds = [init_random_seed(worker=worker, iteration=iter) for iter in range(iters)]
@@ -168,7 +181,7 @@ def multiple(
         seeds = config["seeds"]
 
     options = dict(
-        ltype=ltype,
+        code=code,
         paulix=paulix,
         pauliz=pauliz,
         erasure=erasure,
@@ -211,7 +224,6 @@ def multiprocess(
         config,
         iters,
         dec=None,
-        go=None,
         graph=None,
         processes=None,
         node=0,
@@ -235,7 +247,6 @@ def multiprocess(
 
     options = dict(
         dec=dec,
-        go=go,
         qres=qres,
         called=0,
         debug=debug

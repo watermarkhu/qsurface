@@ -6,7 +6,7 @@ _____________________________________________
 
 The Minimum Weight Perfect Matching decoder
 
-Uses either Kolmogorov's Blossom 5 algorithm:
+Uses either Kolmogorov's Blossom V algorithm:
     Vladimir Kolmogorov. "Blossom V: A new implementation of a minimum cost perfect matching algorithm."
             In Mathematical Programming Computation (MPC), July 2009, 1(1):43-67.
 '''
@@ -97,6 +97,7 @@ class toric(mwpm.toric):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.type = "blossom"
+        self.name = "Minimum-Weight Perfect Matching (blossomV)"
 
     def get_matching(self, anyons, d_anyons):
         output = getMatching(len(anyons), self.get_edges(anyons))

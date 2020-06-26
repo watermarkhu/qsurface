@@ -72,7 +72,7 @@ output = multiprocess(size, dec, go, config, iters, processes=None, **kwargs)
 each accepting the following keyword arguments:
 ```python
 kwargs = dict(
-    ltype="toric",
+    code="toric",
     paulix=0,
     pauliz=0,
     erasure=0,

@@ -11,7 +11,6 @@ The decoder requires a graph object, containing the vertices (stabilizers) and e
 Two decoder classes are defined in this file, toric and planar for their respective lattice types.
 '''
 
-
 from simulator.info.decorators import debug, plot
 from simulator.info import printing as pr
 from simulator.decoder import uf

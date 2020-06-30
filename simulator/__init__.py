@@ -1,6 +1,7 @@
-from . import main
-from . import info
-from . import decoder
-from . import graph
-from . import plot
-from . import threshold
+import simulator.main
+import simulator.helper
+import simulator.decoder
+import simulator.graph
+import simulator.info
+import simulator.plot
+import simulator.threshold

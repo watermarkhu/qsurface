@@ -20,9 +20,9 @@ Qubits: qID (td, y, x)          Stabilizers: sID (ertype, y, x)
 
 The 2D graph (toric/planar) is a square lattice with 1 layer of these unit cells.
 '''
-from ..plot import plot_graph_lattice as pgl
-from ..plot import plot_unionfind as puf
 import random
+from simulator.plot import plot_graph_lattice as pgl
+from simulator.plot import plot_unionfind as puf
 
 
 class toric(object):
@@ -44,7 +44,7 @@ class toric(object):
                         Value:  Qubit object with two Edge objects
     matching_weight total length of edges in the matching
     """
-    def __init__(self, size, decoder, *args, plot_config={}, dim=2, **kwargs):
+    def __init__(self, size, decoder, *args, dim=2, **kwargs):
         self.dim = dim
         self.size = size
         self.range = range(size)
@@ -54,13 +54,13 @@ class toric(object):
         self.cID = 0
         self.C, self.S, self.Q = {}, {}, {}
         self.matching_weight = []
+        self.plot2D = 0
 
         self.init_graph_layer()
 
         for key, value in kwargs.items():
             setattr(self, key, value)
-        self.plot_config = plot_config
-        self.gl_plot = pgl.plot_2D(self, **plot_config) if self.plot2D else None
+        self.gl_plot = pgl.plot_2D(self) if self.plot2D else None
 
 
     def __repr__(self):
@@ -70,7 +70,7 @@ class toric(object):
         '''
         Initializes plot of unionfind decoder.
         '''
-        self.uf_plot = puf.plot_2D(self, **self.plot_config)
+        self.uf_plot = puf.plot_2D(self)
         return self.uf_plot
 
 

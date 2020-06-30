@@ -42,7 +42,7 @@ R1: [N1, M1],  N1: [R1],  M1: [R1, M0]
 '''
 
 from termcolor import colored as cs
-from ...info.decorators import debug
+from simulator.info.decorators import debug
 
 
 class anyon_node(object):

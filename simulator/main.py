@@ -47,8 +47,8 @@ def lattice_type(type, config, dec, go, size, **kwargs):
     '''
     Initilizes the graph and decoder type based on the lattice structure.
     '''
-    decoder = getattr(dec, type)(**config, plot_config=config, **kwargs)
-    graph = getattr(go, type)(size, decoder, **config, plot_config=config, **kwargs)
+    decoder = getattr(dec, type)(**config, **kwargs)
+    graph = getattr(go, type)(size, decoder, **config, **kwargs)
     return graph
 
 
@@ -279,33 +279,3 @@ def multiprocess(
     return output
 
 
-def default_config(**kwargs):
-    '''
-    stores all settings of the decoder
-    '''
-    config = dict(
-        seeds          = [],
-        fbloom         = 0.5,
-        dg_connections = 0,
-        directed_graph = 0,
-        print_steps    = 0,
-        plot2D         = 0,
-        plot3D         = 0,
-        plotUF         = 0,
-        plot_find      = 0,
-        plot_bucket    = 0,
-        plot_cluster   = 0,
-        plot_cut       = 0,
-        plot_peel      = 0,
-        plot_node      = 0,
-        plot_size      = 6,
-        linewidth      = 1.5,
-        scatter_size   = 30,
-        z_distance     = 8,
-    )
-
-    for key, value in kwargs.items():
-        if key in config:
-            config[key] = value
-
-    return config

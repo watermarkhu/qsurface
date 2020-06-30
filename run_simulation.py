@@ -56,20 +56,16 @@ if __name__ == "__main__":
     ]
 
     plot_arguments = [
+        ["-pr", "--print_steps", "store_true", "print all debug info - toggle", dict()],
         ["-p2d", "--plot2D", "store_true", "plot 2D lattice - toggle", dict()],
         ["-p3d", "--plot3D", "store_true", "plot 3D lattice - toggle", dict()],
         ["-puf", "--plotUF", "store_true", "plot uf-lattice - toggle", dict()],
-        ["-pr", "--print_steps", "store_true", "print all debug info - toggle", dict()],
         ["-pf", "--plot_find", "store_true", "plot find cluster routine sequenctially - toggle", dict()],
         ["-pb", "--plot_bucket", "store_true", "plot growth routine by bucket - toggle", dict()],
         ["-pc", "--plot_cluster", "store_true", "plot growth routine by cluster - toggle", dict()],
         ["-pn", "--plot_node", "store_true", "plot growth routine by node - toggle", dict()],
         ["-pk", "--plot_cut", "store_true", "plot removed edges of cluster cycles - toggle", dict()],
         ["-pp", "--plot_peel", "store_true", "plot the peeling of edges sequentially - toggle", dict()],
-        ["-ps", "--plot_size", "store", "size of plotting window - int", dict(type=int, default=6, metavar="")],
-        ["-lw", "--linewidth", "store", "width of line plots - int/float", dict(type=float, default=1.5, metavar="")],
-        ["-ss", "--scatter_size", "store", "size of 3D plot scatter - int/float", dict(type=int, default=30, metavar="")],
-        ["-zd", "--z_distance", "store", "distance between z layers in 3D plot - int/float", dict(type=int, default=2, metavar="")],
     ]
 
     add_args(parser, arguments)

@@ -5,7 +5,7 @@ www.github.com/watermarkhu/OpenSurfaceSim
 _____________________________________________
 
 '''
-from .. import main
+from simulator import main, helper
 from pprint import pprint
 import multiprocessing as mp
 import numpy as np
@@ -81,7 +81,7 @@ def sim_thresholds(
 
     data = None
     pfloat = [float(p) for p in perror]
-    config = main.default_config(**kwargs)
+    config = helper.default_config(**kwargs)
 
     # Simulate and save results to file
     for lati in lattices:

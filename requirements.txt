@@ -2,6 +2,7 @@ matplotlib
 scipy
 numpy
 pandas
+networkx
 progiter
 pprint
 pyparsing

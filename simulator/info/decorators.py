@@ -12,7 +12,7 @@ Contains decorator classes and method for:
 
 import functools
 import time
-from . import printing as pr
+from simulator.info import printing as pr
 
 class plot(object):
     '''

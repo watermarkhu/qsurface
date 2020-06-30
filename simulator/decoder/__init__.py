@@ -1,6 +1,7 @@
-from . import mwpm
-from . import uf
-from . import ufbb
-from . import uf_uwg
-from . import uf_ndf
-from . import uf_ndf_uwg
+import simulator.decoder.mwpm
+import simulator.decoder.blossom
+import simulator.decoder.uf
+import simulator.decoder.uf_ndf
+import simulator.decoder.uf_ndf_uwg
+import simulator.decoder.uf_uwg
+import simulator.decoder.ufbb

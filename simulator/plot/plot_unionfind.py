@@ -14,7 +14,7 @@ Otherwise only minor plotting functions are inherited.
 '''
 
 import matplotlib.pyplot as plt
-from . import plot_graph_lattice as gp
+from simulator.plot import plot_graph_lattice as gp
 
 
 class plot_2D(gp.plot_2D):
@@ -135,14 +135,14 @@ class plot_2D(gp.plot_2D):
         '''
         Draw lines of the X-edges of the qubit
         '''
-        color, alpha = (self.C1[ertype], 1) if qubit.erasure else (self.cl, self.alpha2)
+        color, alpha = (self.C1[ertype], 1) if qubit.erasure else (self.cl, self.alpha)
 
         (type, y0, x0) = qubit.qID
 
         x0, y0, xm, ym, x1, y1 = self.get_edge_data(ertype, type, y0, x0)
 
-        up1 = self.draw_line([x0,  xm], [y0,  ym], Z=qubit.z, color=color, lw=self.linewidth, ls=self.LS[ertype], alpha=alpha)
-        up2 = self.draw_line([xm,  x1], [ym,  y1], Z=qubit.z, color=color, lw=self.linewidth, ls=self.LS[ertype], alpha=alpha)
+        up1 = self.draw_line([x0,  xm], [y0,  ym], Z=qubit.z, color=color, lw=self.linewidth, ls=self.UFLS[ertype], alpha=alpha)
+        up2 = self.draw_line([xm,  x1], [ym,  y1], Z=qubit.z, color=color, lw=self.linewidth, ls=self.UFLS[ertype], alpha=alpha)
         up1.object = up2.object = qubit.E[ertype]
         qubit.E[ertype].pu = [up1, up2]
 
@@ -191,8 +191,8 @@ class plot_2D(gp.plot_2D):
         for qubit in self.graph.Q[z].values():
             for edge in [qubit.E[0], qubit.E[1]]:
                 if edge.peeled and not edge.matching:
-                    self.new_attributes(edge.pu[0], dict(color=self.cl, alpha=self.alpha2))
-                    self.new_attributes(edge.pu[1], dict(color=self.cl, alpha=self.alpha2))
+                    self.new_attributes(edge.pu[0], dict(color=self.cl, alpha=self.alpha))
+                    self.new_attributes(edge.pu[1], dict(color=self.cl, alpha=self.alpha))
 
 
     def add_edge(self, edge, vertex):
@@ -206,9 +206,9 @@ class plot_2D(gp.plot_2D):
             (ye, xe) = edge.qubit.qID[1:3]
             (yv, xv) = vertex.sID[1:3]
             id = 0 if (ye == yv and xe == xv) else 1
-            color = self.Cx if edge.ertype ==0 else self.Cz
+            color = self.cx3 if edge.ertype ==0 else self.cz3
             self.new_attributes(edge.pu[id], dict(color=color, alpha=self.alpha))
-            self.new_attributes(edge.pu[1-id], dict(color=self.cl, alpha=self.alpha2))
+            self.new_attributes(edge.pu[1-id], dict(color=self.cl, alpha=self.alpha))
         elif edge.support == 2:
             color = self.cx if edge.ertype == 0 else self.cz
             self.new_attributes(edge.pu[0], dict(color=color, alpha=1), 1)
@@ -233,7 +233,7 @@ class plot_2D(gp.plot_2D):
             c1 = self.cl
             c2 = self.cl
             text = "☒ remove"
-            alpha = self.alpha2
+            alpha = self.alpha
         elif type == "confirm":
             c1 = self.cx
             c2 = self.cz
@@ -243,7 +243,7 @@ class plot_2D(gp.plot_2D):
             c1 = self.cl
             c2 = self.cl
             text = "☒ peeling"
-            alpha = self.alpha2
+            alpha = self.alpha
         elif type == "match":
             c1 = self.cX
             c2 = self.cZ
@@ -302,7 +302,7 @@ class plot_3D(plot_2D, gp.plot_3D):
     '''
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.alpha2 = 0.01
+        self.alpha = 0.01
 
     def init_plot(self, *args, **kwargs):
         '''
@@ -356,8 +356,8 @@ class plot_3D(plot_2D, gp.plot_3D):
             y += 0.5
             x += 0.5
 
-        up1 = self.draw_line([x,  x], [y,  y], Z=[z, z-.5], color=self.cl, lw=self.linewidth, ls=self.LS[ertype], alpha=self.alpha2)
-        up2 = self.draw_line([x,  x], [y,  y], Z=[z-.5, z-1], color=self.cl, lw=self.linewidth, ls=self.LS[ertype], alpha=self.alpha2)
+        up1 = self.draw_line([x,  x], [y,  y], Z=[z, z-.5], color=self.cl, lw=self.linewidth, ls=self.UFLS[ertype], alpha=self.alpha)
+        up2 = self.draw_line([x,  x], [y,  y], Z=[z-.5, z-1], color=self.cl, lw=self.linewidth, ls=self.UFLS[ertype], alpha=self.alpha)
         up1.object = up2.object = bridge
 
         bridge.E.pu = [up1, up2]
@@ -376,8 +376,8 @@ class plot_3D(plot_2D, gp.plot_3D):
             for bridge in self.graph.G[z].values():
                 edge = bridge.E
                 if edge.peeled and not edge.matching:
-                    self.new_attributes(edge.pu[0], dict(color=self.cl, alpha=self.alpha2))
-                    self.new_attributes(edge.pu[1], dict(color=self.cl, alpha=self.alpha2))
+                    self.new_attributes(edge.pu[0], dict(color=self.cl, alpha=self.alpha))
+                    self.new_attributes(edge.pu[1], dict(color=self.cl, alpha=self.alpha))
 
 
     def add_edge(self, edge, vertex):
@@ -388,7 +388,7 @@ class plot_3D(plot_2D, gp.plot_3D):
             (ye, xe), ze = edge.qubit.qID[1:3], edge.z
             (yv, xv), zv = vertex.sID[1:3], vertex.z
 
-            color = self.Cx if edge.ertype == 0 else self.Cz
+            color = self.cx3 if edge.ertype == 0 else self.cz3
             if edge.edge_type == 0:
                 id = 0 if (ye == yv and xe == xv) else 1
             else:
@@ -401,7 +401,7 @@ class plot_3D(plot_2D, gp.plot_3D):
                     self.draw_bridge(edge.qubit)
 
             self.new_attributes(edge.pu[id], dict(color=color, alpha=self.alpha))
-            self.new_attributes(edge.pu[1-id], dict(color=self.cl, alpha=self.alpha2))
+            self.new_attributes(edge.pu[1-id], dict(color=self.cl, alpha=self.alpha))
 
         elif edge.support == 2:
             color = self.cx if edge.ertype == 0 else self.cz

@@ -17,9 +17,15 @@ from collections import defaultdict as dd
 from matplotlib import pyplot as plt
 from matplotlib.lines import Line2D
 from matplotlib.widgets import Button, RadioButtons
-from ..info import printing as pr
+import matplotlib as mpl
 from time import time
 import random
+import os
+from simulator.info import printing as pr
+from simulator.helper import getconfigdict, writeplotconfig
+
+
+mpl.rcParams['toolbar'] = 'None'
 
 
 class plot_2D:
@@ -39,39 +45,50 @@ class plot_2D:
         self.graph = graph
         self.from3D = from3D
 
-        self.qsize = 0.15
-        self.pick = 5
+        self.plot_size = 6
+        self.linewidth = 1.5
+        self.scatter_size = 30
+        self.z_distance = 8
+        self.qubitsize = 0.15
+        self.picksize = 5
+        self.alpha = 0.35
 
-        self.alpha = 0.4
-        self.alpha2 = 0.3
-
-        for key, value in kwargs.items():
-            setattr(self, key, value)
-
-        # Define colors
+        # Define colors and styles
         self.cw = [1, 1, 1]
         self.cl = [0.8, 0.8, 0.8]  # Line color
-        self.cc = [0.7, 0.7, 0.7]  # Qubit color
-        self.ec = [0.3, 0.3, 0.3]  # Erasure color
+        self.cq = [0.7, 0.7, 0.7]  # Qubit color
         self.cx = [0.9, 0.3, 0.3]  # X error color
         self.cz = [0.5, 0.5, 0.9]  # Z error color
         self.cy = [0.9, 0.9, 0.5]  # Y error color
-        self.cX = [0.9, 0.7, 0.3]  # X quasiparticle color
-        self.cZ = [0.3, 0.9, 0.3]  # Z quasiparticle color
-        self.Cx = [0.5, 0.1, 0.1]
-        self.Cz = [0.1, 0.1, 0.5]
-        self.cE = [0.9, 0.3, 0.7]  # Erasure color
-        self.C1 = [self.cx, self.cz]
-        self.C2 = [self.cX, self.cZ]
-        self.LS = ["-", "--"]
-        self.LS2 = [":", "--"]
+        self.cx2 = [0.9, 0.7, 0.3]  # X quasiparticle color
+        self.cz2 = [0.3, 0.9, 0.3]  # Z quasiparticle color
+        self.cx3 = [0.5, 0.1, 0.1]
+        self.cz3 = [0.1, 0.1, 0.5]
+        self.lsx = ":"
+        self.lsy = "--"
+        self.uflsx = "-"
+        self.uflsy = "--"
 
+        self.C1 = [self.cx, self.cz]
+        self.C2 = [self.cx2, self.cz2]
+        self.LS = [self.lsx, self.lsy]
+        self.UFLS = [self.uflsx, self.uflsy]
+
+        if not os.path.exists('simulator/plot.ini'):
+            writeplotconfig()
+        data = getconfigdict('simulator/plot.ini')
+
+        for key, value in data.items():
+            setattr(self, key, value)
+
+        # History attributes
         self.history = dd(dict)
         self.iter = 0
         self.iter_names = ["Initial"]
         self.iter_plot = 0
         self.recent = 0
 
+        # Initiate figure and axes
         self.f = plt.figure(figsize=(self.plot_size, self.plot_size))
         plt.ion()
         plt.cla()
@@ -79,10 +96,10 @@ class plot_2D:
         plt.axis("off")
         self.ax = plt.axes([0.075, 0.1, 0.7, 0.85])
         self.ax.set_aspect("equal")
-
         self.canvas = self.f.canvas
         self.canvas.callbacks.connect('pick_event', self.on_pick)
 
+        # Initiate buttons and elements
         self.prev_button = Button(plt.axes([0.75, 0.025, 0.125, 0.05]), "Previous")
         self.next_button = Button(plt.axes([0.9, 0.025, 0.075, 0.05]), "Next")
         self.prev_button.on_clicked(self.draw_prev)
@@ -90,12 +107,14 @@ class plot_2D:
         self.rax = plt.axes([0.9, 0.1, 0.075, 0.125])
         self.radio_button = RadioButtons(self.rax, ("info", "X", "Z", "E"))
 
+        # Initiate text box
         self.ax_text = plt.axes([0.025, 0.025, 0.7, 0.05])
         plt.axis("off")
         self.text = self.ax_text.text(0.5, 0.5, "", fontsize=10, va ="center", ha="center", transform=self.ax_text.transAxes)
 
         self.init_plot(z)
 
+        # Turn off radio button
         self.radio_button.set_active(0)
         plt.setp(self.rax, visible=0)
 
@@ -315,12 +334,12 @@ class plot_2D:
 
         self.ax.set_title("{} lattice".format(self.graph.__class__.__name__))
 
-        le_qubit    = self.legend_circle("Qubit", mfc=self.cc, mec=self.cc)
+        le_qubit    = self.legend_circle("Qubit", mfc=self.cq, mec=self.cq)
         le_xer      = self.legend_circle("X-error", mfc=self.cx, mec=self.cx)
         le_zer      = self.legend_circle("Y-error", mfc=self.cz, mec=self.cz)
         le_yer      = self.legend_circle("Z-error", mfc=self.cy, mec=self.cy)
-        le_ver      = self.legend_circle("Vertex", ls="-", lw=self.linewidth, color=self.cX, mfc=self.cX, mec=self.cX, marker="|")
-        le_pla      = self.legend_circle("Plaquette", ls="--", lw=self.linewidth, color=self.cZ, mfc=self.cZ, mec=self.cZ, marker="|")
+        le_ver      = self.legend_circle("Vertex", ls="-", lw=self.linewidth, color=self.cx2, mfc=self.cx2, mec=self.cx2, marker="|")
+        le_pla      = self.legend_circle("Plaquette", ls="--", lw=self.linewidth, color=self.cz2, mfc=self.cz2, mec=self.cz2, marker="|")
 
         self.lh = [le_qubit, le_xer, le_zer, le_yer, le_ver, le_pla] + items
 
@@ -331,7 +350,7 @@ class plot_2D:
         '''
         Initilizes the 2D axis by settings axis limits, flipping y axis and removing the axis border
         '''
-        # plt.grid(alpha = self.alpha2, ls=":", lw=self.linewidth)
+        # plt.grid(alpha = self.alpha, ls=":", lw=self.linewidth)
         self.ax.set_xlim(min, max)
         self.ax.set_ylim(min, max)
         self.ax.invert_yaxis()
@@ -368,7 +387,7 @@ class plot_2D:
         for qubit in self.graph.Q[z].values():
             self.plot_qubit(qubit)
 
-        le_err = self.legend_circle("Erasure", mfc="w", marker="$\u25CC$", mec=self.cc, mew=1, ms=12)
+        le_err = self.legend_circle("Erasure", mfc="w", marker="$\u25CC$", mec=self.cq, mew=1, ms=12)
         self.init_legend(1.3, 0.95, items=[le_err])
         
         self.canvas.draw()
@@ -423,11 +442,11 @@ class plot_2D:
         X, Y = (xb+.5, yb) if td == 0 else (xb, yb+.5)
         qubit.pg = plt.Circle(
             (X, Y),
-            self.qsize,
-            edgecolor=self.cc,
+            self.qubitsize,
+            edgecolor=self.cq,
             fill=False,
             lw=self.linewidth,
-            picker=self.pick,
+            picker=self.picksize,
         )
         self.ax.add_artist(qubit.pg)
         qubit.pg.object = qubit
@@ -452,7 +471,7 @@ class plot_2D:
                 color = self.cz
             else:
                 color = self.cy
-            attr_dict.update(dict(fill=1, facecolor=color, edgecolor=self.cc))
+            attr_dict.update(dict(fill=1, facecolor=color, edgecolor=self.cq))
         return attr_dict
 
 
@@ -533,12 +552,12 @@ class plot_2D:
 
             (type, topy, topx), topz = v0.sID, v0.z
             (type, boty, botx), botz = v1.sID, v1.z
-            p, ls = P[type], self.LS2[type]
+            p, ls = P[type], self.LS[type]
 
             X = [topx + p, botx + p]
             Y = [topy + p, boty + p]
             Z = [(topz - .5)*self.z_distance, (botz - .5)*self.z_distance]
-            lplot = self.draw_line(X, Y, Z=Z, color=color, lw=self.linewidth, ls=ls, alpha=self.alpha2)
+            lplot = self.draw_line(X, Y, Z=Z, color=color, lw=self.linewidth, ls=ls, alpha=self.alpha)
 
             self.history[self.iter - 1][lplot] = dict(visible=0)
             self.history[self.iter][lplot] = dict(visible=1)
@@ -640,7 +659,7 @@ class plot_3D(plot_2D):
                     if key not in attr_dict:
                         attr_dict[key] = value
 
-                prev_changes[old_plot] = dict(visible=1, picker=self.pick)
+                prev_changes[old_plot] = dict(visible=1, picker=self.picksize)
                 next_changes[old_plot] = dict(visible=0, picker=None)
                 plt.setp(old_plot, visible=0)
                 plt.setp(old_plot, picker=None)
@@ -748,12 +767,13 @@ class plot_3D(plot_2D):
                 (td, yb, xb) = qubit.qID
                 X, Y = (xb+.5, yb) if td == 0 else (xb, yb+.5)
                 Z = qubit.z * self.z_distance
-                pdict, plot = self.plot_scatter(X, Y, Z, object=qubit, facecolor=self.cw, edgecolor=self.cc)
+                pdict, plot = self.plot_scatter(X, Y, Z, object=qubit, facecolor=self.cw, edgecolor=self.cq)
                 qubit.pg = pdict
 
-        le_err = self.legend_circle("Erasure", mfc=self.cc, mec=self.cE)
-        le_xan = self.legend_circle("X-anyon", marker="*", mfc=self.cX, mec=self.cX)
-        le_zan = self.legend_circle("Z-anyon", marker="*", mfc=self.cZ, mec=self.cZ)
+        le_err = self.legend_circle(
+            "Erasure", mfc="w", marker="$\u25CC$", mec=self.cq, mew=1, ms=12)
+        le_xan = self.legend_circle("X-anyon", marker="*", mfc=self.cx2, mec=self.cx2)
+        le_zan = self.legend_circle("Z-anyon", marker="*", mfc=self.cz2, mec=self.cz2)
         self.init_legend(1.05, 0.95, items=[le_err, le_xan, le_zan])
         self.set_axes_equal()
         self.canvas.draw()

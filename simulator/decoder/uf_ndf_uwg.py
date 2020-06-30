@@ -12,9 +12,9 @@ Two decoder classes are defined in this file, toric and planar for their respect
 '''
 
 
-from ..info.decorators import debug, plot
-from ..info import printing as pr
-from . import uf, uf_ndf, uf_uwg
+from simulator.info.decorators import debug, plot
+from simulator.info import printing as pr
+from simulator.decoder import uf, uf_ndf, uf_uwg
 
 
 class toric(uf_ndf.toric, uf_uwg.toric):

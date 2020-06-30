@@ -1,2 +1,2 @@
-from . import directed
-from . import undirected
+import simulator.decoder.balancedbloom.directed
+import simulator.decoder.balancedbloom.undirected

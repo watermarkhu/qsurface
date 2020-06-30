@@ -17,9 +17,13 @@ from collections import defaultdict as dd
 from matplotlib import pyplot as plt
 from matplotlib.lines import Line2D
 from matplotlib.widgets import Button, RadioButtons
-from ..info import printing as pr
+import matplotlib as mpl
 from time import time
 import random
+from simulator.info import printing as pr
+
+
+mpl.rcParams['toolbar'] = 'None'
 
 
 class plot_2D:

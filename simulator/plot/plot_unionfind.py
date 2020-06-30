@@ -14,7 +14,7 @@ Otherwise only minor plotting functions are inherited.
 '''
 
 import matplotlib.pyplot as plt
-from . import plot_graph_lattice as gp
+from simulator.plot import plot_graph_lattice as gp
 
 
 class plot_2D(gp.plot_2D):

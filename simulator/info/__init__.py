@@ -1,2 +1,2 @@
-from . import decorators
-from . import printing
+import simulator.info.decorators
+import simulator.info.printing

@@ -7,7 +7,7 @@ _____________________________________________
 '''
 import numpy as np
 from scipy import optimize
-from .sim import get_data
+from simulator.threshold.sim import get_data
 
 
 def get_fit_func(modified_ansatz=False):

@@ -37,7 +37,7 @@ Tree after merge:
 # TODO: Proper calculation of delay for erasures/empty nodes in the graph
 '''
 from termcolor import colored as cs
-from ...info.decorators import debug
+from simulator.info.decorators import debug
 
 class anyon_node(object):
     '''

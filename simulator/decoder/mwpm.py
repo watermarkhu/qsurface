@@ -6,14 +6,11 @@ _____________________________________________
 
 The Minimum Weight Perfect Matching decoder
 
-Uses either Kolmogorov's Blossom 5 algorithm in C (requires linux, wsl, or some gcc compiler for windows)
-    or networkx implementation of the same algorithm in python
-
-The C implementation (in folder blossom5) is highly recommended as it evidently much faster than the networkx version.
+Uses networkx implementation of the Blossom algorithm in python
 '''
-from .blossom5 import pyMatch as pm
-from ..info.decorators import debug
 import time
+import networkx as nx
+from simulator.info.decorators import debug
 
 
 class toric(object):
@@ -27,15 +24,15 @@ class toric(object):
         for key, value in kwargs.items():
             setattr(self, key, value)
 
-
     @debug.get_counters()
     def decode(self):
         '''
         Decode functions for the MWPM toric decoder
         '''
-        self.get_matching()
+        self.matching()
         self.apply_matching()
-        if self.graph.gl_plot: self.graph.gl_plot.plot_lines(self.matching)
+        if self.graph.gl_plot:
+            self.graph.gl_plot.plot_lines(self.matching)
 
 
     def get_stabs(self):
@@ -49,10 +46,12 @@ class toric(object):
                 if stab.state:
                     if stab.sID[0] == 0:
                         verts.append(stab)
-                        decode_verts.append(self.graph.S[self.graph.decode_layer][stab.sID])
+                        decode_verts.append(
+                            self.graph.S[self.graph.decode_layer][stab.sID])
                     else:
                         plaqs.append(stab)
-                        decode_plaqs.append(self.graph.S[self.graph.decode_layer][stab.sID])
+                        decode_plaqs.append(
+                            self.graph.S[self.graph.decode_layer][stab.sID])
         return verts, plaqs, decode_verts, decode_plaqs
 
 
@@ -64,38 +63,36 @@ class toric(object):
         edges = []
         for i0, v0 in enumerate(anyons[:-1]):
             (y0, x0), z0 = v0.sID[1:], v0.z
-            for i1, v1 in enumerate(anyons[i0 + 1 :]):
+            for i1, v1 in enumerate(anyons[i0 + 1:]):
                 (y1, x1), z1 = v1.sID[1:], v1.z
                 wy = (y0 - y1) % (self.graph.size)
                 wx = (x0 - x1) % (self.graph.size)
                 wz = abs(z0 - z1)
-                weight = min([wy, self.graph.size - wy]) + min([wx, self.graph.size - wx]) + wz
+                weight = min([wy, self.graph.size - wy]) + \
+                    min([wx, self.graph.size - wx]) + wz
                 edges.append([i0, i1 + i0 + 1, weight])
         return edges
 
 
-    def get_matching(self):
+    def get_matching(self, anyons, d_anyons):
+        nxgraph = nx.Graph()
+        edges = self.get_edges(anyons)
+        for i0, i1, weight in edges:
+            nxgraph.add_edge(i0, i1, weight=-weight)
+        output = nx.algorithms.matching.max_weight_matching(nxgraph, maxcardinality=True)
+        return [[d_anyons[i0], d_anyons[i1], anyons[i0], anyons[i1]] for i0, i1 in output]
+
+
+    def matching(self):
         """
         Uses the BlossomV algorithm to get the matchings. A list of combinations of all the anyons and their respective weights are feeded to the blossom5 algorithm. To apply the matchings, we walk from each matching vertex to where their paths meet perpendicualarly, flipping the edges on the way over.
         """
         verts, plaqs, d_verts, d_plaqs = self.get_stabs()
-
-        # def get_matching(anyons, d_anyons):
-        #     edges = self.get_edges(anyons)
-        #     for i0, i1, weight in edges:
-        #         nxgraph.add_edge(i0, i1, weight=-weight)
-        #     output = nx.algorithms.matching.max_weight_matching(nxgraph, maxcardinality=True)
-        #     return [[d_anyons[i0], d_anyons[i1]] for i0, i1 in output]
-
-        def get_matching(anyons, d_anyons):
-            output = pm.getMatching(len(anyons), self.get_edges(anyons))
-            return [[d_anyons[i0], d_anyons[i1], anyons[i0], anyons[i1]] for i0, i1 in enumerate(output) if i0 > i1]
-
         self.matching = []
         if verts:
-            self.matching += get_matching(verts, d_verts)
+            self.matching += self.get_matching(verts, d_verts)
         if plaqs:
-            self.matching += get_matching(plaqs, d_plaqs)
+            self.matching += self.get_matching(plaqs, d_plaqs)
 
 
     def get_distances(self, V0, V1):
@@ -120,7 +117,7 @@ class toric(object):
         '''
         Applies the matchings returned from the MWPM algorithm by doing a walk between nodes of the matching
         '''
-
+        print(self.matching)
         for v0, v1, m0, m1 in self.matching:
             dy, yd, dx, xd = self.get_distances(v0, v1)
             xv = self.walk_and_flip(v0, m0, dy, yd)
@@ -135,11 +132,12 @@ class toric(object):
         adds this edge to the matching.
         '''
         for _ in range(length):
-            (flipnode, flipedge)    = flipnode.neighbors[dir]
-            (matchnode, matchedge)  = matchnode.neighbors[dir]
-            flipedge.state      = 1 - flipedge.state
-            matchedge.matching  = 1 - matchedge.matching
+            (flipnode, flipedge) = flipnode.neighbors[dir]
+            (matchnode, matchedge) = matchnode.neighbors[dir]
+            flipedge.state = 1 - flipedge.state
+            matchedge.matching = 1 - matchedge.matching
         return flipnode
+
 
     def walk_z_matchings(self, m0, m1, xv):
         '''
@@ -165,10 +163,11 @@ class planar(toric):
         '''
         Decode functions for the MWPM planar decoder
         '''
-        self.get_matching()
+        self.matching()
         self.remove_virtual()
         self.apply_matching()
-        if self.graph.gl_plot: self.graph.gl_plot.plot_lines(self.matching)
+        if self.graph.gl_plot:
+            self.graph.gl_plot.plot_lines(self.matching)
 
 
     def get_stabs(self):
@@ -184,23 +183,31 @@ class planar(toric):
                 if stab.state:
                     if type == 0:
                         verts.append(stab)
-                        dvert.append(self.graph.S[self.graph.decode_layer][(type, y, x)])
+                        dvert.append(
+                            self.graph.S[self.graph.decode_layer][(type, y, x)])
 
                         if x < self.graph.size/2:
                             tv.append(self.graph.B[stab.z][(type, y, 0)])
-                            dv.append(self.graph.B[self.graph.decode_layer][(type, y, 0)])
+                            dv.append(
+                                self.graph.B[self.graph.decode_layer][(type, y, 0)])
                         else:
-                            tv.append(self.graph.B[stab.z][(type, y, self.graph.size)])
-                            dv.append(self.graph.B[self.graph.decode_layer][(type, y, self.graph.size)])
+                            tv.append(self.graph.B[stab.z]
+                                      [(type, y, self.graph.size)])
+                            dv.append(self.graph.B[self.graph.decode_layer][(
+                                type, y, self.graph.size)])
                     else:
                         plaqs.append(stab)
-                        dplaq.append(self.graph.S[self.graph.decode_layer][(type, y, x)])
+                        dplaq.append(
+                            self.graph.S[self.graph.decode_layer][(type, y, x)])
                         if y < self.graph.size/2:
                             tp.append(self.graph.B[stab.z][(type, -1, x)])
-                            dp.append(self.graph.B[self.graph.decode_layer][(type, -1, x)])
+                            dp.append(
+                                self.graph.B[self.graph.decode_layer][(type, -1, x)])
                         else:
-                            tp.append(self.graph.B[stab.z][(type, self.graph.size - 1, x)])
-                            dp.append(self.graph.B[self.graph.decode_layer][(type, self.graph.size - 1, x)])
+                            tp.append(self.graph.B[stab.z][(
+                                type, self.graph.size - 1, x)])
+                            dp.append(self.graph.B[self.graph.decode_layer][(
+                                type, self.graph.size - 1, x)])
         verts += tv
         plaqs += tp
         dvert += dv
@@ -219,7 +226,7 @@ class planar(toric):
         # Add edges between all anyons
         for i0, v0 in enumerate(anyons[:mid-1]):
             (y0, x0), z0 = v0.sID[1:], v0.z
-            for i1, v1 in enumerate(anyons[i0 + 1 :mid]):
+            for i1, v1 in enumerate(anyons[i0 + 1:mid]):
                 (y1, x1), z1 = v1.sID[1:], v1.z
                 wy = abs(y0 - y1)
                 wx = abs(x0 - x1)

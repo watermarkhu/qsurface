@@ -12,8 +12,8 @@ Two decoder classes are defined in this file, toric and planar for their respect
 '''
 
 
-from ..info.decorators import debug, plot
-from ..info import printing as pr
+from simulator.info.decorators import debug, plot
+from simulator.info import printing as pr
 
 
 class toric(object):

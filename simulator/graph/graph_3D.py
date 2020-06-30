@@ -24,8 +24,8 @@ The 3D graph (toric/planar) is a cubic lattice with many layer of these unit cel
 '''
 
 from . import graph_2D as go
-from ..plot import plot_graph_lattice as pgl
-from ..plot import plot_unionfind as puf
+from simulator.plot import plot_graph_lattice as pgl
+from simulator.plot import plot_unionfind as puf
 import random
 
 
@@ -114,7 +114,7 @@ class toric(go.toric):
     '''
 
 
-    def apply_and_measure_errors(self, pX, pZ, pE, pmX, pmZ, **kwargs):
+    def apply_and_measure_errors(self, pX=0, pZ=0, pE=0, pmX=0, pmZ=0, **kwargs):
         '''
         Initilizes errors on the qubits and measures the stabilizers on the graph on each layer of the cubic lattice.
         For the first size-1 layers, measurement errors are applied.

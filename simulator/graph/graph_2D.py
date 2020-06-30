@@ -20,9 +20,9 @@ Qubits: qID (td, y, x)          Stabilizers: sID (ertype, y, x)
 
 The 2D graph (toric/planar) is a square lattice with 1 layer of these unit cells.
 '''
-from ..plot import plot_graph_lattice as pgl
-from ..plot import plot_unionfind as puf
 import random
+from simulator.plot import plot_graph_lattice as pgl
+from simulator.plot import plot_unionfind as puf
 
 
 class toric(object):
@@ -54,6 +54,7 @@ class toric(object):
         self.cID = 0
         self.C, self.S, self.Q = {}, {}, {}
         self.matching_weight = []
+        self.plot2D = 0
 
         self.init_graph_layer()
 

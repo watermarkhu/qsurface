@@ -86,7 +86,7 @@ config = oopsc.default_config()
 ```
 The config can be changed by inputting keyworded arguments into the default config function:
 ```python
-config = oopsc.default_config(plot3D=True, plot_bucket=True)
+config = oopsc.default_config(plot3D=True, step_bucket=True)
 ```
 
 The `go` and `dec` parameters stand for *graph object* and *decoder*, respectively, which can be either of the items listed above. For the `multiprocess` method, one can specify the number of threads to use. If none is specified, the program will automatically choose to use all available threads.

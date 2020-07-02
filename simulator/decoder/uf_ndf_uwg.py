@@ -22,7 +22,7 @@ class toric(uf_ndf.toric, uf_uwg.toric):
     Union-Find decoder for the toric lattice (2D and 3D)
     '''
     @debug.init_counters_uf()
-    def __init__(self, plot_config=None, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         '''
         Optionally acceps config dict which contains plotting options.
         Counters for decoder specific heuristics are initialized.

@@ -44,7 +44,7 @@ def get_data(data, latts, probs):
 
 def sim_thresholds(
         decoder,
-        lattice_type="toric",
+        code="toric",
         lattices = [],
         perror = [],
         iters = 0,
@@ -54,34 +54,27 @@ def sim_thresholds(
         output="",
         folder = ".",
         debug=False,
+        progressbar=False,
         **kwargs
         ):
     '''
     ############################################
     '''
-    run_oopsc = main.multiprocess if multithreading else main.multiple
-
-    if measurement_error:
-        from ..graph import graph_3D as go
-    else:
-        from ..graph import graph_2D as go
-
+    run_sim = main.multiprocess if multithreading else main.multiple
     sys.setrecursionlimit(100000)
 
-    get_name = lambda s: s[s.rfind(".")+1:]
-    g_type = get_name(go.__name__)
-    d_type = get_name(decoder.__name__)
-    full_name = f"{lattice_type}_{g_type}_{d_type}_{output}"
+    config = dict(**kwargs)
+    graph = helper.sim_setup(code, config, decoder, 3, f3d=measurement_error)
+
+    full_name = f"{code}_{str(graph).split()[0]}_{decoder}_{output}"
 
     if not os.path.exists(folder):
         os.makedirs(folder)
     file_path = folder + "/" + full_name + ".csv"
 
-    progressbar = kwargs.pop("progressbar")
-
     data = None
     pfloat = [float(p) for p in perror]
-    config = helper.default_config(**kwargs)
+    pstr = [str(p) for p in perror]
 
     # Simulate and save results to file
     for lati in lattices:
@@ -89,26 +82,26 @@ def sim_thresholds(
         if multithreading:
             if threads is None:
                 threads = mp.cpu_count()
-            graph = [main.lattice_type(lattice_type, config, decoder, go, lati) for _ in range(threads)]
+            graph = [helper.sim_setup(code, config, decoder, lati, f3d=measurement_error, info=0) for _ in range(threads)]
         else:
-            graph = main.lattice_type(lattice_type, config, decoder, go, lati)
+            graph = helper.sim_setup(code, config, decoder, lati, f3d=measurement_error, info=0)
 
-        for pi, fpi in zip(perror, pfloat):
+        for spi, fpi in zip(pstr, pfloat):
 
-            print("Calculating for L = ", str(lati), "and p =", str(pi))
+            print("Calculating for L = ", str(lati), "and p =", spi)
 
             oopsc_args = dict(
                 paulix=fpi,
-                lattice_type=lattice_type,
+                code=code,
                 debug=debug,
                 processes=threads,
                 progressbar=progressbar
             )
             if measurement_error:
                 oopsc_args.update(measurex=fpi)
-            output = run_oopsc(lati, config, iters, graph=graph, **oopsc_args)
+            result = run_sim(lati, config, iters, graph=graph, **oopsc_args)
 
-            pprint(dict(output))
+            pprint(dict(result))
             print("")
 
             if data is None:
@@ -116,19 +109,18 @@ def sim_thresholds(
                     data = pd.read_csv(file_path, header=0)
                     data = data.set_index(["L", "p"])
                 else:
-                    columns = list(output.keys())
-                    index = pd.MultiIndex.from_product([lattices, perror], names=["L", "p"])
+                    columns = list(result.keys())
+                    index = pd.MultiIndex.from_product([lattices, pstr], names=["L", "p"])
                     data = pd.DataFrame(
                         np.zeros((len(lattices) * len(perror), len(columns))), index=index, columns=columns
                     )
 
-
-            if data.index.isin([(lati, fpi)]).any():
-                for key, value in output.items():
-                    data.loc[(lati, fpi), key] += value
+            if data.index.isin([(lati, spi)]).any():
+                for key, value in result.items():
+                    data.loc[(lati, spi), key] += value
             else:
-                for key, value in output.items():
-                    data.loc[(lati, fpi), key] = value
+                for key, value in result.items():
+                    data.loc[(lati, spi), key] = value
 
             data = data.sort_index()
             if output:

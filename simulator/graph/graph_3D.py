@@ -56,7 +56,7 @@ class toric(go.toric):
 
         plot2D = kwargs.pop("plot2D", 0)
         super().__init__(size, decoder, *args, plot2D=0, dim=3, **kwargs)
-
+        self.name = "3D"
         self.dim = 3
         self.decode_layer = self.size - 1
         self.G = {}

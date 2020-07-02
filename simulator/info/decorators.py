@@ -51,10 +51,10 @@ class plot(object):
                     )
                 elif self.plot:
                     print(f"Growing bucket #{bucket_i}/{self.maxbucket}")
-                if self.plot and self.plot_bucket:
+                if self.plot and self.step_bucket:
                     self.plot.new_iter(f"Bucket {bucket_i} grown")
                 value = func(self, bucket, bucket_i, *args, **kwargs)
-                if self.plot and self.plot_bucket:
+                if self.plot and self.step_bucket:
                     self.plot.draw_plot()
                 return value
             return wrapper_repeat
@@ -65,14 +65,14 @@ class plot(object):
         def decorator_repeat(func):
             @functools.wraps(func)
             def wrapper_repeat(self, bucket_i, *args, **kwargs):
-                if self.plot and self.plot_bucket:
+                if self.plot and self.step_bucket:
                     self.plot.new_iter(f"Bucket {bucket_i} fused")
                 value = func(self, bucket_i *args, **kwargs)
                 if self.print_steps:
                     pr.printlog("")
                     for cID, string in self.mstr.items():
                         pr.printlog(f"B:\n{string}\nA:\n{pr.print_graph(self.graph, [self.graph.C[cID]], include_even=1, return_string=True)}\n")
-                if self.plot and self.plot_bucket:
+                if self.plot and self.step_bucket:
                     self.plot.draw_plot()
                 return value
             return wrapper_repeat
@@ -83,10 +83,10 @@ class plot(object):
         def decorator_repeat(func):
             @functools.wraps(func)
             def wrapper_repeat(self, cluster, *args, **kwargs):
-                if self.plot and self.plot_cluster:
+                if self.plot and self.step_cluster:
                     self.plot.new_iter("bucket {}: {} grown".format(cluster.bucket, cluster))
                 value = func(self, cluster, *args, **kwargs)
-                if self.plot and self.plot_cluster:
+                if self.plot and self.step_cluster:
                     self.plot.draw_plot()
                 return value
             return wrapper_repeat
@@ -97,11 +97,11 @@ class plot(object):
         def decorator_repeat(func):
             @functools.wraps(func)
             def wrapper_repeat(self, cluster, *args, **kwargs):
-                if self.plot and self.plot_cluster: self.plot.new_iter("bucket {}: {} grown".format(cluster.bucket, cluster))
+                if self.plot and self.step_cluster: self.plot.new_iter("bucket {}: {} grown".format(cluster.bucket, cluster))
 
                 value = func(self, cluster, *args, **kwargs)
 
-                if self.plot and self.plot_cluster:
+                if self.plot and self.step_cluster:
                     self.plot.draw_plot()
                 return value
             return wrapper_repeat
@@ -118,7 +118,7 @@ class plot(object):
                     self.plot.new_iter("Clusters peeled")
                 value = func(self, *args, **kwargs)
                 if self.plot:
-                    if not self.plot_peel:
+                    if not self.step_peel:
                         self.plot.plot_removed()
                     self.plot.draw_plot()
                 return value
@@ -152,11 +152,11 @@ class plot(object):
         def decorator_repeat(func):
             @functools.wraps(func)
             def wrapper_repeat(self, cluster, node, *args, **kwargs):
-                if self.plot and self.plot_node: self.plot.new_iter("bucket {}: {}-{} grown".format(cluster.bucket, node, cluster))
+                if self.plot and self.step_node: self.plot.new_iter("bucket {}: {}-{} grown".format(cluster.bucket, node, cluster))
 
                 value = func(self, cluster, node,  *args, **kwargs)
 
-                if self.plot and self.plot_node: self.plot.draw_plot()
+                if self.plot and self.step_node: self.plot.draw_plot()
                 return value
             return wrapper_repeat
         return decorator_repeat

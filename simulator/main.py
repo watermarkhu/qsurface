@@ -33,38 +33,21 @@ def init_random_seed(timestamp=None, worker=0, iteration=0, **kwargs):
     return seed
 
 
-def apply_random_seed(seed=None, **kwargs):
+def apply_random_seed(seed, **kwargs):
     '''
     Applies a certain seed in the same format as init_random_seed()
     '''
-    if seed is None:
-        seed = init_random_seed()
+    if not seed:
+        seed = init_random_seed(**kwargs)
     if type(seed) is not decimal:
         seed = decimal(seed)
     random.seed(seed)
 
 
-def lattice_type(code, config, dec, go, size, **kwargs):
-    '''
-    Initilizes the graph and decoder type based on the lattice structure.
-    '''
-
-    if type(dec) == str:
-        try:
-            decoders = __import__("simulator.decoder", fromlist=[dec])
-            dec = getattr(decoders, dec)
-        except:
-            print("Decoder type invlid")
-    try:
-        decoder = getattr(dec, code)(**config, **kwargs)
-    except:
-        print("Graph type not defined in decoder class")
-
-    graph = getattr(go, code)(size, decoder, **config, **kwargs)
-    return graph
-
-
 def get_mean_var(list_of_var, str):
+    '''
+    Calculates the total mean and variance of a number of means and variances
+    '''
     if list_of_var:
         return {
             str+"_m": np.mean(list_of_var),
@@ -84,10 +67,9 @@ def single(
     measurex=0,
     measurez=0,
     dec=None,
-    # go=None,
     graph=None,
     worker=0,
-    iter=0,
+    iteration=0,
     seed=None,
     called=True,
     debug=False,
@@ -98,17 +80,19 @@ def single(
     """
     # Initialize lattice
     if graph is None:
-        pr.print_configuration(config, 1, size=size, pX=paulix, pZ=pauliz, pE=erasure, pmX=measurex, pmZ=measurez)
         graph = sim_setup(code, config, dec, size, measurex, measurez, **kwargs)
-
-
+        pr.print_configuration(config, 1, size=size, pX=paulix,
+                               pZ=pauliz, pE=erasure, pmX=measurex, pmZ=measurez)
     # Initialize errors
-    if seed is None and not config["seeds"]:
-        init_random_seed(worker=worker, iteration=iter)
+    if seed is None and ("seeds" not in config or not config['seeds']):
+        init_random_seed(worker=worker, iteration=iteration)
     elif seed is not None:
-        apply_random_seed(seed)
-    elif config["seeds"]:
-        apply_random_seed(config["seeds"][0])
+        apply_random_seed(seed, worker=worker, iteration=iteration)
+    else:
+        try:
+            apply_random_seed(config["seeds"][0], worker=worker, iteration=iteration)
+        except:
+            raise IndexError("Seed list is empty")        
 
     graph.apply_and_measure_errors(pX=paulix, pZ=pauliz, pE=erasure, pmX=measurex, pmZ=measurez)
 
@@ -138,11 +122,25 @@ def single(
                     mac     = graph.decoder.mac,
                 ))
             except:
-                print("Debug not available in single mode")
+                raise RuntimeError("Debug not available in single mode")
     else:
         output = correct
 
     return output
+
+
+def check_seeds(seeds, config, iters, **kwargs):
+    '''
+    Checks if the seeds provided either by seeds or the config['seeds'] is enough for the provided number of iters
+    '''
+    if seeds is None and ("seeds" not in config or not config['seeds']):
+        seeds = [init_random_seed(iteration=i, **kwargs) for i in range(iters)]
+    elif ("seeds" in config and config['seeds']):
+        seeds = config["seeds"]
+
+    if len(seeds) != iters:
+        raise IndexError("Not enough seeds in config")
+    return seeds
 
 
 def multiple(
@@ -169,16 +167,14 @@ def multiple(
     Runs the peeling decoder for a number of iterations. The graph is reused for speedup.
     """
 
-    if qres is None:
-        pr.print_configuration(config, iters, size=size, paulix=paulix, pauliz=pauliz, erasure=erasure, measurex=measurex, measurez=measurez)
     if graph is None:
         graph = sim_setup(code, config, dec, size, measurex, measurez, **kwargs)
+    
+    info = True if worker == 0 else False
 
-
-    if seeds is None and not config["seeds"]:
-        seeds = [init_random_seed(worker=worker, iteration=iter) for iter in range(iters)]
-    elif not config["seeds"]:
-        seeds = config["seeds"]
+    pr.print_configuration(config, iters, size=size, paulix=paulix,
+                               pauliz=pauliz, erasure=erasure, measurex=measurex, measurez=measurez, info=info)
+    seeds = check_seeds(seeds, config, iters, worker=worker)
 
     options = dict(
         code=code,
@@ -224,7 +220,8 @@ def multiprocess(
         config,
         iters,
         dec=None,
-        graph=None,
+        graphs=None,
+        seeds=None,
         processes=None,
         node=0,
         debug=False,
@@ -241,6 +238,9 @@ def multiprocess(
     # Calculate iterations for ieach child process
     process_iters = iters // processes
 
+    seeds = check_seeds(seeds, config, iters)
+    process_seeds = [seeds[p*process_iters:(p+1)*process_iters] for p in range(processes)]
+
     # Initiate processes
     qres = mp.Queue()
     workers = []
@@ -252,15 +252,15 @@ def multiprocess(
         debug=debug
     )
 
-    if graph is None or len(graph) != processes:
-        graph = [None]*processes
+    if graphs is None or len(graphs) != processes:
+        graphs = [None]*processes
 
-    for i, g in enumerate(graph, int(node*processes)):
+    for i, (g, s) in enumerate(zip(graphs,  process_seeds), int(node*processes)):
         workers.append(
             mp.Process(
                 target=multiple,
                 args=(size, config, process_iters),
-                kwargs=dict(worker=i, graph=g, **options, **kwargs),
+                kwargs=dict(worker=i, graph=g, seeds=s, **options, **kwargs),
             )
         )
     print("Starting", processes, "workers.")

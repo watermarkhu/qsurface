@@ -22,10 +22,37 @@ from time import time
 import random
 import os
 from simulator.info import printing as pr
-from simulator.helper import getconfigdict, writeplotconfig
+from simulator.helper import readconfig, writeconfig
 
 
 mpl.rcParams['toolbar'] = 'None'
+
+def plotconfig(path):
+    '''
+    Writes the default plot configuration to a file
+    '''
+    config = {'Scale':  {'plot_size': '10',
+                         'linewidth': '1.5',
+                         'scatter_size': '30',
+                         'qubitsize': '0.1',
+                         'z_distance': '8',
+                         'picksize': '5'},
+              'Colors': {'cw': '[1, 1, 1]',
+                         'cl': '[0.8, 0.8, 0.8]',
+                         'cq': '[0.7, 0.7, 0.7]',
+                         'cx': '[0.9, 0.3, 0.3]',
+                         'cz': '[0.5, 0.5, 0.9]',
+                         'cy': '[0.9, 0.9, 0.5]',
+                         'cx2': '[0.9, 0.7, 0.3]',
+                         'cz2': '[0.3, 0.9, 0.3]',
+                         'cx3': '[0.5, 0.1, 0.1]',
+                         'cz3': '[0.1, 0.1, 0.5]',
+                         'alpha': '0.35'},
+              'Linestyles': {'lsx': '":"',
+                             'lsy': '"--"',
+                             'uflsx': '"-"',
+                             'uflsy': '"--"'}}
+    writeconfig(path, config)
 
 
 class plot_2D:
@@ -74,9 +101,11 @@ class plot_2D:
         self.LS = [self.lsx, self.lsy]
         self.UFLS = [self.uflsx, self.uflsy]
 
-        if not os.path.exists('simulator/plot.ini'):
-            writeplotconfig()
-        data = getconfigdict('simulator/plot.ini')
+        
+        configpath = 'simulator/plot/plot.ini'
+        if not os.path.exists(configpath):
+            plotconfig(configpath)
+        data = readconfig(configpath)
 
         for key, value in data.items():
             setattr(self, key, value)

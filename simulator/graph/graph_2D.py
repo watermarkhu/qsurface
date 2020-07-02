@@ -45,6 +45,7 @@ class toric(object):
     matching_weight total length of edges in the matching
     """
     def __init__(self, size, decoder, *args, dim=2, **kwargs):
+        self.name="2D"
         self.dim = dim
         self.size = size
         self.range = range(size)
@@ -54,7 +55,9 @@ class toric(object):
         self.cID = 0
         self.C, self.S, self.Q = {}, {}, {}
         self.matching_weight = []
+
         self.plot2D = 0
+        self.plotUF = 0
 
         self.init_graph_layer()
 
@@ -64,7 +67,7 @@ class toric(object):
 
 
     def __repr__(self):
-        return f"2D {self.__class__.__name__} graph object with"
+        return f"2D {self.__class__.__name__} graph object"
 
     def init_uf_plot(self):
         '''

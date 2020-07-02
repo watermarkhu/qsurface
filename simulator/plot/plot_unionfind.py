@@ -44,8 +44,8 @@ class plot_2D(gp.plot_2D):
 
         self.ax.set_title("{} uf-lattice".format(self.graph.__class__.__name__))
 
-        le_xv = self.legend_circle("X-vertex", mew=0, mfc=self.cX)
-        le_zv = self.legend_circle("Z-vertex", mew=0, mfc=self.cZ)
+        le_xv = self.legend_circle("X-vertex", mew=0, mfc=self.cx2)
+        le_zv = self.legend_circle("Z-vertex", mew=0, mfc=self.cz2)
         le_xe = self.legend_circle("X-edge", lw=self.linewidth, color=self.cx, marker=None)
         le_ze = self.legend_circle("Z-edge", ls="--", lw=self.linewidth, color=self.cz, marker=None)
         self.ax.legend(
@@ -166,7 +166,7 @@ class plot_2D(gp.plot_2D):
             linewidth=lw,
             edgecolor=self.C1[ertype],
             zorder=10,
-            picker = self.pick
+            picker = self.picksize
         )
         stab.pu.object = stab
 
@@ -245,8 +245,8 @@ class plot_2D(gp.plot_2D):
             text = "☒ peeling"
             alpha = self.alpha
         elif type == "match":
-            c1 = self.cX
-            c2 = self.cZ
+            c1 = self.cx2
+            c2 = self.cz2
             text = "☑ matching"
             alpha = 1
 

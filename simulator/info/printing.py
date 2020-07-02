@@ -23,9 +23,9 @@ def printlog(message, print_message=True, log_message=False):
 
 
 def print_configuration(config, iters, **kwargs):
-    print(f"Simulating {iters} iterations")
-    print("using settings:")
+    print("Simulation using settings:")
     settings = {key:value for key, value in kwargs.items() if value != 0}
+    settings["iterations"] = iters
     pprint(settings)
     # print("\nusing config:")
     # pprint(config)

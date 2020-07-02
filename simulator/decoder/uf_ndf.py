@@ -22,7 +22,7 @@ class toric(uf.toric):
     Union-Find decoder for the toric lattice (2D and 3D)
     '''
     @debug.init_counters_uf()
-    def __init__(self, plot_config=None, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         '''
         Optionally acceps config dict which contains plotting options.
         Counters for decoder specific heuristics are initialized.
@@ -79,10 +79,10 @@ class toric(uf.toric):
                     if NE.forest == 0:
                         NE.support = 0
                         if self.plot:
-                            if self.plot_cut:
+                            if self.step_cut:
                                 self.plot.new_iter(str(NE) + " cut")
                             self.plot.add_edge(NE, vertex)
-                            if self.plot_cut:
+                            if self.step_cut:
                                 self.plot.draw_plot()
                 else:
                     NE.forest = 1

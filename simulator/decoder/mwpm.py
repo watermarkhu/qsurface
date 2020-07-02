@@ -10,6 +10,7 @@ Uses networkx implementation of the Blossom algorithm in python
 '''
 import time
 import networkx as nx
+from simulator.helper import decoderconfig
 from simulator.info.decorators import debug
 
 
@@ -22,6 +23,10 @@ class toric(object):
     def __init__(self, *args, **kwargs):
         self.type = "mwpm"
         self.name = "Minimum-Weight Perfect Matching (networkx)"
+
+        self.config = {"maxcardinality": 1}
+
+        decoderconfig(self)
         for key, value in kwargs.items():
             setattr(self, key, value)
 
@@ -80,7 +85,7 @@ class toric(object):
         edges = self.get_edges(anyons)
         for i0, i1, weight in edges:
             nxgraph.add_edge(i0, i1, weight=-weight)
-        output = nx.algorithms.matching.max_weight_matching(nxgraph, maxcardinality=True)
+        output = nx.algorithms.matching.max_weight_matching(nxgraph, maxcardinality=self.maxcardinality)
         return [[d_anyons[i0], d_anyons[i1], anyons[i0], anyons[i1]] for i0, i1 in output]
 
 
@@ -118,7 +123,6 @@ class toric(object):
         '''
         Applies the matchings returned from the MWPM algorithm by doing a walk between nodes of the matching
         '''
-        print(self.matching)
         for v0, v1, m0, m1 in self.matching:
             dy, yd, dx, xd = self.get_distances(v0, v1)
             xv = self.walk_and_flip(v0, m0, dy, yd)

@@ -16,6 +16,7 @@ Two decoder classes are defined in this file, toric and planar for their respect
 from simulator.info.decorators import debug, plot
 from simulator.info import printing as pr
 from simulator.decoder import uf
+from simulator.helper import decoderconfig
 
 
 class toric(uf.toric):
@@ -37,6 +38,12 @@ class toric(uf.toric):
         fully_grown_edge()          Joint of base-trees, save root_node of cluster
         edge_growth_choices()       Copy cluster node to new vertices
     '''
+    
+    def configuration(self):
+        config = super().configuration()
+        config[self.name] = {"fbloom": 0.5, "directed_graph": 0}
+        return config
+
     def __init__(self, *args, **kwargs):
         '''
         Optionally acceps config dict which contains plotting options.
@@ -46,6 +53,13 @@ class toric(uf.toric):
         super().__init__(*args, **kwargs)
         self.type = "ufbb"
         self.name = "Union-Find Balanced-Bloom"
+        self.config = {"fbloom": 0.5,
+                       "directed_graph": 0,
+                       "step_node": 0}
+        decoderconfig(self)
+        for key, value in kwargs.items():
+            setattr(self, key, value)
+
         if self.directed_graph:
             self.grow_boundary = self.grow_boundary_directed
             from .balancedbloom import directed as bb
@@ -55,7 +69,7 @@ class toric(uf.toric):
 
         self.bb = bb.nodeset(self.fbloom)
 
-        self.plot_growth = not any([self.plot_bucket, self.plot_cluster, self.plot_node])
+        self.plot_growth = not any([self.step_bucket, self.step_cluster, self.step_node])
 
     '''
     ##################################################################################################
@@ -105,7 +119,7 @@ class toric(uf.toric):
 
     ##################################################################################################
     '''
-    @plot.iter(name="Clusters found", cname="plot_find", dname="plot_removed")
+    @plot.iter(name="Clusters found", cname="step_find", dname="plot_removed")
     def find_clusters(self, *args, **kwargs):
         """
         Given a set of erased qubits/edges on a lattice, this functions finds all edges that are connected and sorts them in separate clusters. A single anyon can also be its own cluster.
@@ -122,7 +136,7 @@ class toric(uf.toric):
         for vertex in anyons:
             if vertex.cluster is None:
                 cluster = self.graph.add_cluster(self.graph.cID, vertex)
-                self.cluster_new_vertex(cluster, vertex, self.plot_find)
+                self.cluster_new_vertex(cluster, vertex, self.step_find)
                 vertex.node.boundary[0], vertex.new_bound = vertex.new_bound, []
                 self.cluster_place_bucket(cluster)
                 self.graph.cID += 1
@@ -340,9 +354,9 @@ class toric(uf.toric):
         elif pC is aC:
             edge.support = 0
             if self.plot:
-                if self.plot_cut: self.plot.new_iter(str(edge) + " cut")
+                if self.step_cut: self.plot.new_iter(str(edge) + " cut")
                 self.plot.add_edge(edge, aV)
-                if self.plot_cut: self.plot.draw_plot()
+                if self.step_cut: self.plot.draw_plot()
         else:
             union = True
         return union
@@ -372,7 +386,7 @@ class planar(uf.planar, toric):
 
     ##################################################################################################
     '''
-    @plot.iter(name="Boundary clusters found", cname="plot_find", dname="plot_removed")
+    @plot.iter(name="Boundary clusters found", cname="step_find", dname="plot_removed")
     def find_clusters_boundary(self, *args, **kwargs):
         '''
         For the planar lattice, in the case of erasures connected to the boundary, clusters need to be formed from the boundary, such that the shortest path from an anyon to the boundary is formed within the cluster tree.
@@ -432,12 +446,12 @@ class planar(uf.planar, toric):
                             self.bb.new_empty(vertex, new_vertex, vertex.cluster)
                             self.bound_cluster_edges[vertex.cluster.cID].append(new_edge)
                             self.bound_cluster_vertices[vertex.cluster.cID].append(new_vertex)
-                            if self.plot and self.plot_find:
+                            if self.plot and self.step_find:
                                 self.plot.plot_edge_step(new_edge, "confirm")
                             new_list.append(new_vertex)
                         else:  # cycle detected, peel edge
                             new_edge.peeled = True
-                            if self.plot and self.plot_find:
+                            if self.plot and self.step_find:
                                 self.plot.plot_edge_step(new_edge, "remove")
                 else:
                     # Make sure new bound does not lead to self
@@ -466,9 +480,9 @@ class planar(uf.planar, toric):
         if (aC.on_bound and (pV.type == 1 or (pC is not None and pC.on_bound))) or pC is aC:
             edge.support = 0
             if self.plot:
-                if self.plot_cut: self.plot.new_iter(str(edge) + " cut")
+                if self.step_cut: self.plot.new_iter(str(edge) + " cut")
                 self.plot.add_edge(edge, aV)
-                if self.plot_cut: self.plot.draw_plot()
+                if self.step_cut: self.plot.draw_plot()
         elif pC is None:
             aC.add_vertex(pV)
             pV.node = aV.node

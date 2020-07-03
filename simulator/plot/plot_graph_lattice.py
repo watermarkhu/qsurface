@@ -22,38 +22,11 @@ from time import time
 import random
 import os
 from simulator.info import printing as pr
-from simulator.helper import readconfig, writeconfig
+from simulator.configuration import readconfig, writeconfig
 
 
 mpl.rcParams['toolbar'] = 'None'
-
-def plotconfig(path):
-    '''
-    Writes the default plot configuration to a file
-    '''
-    config = {'Scale':  {'plot_size': '10',
-                         'linewidth': '1.5',
-                         'scatter_size': '30',
-                         'qubitsize': '0.1',
-                         'z_distance': '8',
-                         'picksize': '5'},
-              'Colors': {'cw': '[1, 1, 1]',
-                         'cl': '[0.8, 0.8, 0.8]',
-                         'cq': '[0.7, 0.7, 0.7]',
-                         'cx': '[0.9, 0.3, 0.3]',
-                         'cz': '[0.5, 0.5, 0.9]',
-                         'cy': '[0.9, 0.9, 0.5]',
-                         'cx2': '[0.9, 0.7, 0.3]',
-                         'cz2': '[0.3, 0.9, 0.3]',
-                         'cx3': '[0.5, 0.1, 0.1]',
-                         'cz3': '[0.1, 0.1, 0.5]',
-                         'alpha': '0.35'},
-              'Linestyles': {'lsx': '":"',
-                             'lsy': '"--"',
-                             'uflsx': '"-"',
-                             'uflsy': '"--"'}}
-    writeconfig(path, config)
-
+    
 
 class plot_2D:
     '''
@@ -72,43 +45,39 @@ class plot_2D:
         self.graph = graph
         self.from3D = from3D
 
-        self.plot_size = 6
-        self.linewidth = 1.5
-        self.scatter_size = 30
-        self.z_distance = 8
-        self.qubitsize = 0.15
-        self.picksize = 5
-        self.alpha = 0.35
-
-        # Define colors and styles
-        self.cw = [1, 1, 1]
-        self.cl = [0.8, 0.8, 0.8]  # Line color
-        self.cq = [0.7, 0.7, 0.7]  # Qubit color
-        self.cx = [0.9, 0.3, 0.3]  # X error color
-        self.cz = [0.5, 0.5, 0.9]  # Z error color
-        self.cy = [0.9, 0.9, 0.5]  # Y error color
-        self.cx2 = [0.9, 0.7, 0.3]  # X quasiparticle color
-        self.cz2 = [0.3, 0.9, 0.3]  # Z quasiparticle color
-        self.cx3 = [0.5, 0.1, 0.1]
-        self.cz3 = [0.1, 0.1, 0.5]
-        self.lsx = ":"
-        self.lsy = "--"
-        self.uflsx = "-"
-        self.uflsy = "--"
-
+        self.config = {'Scale':  {'plot_size': '10',
+                                  'linewidth': '1.5',
+                                  'scatter_size': '30',
+                                  'qubitsize': '0.1',
+                                  'z_distance': '8',
+                                  'picksize': '5'},
+              'Colors': {'cw': '[1, 1, 1]',
+                         'cl': '[0.8, 0.8, 0.8]',
+                         'cq': '[0.7, 0.7, 0.7]',
+                         'cx': '[0.9, 0.3, 0.3]',
+                         'cz': '[0.5, 0.5, 0.9]',
+                         'cy': '[0.9, 0.9, 0.5]',
+                         'cx2': '[0.9, 0.7, 0.3]',
+                         'cz2': '[0.3, 0.9, 0.3]',
+                         'cx3': '[0.5, 0.1, 0.1]',
+                         'cz3': '[0.1, 0.1, 0.5]',
+                         'alpha': '0.35'},
+              'Linestyles': {'lsx': '":"',
+                             'lsy': '"--"',
+                             'uflsx': '"-"',
+                             'uflsy': '"--"'}}
+        
+        configpath = 'simulator/plot/plot.ini'
+        if not os.path.exists(configpath):
+            writeconfig(configpath, self.config)
+        data = readconfig(configpath)
+        for key, value in data.items():
+            setattr(self, key, value)
+        
         self.C1 = [self.cx, self.cz]
         self.C2 = [self.cx2, self.cz2]
         self.LS = [self.lsx, self.lsy]
         self.UFLS = [self.uflsx, self.uflsy]
-
-        
-        configpath = 'simulator/plot/plot.ini'
-        if not os.path.exists(configpath):
-            plotconfig(configpath)
-        data = readconfig(configpath)
-
-        for key, value in data.items():
-            setattr(self, key, value)
 
         # History attributes
         self.history = dd(dict)

@@ -14,11 +14,11 @@ import multiprocessing as mp
 from decimal import Decimal as decimal
 from collections import defaultdict as dd
 from .info import printing as pr
-from .info.decorators import debug as db
 import numpy as np
 import random
 import time
-from simulator.helper import sim_setup
+from simulator.configuration import sim_setup
+from simulator.decoder._decorators import reset_counters
 
 
 def init_random_seed(timestamp=None, worker=0, iteration=0, **kwargs):
@@ -66,7 +66,7 @@ def single(
     erasure=0,
     measurex=0,
     measurez=0,
-    dec=None,
+    decoder=None,
     graph=None,
     worker=0,
     iteration=0,
@@ -80,7 +80,7 @@ def single(
     """
     # Initialize lattice
     if graph is None:
-        graph = sim_setup(code, config, dec, size, measurex, measurez, **kwargs)
+        graph = sim_setup(code, config, decoder, size, measurex, measurez, **kwargs)
         pr.print_configuration(config, 1, size=size, pX=paulix,
                                pZ=pauliz, pE=erasure, pmX=measurex, pmZ=measurez)
     # Initialize errors
@@ -111,6 +111,7 @@ def single(
         )
         if debug:
             try:
+                print(graph.decoder.counters)
                 output.update(dict(
                     weight  = graph.matching_weight[0],
                     time    = graph.decoder.time,
@@ -153,7 +154,7 @@ def multiple(
     erasure=0,
     measurex=0,
     measurez=0,
-    dec=None,
+    decoder=None,
     graph=None,
     qres=None,
     worker=0,
@@ -168,7 +169,7 @@ def multiple(
     """
 
     if graph is None:
-        graph = sim_setup(code, config, dec, size, measurex, measurez, **kwargs)
+        graph = sim_setup(code, config, decoder, size, measurex, measurez, **kwargs)
     
     info = True if worker == 0 else False
 
@@ -201,7 +202,7 @@ def multiple(
             output.update(**get_mean_var(graph.matching_weight, "weight"))
             for key, value in graph.decoder.clist.items():
                 output.update(**get_mean_var(value, key))
-            db.reset_counters(graph)
+            reset_counters(graph)
         return output
     else:
         output = dict(
@@ -211,7 +212,7 @@ def multiple(
         if debug:
             output.update(weight = graph.matching_weight)
             output.update(**graph.decoder.clist)
-            db.reset_counters(graph)
+            reset_counters(graph)
         qres.put(output)
 
 
@@ -219,7 +220,7 @@ def multiprocess(
         size,
         config,
         iters,
-        dec=None,
+        decoder=None,
         graphs=None,
         seeds=None,
         processes=None,
@@ -246,7 +247,7 @@ def multiprocess(
     workers = []
 
     options = dict(
-        dec=dec,
+        decoder=decoder,
         qres=qres,
         called=0,
         debug=debug

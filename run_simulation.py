@@ -34,8 +34,8 @@ if __name__ == "__main__":
 
     sim_arguments = [
         ["-i", "--iters", "store", "number of iterations - int", dict(type=int, default=1, metavar="")],
-        ["-c", "--code", "store", "type of surface code - {toric/planar}", dict(type=str, choices=["toric", "planar"], default="toric", metavar="")],
-        ["-d", "--decoder", "store", "type of decoder - {mwpm/uf_uwg/uf/ufbb}", dict(type=str, default="ufbb", metavar="")],
+        ["-c", "--code", "store", "type of surface code", dict(type=str, default="toric", metavar="")],
+        ["-d", "--decoder", "store", "type of decoder", dict(type=str, default="uf_bb", metavar="")],
         ["-px", "--paulix", "store", "Pauli X error rate - float {0,1}", dict(type=float, default=0, metavar="")],
         ["-pz", "--pauliz", "store", "Pauli Y error rate - float {0,1}", dict(type=float, default=0, metavar="")],
         ["-pmx", "--measurex", "store", "Measurement X error rate - float {0,1}", dict(type=float, default=0, metavar="")],
@@ -80,10 +80,10 @@ if __name__ == "__main__":
     )
 
     if iters == 1:
-        output = single(size, config, dec=decoder, debug=debug, **kwargs)
+        output = single(size, config, decoder=decoder, debug=debug, **kwargs)
     elif not multi:
-        output = multiple(size, config, iters, dec=decoder, debug=debug, **kwargs)
+        output = multiple(size, config, iters, decoder=decoder, debug=debug, **kwargs)
     else:
-        output = multiprocess(size, config, iters, dec=decoder, debug=debug, processes=threads, **kwargs)
+        output = multiprocess(size, config, iters, decoder=decoder, debug=debug, processes=threads, **kwargs)
 
     pprint(output)

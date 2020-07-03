@@ -60,6 +60,8 @@ class toric(go.toric):
         self.dim = 3
         self.decode_layer = self.size - 1
         self.G = {}
+        self.plot3D = 0
+
 
         for z in range(1, self.size):
             self.init_graph_layer(z=z)

@@ -17,8 +17,8 @@ parser = argparse.ArgumentParser(
 )
 
 arguments = [
-    ["code", "store", str, "type of surface code - {toric/planar}", "c", dict()],
-    ["decoder", "store", str, "type of decoder - {mwpm/uf_uwg/uf/ufbb}", "d", dict()],
+    ["code", "store", str, "type of surface code", "c", dict()],
+    ["decoder", "store", str, "type of decoder", "d", dict()],
     ["iters", "store", int, "number of iterations - int", "i", dict()]
 ]
 

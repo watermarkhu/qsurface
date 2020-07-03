@@ -11,15 +11,17 @@ The decoder requires a graph object, containing the vertices (stabilizers) and e
 Two decoder classes are defined in this file, toric and planar for their respective lattice types.
 '''
 
-from simulator.info.decorators import debug, plot
 from simulator.info import printing as pr
-from simulator.decoder import uf
+from simulator.decoder import uf_db
+from simulator.decoder._decorators import *
+from simulator.decoder.modules_uf._decorators import *
 
-class toric(uf.toric):
+
+class toric(uf_db.toric):
     '''
     Union-Find decoder for the toric lattice (2D and 3D)
     '''
-    @debug.init_counters_uf()
+    @init_counters_uf()
     def __init__(self, *args, **kwargs):
         '''
         Optionally acceps config dict which contains plotting options.
@@ -27,7 +29,9 @@ class toric(uf.toric):
         Decoder options, defined in kwargs are stored as class variables.
         '''
         super().__init__(*args, **kwargs)
-        self.type = "uf_uwg"
+        self.type = "uf_d"
+        self.name = "Union-Find Dynamic-forest"
+
 
 
     '''
@@ -55,9 +59,9 @@ class toric(uf.toric):
         '''
         self.buckets = [[]]
         self.maxbucket = -1
-        self.wastebucket = "unknown in uf_uwg"
+        self.wastebucket = "unknown in uf_d"
 
-    @plot.iter(name="Clusters grown", cname="plot_growth", flip=False)
+    @plot_iter(name="Clusters grown", cname="plot_growth", flip=False)
     def grow_clusters(self, start_bucket=0, *args, **kwargs):
         '''
         Loops over all buckets to grow each bucket iteratively.
@@ -78,8 +82,8 @@ class toric(uf.toric):
 
             bucket_i += 1
 
-    @debug.counter(name="gbu")
-    @plot.iter_grow_bucket()
+    @counter(name="gbu")
+    @plot_grow_bucket()
     def grow_bucket(self, bucket, bucket_i, *args, **kwargs):
         '''
         Grows the clusters which are contained in the current bucket.
@@ -93,5 +97,5 @@ class toric(uf.toric):
                 self.grow_boundary(cluster)
                 cluster.bucket = 0
 
-class planar(uf.planar, toric):
+class planar(uf_db.planar, toric):
     pass

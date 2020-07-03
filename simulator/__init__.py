@@ -1,5 +1,5 @@
 import simulator.main
-import simulator.helper
+import simulator.configuration
 import simulator.decoder
 import simulator.graph
 import simulator.info

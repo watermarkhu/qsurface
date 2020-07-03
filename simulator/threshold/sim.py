@@ -5,7 +5,7 @@ www.github.com/watermarkhu/OpenSurfaceSim
 _____________________________________________
 
 '''
-from simulator import main, helper
+from simulator import main, configuration
 from pprint import pprint
 import multiprocessing as mp
 import numpy as np
@@ -64,7 +64,7 @@ def sim_thresholds(
     sys.setrecursionlimit(100000)
 
     config = dict(**kwargs)
-    graph = helper.sim_setup(code, config, decoder, 3, f3d=measurement_error)
+    graph = configuration.sim_setup(code, config, decoder, 3, f3d=measurement_error)
 
     full_name = f"{code}_{str(graph).split()[0]}_{decoder}_{output}"
 
@@ -82,9 +82,9 @@ def sim_thresholds(
         if multithreading:
             if threads is None:
                 threads = mp.cpu_count()
-            graph = [helper.sim_setup(code, config, decoder, lati, f3d=measurement_error, info=0) for _ in range(threads)]
+            graph = [configuration.sim_setup(code, config, decoder, lati, f3d=measurement_error, info=0) for _ in range(threads)]
         else:
-            graph = helper.sim_setup(code, config, decoder, lati, f3d=measurement_error, info=0)
+            graph = configuration.sim_setup(code, config, decoder, lati, f3d=measurement_error, info=0)
 
         for spi, fpi in zip(pstr, pfloat):
 

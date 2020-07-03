@@ -13,13 +13,15 @@ Two decoder classes are defined in this file, toric and planar for their respect
 '''
 
 
-from simulator.info.decorators import debug, plot
 from simulator.info import printing as pr
-from simulator.decoder import uf
-from simulator.helper import decoderconfig
+from simulator.decoder import uf_db
+from simulator.configuration import decoderconfig
+from simulator.decoder._decorators import *
+from simulator.decoder.modules_uf._decorators import *
+from simulator.decoder.modules_ufbb._decorators import *
 
 
-class toric(uf.toric):
+class toric(uf_db.toric):
     '''
     Union-Find Balanced Bloom-integrated decoder for the toric lattice (2D and 3D)
     Inherits all the class variables and methods of uf.toric
@@ -51,7 +53,7 @@ class toric(uf.toric):
         Decoder options, defined in kwargs are stored as class variables.
         '''
         super().__init__(*args, **kwargs)
-        self.type = "ufbb"
+        self.type = "uf_bb"
         self.name = "Union-Find Balanced-Bloom"
         self.config = {"fbloom": 0.5,
                        "directed_graph": 0,
@@ -62,10 +64,10 @@ class toric(uf.toric):
 
         if self.directed_graph:
             self.grow_boundary = self.grow_boundary_directed
-            from .balancedbloom import directed as bb
+            from .modules_ufbb import directed as bb
         else:
             self.grow_boundary = self.grow_boundary_undirected
-            from .balancedbloom import undirected as bb
+            from .modules_ufbb import undirected as bb
 
         self.bb = bb.nodeset(self.fbloom)
 
@@ -119,7 +121,7 @@ class toric(uf.toric):
 
     ##################################################################################################
     '''
-    @plot.iter(name="Clusters found", cname="step_find", dname="plot_removed")
+    @plot_iter(name="Clusters found", cname="step_find", dname="plot_removed")
     def find_clusters(self, *args, **kwargs):
         """
         Given a set of erased qubits/edges on a lattice, this functions finds all edges that are connected and sorts them in separate clusters. A single anyon can also be its own cluster.
@@ -153,8 +155,8 @@ class toric(uf.toric):
     ##################################################################################################
     '''
 
-    @debug.counter(name="gbu")
-    @plot.iter_grow_bucket()
+    @counter(name="gbu")
+    @plot_grow_bucket()
     def grow_bucket(self, bucket, bucket_i, *args, **kwargs):
         '''
         Loops over all buckets to grow each bucket iteratively.
@@ -173,7 +175,7 @@ class toric(uf.toric):
                 self.grow_cluster(cluster, cluster.root_node)
 
 
-    @plot.iter_grow_cluster()
+    @plot_grow_cluster()
     def grow_cluster(self, cluster, root_node):
         '''
         Grows the current cluster, exists to have non recusive function
@@ -181,8 +183,8 @@ class toric(uf.toric):
         self.grow_boundary(cluster, root_node)
 
 
-    @debug.counter(name="gbo")
-    @plot.iter_grow_boundary_node()
+    @counter(name="gbo")
+    @plot_grow_boundary_node()
     def grow_boundary_directed(self, cluster, node, *args, print_tree=0, **kwargs):
         '''
         Grows the boundary list that is stored at the current node using the directed base-tree.
@@ -206,8 +208,8 @@ class toric(uf.toric):
             self.grow_boundary_directed(cluster, child)
 
 
-    @debug.counter(name="gbo")
-    @plot.iter_grow_boundary_node()
+    @counter(name="gbo")
+    @plot_grow_boundary_node()
     def grow_boundary_undirected(self, cluster, node, ancestor=None, *args, print_tree=0, **kwargs):
         '''
         Grows the boundary list that is stored at the current node using the directed base-tree.
@@ -231,7 +233,7 @@ class toric(uf.toric):
                 self.grow_boundary_undirected(cluster, child, ancestor=node)
 
 
-    @plot.iter_grow_node()
+    @plot_grow_node()
     def grow_node(self, cluster, node, *args, **kwargs):
         node.s += 1
         node.boundary = [[], node.boundary[0]]
@@ -250,7 +252,7 @@ class toric(uf.toric):
                 if self.plot: self.plot.add_edge(new_edge, vertex)
 
 
-    @plot.iter_fuse_bucket()
+    @plot_fuse_bucket()
     def fuse_bucket(self, bucket_i, *args, **kwrags):
         '''
         Put clusters in new buckets. Some will be added double, but will be skipped by the new_boundary check
@@ -363,7 +365,7 @@ class toric(uf.toric):
 
 
 
-class planar(uf.planar, toric):
+class planar(uf_db.planar, toric):
     '''
     Union-Find Balanced Bloom-integrated decoder for the toric lattice (2D and 3D)
     Inherits all the class variables and methods of uf.planar and toric objects.
@@ -386,7 +388,7 @@ class planar(uf.planar, toric):
 
     ##################################################################################################
     '''
-    @plot.iter(name="Boundary clusters found", cname="step_find", dname="plot_removed")
+    @plot_iter(name="Boundary clusters found", cname="step_find", dname="plot_removed")
     def find_clusters_boundary(self, *args, **kwargs):
         '''
         For the planar lattice, in the case of erasures connected to the boundary, clusters need to be formed from the boundary, such that the shortest path from an anyon to the boundary is formed within the cluster tree.

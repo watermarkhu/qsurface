@@ -1,3 +1,11 @@
+'''
+2020 Mark Shui Hu
+
+www.github.com/watermarkhu/OpenSurfaceSim
+_____________________________________________
+
+Contains methods of the simulation configuration
+'''
 import configparser
 import json
 import os
@@ -35,11 +43,11 @@ def writeconfig(path, configdict, sectionname=None):
     if sectionname is None:
         for section, sectionconfig in configdict.items():
             if section not in config:
-                config["section"] = sectionconfig
+                config[section] = sectionconfig
                 change = True
     else:
         if sectionname not in config:
-            config["sectionname"] = configdict
+            config[sectionname] = configdict
             change = True
 
     if change:
@@ -88,13 +96,12 @@ def sim_setup(code, config, decoder, size, measurex=0, measurez=0, f2d=0, f3d=0,
     try:
         decoderobject = getattr(decoder, code)(**config, **kwargs)
     except:
-        print("Error: Graph type not defined in decoder class")
+        raise TypeError("Error: Graph type not defined in decoder class")
 
     if (not f3d and measurex == 0 and measurez == 0) or f2d:
         from simulator.graph import graph_2D as go
     else:
         from simulator.graph import graph_3D as go
-        gtype
     graph = getattr(go, code)(size, decoderobject, **config, **kwargs)
 
     if info:
@@ -106,25 +113,25 @@ def sim_setup(code, config, decoder, size, measurex=0, measurez=0, f2d=0, f3d=0,
     return graph
 
 
-def default_config(**kwargs):
-    '''
-    stores all settings of the decoder
-    '''
-    config = dict(
-        seeds=[],
-        print_steps=0,
-        plot2D=0,
-        plot3D=0,
-        plotUF=0,
-        step_find=0,
-        step_bucket=0,
-        step_cluster=0,
-        step_cut=0,
-        step_peel=0,
-        step_node=0,
-    )
-    for key, value in kwargs.items():
-        if key in config:
-            config[key] = value
+# def default_config(**kwargs):
+#     '''
+#     stores all settings of the decoder
+#     '''
+#     config = dict(
+#         seeds=[],
+#         print_steps=0,
+#         plot2D=0,
+#         plot3D=0,
+#         plotUF=0,
+#         step_find=0,
+#         step_bucket=0,
+#         step_cluster=0,
+#         step_cut=0,
+#         step_peel=0,
+#         step_node=0,
+#     )
+#     for key, value in kwargs.items():
+#         if key in config:
+#             config[key] = value
 
-    return config
+#     return config

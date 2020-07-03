@@ -12,10 +12,10 @@ Two decoder classes are defined in this file, toric and planar for their respect
 '''
 
 
-from simulator.info.decorators import debug, plot
 from simulator.info import printing as pr
-from simulator.helper import decoderconfig
-
+from simulator.configuration import decoderconfig
+from simulator.decoder.modules_uf._decorators import *
+from simulator.decoder._decorators import *
 
 
 class toric(object):
@@ -23,15 +23,15 @@ class toric(object):
     Union-Find decoder for the toric lattice (2D and 3D)
     '''
     
-    @debug.init_counters_uf()
+    @init_counters_uf()
     def __init__(self, *args, **kwargs):
         '''
         Optionally acceps config dict which contains plotting options.
         Counters for decoder specific heuristics are initialized.
         Decoder options, defined in kwargs are stored as class variables.
         '''
-        self.type = "uf"
-        self.name = "Dynamic-forst Bucket Union-Find"
+        self.type = "uf_db"
+        self.name = "Union-Find Dynamic-forest Bucket "
 
         self.config = {"dg_connections": 0,
                        "print_steps": 0,
@@ -53,7 +53,7 @@ class toric(object):
             self.fuse_vertices = self.fuse_vertices_simple
 
 
-    @debug.get_counters()
+    @get_counters()
     def decode(self, *args, **kwargs):
         '''
         Decode functions for the Union-Find toric decoder
@@ -72,7 +72,7 @@ class toric(object):
     ##################################################################################################
     '''
 
-    @debug.counter(name="ufu")
+    @counter(name="ufu")
     def union_clusters(self, parent, child, *args, **kwargs):
         """
         Merges two clusters by updating the parent/child relationship and updating the attributes
@@ -82,7 +82,7 @@ class toric(object):
         parent.size += child.size
         parent.parity += child.parity
 
-    @debug.counter(name="uff")
+    @counter(name="uff")
     def find(self, cluster):
         '''
         Find parent of cluster. Applies path compression.
@@ -195,7 +195,7 @@ class toric(object):
         self.maxbucket = 0
 
 
-    @plot.iter(name="Clusters found", cname="step_find", dname="plot_removed")
+    @plot_iter(name="Clusters found", cname="step_find", dname="plot_removed")
     def find_clusters(self, *args, **kwargs):
         """
         Given a set of erased qubits/edges on a lattice, this functions finds all edges that are connected and sorts them in separate clusters. A single anyon can also be its own cluster.
@@ -226,7 +226,7 @@ class toric(object):
 
     ##################################################################################################
     '''
-    @plot.iter(name="Clusters grown", cname="plot_growth", flip=False)
+    @plot_iter(name="Clusters grown", cname="plot_growth", flip=False)
     def grow_clusters(self, start_bucket=0, *args, **kwargs):
         '''
         Loops over all buckets to grow each bucket iteratively.
@@ -252,8 +252,8 @@ class toric(object):
                 pr.print_graph(self.graph, printmerged=0)
 
 
-    @debug.counter(name="gbu")
-    @plot.iter_grow_bucket()
+    @counter(name="gbu")
+    @plot_grow_bucket()
     def grow_bucket(self, bucket, bucket_i, *args, **kwargs):
         '''
         Grows the clusters which are contained in the current bucket.
@@ -268,8 +268,8 @@ class toric(object):
                 self.grow_boundary(cluster, bucket_i)
 
 
-    @debug.counter(name="gbo")
-    @plot.iter_grow_boundary()
+    @counter(name="gbo")
+    @plot_grow_boundary()
     def grow_boundary(self, cluster, *args, **kwargs):
         '''
         Grows the boundary list that is stored at the current cluster.
@@ -290,7 +290,7 @@ class toric(object):
                 if self.plot: self.plot.add_edge(new_edge, vertex)
 
 
-    @plot.iter_fuse_bucket()
+    @plot_fuse_bucket()
     def fuse_bucket(self, bucket_i, *args, **kwrags):
         '''
         Put clusters in new buckets. Some will be added double, but will be skipped by the new_boundary check
@@ -405,7 +405,7 @@ class toric(object):
 
     ##################################################################################################
     '''
-    @plot.iter_peel_clusters()
+    @plot_peel_clusters()
     def peel_clusters(self, *args, **kwargs):
         """
         Loops overal all vertices to find pendant vertices which are selected from peeling using {peel_edge}
@@ -477,7 +477,7 @@ class planar(toric):
         find_clusters_boundary()        find cluster from the boundary to ensure minimal path within cluster tree
         cluster_new_vertex_boundary()   walk over erasures iteratively to find all edges in the cluster
     '''
-    @debug.get_counters()
+    @get_counters()
     def decode(self, *args, **kwargs):
         '''
         Decode functions for the Union-Find planar decoder
@@ -535,7 +535,7 @@ class planar(toric):
 
     ##################################################################################################
     '''
-    @plot.iter(name="Boundary clusters found", cname="step_find", dname="plot_removed")
+    @plot_iter(name="Boundary clusters found", cname="step_find", dname="plot_removed")
     def find_clusters_boundary(self, *args, **kwargs):
         '''
         For the planar lattice, in the case of erasures connected to the boundary, clusters need to be formed from the boundary, such that the shortest path from an anyon to the boundary is formed within the cluster tree.

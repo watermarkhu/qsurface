@@ -14,8 +14,8 @@ import os
 import time
 import ctypes
 from numpy.ctypeslib import ndpointer
-from simulator.info.decorators import debug
 from simulator.decoder import mwpm
+from simulator.decoder._decorators import *
 
 
 def getMatching_fast(numNodes, nodes1, nodes2, weights):
@@ -23,7 +23,7 @@ def getMatching_fast(numNodes, nodes1, nodes2, weights):
     numEdges = len(nodes1)
 
     PMlib = ctypes.CDLL(
-        "%s/blossom5/PMlib.so" % "/".join(
+        "%s/modules_blossom5/PMlib.so" % "/".join(
             (os.path.realpath(__file__)).split("/")[:-1])
     )
 
@@ -56,7 +56,7 @@ def getMatching(numNodes, graphArray):
     numEdges = len(graphArray)
 
     PMlib = ctypes.CDLL(
-        "%s/blossom5/PMlib.so" % "/".join(
+        "%s/modules_blossom5/PMlib.so" % "/".join(
             (os.path.realpath(__file__)).split("/")[:-1])
     )
 
@@ -94,6 +94,7 @@ class toric(mwpm.toric):
     Edges between all anyons are considered.
     '''
 
+    @init_counters()
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.type = "blossom"

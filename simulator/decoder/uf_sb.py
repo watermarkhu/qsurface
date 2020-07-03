@@ -12,16 +12,16 @@ Two decoder classes are defined in this file, toric and planar for their respect
 '''
 
 
-from simulator.info.decorators import debug, plot
 from simulator.info import printing as pr
-from simulator.decoder import uf
+from simulator.decoder import uf_db
+from simulator.decoder.modules_uf._decorators import *
 
 
-class toric(uf.toric):
+class toric(uf_db.toric):
     '''
     Union-Find decoder for the toric lattice (2D and 3D)
     '''
-    @debug.init_counters_uf()
+    @init_counters_uf()
     def __init__(self, *args, **kwargs):
         '''
         Optionally acceps config dict which contains plotting options.
@@ -29,7 +29,7 @@ class toric(uf.toric):
         Decoder options, defined in kwargs are stored as class variables.
         '''
         super().__init__(*args, **kwargs)
-        self.type = "uf_ndf"
+        self.type = "uf_sb"
         self.name = "Static-forest Bucket Union-Find"
 
 
@@ -57,7 +57,7 @@ class toric(uf.toric):
 
     ##################################################################################################
     '''
-    @plot.iter_peel_clusters()
+    @plot_peel_clusters()
     def peel_clusters(self, *args, **kwargs):
         """
         Loops overal all vertices to find pendant vertices which are selected from peeling using {peel_edge}
@@ -89,5 +89,5 @@ class toric(uf.toric):
                     self.forest(NV)
 
 
-class planar(uf.planar, toric):
+class planar(uf_db.planar, toric):
     pass

@@ -18,7 +18,7 @@ In the case of only Pauli errors, a 2D graph is generated for the simulation. If
 
 * `mwpm`, Minimum Weight Perfect Matching
 * `uf`, Union-Find
-* `ufbb`, Union-Find Balanced Bloom
+* `uf_bb`, Union-Find Balanced Bloom
 
 Several decoder algorithms are supported. The *Mininum-Weight Perfect Matching* (MWPM) decoder uses Kolmogorov's [Blossom V](https://pub.ist.ac.at/~vnk/software.html) algorithm. Furthermore, we implement Delfosse's and Nickerson's [Union-Find decoder](https://arxiv.org/pdf/1709.06218.pdf), which has *almost-linear* complexity. Finally, we present our modification to the Union-Find decoder; the **Balanced Bloom** algorithm, which improves the threshold of the Union-Find decoder to near MWPM performance, while retaining low complexity.
 
@@ -33,6 +33,7 @@ Though this repository, several non-standard python libraries are used, which in
 
 **core packages**
 * matplotlib
+* networkx
 * scipy
 * numpy
 * pandas
@@ -120,6 +121,13 @@ python run_threshold.py --help
 ```
 The threshold values is stored in a csv file in the `\data` folder in the main directory, or in the directory indicated. One could recalculate the threshold using different fitting parameters using `threshold_fit.py` (see `python threshold_fit.py --help`) and replot the data with `threshold_plot.py` (see `python threshold_plot.py --help`)
 
+## License
+
+OpenSurfaceSim is distributed under the [BSD-3 license](https://github.com/watermarkhu/OpenSurfaceSim/blob/master/LICENSE), and is therefore available for private and commercial use. However, the *blossom5* decoder, located at `simulator/decoder/blossom5.py`, uses a external package *BlossomV* [1] located at `simulator/decoder/modules_blossom5/` that has its own [license](https://github.com/watermarkhu/OpenSurfaceSim/blob/master/LICENSE), which is **not** avaiable for commercial use. 
+
+We provide an alternative decoder using the Minimum-Weight Perfect Matching method via the `mwpm` decoder, lcoated at `simulator/decoder/mwpm.py`, which utilizes *networkx* instead of *BlossomV*. The *networkx* implementation is considerably slower than *BlossomV*, but falls under the BSD-3 license.  
+
+[1]: Vladimir Kolmogorov. "Blossom V: A new implementation of a minimum cost perfect matching algorithm."In Mathematical Programming Computation (MPC), July 2009, 1(1):43-67
 
 ## Issues
 

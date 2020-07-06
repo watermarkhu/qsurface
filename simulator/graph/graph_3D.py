@@ -26,6 +26,7 @@ The 3D graph (toric/planar) is a cubic lattice with many layer of these unit cel
 from . import graph_2D as go
 from simulator.plot import plot_graph_lattice as pgl
 from simulator.plot import plot_unionfind as puf
+from simulator.info.statistics import get_count_via_func
 import random
 
 
@@ -95,16 +96,12 @@ class toric(go.toric):
         '''
         weight = 0
         for z in self.range:
-            for qubit in self.Q[z].values():
-                if qubit.E[0].matching == 1:
-                    weight += 1
-                if qubit.E[1].matching == 1:
-                    weight += 1
+            weight += super().count_matching_weight(z)
         for layer in self.G.values():
             for bridge in layer.values():
                 if bridge.E.matching:
                     weight += 1
-        self.matching_weight.append(weight)
+        return weight
 
     '''
     ########################################################################################
@@ -223,6 +220,7 @@ class toric(go.toric):
             stab.state = 0 if stabd_state == stab.parity else 1
 
 
+    @get_count_via_func('weight', 'count_matching_weight')
     def logical_error(self):
         '''
         Applies logical_error() method of parent graph_2D object on the last layer.

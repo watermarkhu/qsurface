@@ -119,34 +119,3 @@ def plot_peel_clusters():
             return value
         return wrapper_repeat
     return decorator_repeat
-
-
-def init_counters_uf():
-    '''
-    Initializes couters for unionfind classes
-    '''
-    def decorator_repeat(func):
-        @functools.wraps(func)
-        def wrapper_repeat(self, *args, **kwargs):
-            value = func(self, *args, **kwargs)
-
-            self.counters = dict(
-                gbu=0,
-                gbo=0,
-                ufu=0,
-                uff=0,
-            )
-            self.c_gbu, self.c_gbo, self.c_ufu, self.c_uff = 0, 0, 0, 0
-
-            self.clist = dict(
-                time=[],
-                gbu=[],
-                gbo=[],
-                ufu=[],
-                uff=[],
-                mac=[],
-                ctd=[],
-            )
-            return value
-        return wrapper_repeat
-    return decorator_repeat

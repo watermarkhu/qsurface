@@ -31,7 +31,7 @@ key_arguments = [
     ["-o", "--output", "store", "output file name (no path, ext)", dict(default="", metavar="")],
     ["-f", "--folder", "store", "base folder path", dict(default=".", metavar="")],
     ["-pb", "--progressbar", "store_true", "enable progressbar - toggle", dict()],
-    ["-db", "--debug", "store_true", "enable debugging heuristics - toggle", dict()],
+    ["-st", "--stats", "store_true", "enable statistics - toggle", dict()],
 ]
 
 add_args(parser, arguments)

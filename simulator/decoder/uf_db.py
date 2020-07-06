@@ -15,7 +15,7 @@ Two decoder classes are defined in this file, toric and planar for their respect
 from simulator.info import printing as pr
 from simulator.configuration import decoderconfig
 from simulator.decoder.modules_uf._decorators import *
-from simulator.decoder._decorators import *
+from simulator.info.statistics import add_count
 
 
 class toric(object):
@@ -23,7 +23,6 @@ class toric(object):
     Union-Find decoder for the toric lattice (2D and 3D)
     '''
     
-    @init_counters_uf()
     def __init__(self, *args, **kwargs):
         '''
         Optionally acceps config dict which contains plotting options.
@@ -53,7 +52,6 @@ class toric(object):
             self.fuse_vertices = self.fuse_vertices_simple
 
 
-    @get_counters()
     def decode(self, *args, **kwargs):
         '''
         Decode functions for the Union-Find toric decoder
@@ -72,7 +70,7 @@ class toric(object):
     ##################################################################################################
     '''
 
-    @counter(name="ufu")
+    @add_count()
     def union_clusters(self, parent, child, *args, **kwargs):
         """
         Merges two clusters by updating the parent/child relationship and updating the attributes
@@ -82,7 +80,8 @@ class toric(object):
         parent.size += child.size
         parent.parity += child.parity
 
-    @counter(name="uff")
+
+    @add_count()
     def find(self, cluster):
         '''
         Find parent of cluster. Applies path compression.
@@ -252,7 +251,7 @@ class toric(object):
                 pr.print_graph(self.graph, printmerged=0)
 
 
-    @counter(name="gbu")
+    @add_count()
     @plot_grow_bucket()
     def grow_bucket(self, bucket, bucket_i, *args, **kwargs):
         '''
@@ -268,7 +267,7 @@ class toric(object):
                 self.grow_boundary(cluster, bucket_i)
 
 
-    @counter(name="gbo")
+    @add_count()
     @plot_grow_boundary()
     def grow_boundary(self, cluster, *args, **kwargs):
         '''
@@ -477,7 +476,6 @@ class planar(toric):
         find_clusters_boundary()        find cluster from the boundary to ensure minimal path within cluster tree
         cluster_new_vertex_boundary()   walk over erasures iteratively to find all edges in the cluster
     '''
-    @get_counters()
     def decode(self, *args, **kwargs):
         '''
         Decode functions for the Union-Find planar decoder

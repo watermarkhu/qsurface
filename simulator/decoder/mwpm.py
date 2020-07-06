@@ -11,7 +11,7 @@ Uses networkx implementation of the Blossom algorithm in python
 import time
 import networkx as nx
 from simulator.configuration import decoderconfig
-from simulator.decoder._decorators import *
+from simulator.info.statistics import timeit
 
 
 class toric(object):
@@ -19,23 +19,21 @@ class toric(object):
     MWPM decoder for the toric lattice (2D and 3D).
     Edges between all anyons are considered.
     '''
-    @init_counters()
     def __init__(self, *args, **kwargs):
         self.type = "mwpm"
         self.name = "Minimum-Weight Perfect Matching (networkx)"
-
         self.config = {"maxcardinality": 1}
 
         decoderconfig(self)
         for key, value in kwargs.items():
             setattr(self, key, value)
 
-    @get_counters()
+    @timeit()
     def decode(self):
         '''
         Decode functions for the MWPM toric decoder
         '''
-        self.matching()
+        self.get_matchings()
         self.apply_matching()
         if self.graph.gl_plot:
             self.graph.gl_plot.plot_lines(self.matching)
@@ -89,7 +87,7 @@ class toric(object):
         return [[d_anyons[i0], d_anyons[i1], anyons[i0], anyons[i1]] for i0, i1 in output]
 
 
-    def matching(self):
+    def get_matchings(self):
         """
         Uses the BlossomV algorithm to get the matchings. A list of combinations of all the anyons and their respective weights are feeded to the blossom5 algorithm. To apply the matchings, we walk from each matching vertex to where their paths meet perpendicualarly, flipping the edges on the way over.
         """
@@ -163,12 +161,11 @@ class planar(toric):
     Edges between all virtual anyons are added with weight zero.
     '''
 
-    @get_counters()
     def decode(self):
         '''
         Decode functions for the MWPM planar decoder
         '''
-        self.matching()
+        self.get_matchings()
         self.remove_virtual()
         self.apply_matching()
         if self.graph.gl_plot:

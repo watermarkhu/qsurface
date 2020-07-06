@@ -45,6 +45,7 @@ from termcolor import colored as cs
 from simulator.decoder._decorators import counter
 from simulator.decoder.modules_ufbb._decorators import init_counters_bb
 
+
 class anyon_node(object):
     '''
     Anyon node object - element in the aj-tree

@@ -13,15 +13,14 @@ Two decoder classes are defined in this file, toric and planar for their respect
 
 from simulator.info import printing as pr
 from simulator.decoder import uf_db
-from simulator.decoder._decorators import *
 from simulator.decoder.modules_uf._decorators import *
+from simulator.info.statistics import add_count
 
 
 class toric(uf_db.toric):
     '''
     Union-Find decoder for the toric lattice (2D and 3D)
     '''
-    @init_counters_uf()
     def __init__(self, *args, **kwargs):
         '''
         Optionally acceps config dict which contains plotting options.
@@ -82,7 +81,8 @@ class toric(uf_db.toric):
 
             bucket_i += 1
 
-    @counter(name="gbu")
+
+    @add_count()
     @plot_grow_bucket()
     def grow_bucket(self, bucket, bucket_i, *args, **kwargs):
         '''

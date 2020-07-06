@@ -46,7 +46,7 @@ if __name__ == "__main__":
         ["-nt", "--threads", "store", "number of threads (defaults to available # logical cores) - int", dict(type=int, metavar="")],
         ["-f2d", "--force2D", "store_true", "force 2D lattice - toggle", dict()],
         ["-f3d", "--force3D", "store_true", "force 3D lattice - toggle", dict()],
-        ["-db", "--debug", "store_true", "enable debugging hearistics - toggle", dict()]
+        ["-st", "--stats", "store_true", "enable statistics - toggle", dict()]
     ]
 
     plot_arguments = [
@@ -59,31 +59,31 @@ if __name__ == "__main__":
     add_kwargs(parser, sim_arguments, "simulation", "arguments for simulation")
     add_kwargs(parser, plot_arguments, "figure", "arguments for plotting")
 
+    config = vars(parser.parse_args())
 
-    config=vars(parser.parse_args())
-    decoder = config.pop("decoder")
     iters   = config.pop("iters")
     multi   = config.pop("multithreading")
     threads = config.pop("threads")
     size    = config.pop("lattice_size")
-    debug   = config.pop("debug")
 
     kwargs = dict(
         code        = config.pop("code"),
+        decoder     = config.pop("decoder"), 
         paulix      = config.pop("paulix"),
         pauliz      = config.pop("pauliz"),
         erasure     = config.pop("erasure"),
         measurex    = config.pop("measurex"),
         measurez    = config.pop("measurez"),
         f2d         = config.pop("force2D"),
-        f3d         = config.pop("force3D")
+        f3d         = config.pop("force3D"),
+        stats       = config.pop("stats")
     )
 
     if iters == 1:
-        output = single(size, config, decoder=decoder, debug=debug, **kwargs)
+        output = single(size, config, **kwargs)
     elif not multi:
-        output = multiple(size, config, iters, decoder=decoder, debug=debug, **kwargs)
+        output = multiple(size, config, iters, **kwargs)
     else:
-        output = multiprocess(size, config, iters, decoder=decoder, debug=debug, processes=threads, **kwargs)
+        output = multiprocess(size, config, iters, processes=threads, **kwargs)
 
-    pprint(output)
+    pprint(dict(output))

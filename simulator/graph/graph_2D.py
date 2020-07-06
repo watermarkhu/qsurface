@@ -23,6 +23,7 @@ The 2D graph (toric/planar) is a square lattice with 1 layer of these unit cells
 import random
 from simulator.plot import plot_graph_lattice as pgl
 from simulator.plot import plot_unionfind as puf
+from simulator.info.statistics import get_count_via_func
 
 
 class toric(object):
@@ -54,7 +55,6 @@ class toric(object):
         self.decode_layer = 0
         self.cID = 0
         self.C, self.S, self.Q = {}, {}, {}
-        self.matching_weight = []
 
         self.plot2D = 0
         self.plotUF = 0
@@ -87,7 +87,7 @@ class toric(object):
                 weight += 1
             if qubit.E[1].matching == 1:
                 weight += 1
-        self.matching_weight.append(weight)
+        return weight
     '''
     ########################################################################################
 
@@ -181,7 +181,7 @@ class toric(object):
 
         if self.gl_plot: self.gl_plot.plot_syndrome()
 
-
+    @get_count_via_func('weight', 'count_matching_weight')
     def logical_error(self, z=0):
         """
         Finds whether there are any logical errors on the lattice/self. The logical error is returned as [Xvertical, Xhorizontal, Zvertical, Zhorizontal], where each item represents a homological Loop

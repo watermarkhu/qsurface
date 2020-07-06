@@ -9,6 +9,7 @@ Contains methods of the simulation configuration
 import configparser
 import json
 import os
+from simulator.info.statistics import stat_counter
 
 
 def readconfig(path):
@@ -80,11 +81,11 @@ def decoderconfig(decoder, path="simulator/decoder/decoder.ini"):
         setattr(decoder, key, value)
 
 
-def sim_setup(code, config, decoder, size, measurex=0, measurez=0, f2d=0, f3d=0, info=True, **kwargs):
+def sim_setup(code, config, decoder, size, measurex=0, measurez=0, f2d=0, f3d=0, info=True, stats=False, **kwargs):
     '''
     Initilizes the graph and decoder type based on the lattice structure.
     '''
-
+    
     if type(decoder) == str:
         decoders = __import__("simulator.decoder", fromlist=[decoder])
         try:
@@ -102,6 +103,7 @@ def sim_setup(code, config, decoder, size, measurex=0, measurez=0, f2d=0, f3d=0,
         from simulator.graph import graph_2D as go
     else:
         from simulator.graph import graph_3D as go
+
     graph = getattr(go, code)(size, decoderobject, **config, **kwargs)
 
     if info:
@@ -110,6 +112,11 @@ def sim_setup(code, config, decoder, size, measurex=0, measurez=0, f2d=0, f3d=0,
         print(f"{'_'*75}\n\nDecoder type: " + decoderobject.name)
         print(f"Graph type: {graph.name} {code}\n{'_'*75}\n")
 
+    if stats:
+        counter = stat_counter()
+        graph.stat_counter = counter
+        decoderobject.stat_counter = counter
+        
     return graph
 
 

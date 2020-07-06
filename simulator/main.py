@@ -9,6 +9,7 @@ The graph type (2D/3D) and decoder (MWPM, unionfind...) are specified and are lo
 One can choose to run a simulated lattice for a single, multiple or many (multithreaded) multiple iterations.
 
 '''
+from simulator.configuration import sim_setup
 from progiter import ProgIter
 import multiprocessing as mp
 from decimal import Decimal as decimal
@@ -17,8 +18,6 @@ from .info import printing as pr
 import numpy as np
 import random
 import time
-from simulator.configuration import sim_setup
-from simulator.decoder._decorators import reset_counters
 
 
 def init_random_seed(timestamp=None, worker=0, iteration=0, **kwargs):
@@ -44,18 +43,20 @@ def apply_random_seed(seed, **kwargs):
     random.seed(seed)
 
 
-def get_mean_var(list_of_var, str):
+def get_mean_var(dict_values, result={}, **kwargs):
     '''
     Calculates the total mean and variance of a number of means and variances
     '''
-    if list_of_var:
-        return {
-            str+"_m": np.mean(list_of_var),
-            str+"_v": np.std(list_of_var)
-        }
-    else:
-        return {str+"_m": 0, str+"_v": 0}
-        
+    for key, list_values in dict_values.items():
+        if list_values:
+            result.update({
+                key+"_m": np.mean(list_values),
+                key+"_v": np.std(list_values)
+            })
+        else:
+            result.update({key+"_m": 0, key+"_v": 0})
+    return result
+            
 
 def single(
     size,
@@ -72,7 +73,7 @@ def single(
     iteration=0,
     seed=None,
     called=True,
-    debug=False,
+    stats=False,
     **kwargs
 ):
     """
@@ -80,7 +81,7 @@ def single(
     """
     # Initialize lattice
     if graph is None:
-        graph = sim_setup(code, config, decoder, size, measurex, measurez, **kwargs)
+        graph = sim_setup(code, config, decoder, size, measurex, measurez, stats=stats, **kwargs)
         pr.print_configuration(config, 1, size=size, pX=paulix,
                                pZ=pauliz, pE=erasure, pmX=measurex, pmZ=measurez)
     # Initialize errors
@@ -100,32 +101,17 @@ def single(
     graph.decoder.decode()
 
     # Measure logical operator
-    graph.count_matching_weight()
     logical_error, correct = graph.logical_error()
     graph.reset()
 
     if called:
-        output = dict(
-            N       = 1,
-            succes  = correct,
-        )
-        if debug:
-            try:
-                print(graph.decoder.counters)
-                output.update(dict(
-                    weight  = graph.matching_weight[0],
-                    time    = graph.decoder.time,
-                    gbu     = graph.decoder.gbu,
-                    gbo     = graph.decoder.gbo,
-                    ufu     = graph.decoder.ufu,
-                    uff     = graph.decoder.uff,
-                    ctd     = graph.decoder.ctd,
-                    mac     = graph.decoder.mac,
-                ))
-            except:
-                raise RuntimeError("Debug not available in single mode")
+        output = dict(succes=correct)
+        if stats:
+            output.update(**graph.stat_counter.counters)
     else:
         output = correct
+        if stats:
+            graph.stat_counter.get_counters()
 
     return output
 
@@ -161,7 +147,7 @@ def multiple(
     seeds=None,
     called=True,
     progressbar=True,
-    debug=False,
+    stats=False,
     **kwargs
 ):
     """
@@ -169,7 +155,7 @@ def multiple(
     """
 
     if graph is None:
-        graph = sim_setup(code, config, decoder, size, measurex, measurez, **kwargs)
+        graph = sim_setup(code, config, decoder, size, measurex, measurez, stats=stats, **kwargs)
     
     info = True if worker == 0 else False
 
@@ -187,7 +173,7 @@ def multiple(
         graph=graph,
         worker=worker,
         called=0,
-        debug=debug,
+        stats=stats,
     )
 
     zipped = zip(ProgIter(range(iters)), seeds) if progressbar else zip(range(iters), seeds)
@@ -198,21 +184,18 @@ def multiple(
             N       = iters,
             succes  = sum(result)
         )
-        if debug:
-            output.update(**get_mean_var(graph.matching_weight, "weight"))
-            for key, value in graph.decoder.clist.items():
-                output.update(**get_mean_var(value, key))
-            reset_counters(graph)
+        if stats:
+            output = get_mean_var(graph.stat_counter.clist, output)
+            graph.stat_counter.reset_clist()
         return output
     else:
         output = dict(
             N         = iters,
             succes    = sum(result),
         )
-        if debug:
-            output.update(weight = graph.matching_weight)
-            output.update(**graph.decoder.clist)
-            reset_counters(graph)
+        if stats:
+            output.update(**graph.stat_counter.clist)
+            graph.stat_counter.reset_clist()
         qres.put(output)
 
 
@@ -225,7 +208,7 @@ def multiprocess(
         seeds=None,
         processes=None,
         node=0,
-        debug=False,
+        stats=False,
         **kwargs
     ):
     """
@@ -250,7 +233,7 @@ def multiprocess(
         decoder=decoder,
         qres=qres,
         called=0,
-        debug=debug
+        stats=stats
     )
 
     if graphs is None or len(graphs) != processes:
@@ -278,12 +261,7 @@ def multiprocess(
             else:
                 output[key] += value
 
-    # from guppy import hpy
-    # h = hpy().heap()
-    # print("\nmememory (MB):", h.size/1000000)
-
-    for key, value in workerlists.items():
-        output.update(get_mean_var(value, key))
+    output = get_mean_var(workerlists, output)
 
     for worker in workers:
         worker.join()

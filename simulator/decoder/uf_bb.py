@@ -10,15 +10,51 @@ An OOP implementation has been made here, where the boundary and support are not
 The decoder requires a graph object, containing the vertices (stabilizers) and edges (qubits) of the uf-lattice. The graph can either be 2D (perfect measurements) or 2D (noisy measurements).
 This impletementation has full integrated the Balanced Bloom algorithm, where boundary edges are not stored at the cluster, but rather at the basetree-nodes.
 Two decoder classes are defined in this file, toric and planar for their respective lattice types.
+_____________________________________________
+
+Objects and methods for the directed graph version of the Balanced Bloom algorithm
+
+A undirected graph refers to that each node in the graph has a paramter cons (connections) refereing to the edges and nodes connected to this node.
+During a merge of two tree's, these connections needs simply to be added in each of the nodes.
+
+merge between M0 and M1:
+
+    R0          R1
+   /  \        /  \
+  N0   M0 --- M1   N1
+
+Connections before:
+
+R0: [N0, M0],  N0: [R0],  M0: [R0]
+R1: [N1, M1],  N1: [R1],  M1: [R1]
+
+Tree after merge:
+
+    R0
+   /  \
+  N0   M0
+        \
+         M1
+          \
+           R1
+            \
+             N1
+
+Connection after:
+
+R0: [N0, M0],  N0: [R0],  M0: [R0, M1]
+R1: [N1, M1],  N1: [R1],  M1: [R1, M0]
+
+
+# TODO: Proper calculation of delay for erasures/empty nodes in the graph
 '''
-
-
 from simulator.info import printing as pr
 from simulator.decoder import uf_db
 from simulator.configuration import decoderconfig
-from simulator.decoder._decorators import *
 from simulator.decoder.modules_uf._decorators import *
-from simulator.decoder.modules_ufbb._decorators import *
+from simulator.decoder.modules_ufbb._decorators import * 
+from simulator.decoder.modules_ufbb.classes import * 
+from simulator.info.statistics import add_count
 
 
 class toric(uf_db.toric):
@@ -40,11 +76,6 @@ class toric(uf_db.toric):
         fully_grown_edge()          Joint of base-trees, save root_node of cluster
         edge_growth_choices()       Copy cluster node to new vertices
     '''
-    
-    def configuration(self):
-        config = super().configuration()
-        config[self.name] = {"fbloom": 0.5, "directed_graph": 0}
-        return config
 
     def __init__(self, *args, **kwargs):
         '''
@@ -56,20 +87,10 @@ class toric(uf_db.toric):
         self.type = "uf_bb"
         self.name = "Union-Find Balanced-Bloom"
         self.config = {"fbloom": 0.5,
-                       "directed_graph": 0,
                        "step_node": 0}
         decoderconfig(self)
         for key, value in kwargs.items():
             setattr(self, key, value)
-
-        if self.directed_graph:
-            self.grow_boundary = self.grow_boundary_directed
-            from .modules_ufbb import directed as bb
-        else:
-            self.grow_boundary = self.grow_boundary_undirected
-            from .modules_ufbb import undirected as bb
-
-        self.bb = bb.nodeset(self.fbloom)
 
         self.plot_growth = not any([self.step_bucket, self.step_cluster, self.step_node])
 
@@ -99,7 +120,7 @@ class toric(uf_db.toric):
 
                         new_edge.support = 2
                         cluster.add_vertex(new_vertex)
-                        self.bb.new_empty(vertex, new_vertex, cluster)
+                        self.new_empty(vertex, new_vertex, cluster)
 
                         if self.plot and plot_step:
                             self.plot.plot_edge_step(new_edge, "confirm")
@@ -133,7 +154,7 @@ class toric(uf_db.toric):
             for vertex in layer.values():
                 if vertex.state:
                     anyons.append(vertex)
-                    vertex.node = self.bb.anyon_node(vertex)
+                    vertex.node = anyon_node(vertex)
 
         for vertex in anyons:
             if vertex.cluster is None:
@@ -155,8 +176,8 @@ class toric(uf_db.toric):
     ##################################################################################################
     '''
 
-    @counter(name="gbu")
-    @plot_grow_bucket()
+    @add_count()
+    @plot_grow_bucket()   
     def grow_bucket(self, bucket, bucket_i, *args, **kwargs):
         '''
         Loops over all buckets to grow each bucket iteratively.
@@ -183,42 +204,18 @@ class toric(uf_db.toric):
         self.grow_boundary(cluster, root_node)
 
 
-    @counter(name="gbo")
+    # def grow_boundary_undirected(self, cluster, node, ancestor=None, *args, print_tree=0, **kwargs):
+    @add_count()
     @plot_grow_boundary_node()
-    def grow_boundary_directed(self, cluster, node, *args, print_tree=0, **kwargs):
-        '''
-        Grows the boundary list that is stored at the current node using the directed base-tree.
-        Fully grown edges are added to the fusion list.
-        '''
-
-        while cluster.root_node.calc_delay:
-            at_node = cluster.root_node.calc_delay.pop()
-            self.bb.comp_tree_p_of_node(at_node)
-            self.bb.comp_tree_d_of_node(at_node, cluster)
-
-        if print_tree:
-            pr.print_tree(cluster.root_node, "children", "tree_rep")
-
-        if node.d - node.w == cluster.mindl:
-            self.grow_node(cluster, node)
-        else:
-            node.w += 1
-
-        for child in node.children:
-            self.grow_boundary_directed(cluster, child)
-
-
-    @counter(name="gbo")
-    @plot_grow_boundary_node()
-    def grow_boundary_undirected(self, cluster, node, ancestor=None, *args, print_tree=0, **kwargs):
+    def grow_boundary(self, cluster, node, ancestor=None, *args, print_tree=0, **kwargs):
         '''
         Grows the boundary list that is stored at the current node using the directed base-tree.
         Fully grown edges are added to the fusion list.
         '''
         while cluster.root_node.calc_delay:
             at_node, at_edge, at_ancestor = cluster.root_node.calc_delay.pop()
-            self.bb.comp_tree_p_of_node(at_node, at_ancestor)
-            self.bb.comp_tree_d_of_node(cluster, at_node, [at_ancestor, at_edge])
+            self.comp_tree_p_of_node(at_node, at_ancestor)
+            self.comp_tree_d_of_node(cluster, at_node, [at_ancestor, at_edge])
 
         if print_tree:
             pr.print_tree(cluster.root_node, "children", "tree_rep")
@@ -230,8 +227,38 @@ class toric(uf_db.toric):
 
         for child, _ in node.cons:
             if child is not ancestor:
-                self.grow_boundary_undirected(cluster, child, ancestor=node)
+                self.grow_boundary(cluster, child, ancestor=node)
 
+    # def grow_boundary_directed(self, cluster, node, *args, print_tree=0, **kwargs):
+    #     '''
+    #     Grows the boundary list that is stored at the current node using the directed base-tree.
+    #     Fully grown edges are added to the fusion list.
+    #     '''
+
+    #     while cluster.root_node.calc_delay:
+    #         at_node = cluster.root_node.calc_delay.pop()
+    #         self.comp_tree_p_of_node(at_node)
+    #         self.comp_tree_d_of_node(at_node, cluster)
+
+    #     if print_tree:
+    #         pr.print_tree(cluster.root_node, "children", "tree_rep")
+
+    #     if node.d - node.w == cluster.mindl:
+    #         self.grow_node(cluster, node)
+    #     else:
+    #         node.w += 1
+
+    #     for child in node.children:
+    #         self.grow_boundary(cluster, child)
+
+
+    # @add_count()
+    # @plot_grow_boundary_node()
+    # def grow_boundary(self, *args, **kwargs):
+    #     if self.directed_graph:
+    #         self.grow_boundary_directed(*args, **kwargs)
+    #     else:
+    #         self.grow_boundary_undirected(*args, **kwargs)
 
     @plot_grow_node()
     def grow_node(self, cluster, node, *args, **kwargs):
@@ -324,7 +351,7 @@ class toric(uf_db.toric):
         pC = self.get_vertex_cluster(pV)
 
         if self.edge_growth_choices(edge, aV, pV, aC, pC):
-            root_node = self.bb.joint(aV, pV, aC, pC)
+            root_node = self.joint(aV, pV, aC, pC)
             if pC.size < aC.size:
                 aC, pC = pC, aC
             if self.print_steps:
@@ -363,7 +390,125 @@ class toric(uf_db.toric):
             union = True
         return union
 
+    '''
+    ##################################################################################################
 
+                                            UFBB: Node functions
+
+    ##################################################################################################
+    '''
+
+    def comp_tree_p_of_node(self, node, ancestor=None):
+        '''
+        Recursive function to find the parity of a node and its children
+        '''
+        parity = sum([1 - self.comp_tree_p_of_node(con[0], node)
+                      for con in node.cons if con[0] is not ancestor]) % 2
+
+        if type(node) == anyon_node:
+            node.p = parity
+            return node.p
+        elif type(node) == junction_node:
+            node.p = 1 - parity
+            return node.p
+        else:
+            node.p = 1
+            return node.p
+
+    @add_count()
+    def comp_tree_d_of_node(self, cluster, node, an_con=None):
+        '''
+        Recursive function to find the delay of a node and its children
+        '''
+        node.calc_delay = []
+        node.w = 0
+
+        if an_con is None:
+            for con in node.cons:
+                self.comp_tree_d_of_node(cluster, con[0], [node, con[1]])
+        else:
+            ancestor, edge = an_con
+            size_diff = (node.s + node.g)//2 - (ancestor.s +
+                                                node.g)//2 + edge*(-1)**(node.p + 1)
+            support_fix = (node.g + ancestor.g) % 2
+            node.d = ancestor.d + int(2*self.fbloom*size_diff) - support_fix
+
+            if node.d < cluster.mindl:                  # store cluster minimum delay
+                cluster.mindl = node.d
+
+            for con in node.cons:
+                if con[0] is not ancestor:
+                    self.comp_tree_d_of_node(cluster, con[0], [node, con[1]])
+
+
+
+    @add_count()
+    def joint(self, ac_vertex, pa_vertex, ac_cluster, pa_cluster):
+        '''
+        Union of two anyontrees.
+        ac_vertex   merging vertex of base cluster
+        pa_vertex   merging vertex of grow cluster
+        '''
+
+        def connect_nodes(nodeA, nodeB, edge):
+            '''
+            Connects two nodes by saving each other in the cons variable
+            '''
+            nodeA.cons.append([nodeB, edge])
+            nodeB.cons.append([nodeA, edge])
+
+        ac_node, pa_node = ac_vertex.node, pa_vertex.node
+        even_after_union = True if ac_cluster.parity % 2 == pa_cluster.parity % 2 else False
+        '''
+        ac_node     root of active vertex
+        pa_node     root of passive vertex
+        an_node     ancestor node during union
+        ch_node     child node during union
+
+        even_after_union:       if cluster is even after union, union of trees is done by weighted union
+                                else, union is done by always appending even tree to odd tree,
+                                delay calculation is needed from the child node (of union duo) and descendents
+        '''
+        if not even_after_union and pa_cluster.parity % 2 == 0:
+            root_node, an_node, ch_node = ac_cluster.root_node, ac_node, pa_node
+        else:
+            root_node, an_node, ch_node = pa_cluster.root_node, pa_node, ac_node
+
+        calc_delay_node = None if even_after_union else ch_node
+
+        if ac_node.g == 0 and pa_node.s > 1:                             # Connect via new juntion-node
+            pa_vertex.node = junction_node(pa_vertex)
+            an_edge = an_node.s // 2
+            connect_nodes(pa_vertex.node, an_node, an_edge)
+            connect_nodes(pa_vertex.node, ch_node, ch_node.s // 2)
+            calc_delay_node = None if even_after_union else [
+                pa_vertex.node, an_edge, an_node]
+        else:                                                               # Connect directly
+            an_edge = (an_node.s + ch_node.s) // 2
+            connect_nodes(an_node, ch_node, an_edge)
+            calc_delay_node = None if even_after_union else [
+                ch_node, an_edge, an_node]
+
+        # store generator of undefined delay
+        root_node.calc_delay.append(calc_delay_node)
+
+        return root_node
+
+    def new_empty(self, ac_vertex, pa_vertex, cluster):
+        '''
+        New empty node that is the result of erasure errors.
+        Distance is calculated from this node to the closest non-empty node
+        '''
+        pa_vertex.node = empty_node(pa_vertex)
+        ac_node, pa_node = ac_vertex.node, pa_vertex.node
+
+        if ac_node.type == "E":
+            self.connect_nodes(ac_node, pa_node, 1)
+            pa_node.dis = ac_node.dis + 1
+        else:
+            self.connect_nodes(ac_node, pa_node, ac_node.s // 2)
+            # cluster.root_node.calc_de
+            
 
 class planar(uf_db.planar, toric):
     '''
@@ -408,7 +553,7 @@ class planar(uf_db.planar, toric):
                         bound_clusters.append(cluster)
                         self.bound_cluster_vertices.append([bound])
                         erasure_bound.append(bound)
-                        bound.node = self.bb.boundary_node(bound)
+                        bound.node = boundary_node(bound)
                         self.graph.cID += 1
 
         self.bound_cluster_edges = [[] for _ in range(self.graph.cID)]
@@ -445,7 +590,7 @@ class planar(uf_db.planar, toric):
                         if new_vertex.cluster is None:  # if no cycle detected
                             new_edge.support = 2
                             vertex.cluster.add_vertex(new_vertex)
-                            self.bb.new_empty(vertex, new_vertex, vertex.cluster)
+                            self.new_empty(vertex, new_vertex, vertex.cluster)
                             self.bound_cluster_edges[vertex.cluster.cID].append(new_edge)
                             self.bound_cluster_vertices[vertex.cluster.cID].append(new_vertex)
                             if self.plot and self.step_find:

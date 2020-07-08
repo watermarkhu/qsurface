@@ -10,23 +10,21 @@ Uses networkx implementation of the Blossom algorithm in python
 '''
 import time
 import networkx as nx
-from simulator.configuration import decoderconfig
-from simulator.info.statistics import timeit
+from simulator.info.benchmark import timeit
+from simulator.decoder._template import decoder_template
 
 
-class toric(object):
+class toric(decoder_template):
     '''
     MWPM decoder for the toric lattice (2D and 3D).
     Edges between all anyons are considered.
     '''
-    def __init__(self, *args, **kwargs):
-        self.type = "mwpm"
-        self.name = "Minimum-Weight Perfect Matching (networkx)"
-        self.config = {"maxcardinality": 1}
+    def __init__(self, graph,
+                 name="Minimum-Weight Perfect Matching (networkx)",
+                 config={"maxcardinality": 1},
+                 **kwargs):
+        super().__init__(graph, name, config, **kwargs)
 
-        decoderconfig(self)
-        for key, value in kwargs.items():
-            setattr(self, key, value)
 
     @timeit()
     def decode(self):

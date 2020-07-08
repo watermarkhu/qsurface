@@ -9,7 +9,7 @@ The graph type (2D/3D) and decoder (MWPM, unionfind...) are specified and are lo
 One can choose to run a simulated lattice for a single, multiple or many (multithreaded) multiple iterations.
 
 '''
-from simulator.configuration import sim_setup
+from simulator.configuration import setup_decoder
 from progiter import ProgIter
 import multiprocessing as mp
 from decimal import Decimal as decimal
@@ -60,161 +60,145 @@ def get_mean_var(dict_values, result={}, **kwargs):
 
 def single(
     size,
-    config,
     code="toric",
-    paulix=0,
-    pauliz=0,
-    erasure=0,
-    measurex=0,
-    measurez=0,
+    decode_module='mwpm',
+    error_rates = {},
+    perfect_measurements=True,
     decoder=None,
-    graph=None,
     worker=0,
     iteration=0,
     seed=None,
     called=True,
-    stats=False,
+    benchmark=False,
     **kwargs
 ):
     """
     Runs the peeling decoder for one iteration
     """
     # Initialize lattice
-    if graph is None:
-        graph = sim_setup(code, config, decoder, size, measurex, measurez, stats=stats, **kwargs)
-        pr.print_configuration(config, 1, size=size, pX=paulix,
-                               pZ=pauliz, pE=erasure, pmX=measurex, pmZ=measurez)
+    if decoder is None:
+        decoder = setup_decoder(code, decode_module, size, perfect_measurements, 
+            benchmark=benchmark, **kwargs)
+        pr.print_configuration(1, size=size, **error_rates)
     # Initialize errors
-    if seed is None and ("seeds" not in config or not config['seeds']):
+    if seed is None:
         init_random_seed(worker=worker, iteration=iteration)
-    elif seed is not None:
-        apply_random_seed(seed, worker=worker, iteration=iteration)
     else:
-        try:
-            apply_random_seed(config["seeds"][0], worker=worker, iteration=iteration)
-        except:
-            raise IndexError("Seed list is empty")        
-
-    graph.apply_and_measure_errors(pX=paulix, pZ=pauliz, pE=erasure, pmX=measurex, pmZ=measurez)
+        if type(seed) not in [float, int, str]:
+            raise TypeError("Seed type error. Check if single seed given.")
+        apply_random_seed(seed, worker=worker, iteration=iteration)
+       
+    decoder.graph.apply_and_measure_errors(**error_rates)
 
     # Peeling decoder
-    graph.decoder.decode()
+    decoder.decode()
 
     # Measure logical operator
-    logical_error, correct = graph.logical_error()
-    graph.reset()
+    logical_error, correct = decoder.graph.logical_error()
+    decoder.reset()
 
     if called:
         output = dict(succes=correct)
-        if stats:
-            output.update(**graph.stat_counter.counters)
+        if benchmark:
+            output.update(**decoder.benchmarker.counters)
     else:
         output = correct
-        if stats:
-            graph.stat_counter.get_counters()
+        if benchmark:
+            decoder.benchmarker.get_counters()
 
     return output
 
 
-def check_seeds(seeds, config, iters, **kwargs):
+def check_seeds(seed, iters, **kwargs):
     '''
     Checks if the seeds provided either by seeds or the config['seeds'] is enough for the provided number of iters
     '''
-    if seeds is None and ("seeds" not in config or not config['seeds']):
-        seeds = [init_random_seed(iteration=i, **kwargs) for i in range(iters)]
-    elif ("seeds" in config and config['seeds']):
-        seeds = config["seeds"]
+    if seed is None:
+        seed = [init_random_seed(iteration=1, **kwargs)
+            for i in range(iters)]
+    else:
+        if type(seed) != list:
+            raise TypeError("Must supply a list of seeds")
 
-    if len(seeds) != iters:
-        raise IndexError("Not enough seeds in config")
-    return seeds
+        if len(seed) != iters:
+            raise IndexError("Not enough seeds in config")
+
+    return seed
 
 
 def multiple(
     size,
-    config,
     iters,
     code="toric",
-    paulix=0,
-    pauliz=0,
-    erasure=0,
-    measurex=0,
-    measurez=0,
+    decode_module="mwpm",
+    error_rates={},
+    perfect_measurements=True,
     decoder=None,
-    graph=None,
     qres=None,
     worker=0,
-    seeds=None,
+    seed=None,
     called=True,
     progressbar=True,
-    stats=False,
+    benchmark=False,
     **kwargs
 ):
     """
     Runs the peeling decoder for a number of iterations. The graph is reused for speedup.
     """
 
-    if graph is None:
-        graph = sim_setup(code, config, decoder, size, measurex, measurez, stats=stats, **kwargs)
-    
-    info = True if worker == 0 else False
+    if decoder is None:
+        info = True if worker == 0 else False
+        decoder = setup_decoder(code, decode_module, size,
+            perfect_measurements, benchmark=benchmark, info=info, **kwargs)
+        if info:
+            pr.print_configuration(iters, size=size, **error_rates)
 
-    pr.print_configuration(config, iters, size=size, paulix=paulix,
-                               pauliz=pauliz, erasure=erasure, measurex=measurex, measurez=measurez, info=info)
-    seeds = check_seeds(seeds, config, iters, worker=worker)
+    seed = check_seeds(seed, iters, worker=worker)
 
     options = dict(
-        code=code,
-        paulix=paulix,
-        pauliz=pauliz,
-        erasure=erasure,
-        measurex=measurex,
-        measurez=measurez,
-        graph=graph,
+        error_rates=error_rates,
+        decoder=decoder,
         worker=worker,
         called=0,
-        stats=stats,
+        benchmark=benchmark
     )
+    
 
-    zipped = zip(ProgIter(range(iters)), seeds) if progressbar else zip(range(iters), seeds)
-    result = [single(size, config, iter=iter, seed=seed, **options, **kwargs) for iter, seed in zipped]
+    zipped = zip(ProgIter(range(iters)), seed) if progressbar else zip(range(iters), seed)
+    result = [single(size, iteration=iter, seed=ss, **options, **kwargs) for iter, ss in zipped]
 
     if called:
         output = dict(
             N       = iters,
             succes  = sum(result)
         )
-        if stats:
-            output = get_mean_var(graph.stat_counter.clist, output)
-            graph.stat_counter.reset_clist()
+        if benchmark:
+            output = get_mean_var(decoder.benchmarker.clist, output)
+            decoder.benchmarker.reset_clist()
         return output
     else:
         output = dict(
             N         = iters,
             succes    = sum(result),
         )
-        if stats:
-            output.update(**graph.stat_counter.clist)
-            graph.stat_counter.reset_clist()
+        if benchmark:
+            output.update(**decoder.benchmarker.clist)
+            decoder.benchmarker.reset_clist()
         qres.put(output)
 
 
 def multiprocess(
         size,
-        config,
         iters,
         decoder=None,
-        graphs=None,
-        seeds=None,
+        seed=None,
         processes=None,
         node=0,
-        stats=False,
         **kwargs
     ):
     """
     Runs the peeling decoder for a number of iterations, split over a number of processes
     """
-    pr.print_configuration(config, iters, **kwargs)
 
     if processes is None:
         processes = mp.cpu_count()
@@ -222,29 +206,28 @@ def multiprocess(
     # Calculate iterations for ieach child process
     process_iters = iters // processes
 
-    seeds = check_seeds(seeds, config, iters)
-    process_seeds = [seeds[p*process_iters:(p+1)*process_iters] for p in range(processes)]
+    seed = check_seeds(seed, iters)
+    process_seeds = [seed[p*process_iters:(p+1)*process_iters] 
+        for p in range(processes)]
 
     # Initiate processes
     qres = mp.Queue()
     workers = []
 
     options = dict(
-        decoder=decoder,
         qres=qres,
         called=0,
-        stats=stats
     )
 
-    if graphs is None or len(graphs) != processes:
-        graphs = [None]*processes
+    if decoder is None or len(decoder) != processes:
+        decoder = [None]*processes
 
-    for i, (g, s) in enumerate(zip(graphs,  process_seeds), int(node*processes)):
+    for i, (pseed, pdec) in enumerate(zip(process_seeds, decoder)):
         workers.append(
             mp.Process(
                 target=multiple,
-                args=(size, config, process_iters),
-                kwargs=dict(worker=i, graph=g, seeds=s, **options, **kwargs),
+                args=(size, process_iters),
+                kwargs=dict(worker=i, seed=pseed, decoder=pdec, **options, **kwargs)
             )
         )
     print("Starting", processes, "workers.")

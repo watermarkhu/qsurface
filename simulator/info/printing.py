@@ -22,14 +22,22 @@ def printlog(message, print_message=True, log_message=False):
         logging.warning(message)
 
 
-def print_configuration(config, iters, **kwargs):
+def print_setup(graph, decoder):
+    '''
+    Print repository information and simulation setup
+    '''
+    print(f"{'_'*75}\n")
+    print(f"OpenSurfaceSim\n2020 Mark Shui Hu\nhttps://github.com/watermarkhu/OpenSurfaceSim")
+    print(f"{'.'*75}\n\nDecoder type: " + decoder.name)
+    print(f"Graph type: {graph.name} {graph.__class__.__name__}\n{'.'*75}\n")
+
+
+def print_configuration(iters, **kwargs):
     print("Simulation using settings:")
     settings = {key:value for key, value in kwargs.items() if value != 0}
     settings["iterations"] = iters
     pprint(settings)
-    # print("\nusing config:")
-    # pprint(config)
-    print()
+    print(f"{'.'*75}\n")
 
 
 def print_graph(graph, clusters=None, prestring="", poststring=None, printmerged=1, include_even=0, return_string=False):

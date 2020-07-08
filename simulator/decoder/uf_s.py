@@ -20,15 +20,11 @@ class toric(uf_sb.toric, uf_d.toric):
     '''
     Union-Find decoder for the toric lattice (2D and 3D)
     '''
-    def __init__(self, *args, **kwargs):
-        '''
-        Optionally acceps config dict which contains plotting options.
-        Counters for decoder specific heuristics are initialized.
-        Decoder options, defined in kwargs are stored as class variables.
-        '''
-        super().__init__(*args, **kwargs)
-        self.type = "uf_s"
-        self.name = "Static-forest Union-Find"
+
+    def __init__(self, graph,
+                 name="Static-forest Union-Find",
+                 **kwargs):
+        super().__init__(graph, name, **kwargs)
 
 class planar(uf_sb.planar, uf_d.planar, toric):
     pass

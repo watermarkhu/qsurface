@@ -15,7 +15,7 @@ def getMatching_fast(numNodes, nodes1, nodes2, weights):
     numEdges = len(nodes1)
 
     PMlib = ctypes.CDLL(
-        "%s/modules_blossom5/PMlib.so" % "/".join(
+        "%s/PMlib.so" % "/".join(
             (os.path.realpath(__file__)).split("/")[:-1])
     )
 
@@ -48,7 +48,7 @@ def getMatching(numNodes, graphArray):
     numEdges = len(graphArray)
 
     PMlib = ctypes.CDLL(
-        "%s/modules_blossom5/PMlib.so" % "/".join(
+        "%s/PMlib.so" % "/".join(
             (os.path.realpath(__file__)).split("/")[:-1])
     )
 

@@ -21,10 +21,11 @@ class toric(mwpm.toric):
     Edges between all anyons are considered.
     '''
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.type = "blossom"
-        self.name = "Minimum-Weight Perfect Matching (blossomV)"
+    def __init__(self, graph,
+                 name="Minimum-Weight Perfect Matching (blossomV)",
+                 config={},
+                 **kwargs):
+        super().__init__(graph, name, config, **kwargs)
 
     def get_matching(self, anyons, d_anyons):
         output = getMatching(len(anyons), self.get_edges(anyons))

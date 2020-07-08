@@ -23,7 +23,7 @@ The 2D graph (toric/planar) is a square lattice with 1 layer of these unit cells
 import random
 from simulator.plot import plot_graph_lattice as pgl
 from simulator.plot import plot_unionfind as puf
-from simulator.info.statistics import get_count_via_func
+from simulator.info.benchmark import save_count_via_func
 
 
 class toric(object):
@@ -32,7 +32,6 @@ class toric(object):
 
     size            1D size of the graph
     range           range over 1D that is often used
-    decoder         decoder object to use for this graph, also saves graph object to decoder object
     decode_layer    z layer on which the qubits is decoded, 0 for 2D graph graph
     C               dict of clusters with
                         Key:    cID number
@@ -45,24 +44,24 @@ class toric(object):
                         Value:  Qubit object with two Edge objects
     matching_weight total length of edges in the matching
     """
-    def __init__(self, size, decoder, *args, dim=2, **kwargs):
+    def __init__(self, size, *args, dim=2, benchmarker=None, **kwargs):
         self.name="2D"
         self.dim = dim
         self.size = size
         self.range = range(size)
-        self.decoder = decoder
-        decoder.graph = self
         self.decode_layer = 0
         self.cID = 0
         self.C, self.S, self.Q = {}, {}, {}
+        self.benchmarker = benchmarker
 
         self.plot2D = 0
         self.plotUF = 0
 
-        self.init_graph_layer()
-
         for key, value in kwargs.items():
             setattr(self, key, value)
+
+        self.init_graph_layer()
+
         self.gl_plot = pgl.plot_2D(self) if self.plot2D else None
 
 
@@ -122,13 +121,13 @@ class toric(object):
                 self.add_qubit(1, y, x, z, vW, vE, vN, vS)
 
 
-    def apply_and_measure_errors(self, pX=0, pZ=0, pE=0, **kwargs):
+    def apply_and_measure_errors(self, paulix=0, pauliy=0, erasure=0, **kwargs):
         '''
         Initilizes errors on the qubits and measures the stabilizers on the graph
         '''
 
-        self.init_erasure(pE=pE)
-        self.init_pauli(pX=pX, pZ=pZ)         # initialize errors
+        self.init_erasure(erasure)
+        self.init_pauli(paulix, pauliy)         # initialize errors
         self.measure_stab()                       # Measure stabiliziers
 
 
@@ -181,7 +180,7 @@ class toric(object):
 
         if self.gl_plot: self.gl_plot.plot_syndrome()
 
-    @get_count_via_func('weight', 'count_matching_weight')
+    @save_count_via_func('weight', 'count_matching_weight')
     def logical_error(self, z=0):
         """
         Finds whether there are any logical errors on the lattice/self. The logical error is returned as [Xvertical, Xhorizontal, Zvertical, Zhorizontal], where each item represents a homological Loop

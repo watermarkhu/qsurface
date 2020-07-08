@@ -21,15 +21,11 @@ class toric(uf_db.toric):
     '''
     Union-Find decoder for the toric lattice (2D and 3D)
     '''
-    def __init__(self, *args, **kwargs):
-        '''
-        Optionally acceps config dict which contains plotting options.
-        Counters for decoder specific heuristics are initialized.
-        Decoder options, defined in kwargs are stored as class variables.
-        '''
-        super().__init__(*args, **kwargs)
-        self.type = "uf_sb"
-        self.name = "Static-forest Bucket Union-Find"
+
+    def __init__(self, graph,
+                 name="Static-forest Bucket Union-Find",
+                 **kwargs):
+        super().__init__(graph, name, **kwargs)
 
 
     def edge_growth_choices(self, edge, aV, pV, aC, pC):

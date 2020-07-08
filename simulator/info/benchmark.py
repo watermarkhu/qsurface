@@ -14,7 +14,7 @@ import time
 from collections import defaultdict as dd
 
 
-class stat_counter(object):
+class benchmarker(object):
 
     def __init__(self):
         self.counters = dd(int)
@@ -46,7 +46,7 @@ def add_count(name=None):
     def decorator_repeat(func):
         @functools.wraps(func)
         def wrapper_repeat(self, *args, **kwargs):
-            if hasattr(self, 'stat_counter'):
+            if self.benchmarker is not None:
                 if name is not None:
                     key = name
                 else:
@@ -54,21 +54,24 @@ def add_count(name=None):
                         key = func.__name__
                     except:
                         raise TypeError("Must decorate a method")
-                self.stat_counter.add_count(key)
+                self.benchmarker.add_count(key)
             value = func(self, *args, **kwargs)
             return value
         return wrapper_repeat
     return decorator_repeat
 
 
-def get_count_via_func(name, func_name):
+def save_count_via_func(name, classmethod):
+    '''
+    Save a count via a supplied classmethod 
+    '''
     def decorator_repeat(func):
         @functools.wraps(func)
         def wrapper_repeat(self, *args, **kwargs):
-            if hasattr(self, 'stat_counter'):
-                count_func = getattr(self, func_name)
+            if self.benchmarker is not None:
+                count_func = getattr(self, classmethod)
                 count = count_func()
-                self.stat_counter.set_count(name, count)
+                self.benchmarker.set_count(name, count)
             value = func(self, *args, **kwargs)
             return value
         return wrapper_repeat
@@ -76,13 +79,16 @@ def get_count_via_func(name, func_name):
 
 
 def timeit(name="time"):
+    '''
+    Find the process time the decorated method
+    '''
     def decorator_repeat(func):
         @functools.wraps(func)
         def wrapper_repeat(self, *args, **kwargs):
-            if hasattr(self, 'stat_counter'):
+            if self.benchmarker is not None:
                 t0 = time.process_time()
                 value = func(self, *args, **kwargs)
-                self.stat_counter.set_count(name, time.process_time() - t0)
+                self.benchmarker.set_count(name, time.process_time() - t0)
             else:
                 value = func(self, *args, **kwargs)
             return value

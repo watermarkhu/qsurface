@@ -9,7 +9,9 @@ Contains methods of the simulation configuration
 import configparser
 import json
 import os
-from simulator.info.statistics import stat_counter
+from simulator.info.benchmark import benchmarker
+from simulator.info.printing import print_setup
+from types import ModuleType
 
 
 def readconfig(path):
@@ -77,47 +79,55 @@ def decoderconfig(decoder, path="simulator/decoder/decoder.ini"):
             config.write(configfile)
         data = decoder.config
 
+
     for key, value in data.items():
         setattr(decoder, key, value)
 
 
-def sim_setup(code, config, decoder, size, measurex=0, measurez=0, f2d=0, f3d=0, info=True, stats=False, **kwargs):
+def setup_decoder(code, decode_module, size, 
+    perfect_measurements=True, 
+    info=True, 
+    benchmark=False, 
+    **kwargs):
     '''
     Initilizes the graph and decoder type based on the lattice structure.
-    '''
-    
-    if type(decoder) == str:
-        decoders = __import__("simulator.decoder", fromlist=[decoder])
-        try:
-            decoder = getattr(decoders, decoder)
-        except:
-            print("Error: Decoder type invalid, loading MWPM decoder")
-            decoder = getattr(decoders, 'mwpm')
-            
-    try:
-        decoderobject = getattr(decoder, code)(**config, **kwargs)
-    except:
-        raise TypeError("Error: Graph type not defined in decoder class")
+    '''  
+    bmarker = benchmarker() if benchmark else None
+    kwargs["benchmarker"] = bmarker
 
-    if (not f3d and measurex == 0 and measurez == 0) or f2d:
+    # Get graph object
+    if perfect_measurements:
         from simulator.graph import graph_2D as go
     else:
         from simulator.graph import graph_3D as go
+    try:
+        graph = getattr(go, code)(size, **kwargs)
+    except:
+        raise NameError("Code type not defined in graph")
 
-    graph = getattr(go, code)(size, decoderobject, **config, **kwargs)
+    # Get decoder object
+    if type(decode_module) == str:
+        decode_modules = __import__("simulator.decoder", fromlist=[decode_module])
+        try:
+            decode_module = getattr(decode_modules, decode_module)
+        except:
+            raise  ModuleNotFoundError("Unknown decoder name")
+    elif type(decode_module) == ModuleType:
+        if decode_module.__package__ != 'simulator.decoder':
+            raise TypeError("Decoder is not a simulator.decoder module")
+    else:
+        raise TypeError("Decoder argument must be either a decoder module or name (string) or decoder module")
+    
+    # Get code-specific decoder
+    try:
+        decoder = getattr(decode_module, code)(graph, **kwargs)
+    except:
+        raise NameError("Code type not defined in decoder class")
 
     if info:
-        print(f"{'_'*75}\n")
-        print(f"OpenSurfaceSim\n2020 Mark Shui Hu\nhttps://github.com/watermarkhu/OpenSurfaceSim")
-        print(f"{'_'*75}\n\nDecoder type: " + decoderobject.name)
-        print(f"Graph type: {graph.name} {code}\n{'_'*75}\n")
-
-    if stats:
-        counter = stat_counter()
-        graph.stat_counter = counter
-        decoderobject.stat_counter = counter
+        print_setup(graph, decoder)
         
-    return graph
+    return decoder
 
 
 # def default_config(**kwargs):

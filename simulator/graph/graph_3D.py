@@ -26,7 +26,7 @@ The 3D graph (toric/planar) is a cubic lattice with many layer of these unit cel
 from . import graph_2D as go
 from simulator.plot import plot_graph_lattice as pgl
 from simulator.plot import plot_unionfind as puf
-from simulator.info.statistics import get_count_via_func
+from simulator.info.benchmark import save_count_via_func
 import random
 
 
@@ -53,31 +53,25 @@ class toric(go.toric):
     Dim dimension is set to 3 and decoder_layer is set to last layer.
     '''
 
-    def __init__(self, size, decoder, dim=3, *args, **kwargs):
+    def __init__(self, size, dim=3, *args, **kwargs):
 
-        plot2D = kwargs.pop("plot2D", 0)
-        super().__init__(size, decoder, *args, plot2D=0, dim=3, **kwargs)
+        super().__init__(size, *args, dim=3, **kwargs)
         self.name = "3D"
-        self.dim = 3
         self.decode_layer = self.size - 1
         self.G = {}
         self.plot3D = 0
 
+        for key, value in kwargs.items():
+            setattr(self, key, value)
 
         for z in range(1, self.size):
             self.init_graph_layer(z=z)
             self.G[z] = {}
-
             for vU, vD in zip(self.S[z].values(), self.S[z-1].values()):
                 bridge = self.G[z][vU.sID] = Bridge(qID=vU.sID, z=z)
-
                 vU.neighbors["d"] = (vD, bridge.E)
                 vD.neighbors["u"] = (vU, bridge.E)
 
-
-        for key, value in kwargs.items():
-            setattr(self, key, value)
-        self.plot2D = plot2D
         self.gl_plot = pgl.plot_3D(self) if self.plot3D else None
 
 
@@ -112,7 +106,13 @@ class toric(go.toric):
     '''
 
 
-    def apply_and_measure_errors(self, pX=0, pZ=0, pE=0, pmX=0, pmZ=0, **kwargs):
+    def apply_and_measure_errors(self, 
+        paulix=0, 
+        pauliy=0,
+        erasure=0, 
+        measurex=0,
+        measurey=0,
+        **kwargs):
         '''
         Initilizes errors on the qubits and measures the stabilizers on the graph on each layer of the cubic lattice.
         For the first size-1 layers, measurement errors are applied.
@@ -121,17 +121,17 @@ class toric(go.toric):
 
         # first layers initilized with measurement error
         for z in self.range[:-1]:
-            self.init_erasure(pE=pE, z=z)
-            self.init_pauli(pX=pX, pZ=pZ, pE=pE, z=z)
-            self.measure_stab(pmX=pmX, pmZ=pmZ, z=z)
+            self.init_erasure(erasure, z=z)
+            self.init_pauli(paulix, pauliy, erasure, z=z)
+            self.measure_stab(measurex, measurey, z=z)
 
         # final layer initialized with perfect measurements
-        self.init_erasure(pE=pE, z=self.decode_layer)
-        self.init_pauli(pX=pX, pZ=pZ, z=self.decode_layer)
+        self.init_erasure(erasure, z=self.decode_layer)
+        self.init_pauli(paulix, pauliy, z=self.decode_layer)
         self.measure_stab(pmX=0, pmZ=0, z=self.decode_layer)
 
         if self.gl_plot:
-            if pE != 0:
+            if erasure != 0:
                 for z in self.range:
                     self.gl_plot.plot_erasures(z, draw=False)
                 self.gl_plot.draw_plot()
@@ -220,7 +220,7 @@ class toric(go.toric):
             stab.state = 0 if stabd_state == stab.parity else 1
 
 
-    @get_count_via_func('weight', 'count_matching_weight')
+    @save_count_via_func('weight', 'count_matching_weight')
     def logical_error(self):
         '''
         Applies logical_error() method of parent graph_2D object on the last layer.

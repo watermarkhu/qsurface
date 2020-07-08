@@ -1,2 +1,2 @@
 import simulator.info.printing
-import simulator.info.statistics
+import simulator.info.benchmark

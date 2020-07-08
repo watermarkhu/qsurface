@@ -54,7 +54,7 @@ from simulator.configuration import decoderconfig
 from simulator.decoder.modules_uf._decorators import *
 from simulator.decoder.modules_ufbb._decorators import * 
 from simulator.decoder.modules_ufbb.classes import * 
-from simulator.info.statistics import add_count
+from simulator.info.benchmark import add_count
 
 
 class toric(uf_db.toric):
@@ -77,14 +77,8 @@ class toric(uf_db.toric):
         edge_growth_choices()       Copy cluster node to new vertices
     '''
 
-    def __init__(self, *args, **kwargs):
-        '''
-        Optionally acceps config dict which contains plotting options.
-        Counters for decoder specific heuristics are initialized.
-        Decoder options, defined in kwargs are stored as class variables.
-        '''
-        super().__init__(*args, **kwargs)
-        self.type = "uf_bb"
+    def __init__(self, graph, **kwargs):
+        super().__init__(graph, **kwargs)
         self.name = "Union-Find Balanced-Bloom"
         self.config = {"fbloom": 0.5,
                        "step_node": 0}

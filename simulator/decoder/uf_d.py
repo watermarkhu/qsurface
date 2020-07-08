@@ -14,24 +14,18 @@ Two decoder classes are defined in this file, toric and planar for their respect
 from simulator.info import printing as pr
 from simulator.decoder import uf_db
 from simulator.decoder.modules_uf._decorators import *
-from simulator.info.statistics import add_count
+from simulator.info.benchmark import add_count
 
 
 class toric(uf_db.toric):
     '''
     Union-Find decoder for the toric lattice (2D and 3D)
     '''
-    def __init__(self, *args, **kwargs):
-        '''
-        Optionally acceps config dict which contains plotting options.
-        Counters for decoder specific heuristics are initialized.
-        Decoder options, defined in kwargs are stored as class variables.
-        '''
-        super().__init__(*args, **kwargs)
-        self.type = "uf_d"
-        self.name = "Union-Find Dynamic-forest"
 
-
+    def __init__(self, graph,
+                 name="Union-Find Dynamic-forest",
+                 **kwargs):
+        super().__init__(graph, name, **kwargs)
 
     '''
     ##################################################################################################

@@ -411,8 +411,6 @@ class plot_3D(plot_2D, gp.plot_3D):
             self.new_attributes(edge.pu[0], dict(color=self.cw, alpha=0), 1)
             self.new_attributes(edge.pu[1], dict(color=self.cw, alpha=0), 1)
 
-
-
     # def plot_strip_step_anyon(self, stab):
     #     """
     #     plot function for the flips of the anyons
@@ -424,7 +422,6 @@ class plot_3D(plot_2D, gp.plot_3D):
     #         self.new_attributes(stab.pu, dict(linewidth=lw))
     #     else:
     #         self.new_attributes(stab.pu, dict(edgecolor=self.C1[stab.sID[0]]))
-
 
     def plot_strip_step_anyon(self, stab):
         """

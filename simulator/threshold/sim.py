@@ -43,18 +43,16 @@ def get_data(data, latts, probs):
 
 
 def sim_thresholds(
-        decoder,
         code="toric",
-        lattices = [],
+        decode_module="mwpm",
+        lattices=[],
         perror = [],
         iters = 0,
-        measurement_error=False,
+        perfect_measurements=False,
         multithreading=False,
         threads=None,
         output="",
         folder = ".",
-        debug=False,
-        progressbar=False,
         **kwargs
         ):
     '''
@@ -64,9 +62,9 @@ def sim_thresholds(
     sys.setrecursionlimit(100000)
 
     config = dict(**kwargs)
-    graph = configuration.sim_setup(code, config, decoder, 3, f3d=measurement_error)
+    graph = configuration.setup_decoder(code, decode_module, 3, perfect_measurements)
 
-    full_name = f"{code}_{str(graph).split()[0]}_{decoder}_{output}"
+    full_name = f"{code}_{str(graph).split()[0]}_{decode_module}_{output}"
 
     if not os.path.exists(folder):
         os.makedirs(folder)
@@ -82,24 +80,18 @@ def sim_thresholds(
         if multithreading:
             if threads is None:
                 threads = mp.cpu_count()
-            graph = [configuration.sim_setup(code, config, decoder, lati, f3d=measurement_error, info=0) for _ in range(threads)]
+            decoder = [configuration.setup_decoder(code, decode_module, lati, perfect_measurements, info=0) for _ in range(threads)]
         else:
-            graph = configuration.sim_setup(code, config, decoder, lati, f3d=measurement_error, info=0)
+            decoder = configuration.setup_decoder(code, decode_module, lati, perfect_measurements, info=0)
 
         for spi, fpi in zip(pstr, pfloat):
 
             print("Calculating for L = ", str(lati), "and p =", spi)
 
-            oopsc_args = dict(
-                paulix=fpi,
-                code=code,
-                debug=debug,
-                processes=threads,
-                progressbar=progressbar
-            )
-            if measurement_error:
-                oopsc_args.update(measurex=fpi)
-            result = run_sim(lati, config, iters, graph=graph, **oopsc_args)
+            error_rates = dict(paulix=fpi)
+            if not perfect_measurements:
+                error_rates.update(measurex=fpi)
+            result = run_sim(lati, iters, decoder=decoder, error_rates=error_rates, **kwargs)
 
             pprint(dict(result))
             print("")

@@ -75,7 +75,6 @@ class toric(uf_db.toric):
 
             bucket_i += 1
 
-
     @add_count()
     @plot_grow_bucket()
     def grow_bucket(self, bucket, bucket_i, *args, **kwargs):

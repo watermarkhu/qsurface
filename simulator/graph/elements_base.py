@@ -35,20 +35,30 @@ class Ancilla_qubit(Qubit):
     mstate      boolean indicating measurement error on this stab (for plotting)
     """
 
-    def __init__(self, *args, EID=0, Type="ancilla", **kwargs):
+    def __init__(self, *args, ErrorType=0, Type="ancilla", **kwargs):
         super().__init__(*args, Type=Type, **kwargs)
-        self.EID = EID
+        self.ErrorType = ErrorType
         self.parity_qubits = {}
+        self.vertical_qubits = {}
         self.mstate = 0
 
-    def add_parity_qubit(self, key, parity_qubit):
-        self.parity_qubits[key] = (parity_qubit, self.EID)
-        parity_qubit.E[self.EID].new_node(self)
+
+    def add_parity_qubit(self, key, data_qubit, edge=None, **kwargs):
+        if edge is None:
+            edge = data_qubit.E[self.ErrorType]
+        self.parity_qubits[key] = (data_qubit, edge)
+        edge.new_node(self)
+
+
+    def add_vertical_qubit(self, key, ancilla_qubit, edge, **kwargs):
+        self.vertical_qubits[key] = (ancilla_qubit, edge)
+        edge.new_node(self)
+
 
     def measure_parity(self, **kwargs):
         parity = 0
-        for qubit, EID in self.parity_qubits.values():
-            if qubit.E[EID].state:
+        for qubit, ErrorType in self.parity_qubits.values():
+            if qubit.E[ErrorType].state:
                 parity = 1 - parity
         self.state = parity
         return parity
@@ -85,7 +95,7 @@ class Data_qubit(Qubit):
 
     def __init__(self, *args, Type="data", **kwargs):
         super().__init__(*args, Type=Type, **kwargs)
-        self.E = [Edge(self, ID=0), Edge(self, ID=1)]
+        self.E = [Edge(self, lattice=0), Edge(self, lattice=1)]
 
     @property
     def state(self):
@@ -122,19 +132,18 @@ class Edge(object):
     matching        boolean indicating whether this edge is apart of the matching
     """
 
-    def __init__(self, qubit, ID, edge_type=0):
+    def __init__(self, qubit, lattice, rep="-"):
         # fixed parameters
         self.qubit = qubit
-        self.edge_type = edge_type
-        self.ID = ID
+        self.lattice = lattice
+        self.rep = rep
         self._nodes = []
         self.state = 0
         self.matching = 0
 
     def __repr__(self):
-        orientation = "-" if self.edge_type == 0 else "|"
-        errortype = "X" if self.ID == 0 else "Z"
-        return "e{}{}({},{}|{})".format(errortype, orientation, *self.qubit.loc)
+        errortype = "X" if self.lattice == 0 else "Z"
+        return "e{}{}({},{}|{})".format(errortype, self.rep, *self.qubit.loc)
 
     @property
     def nodes(self):
@@ -160,5 +169,3 @@ class Edge(object):
         self.state = 0
         self.matching = 0
 
-
-# %%

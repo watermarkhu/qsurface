@@ -60,6 +60,22 @@ class perfect_measurements(toric.perfect_measurements):
                 self.setup_parity(star, report_error=False)
                 self.setup_parity(plaq, report_error=False)
 
+    def logical_error(self, z=0):
+        """
+        Finds whether there are any logical errors on the lattice/self. The logical error is returned as [Xhorizontal, Zvertical], where each item represents a homological Loop
+        """
+
+        logical_error = [0, 0]
+
+        for i in self.range:
+            if self.DQ[z][(i+.5)].E[0].state:
+                logical_error[0] = 1 - logical_error[0]
+            if self.DQ[z][(.5, i)].E[1].state:
+                logical_error[1] = 1 - logical_error[1]
+
+        no_error = True if logical_error == [0, 0] else False
+        return logical_error, no_error
+
         
     def add_boundary(self, x, y, z, **kwargs):
         boundary = self.elements.Boundary(loc=(x,y,z))

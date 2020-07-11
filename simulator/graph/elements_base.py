@@ -67,7 +67,7 @@ class Boundary(Ancilla_qubit):
     Iherits all class variables and methods of Stab object
     '''
     def __init__(self, *args, **kwargs):
-        super().__init__(*args, Type="bound" **kwargs)
+        super().__init__(*args, Type="bound", **kwargs)
 
 
 class Data_qubit(Qubit):

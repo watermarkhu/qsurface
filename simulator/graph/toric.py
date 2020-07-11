@@ -60,7 +60,9 @@ class perfect_measurements(object):
 
 
     def __repr__(self):
-        return f"{self.__module__.__name__} {self.__class__.__name__}"
+        code = self.__module__.split(".")[-1]
+        classname = self.__class__.__name__
+        return f"{code} {self.size}x{self.size} graph with {classname}"
 
 
     def count_matching_weight(self, z=0):
@@ -151,12 +153,20 @@ class perfect_measurements(object):
         self.DQ[z][(x,y)] = data_qubit
         return data_qubit
 
-    def setup_parity(self, ancilla_qubit, **kwargs):
+
+    def setup_parity(self, ancilla_qubit, report_error=True, **kwargs):
         (x, y, z) = ancilla_qubit.loc
-        ancilla_qubit.add_parity_qubit("e", self.DQ[z][((x + .5) % self.size, y)])
-        ancilla_qubit.add_parity_qubit("w", self.DQ[z][((x - .5) % self.size, y)])
-        ancilla_qubit.add_parity_qubit("n", self.DQ[z][(x, (y + .5) % self.size)])
-        ancilla_qubit.add_parity_qubit("s", self.DQ[z][(x, (y - .5) % self.size)])
+
+        def add_parity(key, dir):
+            if key in self.DQ[z]:
+                ancilla_qubit.add_parity_qubit(dir, self.DQ[z][key])
+            elif report_error:
+                raise KeyError("Data qubit not initiated")
+
+        add_parity(((x + .5) % self.size, y), "e")
+        add_parity(((x - .5) % self.size, y), "w")
+        add_parity((x, (y + .5) % self.size), "n")
+        add_parity((x, (y - .5) % self.size), "s")
 
 
     def reset(self):

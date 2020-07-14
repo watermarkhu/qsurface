@@ -47,39 +47,35 @@ class perfect_measurements(toric.perfect_measurements):
                 self.add_data_qubit(x, y+.5, z)
 
         for yx in self.range:
-            self.add_boundary(0, yx, z)
-            self.add_boundary(self.size, yx, z)
-            self.add_boundary(yx+.5, -.5, z)
-            self.add_boundary(yx+.5, self.size-.5, z)
-
+            self.add_boundary(0, yx, z, Type="bstar")
+            self.add_boundary(self.size, yx, z, Type="bstar")
 
         for yx in self.range:
             for xy in range(self.size - 1):
-                star = self.add_ancilla_qubit(xy+1, yx, z, 0)
-                plaq = self.add_ancilla_qubit(yx+.5, xy+.5, z, 1)
+                star = self.add_ancilla_qubit(xy+1, yx, z, "X")
                 self.setup_parity(star, report_error=False)
-                self.setup_parity(plaq, report_error=False)
 
-    def logical_error(self, z=0):
-        """
-        Finds whether there are any logical errors on the lattice/self. The logical error is returned as [Xhorizontal, Zvertical], where each item represents a homological Loop
-        """
+        if self.phaseflip:
+            for yx in self.range:
+                self.add_boundary(yx+.5, -.5, z, Type="bplaq")
+                self.add_boundary(yx+.5, self.size-.5, z, Type="bplaq")
 
-        logical_error = [0, 0]
+            for yx in self.range:
+                for xy in range(self.size - 1):
+                    plaq = self.add_ancilla_qubit(yx+.5, xy+.5, z, "Z")
+                    self.setup_parity(plaq, report_error=False)
 
-        for i in self.range:
-            if self.DQ[z][(i+.5)].E[0].state:
-                logical_error[0] = 1 - logical_error[0]
-            if self.DQ[z][(.5, i)].E[1].state:
-                logical_error[1] = 1 - logical_error[1]
-
-        no_error = True if logical_error == [0, 0] else False
-        return logical_error, no_error
+    def init_logical_operator(self, **kwargs):
+        self.logical_operators["X"] = [self.DQ[self.decode_layer][(i+.5)].edges["X"] for i in self.range]
+        if self.phaseflip:
+            self.logical_operators["Z"] = [self.DQ[self.decode_layer][(.5, i)].edges["Z"] for i in self.range]
 
         
-    def add_boundary(self, x, y, z, **kwargs):
-        boundary = self.elements.Boundary(loc=(x,y,z))
+    def add_boundary(self, x, y, z, Type="bound", **kwargs):
+        boundary = self.elements.Boundary(loc=(x,y,z), Type=Type)
         self.BQ[z][(x,y)] = boundary
         return boundary
 
 
+class faulty_measurements(toric.faulty_measurements, perfect_measurements):
+    pass

@@ -1,13 +1,27 @@
+# Compiled python modules.
 *.pyc
-*.xml
-*.xml
-*.ini
+
+# Setuptools distribution folder.
+/dist/
+
+# Python egg metadata, regenerated from source files by setuptools.
+/*.egg-info
+
+
+# compiled C code
 *.o
 *.so
+
+
+# data files
+*.xml
+*.ini
 *.pkl
 *.csv
 *.txt
+!requirements.txt
 
+# folders
 simulations
 Simulations
 cartesiusdata
@@ -16,4 +30,3 @@ __pycache__/
 .idea/
 .python-version
 .vscode/
-!requirements.txt

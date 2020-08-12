@@ -7,7 +7,7 @@ _____________________________________________
 '''
 import argparse
 from run_simulation import add_args, add_kwargs
-from simulator.threshold.plot import plot_thresholds
+from opensurfacesim.threshold.plot import plot_thresholds
 
 
 parser = argparse.ArgumentParser(

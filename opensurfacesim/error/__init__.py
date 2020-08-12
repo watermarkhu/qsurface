@@ -1,2 +1,2 @@
-import simulator.error.erasure
-import simulator.error.pauli
+import opensurfacesim.error.erasure
+import opensurfacesim.error.pauli

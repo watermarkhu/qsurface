@@ -9,3 +9,4 @@ setup(name='opensurfacesim',
       license="BSD-3",
       packages=["opensurfacesim"],
       zip_safe=False)
+

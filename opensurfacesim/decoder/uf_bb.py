@@ -48,13 +48,13 @@ R1: [N1, M1],  N1: [R1],  M1: [R1, M0]
 
 # TODO: Proper calculation of delay for erasures/empty nodes in the graph
 '''
-from simulator.info import printing as pr
-from simulator.decoder import uf_db
-from simulator.configuration import decoderconfig
-from simulator.decoder.modules_uf._decorators import *
-from simulator.decoder.modules_ufbb._decorators import * 
-from simulator.decoder.modules_ufbb.classes import * 
-from simulator.info.benchmark import add_count
+from opensurfacesim.info import printing as pr
+from opensurfacesim.decoder import uf_db
+from opensurfacesim.configuration import decoderconfig
+from opensurfacesim.decoder.modules_uf._decorators import *
+from opensurfacesim.decoder.modules_ufbb._decorators import * 
+from opensurfacesim.decoder.modules_ufbb.classes import * 
+from opensurfacesim.info.benchmark import add_count
 
 
 class toric(uf_db.toric):
@@ -87,7 +87,7 @@ class toric(uf_db.toric):
             setattr(self, key, value)
 
         self.plot_growth = not any([self.step_bucket, self.step_cluster, self.step_node])
-
+    
     '''
     ##################################################################################################
 

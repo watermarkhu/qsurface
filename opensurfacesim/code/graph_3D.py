@@ -24,9 +24,9 @@ The 3D graph (toric/planar) is a cubic lattice with many layer of these unit cel
 '''
 
 from . import graph_2D as go
-from simulator.plot import plot_graph_lattice as pgl
-from simulator.plot import plot_unionfind as puf
-from simulator.info.benchmark import save_count_via_func
+from opensurfacesim.plot import plot_graph_lattice as pgl
+from opensurfacesim.plot import plot_unionfind as puf
+from opensurfacesim.info.benchmark import save_count_via_func
 import random
 
 

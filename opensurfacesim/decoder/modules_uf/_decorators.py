@@ -11,7 +11,7 @@ Contains decorator classes and method for:
 
 import functools
 import time
-from simulator.info import printing as pr
+from opensurfacesim.info import printing as pr
 
 
 def plot_iter(name, cname, dname=None, flip=True):

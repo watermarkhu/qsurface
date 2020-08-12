@@ -1,6 +1,6 @@
 
 #%%
-import elements_base as eb
+from . import elements_base as eb
 
 
 class Ancilla_qubit(eb.Ancilla_qubit):

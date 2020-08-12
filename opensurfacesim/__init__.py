@@ -1,8 +1,8 @@
-import simulator.main
-import simulator.configuration
-import simulator.decoder
-import simulator.graph
-import simulator.error
-import simulator.info
-import simulator.plot
-import simulator.threshold
+import opensurfacesim.main
+import opensurfacesim.configuration
+import opensurfacesim.decoder
+import opensurfacesim.code
+import opensurfacesim.error
+import opensurfacesim.info
+import opensurfacesim.plot
+import opensurfacesim.threshold

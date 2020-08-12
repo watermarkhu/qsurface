@@ -11,8 +11,8 @@ from collections import defaultdict
 from scipy import optimize
 import numpy as np
 import math
-from simulator.threshold.fit import fit_thresholds, get_fit_func
-from simulator.threshold.sim import get_data, read_data
+from opensurfacesim.threshold.fit import fit_thresholds, get_fit_func
+from opensurfacesim.threshold.sim import get_data, read_data
 
 
 def plot_style(ax, title=None, xlabel=None, ylabel=None, **kwargs):

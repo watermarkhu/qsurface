@@ -11,8 +11,8 @@ Uses either Kolmogorov's Blossom V algorithm:
             In Mathematical Programming Computation (MPC), July 2009, 1(1):43-67.
 '''
 import time
-from simulator.decoder import mwpm
-from simulator.decoder.modules_blossom5.methods import *
+from opensurfacesim.decoder import mwpm
+from opensurfacesim.decoder.modules_blossom5.methods import *
 
 
 class toric(mwpm.toric):

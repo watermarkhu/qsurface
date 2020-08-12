@@ -5,7 +5,7 @@ www.github.com/watermarkhu/OpenSurfaceSim
 _____________________________________________
 
 '''
-from simulator import main, configuration
+from opensurfacesim import main, configuration
 from pprint import pprint
 import multiprocessing as mp
 import numpy as np

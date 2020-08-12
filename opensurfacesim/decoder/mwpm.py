@@ -10,8 +10,8 @@ Uses networkx implementation of the Blossom algorithm in python
 '''
 import time
 import networkx as nx
-from simulator.info.benchmark import timeit
-from simulator.decoder._template import decoder_template
+from opensurfacesim.info.benchmark import timeit
+from opensurfacesim.decoder._template import decoder_template
 
 
 class toric(decoder_template):

@@ -1,1 +1,1 @@
-import simulator.decoder.modules_blossom5.methods
+import opensurfacesim.decoder.modules_blossom5.methods

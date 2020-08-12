@@ -21,8 +21,8 @@ import matplotlib as mpl
 from time import time
 import random
 import os
-from simulator.info import printing as pr
-from simulator.configuration import readconfig, writeconfig
+from opensurfacesim.info import printing as pr
+from opensurfacesim.configuration import readconfig, writeconfig
 
 
 mpl.rcParams['toolbar'] = 'None'

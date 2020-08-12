@@ -1,6 +1,6 @@
 
-from simulator.configuration import setup_decoder 
-from simulator import decoder
+from opensurfacesim.configuration import setup_decoder 
+from opensurfacesim import decoder
 import pytest
 
 def test_pymatch():

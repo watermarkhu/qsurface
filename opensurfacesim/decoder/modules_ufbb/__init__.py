@@ -1,2 +1,2 @@
-import simulator.decoder.modules_ufbb.classes
-import simulator.decoder.modules_ufbb._decorators
+import opensurfacesim.decoder.modules_ufbb.classes
+import opensurfacesim.decoder.modules_ufbb._decorators

@@ -1,2 +1,2 @@
-import simulator.info.printing
-import simulator.info.benchmark
+import opensurfacesim.info.printing
+import opensurfacesim.info.benchmark

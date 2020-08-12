@@ -9,8 +9,8 @@ Contains methods of the simulation configuration
 import configparser
 import json
 import os
-from simulator.info.benchmark import benchmarker
-from simulator.info.printing import print_setup
+from .info.benchmark import benchmarker
+from .info.printing import print_setup
 from types import ModuleType
 
 
@@ -58,7 +58,7 @@ def writeconfig(path, configdict, sectionname=None):
             config.write(configfile)
 
 
-def decoderconfig(decoder, path="simulator/decoder/decoder.ini"):
+def decoderconfig(decoder, path="opensurfacesim/decoder/decoder.ini"):
     '''
     Loads or writes the configuration variables of a decoder to a single decoder.ini file. 
     The standard configurations must be stored at decoder.config and is a dictionary
@@ -84,11 +84,11 @@ def decoderconfig(decoder, path="simulator/decoder/decoder.ini"):
         setattr(decoder, key, value)
 
 
-def setup_decoder(code, decode_module, size, 
-    perfect_measurements=True, 
-    info=True, 
-    benchmark=False, 
-    **kwargs):
+def setup_decoder(code, decode_module, size,
+                  perfect_measurements=True,
+                  benchmark=False,
+                  info=True,
+                  **kwargs):
     '''
     Initilizes the graph and decoder type based on the lattice structure.
     '''  
@@ -97,9 +97,9 @@ def setup_decoder(code, decode_module, size,
 
     # Get graph object
     if perfect_measurements:
-        from simulator.graph import graph_2D as go
+        from .code import graph_2D as go
     else:
-        from simulator.graph import graph_3D as go
+        from .code import graph_3D as go
     try:
         graph = getattr(go, code)(size, **kwargs)
     except:
@@ -107,7 +107,7 @@ def setup_decoder(code, decode_module, size,
 
     # Get decoder object
     if type(decode_module) == str:
-        decode_modules = __import__("simulator.decoder", fromlist=[decode_module])
+        decode_modules = __import__("opensurfacesim.decoder", fromlist=[decode_module])
         try:
             decode_module = getattr(decode_modules, decode_module)
         except:

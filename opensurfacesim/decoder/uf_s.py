@@ -12,9 +12,9 @@ Two decoder classes are defined in this file, toric and planar for their respect
 '''
 
 
-from simulator.info import printing as pr
-from simulator.decoder import uf_sb, uf_d
-from simulator.decoder.modules_uf._decorators import *
+from opensurfacesim.info import printing as pr
+from opensurfacesim.decoder import uf_sb, uf_d
+from opensurfacesim.decoder.modules_uf._decorators import *
 
 class toric(uf_sb.toric, uf_d.toric):
     '''

@@ -21,9 +21,9 @@ Qubits: qID (td, y, x)          Stabilizers: sID (ertype, y, x)
 The 2D graph (toric/planar) is a square lattice with 1 layer of these unit cells.
 '''
 import random
-from simulator.plot import plot_graph_lattice as pgl
-from simulator.plot import plot_unionfind as puf
-from simulator.info.benchmark import save_count_via_func
+from opensurfacesim.plot import plot_graph_lattice as pgl
+from opensurfacesim.plot import plot_unionfind as puf
+from opensurfacesim.info.benchmark import save_count_via_func
 
 
 class toric(object):

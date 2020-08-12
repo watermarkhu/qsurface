@@ -12,11 +12,11 @@ Two decoder classes are defined in this file, toric and planar for their respect
 '''
 
 
-from simulator.info import printing as pr
-from simulator.configuration import decoderconfig
-from simulator.decoder._template import decoder_template
-from simulator.decoder.modules_uf._decorators import *
-from simulator.info.benchmark import add_count
+from opensurfacesim.info import printing as pr
+from opensurfacesim.configuration import decoderconfig
+from opensurfacesim.decoder._template import decoder_template
+from opensurfacesim.decoder.modules_uf._decorators import *
+from opensurfacesim.info.benchmark import add_count
 
 
 class toric(decoder_template):
@@ -25,7 +25,7 @@ class toric(decoder_template):
     '''
 
     def __init__(self, graph,
-                 name="Union-Find Dynamic-forest Bucket ",
+                 name="Union-Find Dynamic-forest Bucket",
                  config={"dg_connections": 0,
                          "print_steps": 0,
                          "step_find": 0,

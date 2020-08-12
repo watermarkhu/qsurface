@@ -37,8 +37,8 @@ Tree after merge:
 # TODO: Proper calculation of delay for erasures/empty nodes in the graph
 '''
 from termcolor import colored as cs
-from simulator.decoder._decorators import counter
-from simulator.decoder.modules_ufbb._decorators import init_counters_bb
+from opensurfacesim.decoder._decorators import counter
+from opensurfacesim.decoder.modules_ufbb._decorators import init_counters_bb
 
 
 class anyon_node(object):

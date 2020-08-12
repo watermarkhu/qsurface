@@ -42,8 +42,8 @@ R1: [N1, M1],  N1: [R1],  M1: [R1, M0]
 '''
 
 from termcolor import colored as cs
-from simulator.decoder._decorators import counter
-from simulator.decoder.modules_ufbb._decorators import init_counters_bb
+from opensurfacesim.decoder._decorators import counter
+from opensurfacesim.decoder.modules_ufbb._decorators import init_counters_bb
 
 
 class anyon_node(object):

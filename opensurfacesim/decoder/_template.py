@@ -7,8 +7,8 @@ _____________________________________________
 Template file for decoder modules
 '''
 
-from simulator.configuration import decoderconfig
-from simulator.info.benchmark import timeit
+from opensurfacesim.configuration import decoderconfig
+from opensurfacesim.info.benchmark import timeit
 
 
 class decoder_template(object):
@@ -31,6 +31,9 @@ class decoder_template(object):
         decoderconfig(self)                         # configuration saved to decoder.ini
         for key, value in kwargs.items():
             setattr(self, key, value)
+    
+    def __repr__(self):
+        return "{} decoder ({})".format(self.name, self.__class__.__name__)
 
     @timeit()
     def decode(self, *args, **kwargs):

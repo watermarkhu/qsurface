@@ -9,10 +9,9 @@ The graph type (2D/3D) and decoder (MWPM, unionfind...) are specified and are lo
 One can choose to run a simulated lattice for a single, multiple or many (multithreaded) multiple iterations.
 
 '''
-from simulator.configuration import setup_decoder
+from .configuration import setup_decoder
 from progiter import ProgIter
 import multiprocessing as mp
-from decimal import Decimal as decimal
 from collections import defaultdict as dd
 from .info import printing as pr
 import numpy as np
@@ -20,38 +19,49 @@ import random
 import time
 
 
-def init_random_seed(timestamp=None, worker=0, iteration=0, **kwargs):
+def init_random_seed(seed=None, **kwargs):
     '''
-    Initializes a random seed based on the current time, simulaton worker and iteration, which ensures a unique seed
-    '''
-    if timestamp is None:
-        timestamp = time.time()
-    seed = "{:.0f}".format(timestamp*10**7) + str(worker) + str(iteration)
-    random.seed(decimal(seed))
-    # print(seed)
-    return seed
+    Initializes random with a seed
 
+    If no `seed` is provided, the current timestamp from `time.time()` is used as the seed
 
-def apply_random_seed(seed, **kwargs):
+    Parameters
+    ----------
+    seed : optional
     '''
-    Applies a certain seed in the same format as init_random_seed()
-    '''
-    if not seed:
-        seed = init_random_seed(**kwargs)
-    if type(seed) is not decimal:
-        seed = decimal(seed)
+    if seed is None:
+        seed = time.time()
     random.seed(seed)
 
 
 def get_mean_var(dict_values, result={}, **kwargs):
     '''
-    Calculates the total mean and variance of a number of means and variances
+    Calculates the means and variances of a number of lists of values. 
+
+    For every key and item (list of values) in `dict_values`, the mean and variance of the values are stored in the `result` dictionary at with the keys `key_m`, `key_v`, respectively. If a `result` dictionary is provided as input, the mean and variance values are updated to this dictionary and outputted. 
+
+    Parameters
+    ----------
+    dict_values : dict of lists
+        Dictionary with lists of values on which the mean and variance are calculated.
+    result : dict, optional
+        Dictionary in which the means and variances are stored
+
+    Examples
+    --------
+    >>> get_mean_var({"foo": [1,2], "bar": [1,2,3,4,5]})
+    {
+        "foo_m": 1.5,
+        "foo_v": 0.25,
+        "bar_m": 3.0,
+        "bar_v": 2.0
+    }
     '''
     for key, list_values in dict_values.items():
         if list_values:
             result.update({
                 key+"_m": np.mean(list_values),
-                key+"_v": np.std(list_values)
+                key+"_v": np.var(list_values)
             })
         else:
             result.update({key+"_m": 0, key+"_v": 0})
@@ -64,36 +74,67 @@ def single(
     decode_module='mwpm',
     error_rates = {},
     perfect_measurements=True,
-    decoder=None,
-    worker=0,
-    iteration=0,
     seed=None,
-    called=True,
     benchmark=False,
+    called=True,
+    decoder=None,
     **kwargs
 ):
     """
-    Runs the peeling decoder for one iteration
+    Runs the surface code simulation for one iteration
+
+    Parameters
+    ----------
+
+    size : int
+        One-dimensional length of the surface.
+    code : str, optional
+        Type of surface code. Name must be equivalent to a code included in `opensurfacesim.code` as `{code}.py`. 
+    decode_module : str, optional
+        Type of decoder. Name must equivalent to a decoder included in `opensurfacesim.decoder` as `{decoder}.py`. 
+    error_rates : dict, optional
+        Dictionary of included error rates. The keys of this dictionary must be equivalent to one of the keys of the `apply_error()` methods in the error modules in `opensurfacesim.error`.
+    perfect_measurments : bool, optional
+        Toggle of enabling perfect measurements. ## TODO remove this, must be included in `error_rates`.
+    seed : optional
+        The seed used for the `random` module. 
+    benchmark : bool, optional
+        Toggle for adding benchmarking tools to the simulation. See `opensurfacesim.info.benchmark`.
+    called, decoder
+        Parameters used when `single` is called by the `multiple` method. 
+
+    Examples
+    --------
+    >>> single(8, code="toric", decode_module="mwpm", error_rates={"paulix":0.1})
+    ___________________________________________________________________________
+    OpenSurfaceSim
+    2020 Mark Shui Hu
+    https://github.com/watermarkhu/OpenSurfaceSim
+    ...........................................................................
+    Decoder type: Minimum-Weight Perfect Matching (networkx)
+    Graph type: 2D toric
+    ...........................................................................
+    Simulation using settings:
+    {'iterations': 1, 'paulix': 0.1, 'size': 8}
+    ...........................................................................
+    {'succes': True}
+    
     """
     # Initialize lattice
     if decoder is None:
-        decoder = setup_decoder(code, decode_module, size, perfect_measurements, 
-            benchmark=benchmark, **kwargs)
+        decoder = setup_decoder(code, decode_module, size, perfect_measurements, benchmark, **kwargs)
         pr.print_configuration(1, size=size, **error_rates)
+
     # Initialize errors
     if seed is None:
-        init_random_seed(worker=worker, iteration=iteration)
+        init_random_seed()
     else:
         if type(seed) not in [float, int, str]:
             raise TypeError("Seed type error. Check if single seed given.")
-        apply_random_seed(seed, worker=worker, iteration=iteration)
+        apply_random_seed(seed)
        
     decoder.graph.apply_and_measure_errors(**error_rates)
-
-    # Peeling decoder
     decoder.decode()
-
-    # Measure logical operator
     logical_error, correct = decoder.graph.logical_error()
     decoder.reset()
 
@@ -109,22 +150,6 @@ def single(
     return output
 
 
-def check_seeds(seed, iters, **kwargs):
-    '''
-    Checks if the seeds provided either by seeds or the config['seeds'] is enough for the provided number of iters
-    '''
-    if seed is None:
-        seed = [init_random_seed(iteration=1, **kwargs)
-            for i in range(iters)]
-    else:
-        if type(seed) != list:
-            raise TypeError("Must supply a list of seeds")
-
-        if len(seed) != iters:
-            raise IndexError("Not enough seeds in config")
-
-    return seed
-
 
 def multiple(
     size,
@@ -136,7 +161,6 @@ def multiple(
     decoder=None,
     qres=None,
     worker=0,
-    seed=None,
     called=True,
     progressbar=True,
     benchmark=False,
@@ -153,19 +177,15 @@ def multiple(
         if info:
             pr.print_configuration(iters, size=size, **error_rates)
 
-    seed = check_seeds(seed, iters, worker=worker)
-
     options = dict(
         error_rates=error_rates,
         decoder=decoder,
-        worker=worker,
         called=0,
         benchmark=benchmark
     )
-    
 
-    zipped = zip(ProgIter(range(iters)), seed) if progressbar else zip(range(iters), seed)
-    result = [single(size, iteration=iter, seed=ss, **options, **kwargs) for iter, ss in zipped]
+    iterator = ProgIter(range(iters)) if progressbar else range(iters)
+    result = [single(size, **options, **kwargs) for iter in iterator]
 
     if called:
         output = dict(
@@ -191,7 +211,6 @@ def multiprocess(
         size,
         iters,
         decoder=None,
-        seed=None,
         processes=None,
         node=0,
         **kwargs
@@ -206,10 +225,6 @@ def multiprocess(
     # Calculate iterations for ieach child process
     process_iters = iters // processes
 
-    seed = check_seeds(seed, iters)
-    process_seeds = [seed[p*process_iters:(p+1)*process_iters] 
-        for p in range(processes)]
-
     # Initiate processes
     qres = mp.Queue()
     workers = []
@@ -222,12 +237,12 @@ def multiprocess(
     if decoder is None or len(decoder) != processes:
         decoder = [None]*processes
 
-    for i, (pseed, pdec) in enumerate(zip(process_seeds, decoder)):
+    for i, pdec in enumerate(decoder):
         workers.append(
             mp.Process(
                 target=multiple,
                 args=(size, process_iters),
-                kwargs=dict(worker=i, seed=pseed, decoder=pdec, **options, **kwargs)
+                kwargs=dict(worker=i, decoder=pdec, **options, **kwargs)
             )
         )
     print("Starting", processes, "workers.")

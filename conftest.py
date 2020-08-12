@@ -1,5 +1,5 @@
 # import pytest
-# from simulator.graph import graph_2D, graph_3D
+# from opensurfacesim.code import graph_2D, graph_3D
 
 
 # simulator = __import__("simulator")

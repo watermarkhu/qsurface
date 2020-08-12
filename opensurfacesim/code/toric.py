@@ -50,7 +50,7 @@ class perfect_measurements(object):
         self.phaseflip = phaseflip
 
         if elements is None:
-            from simulator.graph import elements_base as elements
+            from opensurfacesim.code import elements_base as elements
         self.elements = elements
         
         for key, value in kwargs.items():

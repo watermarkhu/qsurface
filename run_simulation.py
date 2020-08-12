@@ -7,7 +7,7 @@ _____________________________________________
 '''
 import argparse
 from pprint import pprint
-from simulator.main import single, multiple, multiprocess
+from opensurfacesim.main import single, multiple, multiprocess
 
 
 def add_args(parser, args):
@@ -92,5 +92,4 @@ if __name__ == "__main__":
     else:
         output = multiprocess(size, iters, error_rates=error_rates, processes=threads, **sim_kwargs)
 
-    print()
     pprint(dict(output=dict(output)))

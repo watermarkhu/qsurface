@@ -25,6 +25,7 @@
 simulations
 Simulations
 cartesiusdata
+docs/build/
 
 __pycache__/
 .idea/

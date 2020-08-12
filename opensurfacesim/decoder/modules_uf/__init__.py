@@ -1,1 +1,1 @@
-import simulator.decoder.modules_uf._decorators
+import opensurfacesim.decoder.modules_uf._decorators

@@ -1,4 +1,4 @@
-import simulator.threshold.fit
-import simulator.threshold.plot
-import simulator.threshold.sim
+import opensurfacesim.threshold.fit
+import opensurfacesim.threshold.plot
+import opensurfacesim.threshold.sim
 

@@ -11,10 +11,10 @@ The decoder requires a graph object, containing the vertices (stabilizers) and e
 Two decoder classes are defined in this file, toric and planar for their respective lattice types.
 '''
 
-from simulator.info import printing as pr
-from simulator.decoder import uf_db
-from simulator.decoder.modules_uf._decorators import *
-from simulator.info.benchmark import add_count
+from opensurfacesim.info import printing as pr
+from opensurfacesim.decoder import uf_db
+from opensurfacesim.decoder.modules_uf._decorators import *
+from opensurfacesim.info.benchmark import add_count
 
 
 class toric(uf_db.toric):

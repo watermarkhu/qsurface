@@ -32,7 +32,9 @@ release = '0.1'
 # ones.
 extensions = [
     "sphinx.ext.autodoc",
-    "numpydoc",
+    "sphinx.ext.viewcode",
+    "sphinx.ext.githubpages",
+    # "numpydoc",
     "m2r2"
 ]
 source_suffix = ['.rst', '.md']
@@ -53,7 +55,27 @@ exclude_patterns = []
 #
 html_theme = 'alabaster'
 
+# Theme options are theme-specific and customize the look and feel of a theme
+# further.  For a list of options available for each theme, see the
+# documentation.
+html_theme_options = {
+    'description': 'Open Surface code Simulations',
+    'github_user': 'watermarkhu',
+    'github_repo': 'OpenSurfaceSim',
+    'github_banner': True,
+    'github_type': 'mark',
+    'github_count': False,
+    'font_family': '"Charis SIL", "Noto Serif", serif',
+    'head_font_family': 'Lato, sans-serif',
+    'code_font_family': '"Code new roman", "Ubuntu Mono", monospace',
+    'code_font_size': '1rem',
+}
+
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+
+m2r_parse_relative_links = True
+m2r_anonymous_references = False
+m2r_disable_inline_math = False

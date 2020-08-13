@@ -1,9 +1,4 @@
 '''
-2020 Mark Shui Hu
-
-www.github.com/watermarkhu/OpenSurfaceSim
-_____________________________________________
-
 Contains methods to run a simulated lattice of the surface code.
 The graph type (2D/3D) and decoder (MWPM, unionfind...) are specified and are loaded.
 One can choose to run a simulated lattice for a single, multiple or many (multithreaded) multiple iterations.

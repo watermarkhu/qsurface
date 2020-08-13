@@ -1,11 +1,11 @@
 opensurfacesim.code package
-============================
+===========================
 
 Submodules
 ----------
 
 opensurfacesim.code.elements\_base module
-------------------------------------------
+-----------------------------------------
 
 .. automodule:: opensurfacesim.code.elements_base
    :members:
@@ -13,7 +13,7 @@ opensurfacesim.code.elements\_base module
    :show-inheritance:
 
 opensurfacesim.code.elements\_uf module
-----------------------------------------
+---------------------------------------
 
 .. automodule:: opensurfacesim.code.elements_uf
    :members:
@@ -21,7 +21,7 @@ opensurfacesim.code.elements\_uf module
    :show-inheritance:
 
 opensurfacesim.code.graph\_2D module
--------------------------------------
+------------------------------------
 
 .. automodule:: opensurfacesim.code.graph_2D
    :members:
@@ -29,7 +29,7 @@ opensurfacesim.code.graph\_2D module
    :show-inheritance:
 
 opensurfacesim.code.graph\_3D module
--------------------------------------
+------------------------------------
 
 .. automodule:: opensurfacesim.code.graph_3D
    :members:
@@ -37,7 +37,7 @@ opensurfacesim.code.graph\_3D module
    :show-inheritance:
 
 opensurfacesim.code.planar module
-----------------------------------
+---------------------------------
 
 .. automodule:: opensurfacesim.code.planar
    :members:
@@ -45,7 +45,7 @@ opensurfacesim.code.planar module
    :show-inheritance:
 
 opensurfacesim.code.toric module
----------------------------------
+--------------------------------
 
 .. automodule:: opensurfacesim.code.toric
    :members:
@@ -56,7 +56,7 @@ opensurfacesim.code.toric module
 Module contents
 ---------------
 
-.. automodule:: opensurfacesim.graph
+.. automodule:: opensurfacesim.code
    :members:
    :undoc-members:
    :show-inheritance:

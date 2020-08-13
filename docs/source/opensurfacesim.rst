@@ -7,9 +7,9 @@ Subpackages
 .. toctree::
    :maxdepth: 4
 
+   opensurfacesim.code
    opensurfacesim.decoder
    opensurfacesim.error
-   opensurfacesim.code
    opensurfacesim.info
    opensurfacesim.plot
    opensurfacesim.threshold

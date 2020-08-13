@@ -1,7 +1,9 @@
 
-# OOP Surface Code Simulations
+# Open Surface code Simulations
 
-This repository provides an object-oriented simulation package for the surface code. The toric and planar lattices are currently supported. Each lattice is simulated by a *graph* of nodes and edges, where the *stars* and *plaquettes* are the nodes and qubits are the edges on the graph.
+[![Unitary Fund](https://img.shields.io/badge/Supported%20By-UNITARY%20FUND-brightgreen.svg?style=for-the-badge)](http://unitary.fund)
+
+This repository provides a simulation package for the surface code. The toric and planar lattices are currently supported. Each lattice is simulated by a *graph* of nodes and edges, where the *stars* and *plaquettes* are the nodes and qubits are the edges on the graph.
 
 ![alt text][toric4]
 
@@ -137,6 +139,8 @@ Make sure to install tkinter via `sudo apt-get update` and `sudo apt-get install
 In case of any errors involvig the *backend* or *renderer* please uninstall via `pip uninstall matplotlib` and reinstall via the package manager. On Debian/Ubuntu this is done via `sudo apt-get install python-matplotlib`.
 
 
+
+*This project is proudly funded by the [Unitary Fund](https://unitary.fund/).*
 
 [uftoric6]: https://raw.githubusercontent.com/watermarkhu/oop_surface_code/master/images/uftoric3d_6.png "UF toric graph 6x6x6"
 [planar12]: https://raw.githubusercontent.com/watermarkhu/oop_surface_code/master/images/planar2d_12.png "Planar lattice 12x12"

@@ -14,8 +14,8 @@ from collections import defaultdict
 from scipy import optimize
 import numpy as np
 import math
-from oopsc.threshold.fit import fit_thresholds, get_fit_func
-from oopsc.threshold.sim import get_data, read_data
+from simulator.threshold.fit import fit_thresholds, get_fit_func
+from simulator.threshold.sim import get_data, read_data
 
 from thesis_style import *
 

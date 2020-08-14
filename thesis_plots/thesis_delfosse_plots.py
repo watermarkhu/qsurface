@@ -7,8 +7,8 @@ import numpy as np
 import math
 import sys
 sys.path.insert(0, '..')
-from oopsc.threshold.fit import fit_thresholds, get_fit_func
-from oopsc.threshold.sim import get_data, read_data
+from simulator.threshold.fit import fit_thresholds, get_fit_func
+from simulator.threshold.sim import get_data, read_data
 
 
 def plot(

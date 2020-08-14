@@ -14,8 +14,8 @@ import numpy as np
 import math
 import sys
 sys.path.insert(0, '..')
-from oopsc.threshold.fit import fit_thresholds, get_fit_func
-from oopsc.threshold.sim import get_data, read_data
+from simulator.threshold.fit import fit_thresholds, get_fit_func
+from simulator.threshold.sim import get_data, read_data
 
 
 
@@ -265,7 +265,6 @@ def plot_sequential(
                legend_style(), title=r"$L_1,L_2$", title_fontsize=8)
 
     return f0, f1, thresholds
-
 
 
 def plot_multiple(locs, names=None, styles=["-"], showleg=True, **kwargs):

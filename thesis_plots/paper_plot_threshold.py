@@ -6,8 +6,8 @@ import matplotlib.pyplot as plt
 from matplotlib.lines import Line2D
 from matplotlib.patches import Patch
 import numpy as np
-from oopsc.threshold.sim import get_data, read_data
-from oopsc.threshold.fit import get_fit_func, fit_thresholds
+from simulator.threshold.sim import get_data, read_data
+from simulator.threshold.fit import get_fit_func, fit_thresholds
 
 
 def plot_style(ax, title=None, xlabel=None, ylabel=None, **kwargs):

@@ -7,8 +7,8 @@ _____________________________________________
 '''
 
 import argparse
-from run_oopsc import add_args, add_kwargs
-from oopsc.batch.sim import sim_thresholds
+from run_simulation import add_args, add_kwargs
+from simulator.batch.sim import sim_thresholds
 
 parser = argparse.ArgumentParser(
     prog="threshold_run",
@@ -49,7 +49,7 @@ add_kwargs(parser, key_arguments)
 args=vars(parser.parse_args())
 decoder = args.pop("decoder")
 
-decoders = __import__("oopsc.decoder", fromlist=[decoder])
+decoders = __import__("simulator.decoder", fromlist=[decoder])
 decode = getattr(decoders, decoder)
 
 decoder_names = {

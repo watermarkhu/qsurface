@@ -3,11 +3,11 @@
 
 www.github.com/watermarkhu/oop_surface_code
 _____________________________________________
-
+py
 '''
 import argparse
-from run_oopsc import add_kwargs
-from oopsc.batch.sql import get_data
+from run_simulation import add_kwargs
+from simulator.batch.sql import get_data
 
 
 parser = argparse.ArgumentParser(

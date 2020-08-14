@@ -22,7 +22,7 @@ def multiple(
     debug=True,
     **kwargs
 ):
-    from ..oopsc import init_random_seed, single, get_mean_var
+    from ..main import init_random_seed, single, get_mean_var
     from ..info.decorators import debug as db
 
 
@@ -122,7 +122,7 @@ def sim_thresholds(
     '''
     ############################################
     '''
-    from ..oopsc import default_config, lattice_type as makegraph
+    from ..main import default_config, lattice_type as makegraph
     if measurement_error:
         from ..graph import graph_3D as go
     else:

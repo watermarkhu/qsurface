@@ -1,0 +1,17 @@
+#!/bin/bash
+#SBATCH --constraint=haswell -N 4 -t 10:00:00
+
+nodes=8
+iters=192000
+name=mwpm_toric_3d_lowerror
+shared=/scratch-shared/tmp.l5jNGplBBW
+
+mkdir -p $shared/$name
+let iter=$iters/$nodes
+
+for (( i=0; i<$nodes; i++)); do
+(
+srun -N 1 bash $HOME/OpenSurfaceSim/simulator/batch/lowerror/scripts/mwpm_toric_3d_script $i $iter $name $shared
+)&
+done
+wait

@@ -45,7 +45,7 @@ def new_database(host_name, user_name, user_password, database_name):
 if __name__ == "__main__":
 
     import argparse
-    from oopsc import add_kwargs
+    from simulator import add_kwargs
 
     parser = argparse.ArgumentParser(
         prog="mysql creator",

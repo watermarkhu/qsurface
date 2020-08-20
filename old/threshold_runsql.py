@@ -78,7 +78,7 @@ def multiple(
     debug=True,
     **kwargs
 ):
-    from oopsc import init_random_seed, single, get_mean_var
+    from simulator import init_random_seed, single, get_mean_var
     from decorators import debug as db
 
 
@@ -224,7 +224,7 @@ def run_thresholds(
 if __name__ == "__main__":
 
     import argparse
-    from oopsc import add_kwargs
+    from simulator import add_kwargs
 
     parser = argparse.ArgumentParser(
         prog="threshold_run",

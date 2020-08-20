@@ -52,7 +52,6 @@ def plot_thresholds(
     else:
         fitL, fitp, fitN, fitt = get_data(data, latts, probs)
 
-
     fit_func = get_fit_func(modified_ansatz)
 
     '''

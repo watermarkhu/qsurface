@@ -22,7 +22,11 @@ def plot(
     ms=4,
     style="-",           # linestyles for data and fit
     leg=False,
+    legendname="",
+    legloc="lower left",
     yb=False,
+    starti=0,
+    **kwargs
 ):
 
     data = read_data(file_name)
@@ -44,9 +48,9 @@ def plot(
 
     lattices = sorted(set(fitL))
 
-    colors = {lati: f"C{i%10}" for i, lati in enumerate(lattices)}
+    colors = {lati: f"C{(i+starti)%10}" for i, lati in enumerate(lattices)}
     markerlist = get_markers()
-    markers = {lati: markerlist[i % len(markerlist)]
+    markers = {lati: markerlist[(i+starti) % len(markerlist)]
                for i, lati in enumerate(lattices)}
     legend = []
 
@@ -58,7 +62,7 @@ def plot(
             color=colors[lati],
             marker=markers[lati],
             ms=ms,
-            # ls="-",
+            ls=style,
             fillstyle="none",
         )
         legend.append(Line2D(
@@ -79,13 +83,13 @@ def plot(
     kname = r"$k_C$"
 
     if yb:
-        plot_style(ax, title, r"$p_X $", r"$k_C$")
+        plot_style(ax, title, r"$p_X $", r"$k_C$", **kwargs)
     else:
-        plot_style(ax, title, r"$p_X $", "")
+        plot_style(ax, title, r"$p_X $", "", **kwargs)
 
     if leg:
-        legend = ax.legend(handles=legend, loc="lower left", ncol=2,
-                            markerscale=1, fontsize="small", columnspacing=0, labelspacing=0.2, handletextpad=0, numpoints=1, title=r"$L$", title_fontsize=8)
+        legend = ax.legend(handles=legend, loc=legloc, ncol=2,
+                            markerscale=1, fontsize="small", columnspacing=0, labelspacing=0.2, handletextpad=0, numpoints=1, title=r"{}$L$".format(legendname), title_fontsize=8)
 
     return ax
 
@@ -94,21 +98,33 @@ latex_style(1, 0.4)
 (f1, axes1) = plt.subplots(1, 4, sharey=True, tight_layout=True)
 (f2, axes2) = plt.subplots(1, 4, sharey=True, tight_layout=True)
 
+latex_style(1, 0.6)
+(f3, axes3) = plt.subplots(1, 4, sharey=True, tight_layout=True)
+
+axes3 = list(axes3)
+for i in range(4):
+    axes3.append(axes3[i].twiny())
+
+
+latex_style(1, 0.7)
+(f4, axes4) = plt.subplots(2, 4, sharey=True, tight_layout=True)
+
+
+
+
 D2 = [
-    "/home/watermarkhu/mep/oop_surface_code/cartesiusdata/delfosse_2d_uf.csv",
-    "/home/watermarkhu/mep/oop_surface_code/cartesiusdata/delfosse_2d_dbuf.csv",
-    "/home/watermarkhu/mep/oop_surface_code/cartesiusdata/delfosse_2d_ufbb.csv",
-    "/home/watermarkhu/mep/oop_surface_code/cartesiusdata/delfosse_2d_mwpm.csv",
+    "/home/watermarkhu/mep/OpenSurfaceSim/cartesiusdata/delfosse_2d_uf.csv",
+    "/home/watermarkhu/mep/OpenSurfaceSim/cartesiusdata/delfosse_2d_dbuf.csv",
+    "/home/watermarkhu/mep/OpenSurfaceSim/cartesiusdata/delfosse_2d_ufbb.csv",
+    "/home/watermarkhu/mep/OpenSurfaceSim/cartesiusdata/delfosse_2d_mwpm.csv",
 ]
 
 D3 = [
-    "/home/watermarkhu/mep/oop_surface_code/cartesiusdata/delfosse_3d_uf.csv",
-    "/home/watermarkhu/mep/oop_surface_code/cartesiusdata/delfosse_3d_dbuf.csv",
-    "/home/watermarkhu/mep/oop_surface_code/cartesiusdata/delfosse_3d_ufbb.csv",
-    "/home/watermarkhu/mep/oop_surface_code/cartesiusdata/delfosse_3d_mwpm.csv",
+    "/home/watermarkhu/mep/OpenSurfaceSim/cartesiusdata/delfosse_3d_uf.csv",
+    "/home/watermarkhu/mep/OpenSurfaceSim/cartesiusdata/delfosse_3d_dbuf.csv",
+    "/home/watermarkhu/mep/OpenSurfaceSim/cartesiusdata/delfosse_3d_ufbb.csv",
+    "/home/watermarkhu/mep/OpenSurfaceSim/cartesiusdata/delfosse_3d_mwpm.csv",
 ]
-
-
     
 plot(D2[0], "Union-Find", ax=axes1[0], yb=1)
 plot(D3[0], "Union-Find", ax=axes2[0], yb=1)
@@ -118,8 +134,36 @@ plot(D2[2], "UFBB", ax=axes1[2])
 plot(D3[2], "UFBB", ax=axes2[2])
 plot(D2[3], "MWPM", ax=axes1[3], leg=1)
 plot(D3[3], "MWPM", ax=axes2[3], leg=1)
-plt.show()
 
+
+plot(D2[0], "Union-Find",   ax=axes3[0], gridstyle="-", gridwidth=0.6, yb=1)
+plot(D2[1], "DBUF",         ax=axes3[1], gridstyle="-", gridwidth=0.6)
+plot(D2[2], "UFBB",         ax=axes3[2], gridstyle="-", gridwidth=0.6)
+plot(D2[3], "MWPM",         ax=axes3[3], gridstyle="-", gridwidth=0.6, leg=1, legloc="lower left")
+plot(D3[0], "", style=":", gridwidth=0.6, starti=6, ax=axes3[4], yb=1, leg=1, legloc="upper right")
+plot(D3[1], "", style=":", gridwidth=0.6, starti=6, ax=axes3[5])
+plot(D3[2], "", style=":", gridwidth=0.6, starti=6, ax=axes3[6])
+plot(D3[3], "", style=":", gridwidth=0.6, starti=6, ax=axes3[7])
+
+
+plot(D2[0], "Union-Find",   ax=axes4[0][0], yb=1, leg=1, legloc="upper right")
+plot(D2[1], "DBUF",         ax=axes4[0][1])
+plot(D2[2], "UFBB",         ax=axes4[0][2])
+plot(D2[3], "MWPM",         ax=axes4[0][3])
+plot(D3[0], "", starti=6, ax=axes4[1][0], yb=1, leg=1, legloc="lower left")
+plot(D3[1], "", starti=6, ax=axes4[1][1])
+plot(D3[2], "", starti=6, ax=axes4[1][2])
+plot(D3[3], "", starti=6, ax=axes4[1][3])
+
+axes4[0][3].set_ylabel("Independent noise")
+axes4[0][3].yaxis.set_label_coords(1.4, 0.5)
+axes4[1][3].set_ylabel("Phenomenological noise")
+axes4[1][3].yaxis.set_label_coords(1.4, 0.5)
+
+plt.show()
 
 f1.savefig("/home/watermarkhu/mep/mep-thesis/pgfplots/threshold_delfosse_2d.pgf")
 f2.savefig("/home/watermarkhu/mep/mep-thesis/pgfplots/threshold_delfosse_3d.pgf")
+f3.savefig("/home/watermarkhu/mep/mep-thesis/pgfplots/threshold_delfosse_dense.pgf")
+f4.savefig("/home/watermarkhu/mep/mep-thesis/pgfplots/threshold_delfosse.pgf")
+

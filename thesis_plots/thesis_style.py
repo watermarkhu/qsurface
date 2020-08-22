@@ -35,8 +35,8 @@ def latex_style(scale=0.9, y=None):
     plt.rcParams.update(pgf_with_latex)
 
 
-def plot_style(ax, title=None, xlabel=None, ylabel=None, **kwargs):
-    ax.grid(linestyle=':', linewidth=.5)
+def plot_style(ax, title=None, xlabel=None, ylabel=None, gridstyle=":", gridwidth=0.5, **kwargs):
+    ax.grid(linestyle=gridstyle, linewidth=gridwidth)
     ax.set_title(title)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)

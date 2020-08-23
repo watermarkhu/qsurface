@@ -35,8 +35,8 @@ def latex_style(scale=0.9, y=None):
     plt.rcParams.update(pgf_with_latex)
 
 
-def plot_style(ax, title=None, xlabel=None, ylabel=None, gridstyle=":", gridwidth=0.5, **kwargs):
-    ax.grid(linestyle=gridstyle, linewidth=gridwidth)
+def plot_style(ax, title=None, xlabel=None, ylabel=None, gridstyle=":", gridwidth=0.5, gridcolor="k", **kwargs):
+    ax.grid(linestyle=gridstyle, linewidth=gridwidth, color=gridcolor)
     ax.set_title(title)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
@@ -48,6 +48,16 @@ def plot_style(ax, title=None, xlabel=None, ylabel=None, gridstyle=":", gridwidt
 def get_markers():
     return ["o", "s", "D", "p", "v", "<", "^", ">", "*", "P", "X", "h", "H", "d", 4, 5, 6, 7, 8, 9, 10, 11]
 
+
+def get_markers2():
+    return {
+        "SUF":    "p",
+        "DUF":    "v",
+        "SBUF":   "X",
+        "DBUF":   "o",
+        "MWPM":   "s",
+        "UFBB":   "D",
+    }
 
 def get_colors():
     return {
@@ -71,5 +81,8 @@ def get_linestyles():
     }
 
 
-def legend_style():
-    return dict(markerscale=1, fontsize="small", columnspacing=0, labelspacing=0.2, handletextpad=0, numpoints=1)
+def legend_style(**kwargs):
+    style = dict(markerscale=1, fontsize="small", columnspacing=0, labelspacing=0.2, handletextpad=0, numpoints=1)
+    for key, value in kwargs.items():
+        style[key] = value
+    return style

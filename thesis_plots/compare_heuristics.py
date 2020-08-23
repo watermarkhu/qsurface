@@ -19,6 +19,7 @@ from simulator.threshold.sim import get_data, read_data
 
 from thesis_style import *
 
+lw=1
 
 def get_csvdir(names):
     return ["../cartesiusdata/{}.csv".format(n) for n in names]
@@ -38,7 +39,13 @@ def plot_compare(
     normy=None,
     yname="",
     output="", 
-    fitname="", 
+    fitname="",
+    folder="/home/watermarkhu/mep/mep-thesis/pgfplots/",
+    show_legend=True,
+    markers=None,
+    colors=None,
+    linestyles=None,
+    gridcolor="k",
     **kwargs
     ):
 
@@ -51,10 +58,12 @@ def plot_compare(
             print("fit does not exist")
             fit = None
 
-    markers = get_markers()
-    colors = get_colors()
-    linestyles = get_linestyles()
-
+    if not markers:
+        markers = get_markers2()
+    if not colors:
+        colors = get_colors()
+    if not linestyles:
+        linestyles = get_linestyles()
 
     xchoice = dict(p="p", P="p", l="L", L="L")
     ychoice = dict(p="L", P="L", l="p", L="p")
@@ -67,7 +76,7 @@ def plot_compare(
     data, leg1, leg2 = [], [], []
     for i, (name, x) in enumerate(zip(csv_names, names)):
         ls = linestyles[x]
-        leg1.append(Line2D([0], [0], ls=ls,  color=colors[x], label=x))
+        leg1.append(Line2D([0], [0], ls=ls,  color=colors[x], label=x, lw=lw))
         data.append(read_data(name))
 
     if not ylabels:
@@ -85,7 +94,7 @@ def plot_compare(
 
         for j, ylabel in enumerate(ylabels):
 
-            marker = markers[i % len(markers)]
+            marker = markers[name]
             # color = colors[ylabel]
             color = colors[name]
 
@@ -119,16 +128,16 @@ def plot_compare(
                 step = abs(int((X[-1] - X[0])/100))
                 pn = np.array(range(X[0], X[-1] + step, step))
                 ft = fit.func(pn, *res[0])
-                plt.plot(pn, ft, ls=ls, c=color)
+                plt.plot(pn, ft, ls=ls, c=color, lw=lw)
                 plt.plot(X, Y, lw=0, c=color, marker=marker,
                          ms=ms, fillstyle="none")
                 print(f"{ychoice} = {ylabel}", fit.show(*res[0]))
             else:
                 plt.plot(X, Y, ls=ls, c=color, marker=marker,
-                         ms=ms, fillstyle="none")
+                         ms=ms, fillstyle="none", lw=lw)
 
             if i == 0:
-                leg2.append(Line2D([0], [0], ls=ls, c=color, marker=marker,
+                leg2.append(Line2D([0], [0], ls=ls, c=color, marker=marker, lw=lw,
                                    ms=ms, fillstyle="none", label=f"{ychoice}={ylabel}"))
 
             if plot_error and f"{feature}_v" in d:
@@ -143,19 +152,20 @@ def plot_compare(
     xnames = [round(x*xm, 3) for x in xnames]
 
     plt.xticks(xticks, xnames)
-    L1 = plt.legend(handles=leg1, loc="upper left")
-    plt.gca().add_artist(L1)
-    if len(probs) > 1:
-        L2 = plt.legend(handles=leg2, loc="upper left", ncol=3)
-        plt.gca().add_artist(L2)
 
-    plot_style(plt.gca(), "", xchoice, yname)
+    if show_legend:
+        L1 = plt.legend(handles=leg1, loc="upper left")
+        plt.gca().add_artist(L1)
+        if len(probs) > 1:
+            L2 = plt.legend(handles=leg2, loc="upper left", ncol=3)
+            plt.gca().add_artist(L2)
+
+    plot_style(plt.gca(), "", xchoice, yname, gridcolor=gridcolor)
     # plt.title("Comparison of matching weight")
     plt.tight_layout()
 
     if output:
-        plt.savefig("/home/watermarkhu/mep/mep-thesis/pgfplots/{}.pgf".format(output))
-    plt.show()
+        plt.savefig(folder + "{}.pgf".format(output))
 
 
 def plot_compare2(
@@ -173,6 +183,13 @@ def plot_compare2(
     yname="",
     output="",
     fitname="",
+    folder="/home/watermarkhu/mep/mep-thesis/pgfplots/",
+    show_legend=True,
+    show_normline=True,
+    markers=None,
+    colors=None,
+    linestyles=None,
+    gridcolor="k",
     **kwargs
 ):
 
@@ -185,9 +202,12 @@ def plot_compare2(
             print("fit does not exist")
             fit = None
 
-    markers = get_markers()
-    colors = get_colors()
-    linestyles = get_linestyles()
+    if not markers:
+        markers = get_markers2()
+    if not colors:
+        colors = get_colors()
+    if not linestyles:
+        linestyles = get_linestyles()
 
 
     xchoice = dict(p="p", P="p", l="L", L="L")
@@ -203,7 +223,7 @@ def plot_compare2(
         data.append(read_data(name))
         if i != 0:
             ls = linestyles[x]
-            leg1.append(Line2D([0], [0], ls=ls,  color=colors[x], label=x))
+            leg1.append(Line2D([0], [0], ls=ls,  color=colors[x], label=x, lw=lw))
 
     if not ylabels:
         ylabels = set()
@@ -221,7 +241,7 @@ def plot_compare2(
 
         for j, ylabel in enumerate(ylabels):
 
-            marker = markers[i-1 % len(markers)]
+            marker = markers[name]
             # color = colors[ylabel]
             color = colors[name]
 
@@ -249,6 +269,8 @@ def plot_compare2(
             if i == 0:
                 Ynorm = Y
                 marker="None"
+                if not show_normline:
+                    continue
 
             Y = [y1/y2 for y1, y2 in zip(Y,Ynorm)]
 
@@ -261,17 +283,17 @@ def plot_compare2(
                 step = abs(int((X[-1] - X[0])/100))
                 pn = np.array(range(X[0], X[-1] + step, step))
                 ft = fit.func(pn, *res[0])
-                plt.plot(pn, ft, ls=ls, c=color)
+                plt.plot(pn, ft, ls=ls, c=color, lw=lw)
                 plt.plot(X, Y, lw=0, c=color, marker=marker,
                          ms=ms, fillstyle="none")
                 print(f"{ychoice} = {ylabel}", fit.show(*res[0]))
             else:
-                plt.plot(X, Y, ls=ls, c=color, marker=marker,
+                plt.plot(X, Y, ls=ls, c=color, marker=marker, lw=lw,
                          ms=ms, fillstyle="none")
 
             if i == 0:
                 leg2.append(Line2D([0], [0], ls=ls, c=color, marker=marker,
-                                   ms=ms, fillstyle="none", label=f"{ychoice}={ylabel}"))
+                                   ms=ms, fillstyle="none", label=f"{ychoice}={ylabel}"), lw=lw)
 
             if plot_error and f"{feature}_v" in d:
                 E = list(d.loc[:, f"{feature}_v"])
@@ -285,19 +307,18 @@ def plot_compare2(
     xnames = [round(x*xm, 3) for x in xnames]
 
     plt.xticks(xticks, xnames)
-    L1 = plt.legend(handles=leg1) #, loc="center right", bbox_to_anchor=(1, 0.2))
-    plt.gca().add_artist(L1)
+    if show_legend:
+        L1 = plt.legend(handles=leg1) #, loc="center right", bbox_to_anchor=(1, 0.2))
+        plt.gca().add_artist(L1)
+        if len(probs) > 1:
+            L2 = plt.legend(handles=leg2, ncol=3)
+            plt.gca().add_artist(L2)
 
-    if len(probs) > 1:
-        L2 = plt.legend(handles=leg2, ncol=3)
-        plt.gca().add_artist(L2)
-
-    plot_style(plt.gca(), "", xchoice, yname)
+    plot_style(plt.gca(), "", xchoice, yname, gridcolor=gridcolor)
     # plt.title("Comparison of matching weight, normalized to MWPM")
     plt.tight_layout()
     if output:
-        plt.savefig("/home/watermarkhu/mep/mep-thesis/pgfplots/{}.pgf".format(output))
-    plt.show()
+        plt.savefig(folder + "{}.pgf".format(output))
 
 
 

@@ -27,7 +27,7 @@ def get_data(data, latts, probs):
     if not latts: latts = []
     if not probs: probs = []
     fitL = data.index.get_level_values("L")
-    fitp = data.index.get_level_values("p")
+    fitp = [round(p, 8) for p in data.index.get_level_values("p")]
     fitN = data.loc[:, "N"].values
     fitt = data.loc[:, "succes"].values
 

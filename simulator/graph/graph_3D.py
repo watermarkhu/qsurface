@@ -230,7 +230,7 @@ class toric(go.toric):
             self.gl2_plot = pgl.plot_2D(self, z=self.decode_layer, from3D=1, **self.plot_config)
             self.gl2_plot.new_iter("Final layer errors")
             self.gl2_plot.plot_errors(z=self.decode_layer, draw=1)
-        return super().logical_error(z=self.size-1)
+        return super().logical_error(z=self.decode_layer)
 
     '''
     ########################################################################################

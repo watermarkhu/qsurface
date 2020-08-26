@@ -61,8 +61,8 @@ class plot_2D:
         self.Cx = [0.5, 0.1, 0.1]
         self.Cz = [0.1, 0.1, 0.5]
         self.cE = [0.9, 0.3, 0.7]  # Erasure color
-        self.C1 = [self.cx, self.cz]
-        self.C2 = [self.cX, self.cZ]
+        self.C1 = [self.cz, self.cx]
+        self.C2 = [self.cZ, self.cX]
         self.LS = ["-", "--"]
         self.LS2 = [":", "--"]
 
@@ -319,21 +319,25 @@ class plot_2D:
         le_xer      = self.legend_circle("X-error", mfc=self.cx, mec=self.cx)
         le_zer      = self.legend_circle("Y-error", mfc=self.cz, mec=self.cz)
         le_yer      = self.legend_circle("Z-error", mfc=self.cy, mec=self.cy)
-        le_ver      = self.legend_circle("Vertex", ls="-", lw=self.linewidth, color=self.cX, mfc=self.cX, mec=self.cX, marker="|")
-        le_pla      = self.legend_circle("Plaquette", ls="--", lw=self.linewidth, color=self.cZ, mfc=self.cZ, mec=self.cZ, marker="|")
+        le_pla      = self.legend_circle("Plaquette", ls="--", lw=self.linewidth, color=self.cX, mfc=self.cX, mec=self.cX, marker="|")
+        le_ver      = self.legend_circle("Vertex", ls="-", lw=self.linewidth, color=self.cZ, mfc=self.cZ, mec=self.cZ, marker="|")
 
-        self.lh = [le_qubit, le_xer, le_zer, le_yer, le_ver, le_pla] + items
+        self.lh = [le_qubit, le_xer, le_zer, le_yer, le_pla, le_ver] + items
 
         self.ax.legend(handles=self.lh, bbox_to_anchor=(x, y), loc=loc, ncol=1)
 
 
-    def init_axis(self, min, max):
+    def init_axis(self, xmin, xmax, ymin=None, ymax=None):
         '''
         Initilizes the 2D axis by settings axis limits, flipping y axis and removing the axis border
         '''
+        if not ymin:
+            ymin = xmin
+        if not ymax:
+            ymax = xmax
         # plt.grid(alpha = self.alpha2, ls=":", lw=self.linewidth)
-        self.ax.set_xlim(min, max)
-        self.ax.set_ylim(min, max)
+        self.ax.set_xlim(xmin, xmax)
+        self.ax.set_ylim(ymin, ymax)
         self.ax.invert_yaxis()
         self.ax.spines["top"].set_visible(False)
         self.ax.spines["right"].set_visible(False)
@@ -353,13 +357,17 @@ class plot_2D:
         Qubits are plotted with Circle objects
         '''
         plt.sca(self.ax)
-        self.init_axis(-.25, self.size-.25)
+        if hasattr(self.graph, 'B'):
+            self.init_axis(-.25, self.size+.25, -.5, self.size-0.5)
+        else:
+            self.init_axis(-.25, self.size-.25)
 
         # Plot stabilizers
         for stab in self.graph.S[z].values():
             self.plot_stab(stab, alpha=self.alpha)
 
         # Plot open boundaries if exists
+
         if hasattr(self.graph, 'B'):
             for bound in self.graph.B[z].values():
                 self.plot_stab(bound, alpha=self.alpha)

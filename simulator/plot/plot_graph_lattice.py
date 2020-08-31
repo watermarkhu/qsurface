@@ -317,8 +317,8 @@ class plot_2D:
 
         le_qubit    = self.legend_circle("Qubit", mfc=self.cc, mec=self.cc)
         le_xer      = self.legend_circle("X-error", mfc=self.cx, mec=self.cx)
-        le_zer      = self.legend_circle("Y-error", mfc=self.cz, mec=self.cz)
-        le_yer      = self.legend_circle("Z-error", mfc=self.cy, mec=self.cy)
+        le_zer      = self.legend_circle("Y-error", mfc=self.cy, mec=self.cy)
+        le_yer      = self.legend_circle("Z-error", mfc=self.cz, mec=self.cz)
         le_pla      = self.legend_circle("Plaquette", ls="--", lw=self.linewidth, color=self.cX, mfc=self.cX, mec=self.cX, marker="|")
         le_ver      = self.legend_circle("Vertex", ls="-", lw=self.linewidth, color=self.cZ, mfc=self.cZ, mec=self.cZ, marker="|")
 

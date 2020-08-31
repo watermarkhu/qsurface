@@ -338,7 +338,7 @@ ufstyle = (0, (3, 1, 1, 1, 1))
 
 
 latex_style(1.15, 0.5)
-(f4, axes4) = plt.subplots(2, 4, sharey="row", tight_layout=True)
+(f4, axes4) = plt.subplots(2, 4, sharey="row", tight_layout=True, gridspec_kw={'wspace': 0.1, 'hspace': 0.5})
 
 threscompplot(D2[0], "UF", ax=axes4[0][0])
 threscompplot(D2[1], "BDUF",       ax=axes4[0][1])
@@ -360,10 +360,6 @@ axes4[1][3].yaxis.set_label_coords(1.4, 0.5)
 '''
 Compare matching weight
 '''
-
-latex_style(scale=0.55, y=0.8)
-f5, ax5 = plt.subplots(tight_layout=True)
-
 keys = ["MWPM", "AUF", "DUF", "BAUF", "BDUF", "UFNS"]
 markers = {key: None for key in keys}
 linestyles = {
@@ -384,6 +380,8 @@ colors = {
     "UFNS": "C2"
 }
 
+latex_style(scale=0.55, y=0.8)
+f5, ax5 = plt.subplots(tight_layout=True)
 l = [8+i*8 for i in range(8)]
 names = get_csvdir(["mwpm_toric_2d", "suf_toric_2d", "duf_toric_2d",
                     "sbuf_toric_2d", "dbuf_toric_2d", "ufbb_toric_2d"])
@@ -408,26 +406,79 @@ plt.tight_layout()
 
 
 '''
-lowerror
+lowerror time
+'''
+latex_style(scale=0.55, y=1)
+f8, axes = plt.subplots(3, 1, tight_layout=True, sharex=True, gridspec_kw={'wspace': 0, 'hspace': 0.1})
+
+keys = ["UFNS", "MWPM", "BDUF"]
+names = get_csvdir(["ufns_lowerror", "mwpm_lowerror", "bduf_lowerror"])
+
+prange = [0.005, 0.012, 0.02]
+xnames = ["", "", "L"]
+for ax, p, x in zip(axes, prange, xnames):
+    plt.sca(ax)
+    plot_compare(keys,
+                names, "l", [p], [6, 10, 14, 18], "time", dim=3, yname="", xname=x, show_legend=False, colors=colors, linestyles=linestyles, markers=markers)
+    ax.annotate(r"$p_Z$={:.1f}\%".format(p*100), xy=(0.5, 0.9), xycoords='axes fraction',
+                horizontalalignment='center', verticalalignment='top')
+axes[1].set_ylabel("Mean time (s)")
+leg = [Line2D([0], [0], ls=linestyles[key], color=colors[key], label=key, lw=lw) for key in keys]
+axes[2].legend(handles=leg, loc="upper left")
+plt.tight_layout()
+
+# '''
+# lowerror time and weight
+# '''
+# latex_style(scale=0.55, y=1)
+# f9, axes = plt.subplots(3, 1, tight_layout=True, sharex=True, gridspec_kw={'wspace': 0, 'hspace': 0.1})
+# taxes = [ax.twinx() for ax in axes]
+
+# keys = ["UFNS", "MWPM", "BDUF"]
+# names = get_csvdir(["ufns_lowerror", "mwpm_lowerror", "bduf_lowerror"])
+# keys2 = ["MWPM", "UFNS", "BDUF"]
+# names2 = get_csvdir(["mwpm_lowerror", "ufns_lowerror", "bduf_lowerror"])
+
+# prange = [0.005, 0.012, 0.02]
+# xnames = ["", "", "L"]
+# for ax, tax, p, x in zip(axes, taxes, prange, xnames):
+#     plt.sca(ax)
+    
+#     plot_compare(keys,
+#                  names, "l", [p], [6, 10, 14, 18], "time", dim=3, yname="", xname=x, show_legend=False, colors=colors, linestyles=linestyles, markers=markers)
+#     ax.annotate(r"$p_Z$={:.1f}\%".format(p*100), xy=(0.5, 0.9), xycoords='axes fraction',
+#                 horizontalalignment='center', verticalalignment='top')
+    
+#     plt.sca(tax)
+#     plot_compare2(keys2, names2, "l", [p], [6, 10, 14, 18], "weight", dim=3,
+#                   yname=r"$ |\mathcal{C}|/ \min{|\mathcal{C}|} $", markers=markers, colors=colors, linestyles=linestyles, show_normline=0)
+
+# axes[1].set_ylabel("Mean time (s)")
+# leg = [Line2D([0], [0], ls=linestyles[key], color=colors[key], label=key, lw=lw) for key in keys]
+# axes[2].legend(handles=leg, loc="upper left")
+# plt.tight_layout()
+
+'''
+lowerror decoding rate
 '''
 latex_style(scale=0.55, y=0.6)
 f7, ax7 = plt.subplots(tight_layout=True)
 
 colors = {6:"C6", 10: "C7", 14:"C8", 18: "C9"}
-linestyles={'AUF':"dotted", "UFNS": "-", "MWPM": "dashdot"}
-comp_thresholds(ax7, [6, 10, 14, 18], "lowerror", colors, linestyles, ["MWPM", "UFNS", 'AUF'])
+linestyles = {"UFNS": "-", "MWPM": "dashdot", "BDUF": "--"} #, 'AUF': "dotted"}
+comp_thresholds(ax7, [6, 10, 14, 18], "lowerror", colors, linestyles, ["UFNS", "MWPM", "BDUF"]) #, 'AUF'])
 leg1 = [Line2D([0], [0], ls=ls, color="k", label=key, lw=lw) for key, ls in linestyles.items()]
 leg2 = [Line2D([0], [0], ls="-", color=c, label=key, lw=lw) for key, c in colors.items()]
 ax7.add_artist(plt.legend(handles=leg1, loc="lower center", columnspacing=0.2, handletextpad=0.2, handlelength=2))
 ax7.add_artist(plt.legend(handles=leg2, loc="lower left", columnspacing=0.2, handletextpad=0.5, handlelength=2, title="L", title_fontsize=8))
 
 
-# plt.show()
-
-f0.savefig(folder + "threshold_ufbb.pdf")
-# f2.savefig(folder + "comp_ufbb_toric_2d_p98.pdf")
-# f3.savefig(folder + "threshold_comparison_dense.pdf")
-f4.savefig(folder + "threshold_comparison.pdf")
-f5.savefig(folder + "comp_matching_weight.pdf")
-f6.savefig(folder + "comp_time.pdf")
-f7.savefig(folder + "comp_lowerror.pdf")
+plt.show()
+# f0.savefig(folder + "threshold_ufbb.pdf")
+# # f2.savefig(folder + "comp_ufbb_toric_2d_p98.pdf")
+# # f3.savefig(folder + "threshold_comparison_dense.pdf")
+# f4.savefig(folder + "threshold_comparison.pdf")
+# f5.savefig(folder + "comp_matching_weight.pdf")
+# f6.savefig(folder + "comp_time.pdf")
+# f7.savefig(folder + "comp_lowerror.pdf")
+# f8.savefig(folder + "comp_lowerror_time.pdf")

@@ -40,6 +40,7 @@ def plot_style(ax, title=None, xlabel=None, ylabel=None, gridstyle=":", gridwidt
     ax.set_title(title)
     ax.set_xlabel(xlabel)
     ax.set_ylabel(ylabel)
+    ax.tick_params(axis='both',which='both',bottom=False, left=False, top=False, right=False)
     for key, arg in kwargs.items():
         func = getattr(ax, f"set_{key}")
         func(arg)

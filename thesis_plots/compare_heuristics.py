@@ -37,6 +37,7 @@ def plot_compare(
     xm=1, 
     ms=5,
     normy=None,
+    xname=None,
     yname="",
     output="", 
     fitname="",
@@ -71,6 +72,8 @@ def plot_compare(
     xlabels, ylabels = (probs, latts) if xaxis == "p" else (latts, probs)
     if xlabels:
         xlabels = sorted(xlabels)
+    if xname is None:
+        xname = xchoice
 
 
     data, leg1, leg2 = [], [], []
@@ -87,6 +90,7 @@ def plot_compare(
         ylabels = sorted(list(ylabels))
 
     xset = set()
+
     for i, (df,name) in enumerate(zip(data,names)):
 
         indices = [round(x, 6) for x in df.index.get_level_values(ychoice)]
@@ -160,7 +164,7 @@ def plot_compare(
             L2 = plt.legend(handles=leg2, loc="upper left", ncol=3)
             plt.gca().add_artist(L2)
 
-    plot_style(plt.gca(), "", xchoice, yname, gridcolor=gridcolor)
+    plot_style(plt.gca(), "", xname, yname, gridcolor=gridcolor)
     # plt.title("Comparison of matching weight")
     plt.tight_layout()
 
@@ -181,6 +185,7 @@ def plot_compare2(
     ms=5,
     normy=None,
     yname="",
+    xname=None,
     output="",
     fitname="",
     folder="/home/watermarkhu/mep/mep-thesis/pgfplots/",
@@ -216,7 +221,8 @@ def plot_compare2(
     xlabels, ylabels = (probs, latts) if xaxis == "p" else (latts, probs)
     if xlabels:
         xlabels = sorted(xlabels)
-
+    if xname is None:
+        xname = xchoice
 
     data, leg1, leg2 = [], [], []
     for i, (name, x) in enumerate(zip(csv_names, names)):
@@ -238,6 +244,8 @@ def plot_compare2(
 
         indices = [round(x, 6) for x in df.index.get_level_values(ychoice)]
         ls = linestyles[name]
+
+        print(i, name)
 
         for j, ylabel in enumerate(ylabels):
 
@@ -266,6 +274,7 @@ def plot_compare2(
             if dim != 1:
                 X = [x**dim for x in X]
 
+            
             if i == 0:
                 Ynorm = Y
                 marker="None"
@@ -273,7 +282,6 @@ def plot_compare2(
                     continue
 
             Y = [y1/y2 for y1, y2 in zip(Y,Ynorm)]
-
             # print(ylabel, X, Y)
             #
             if fit is not None:

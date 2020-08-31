@@ -293,7 +293,7 @@ def plot_compare2(
 
             if i == 0:
                 leg2.append(Line2D([0], [0], ls=ls, c=color, marker=marker,
-                                   ms=ms, fillstyle="none", label=f"{ychoice}={ylabel}"), lw=lw)
+                                   ms=ms, fillstyle="none", label=f"{ychoice}={ylabel}", lw=lw))
 
             if plot_error and f"{feature}_v" in d:
                 E = list(d.loc[:, f"{feature}_v"])
@@ -308,7 +308,7 @@ def plot_compare2(
 
     plt.xticks(xticks, xnames)
     if show_legend:
-        L1 = plt.legend(handles=leg1) #, loc="center right", bbox_to_anchor=(1, 0.2))
+        L1 = plt.legend(handles=leg1, loc="center right", bbox_to_anchor=(1, 0.4))
         plt.gca().add_artist(L1)
         if len(probs) > 1:
             L2 = plt.legend(handles=leg2, ncol=3)

@@ -17,12 +17,13 @@ planar_fm.parity_measurement()
 planar_fm.get_logical_state()
 
 #%%
+import opensurfacesim
 
-from opensurfacesim.code.toric.sim import PerfectMeasurements, FaultyMeasurements
-pm = PerfectMeasurements(6)
+toric_pm = opensurfacesim.code.toric.sim.PerfectMeasurements(3)
+toric_pm.init_errors("pauli")
 # %%
-class test(object):
-    def __init__(self) -> None:
-        print(self.__module__)
-A = test()
+import opensurfacesim
+
+toric = opensurfacesim.code.toric.sim.FaultyMeasurements(3)
+toric.init_errors("pauli", error_rates=dict(pmx=0.03))
 # %%

@@ -21,19 +21,19 @@ class Qubit(ABC):
 
     Notes
     -----
-    This class mainly serves as a superclass or template to other more useful qubit types, which have the apprioate subclass attributes and subclass methods. For other types to to the 'See Also' section. 
+    This class mainly serves as a superclass or template to other more useful qubit types, which have the apprioate subclass attributes and subclass methods. For other types to to the 'See Also' section.
     """
-    def __init__(self, loc=(0,0), z=0, type="Qubit", *args, **kwargs):
-        self.type = type
+
+    def __init__(self, loc=(0, 0), z=0, qubit_type="Qubit", *args, **kwargs):
+        self.type = qubit_type
         self.loc = loc
         self.z = z
 
     def __repr__(self):
-        return "{}({},{}|{})".format(self.type, *self.loc)
+        return "{}{}|{})".format(self.type, *self.loc, self.z)
 
     def picker(self):
-        """Returns selftext for pick action during plotting. 
-        """
+        """Returns selftext for pick action during plotting."""
         return self.__repr__()
 
 
@@ -51,9 +51,9 @@ class DataQubit(Qubit):
 
     Attributes
     ----------
-    state 
+    state
     edges : dict
-        Dictionary of `Edge` objects with the error type as key (e.g. `"X"` or `"Z"`). 
+        Dictionary of `Edge` objects with the error type as key (e.g. `"X"` or `"Z"`).
 
 
     See Also
@@ -63,13 +63,14 @@ class DataQubit(Qubit):
     Boundary
     Edge
     """
+
     def __init__(self, *args, type="data", **kwargs):
         super().__init__(*args, type=type, **kwargs)
-        self.edges = dict()
+        self.edges = {}
+        self.erased = False
 
     def reset(self):
-        """Resets this qubit's attributes.
-        """
+        """Resets this qubit's attributes."""
         self.state = False
         super().reset()
         for edge in self.edges.values():
@@ -77,9 +78,9 @@ class DataQubit(Qubit):
 
     @property
     def state(self):
-        """Current state of the `Data_qubit`. 
-        
-        The state of a `Data_qubit` is a class property that calls to each of the edges stored at the `edges` attribute and returns all edge states as a dictionary. 
+        """Current state of the `Data_qubit`.
+
+        The state of a `Data_qubit` is a class property that calls to each of the edges stored at the `edges` attribute and returns all edge states as a dictionary.
         """
         return {key: self.edges[key].state for key in self.edges.keys()}
 
@@ -110,10 +111,10 @@ class AncillaQubit(Qubit):
     Attributes
     ----------
     state : bool
-        Result of the stabilizer measurement on this ancilla qubit. 
+        Result of the stabilizer measurement on this ancilla qubit.
     mstate : bool
         Boolean indicating a measurement error on this ancilla qubit.
-    parity_qubits : dict of `Data_qubit` 
+    parity_qubits : dict of `Data_qubit`
         All data_qubits in this dictionary are entangled to the current ancilla qubit for stabilizer measurements. The entangled state is located at `Data_qubit.edges[Ancilla_qubit.ancilla_type]`.
     vertical_ancillas : dict of 'Ancilla_qubit`
         Vertically connected ancilla qubit that is an instance of the same qubit at a different time. Vertical elements are needed when `graph.faulty_measurements` is the graph class. Instances at `u` or `up` refer to instances later in time, and instances at `d` or `down` refer to an instances prior in time.
@@ -126,7 +127,7 @@ class AncillaQubit(Qubit):
     Edge
     """
 
-    def __init__(self, *args, ancilla_type='default', type="ancilla", **kwargs):
+    def __init__(self, *args, ancilla_type="default", type="ancilla", **kwargs):
         super().__init__(*args, type=type, **kwargs)
         self.ancilla_type = ancilla_type
         self.parity_qubits = {}
@@ -135,14 +136,12 @@ class AncillaQubit(Qubit):
         self.init_state()
 
     def init_state(self):
-        """(Re)initializes the `Data_qubit` subclass attributes.
-        """
+        """(Re)initializes the `Data_qubit` subclass attributes."""
         self.mstate = False
         self.state = False
 
     def reset(self):
-        """Resets this qubit's attributes.
-        """
+        """Resets this qubit's attributes."""
         self.state = False
         super().reset()
         self.init_state()
@@ -150,9 +149,10 @@ class AncillaQubit(Qubit):
 
 class PseudoQubit(AncillaQubit):
     """Boundary element
-    
-    Edges needs to be spanned by two nodes. For data qubits on the boundary, one of its edges additionaly requires an ancilla qubit like node, which is the boundary element. 
+
+    Edges needs to be spanned by two nodes. For data qubits on the boundary, one of its edges additionaly requires an ancilla qubit like node, which is the boundary element.
     """
+
     def __init__(self, type="pseudo", *args, **kwargs):
         super().__init__(*args, type=type, **kwargs)
 
@@ -182,15 +182,15 @@ class Edge(object):
     def __init__(self, qubit, Type="default", rep="-"):
         # fixed parameters
         self.qubit = qubit
-        self.Type=Type
+        self.Type = Type
         self.rep = rep
         self._nodes = []
         self.reset()
-    
+
     def reset(self):
         self.state = False
         self.matching = False
-    
+
     def __call__(self):
         return self.state
 
@@ -199,8 +199,7 @@ class Edge(object):
 
     @property
     def nodes(self):
-        """List of two `Ancilla_qubit` like object that act as the nodes of the edge. 
-        """
+        """List of two `Ancilla_qubit` like object that act as the nodes of the edge."""
         return self._nodes
 
     @nodes.setter
@@ -210,12 +209,10 @@ class Edge(object):
         self._nodes = items
 
     def picker(self):
-        """Returns selftext for pick action during plotting. 
-        """
+        """Returns selftext for pick action during plotting."""
         return self.__repr__()
 
 
 class PseudoEdge(Edge):
-
     def __init__(self, *args, **kwargs):
         super().__init__(*kwargs, rep=kwargs.pop("rep", "|"), **kwargs)

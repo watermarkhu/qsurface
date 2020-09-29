@@ -1,8 +1,9 @@
 from abc import ABC, abstractmethod
-from opensurfacesim.code.template.elements import DataQubit
 from .elements import DataQubit, AncillaQubit, PseudoQubit, Edge, PseudoEdge
 from ...info.benchmark import BenchMarker
+from ...error._template import Error
 from typing import List, Optional, Union, Tuple
+import importlib
 import random
 
 
@@ -58,25 +59,32 @@ class PerfectMeasurements(ABC):
         self.pseudoQubit = pseudoQubit
         self.edge = edge
         self.benchmarker = benchmarker
+        self.code = str(self.__module__).split(".")[-2]
         self.x_names = ["x", "X", 0, "bit-flip"]
         self.z_names = ["z", "Z", 1, "phase-flip"]
-        self.code = str(self.__module__).split(".")[-2]
+        self.layers = 1
+        self.decode_layer = 0
 
         for key, value in kwargs.items():
             setattr(self, key, value)
 
-        self.decode_layer = 0
         self.ancilla_qubits = {}
         self.data_qubits = {}
         self.pseudo_qubits = {}
+        self.errors = {}
         self.init_surface()
         self.init_logical_operator()
         self.logical_state = {key: False for key in self.logical_operators}
 
-
     def __repr__(self):
         classname = self.__class__.__name__
         return f"{self.code} {self.size} {classname} surface"
+
+    """
+    ----------------------------------------------------------------------------------------
+                                        Initialization
+    ----------------------------------------------------------------------------------------
+    """
 
     @abstractmethod
     def init_surface(self):
@@ -199,6 +207,58 @@ class PerfectMeasurements(ABC):
             edge = data_qubit.edges[ancilla_qubit.ancilla_type]
         edge.nodes += [ancilla_qubit]
 
+    """
+    ----------------------------------------------------------------------------------------
+                                            Errors
+    ----------------------------------------------------------------------------------------
+    """
+
+    def init_errors(self, *error_modules: Union[str, Error], error_rates: dict = {}) -> None:
+        """Initializes error modules.
+
+        Any error module from `opensurfacesim.error` can loaded as either a string equivalent to the module file name or as the module itself. The default error rates for all loaded error modules can be supplied as a dictionary with keywords corresponding to the default error rates of the associated error modules. 
+
+        Parameters
+        ----------
+        args : string or error module
+            The error modules to load. May be a string or the loaded module.
+        error_rates : dict of floats
+            The default error rates for the loaded modules. Must be a dictionary with probabilities with keywords corresponding to the default or overriding error rates of the associated error modules. 
+
+        See Also
+        --------
+        Error
+
+        Examples
+        --------
+        Load Pauli and erasure error modules via strings. Set default bit-flip rate to `0.1` and erasure to `0.03`. 
+
+        >>> SurfaceCode.init_errors("pauli", "erasure", error_rates={"pauli_x": 0.1, "p_erasure": 0.03})
+
+        Load Pauli error module via module. Set default phase-flip rate to `0.05`.
+
+        >>> import opensurfacesim.error.pauli as pauli
+        >>> SurfaceCode.init_errors(pauli, error_rates={"pauli_z": 0.05})
+        """
+        for error_module in error_modules:
+            if type(error_module) == str:
+                error_module = importlib.import_module(".error.{}".format(error_module), package="opensurfacesim")
+            error_type = error_module.__name__.split(".")[-1]
+            self.errors[error_type] = error_module.Error(self.data_qubits, **error_rates)
+
+    def apply_errors(self, z: numtype = 0, apply_order: Optional[List[Error]] = None, **kwargs: numtype) -> None:
+
+        if not apply_order:
+            apply_order = self.errors.values()
+        for error_class in apply_order:
+            error_class.apply_error_layer(z=z, **kwargs)
+
+    """
+    ----------------------------------------------------------------------------------------
+                                        Measurement
+    ----------------------------------------------------------------------------------------
+    """
+
     def measure_parity(self, ancilla_qubit: AncillaQubit, **kwargs) -> bool:
         """Applies a parity measurement on the ancilla.
 
@@ -236,6 +296,23 @@ class PerfectMeasurements(ABC):
         """
         for ancilla_qubit in self.ancilla_qubits[z].values():
             self.measure_parity(ancilla_qubit)
+
+    """
+    ----------------------------------------------------------------------------------------
+                                        Simulation
+    ----------------------------------------------------------------------------------------
+    """
+
+    def simulate(self, z: numtype = 0, **kwargs):
+        """Simulate an iteration or errors and measurement. 
+
+        Parameters
+        ----------
+        z : int or float, optional
+            Layer of qubits.
+        """
+        self.apply_errors(z=z, **kwargs)
+        self.parity_measurement(z=z, **kwargs)
 
     def get_logical_state(self, z: numtype = 0, **kwargs) -> Tuple[List[bool], bool]:
         """Returns the logical state on layer `z`.
@@ -289,7 +366,7 @@ class PerfectMeasurements(ABC):
 
 class FaultyMeasurements(PerfectMeasurements):
     """Simulation template code class for faulty measurements
-    
+
     Parameters
     ----------
     layers : int, optional
@@ -298,15 +375,35 @@ class FaultyMeasurements(PerfectMeasurements):
         Pseudo edge class.
     """
 
-    def __init__(self, size, *args, layers:Optional[int]= None, pseudoEdge: PseudoEdge = PseudoEdge, **kwargs):
+    def __init__(
+        self,
+        size,
+        *args,
+        layers: Optional[int] = None,
+        pseudoEdge: PseudoEdge = PseudoEdge,
+        pmx: numtype = 0,
+        pmz: numtype = 0,
+        **kwargs,
+    ):
         super().__init__(size, *args, dim=3, **kwargs)
 
         self.layers = layers if layers else size
         self.decode_layer = self.layers - 1
+        self.default_faulty_measurements = dict(pmx=pmx, pmz=pmz)
         self.pseudoEdge = pseudoEdge
         self.pseudo_edges = []
 
+    """
+    ----------------------------------------------------------------------------------------
+                                        Initialization
+    ----------------------------------------------------------------------------------------
+    """
+
     def init_surface(self, **kwargs) -> None:
+        """Inititates the surface code.
+        
+        The 3D lattice is initilized by first building the ground layer. After that each consecutive layer is built and pseudo-edges are added to connect the ancilla qubits of each layer. 
+        """
 
         super().init_surface()
         for z in range(1, self.layers):
@@ -340,25 +437,38 @@ class FaultyMeasurements(PerfectMeasurements):
         lower_ancilla.vertical_edges["u"] = pseudo_edge
         pseudo_edge.nodes = [upper_ancilla, lower_ancilla]
 
-    def parity_measurement(self, pmX: numtype = 0, pmZ: numtype = 0, z: numtype = 0, **kwargs) -> None:
+    """
+    ----------------------------------------------------------------------------------------
+                                        Measurement
+    ----------------------------------------------------------------------------------------
+    """
+
+    def parity_measurement(
+        self, pmx: Optional[numtype] = None, pmz: Optional[numtype] = None, z: numtype = 0, **kwargs
+    ) -> None:
         """Performs a round of parity measurements on layer `z` with faulty measurements.
 
         On all ancilla qubits of layer `z`, a parity check measurement is performed. Additionally tot he `PerferctMeasurements` class, an additional measurement error is applied, dependent on the type of the ancilla qubit.
 
         Parameters
         ----------
-        pmX : int or float, optional
+        pmx : int or float, optional
             Probability of a bit-flip during a parity check measurement.
-        pmZ : int or float, optional
+        pmz : int or float, optional
             Probability of a phase-flip during a parity check measurement.
         z : int or float, optional
             Layer of qubits.
         """
+        if pmx is None:
+            pmx = self.default_faulty_measurements["pmx"]
+        if pmz is None:
+            pmz = self.default_faulty_measurements["pmz"]
+
         for ancilla_qubit in self.ancilla_qubits[z].values():
             self.measure_parity(ancilla_qubit)
 
             # Apply measurement error
-            pM = pmX if ancilla_qubit.ancilla_type in self.x_names else pmZ
+            pM = pmx if ancilla_qubit.ancilla_type in self.x_names else pmz
             if pM != 0 and random.random() < pM:
                 ancilla_qubit.state = 1 - ancilla_qubit.state
                 ancilla_qubit.mstate = 1
@@ -369,6 +479,26 @@ class FaultyMeasurements(PerfectMeasurements):
             else:
                 lower_state = 0
             ancilla_qubit.state = 0 if ancilla_qubit.state == lower_state else 1
+
+    """
+    ----------------------------------------------------------------------------------------
+                                        Simulation
+    ----------------------------------------------------------------------------------------
+    """
+
+    def simulate(self, **kwargs):
+        """Simulate an iteration or errors and measurement. 
+
+        On all but the final layer, the default or overriding error rates (via keyworded arguments) are applied. On the final layer, perfect measurements are applied by setting `pmx=0` and `pmz=0`. 
+        """
+        # Simulate on all but final layers
+        for z in range(self.layers):
+            super().simulate(z=z, **kwargs)
+
+        # Simulate final layer with perfect measurements
+        kwargs.update(dict(pmx=0, pmz=0))
+        super().simulate(z=self.decode_layer, **kwargs)
+        
 
     def get_logical_state(self, **kwargs) -> Tuple[List[bool], bool]:
         """Returns the logical state on the decode layer."""

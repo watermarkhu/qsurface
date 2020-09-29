@@ -22,8 +22,8 @@ The 2D graph (toric/planar) is a square lattice with 1 layer of these unit cells
 """
 
 
-from opensurfacesim.code.template.elements import AncillaQubit
-from ..template.sim import PerfectMeasurements as TemplatePM, FaultyMeasurements as TemplateFM
+from .._template.elements import AncillaQubit
+from .._template.sim import PerfectMeasurements as TemplatePM, FaultyMeasurements as TemplateFM
 from typing import Union
 
 

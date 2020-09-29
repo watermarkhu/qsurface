@@ -1,2 +1,3 @@
-import opensurfacesim.error.erasure
-import opensurfacesim.error.pauli
+from . import _template
+from . import erasure
+from . import pauli

@@ -32,6 +32,7 @@ numtype = Union[int, float]
 
 class PerfectMeasurements(TemplatePM):
     """Simulation toric code for perfect measurements."""
+
     def init_surface(self, z: numtype = 0, **kwargs):
         """Initilizes the toric surface code on layer `z`.
 
@@ -61,10 +62,10 @@ class PerfectMeasurements(TemplatePM):
                     plaq = self.add_ancilla_qubit((x + 0.5, y + 0.5), z=z, ancilla_type="z")
                     self.init_parity_check(plaq)
 
-    def init_parity_check(self, ancilla_qubit : AncillaQubit, **kwargs) -> None:
+    def init_parity_check(self, ancilla_qubit: AncillaQubit, **kwargs) -> None:
         """Inititates a parity check measurement.
 
-        For every ancilla qubit on `(x,y)`, four neighboring data qubits are entangled for parity check measurements. They are stored via the wind-directional keys. 
+        For every ancilla qubit on `(x,y)`, four neighboring data qubits are entangled for parity check measurements. They are stored via the wind-directional keys.
 
         Parameters
         ----------
@@ -78,9 +79,9 @@ class PerfectMeasurements(TemplatePM):
         (x, y), z = ancilla_qubit.loc, ancilla_qubit.z
         checks = {
             "e": ((x + 0.5) % self.size, y),
-            "w": ((x - 0.5) % self.size, y), 
-            "n": (x, (y + 0.5) % self.size), 
-            "s": (x, (y - 0.5) % self.size)
+            "w": ((x - 0.5) % self.size, y),
+            "n": (x, (y + 0.5) % self.size),
+            "s": (x, (y - 0.5) % self.size),
         }
         for key, loc in checks.items():
             self.entangle_pair(self.data_qubits[z][loc], ancilla_qubit, key)
@@ -92,13 +93,16 @@ class PerfectMeasurements(TemplatePM):
             "x2": [self.data_qubits[self.decode_layer][(0, i + 0.5)].edges["x"] for i in self.range],
         }
         if self.dual:
-            operators.update({
-                "z1": [self.data_qubits[self.decode_layer][(i, 0.5)].edges["z"] for i in self.range],
-                "z2": [self.data_qubits[self.decode_layer][(0.5, i)].edges["z"] for i in self.range],
-            })
+            operators.update(
+                {
+                    "z1": [self.data_qubits[self.decode_layer][(i, 0.5)].edges["z"] for i in self.range],
+                    "z2": [self.data_qubits[self.decode_layer][(0.5, i)].edges["z"] for i in self.range],
+                }
+            )
         self.logical_operators = operators
 
 
-class FaultyMeasurements(PerfectMeasurements, TemplateFM):
+class FaultyMeasurements(TemplateFM, PerfectMeasurements):
     """Simulation toric code for faulty measurements."""
+
     pass

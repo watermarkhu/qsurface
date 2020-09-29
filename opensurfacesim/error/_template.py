@@ -13,7 +13,7 @@ class Error(ABC):
     ----------
     data_qubits: dict of dict of DataQubit
         Data-qubit database supplied by `code.<type>.init_errors`.
-    
+
     See Also
     --------
     DataQubit

@@ -72,19 +72,22 @@ class PerfectMeasurements(ABC):
         self.data_qubits = {}
         self.pseudo_qubits = {}
         self.errors = {}
-        self.init_surface()
-        self.init_logical_operator()
-        self.logical_state = {key: False for key in self.logical_operators}
 
     def __repr__(self):
-        classname = self.__class__.__name__
-        return f"{self.code} {self.size} {classname} surface"
+        return f"{self.code} {self.size} {self.__class__.__name__}"
 
     """
     ----------------------------------------------------------------------------------------
                                         Initialization
     ----------------------------------------------------------------------------------------
     """
+
+    def initialize(self, *args, **kwargs) -> None:
+        """Initilizes all data objects of the code."""
+        self.init_surface(**kwargs)
+        self.init_logical_operator(**kwargs)
+        self.logical_state = {key: False for key in self.logical_operators}
+        self.init_errors(*args, **kwargs)
 
     @abstractmethod
     def init_surface(self):
@@ -216,14 +219,14 @@ class PerfectMeasurements(ABC):
     def init_errors(self, *error_modules: Union[str, Error], error_rates: dict = {}) -> None:
         """Initializes error modules.
 
-        Any error module from `opensurfacesim.error` can loaded as either a string equivalent to the module file name or as the module itself. The default error rates for all loaded error modules can be supplied as a dictionary with keywords corresponding to the default error rates of the associated error modules. 
+        Any error module from `opensurfacesim.error` can loaded as either a string equivalent to the module file name or as the module itself. The default error rates for all loaded error modules can be supplied as a dictionary with keywords corresponding to the default error rates of the associated error modules.
 
         Parameters
         ----------
         args : string or error module
             The error modules to load. May be a string or the loaded module.
         error_rates : dict of floats
-            The default error rates for the loaded modules. Must be a dictionary with probabilities with keywords corresponding to the default or overriding error rates of the associated error modules. 
+            The default error rates for the loaded modules. Must be a dictionary with probabilities with keywords corresponding to the default or overriding error rates of the associated error modules.
 
         See Also
         --------
@@ -231,7 +234,7 @@ class PerfectMeasurements(ABC):
 
         Examples
         --------
-        Load Pauli and erasure error modules via strings. Set default bit-flip rate to `0.1` and erasure to `0.03`. 
+        Load Pauli and erasure error modules via strings. Set default bit-flip rate to `0.1` and erasure to `0.03`.
 
         >>> SurfaceCode.init_errors("pauli", "erasure", error_rates={"pauli_x": 0.1, "p_erasure": 0.03})
 
@@ -304,7 +307,7 @@ class PerfectMeasurements(ABC):
     """
 
     def simulate(self, z: numtype = 0, **kwargs):
-        """Simulate an iteration or errors and measurement. 
+        """Simulate an iteration or errors and measurement.
 
         Parameters
         ----------
@@ -399,12 +402,21 @@ class FaultyMeasurements(PerfectMeasurements):
     ----------------------------------------------------------------------------------------
     """
 
+    def initialize(self, *args, **kwargs) -> None:
+        """Initilizes all data objects of the code."""
+        self.init_surface(**kwargs)
+        self.init_logical_operator(**kwargs)
+        self.logical_state = {key: False for key in self.logical_operators}
+        self.default_faulty_measurements = {
+            key: kwargs.pop(key, self.default_faulty_measurements[key]) for key in ["pmx", "pmz"]
+        }
+        self.init_errors(*args, **kwargs)
+
     def init_surface(self, **kwargs) -> None:
         """Inititates the surface code.
-        
-        The 3D lattice is initilized by first building the ground layer. After that each consecutive layer is built and pseudo-edges are added to connect the ancilla qubits of each layer. 
-        """
 
+        The 3D lattice is initilized by first building the ground layer. After that each consecutive layer is built and pseudo-edges are added to connect the ancilla qubits of each layer.
+        """
         super().init_surface()
         for z in range(1, self.layers):
             super().init_surface(z=z)
@@ -475,7 +487,7 @@ class FaultyMeasurements(PerfectMeasurements):
 
             # Save vertex as anyon if parity different than previous layer
             if "d" in ancilla_qubit.vertical_ancillas:
-                lower_state = ancilla_qubit.vertical_ancillas["d"][0].state
+                lower_state = ancilla_qubit.vertical_ancillas["d"].state
             else:
                 lower_state = 0
             ancilla_qubit.state = 0 if ancilla_qubit.state == lower_state else 1
@@ -487,9 +499,9 @@ class FaultyMeasurements(PerfectMeasurements):
     """
 
     def simulate(self, **kwargs):
-        """Simulate an iteration or errors and measurement. 
+        """Simulate an iteration or errors and measurement.
 
-        On all but the final layer, the default or overriding error rates (via keyworded arguments) are applied. On the final layer, perfect measurements are applied by setting `pmx=0` and `pmz=0`. 
+        On all but the final layer, the default or overriding error rates (via keyworded arguments) are applied. On the final layer, perfect measurements are applied by setting `pmx=0` and `pmz=0`.
         """
         # Simulate on all but final layers
         for z in range(self.layers):
@@ -498,7 +510,6 @@ class FaultyMeasurements(PerfectMeasurements):
         # Simulate final layer with perfect measurements
         kwargs.update(dict(pmx=0, pmz=0))
         super().simulate(z=self.decode_layer, **kwargs)
-        
 
     def get_logical_state(self, **kwargs) -> Tuple[List[bool], bool]:
         """Returns the logical state on the decode layer."""

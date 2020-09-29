@@ -19,10 +19,7 @@ class Error(TemplateError):
 
     def __init__(self, *args, pauli_x: numtype = 0, pauli_z: numtype = 0, **kwargs) -> None:
         super().__init__(*args, **kwargs)
-        self.default_error_rates = {
-            "pauli_x": pauli_x,
-            "pauli_z": pauli_z
-        }
+        self.default_error_rates = {"pauli_x": pauli_x, "pauli_z": pauli_z}
 
     def apply_error(self, qubit, pauli_x: Optional[numtype] = None, pauli_z: Optional[numtype] = None, **kwargs):
         """Applies a Pauli error, bit-flip and/or phase-flip.

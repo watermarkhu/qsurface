@@ -12,18 +12,15 @@ print(toric_fm)
 print(planar_pm)
 print(planar_fm)
 
-# %%
-planar_fm.parity_measurement()
-planar_fm.get_logical_state()
+toric_pm.initialize("pauli", error_rates=dict(pauli_x=0.1))
+toric_fm.initialize("pauli", error_rates=dict(pauli_x=0.03), pmx=0.03)
+planar_pm.initialize("pauli", error_rates=dict(pauli_x=0.1))
+planar_fm.initialize("pauli", error_rates=dict(pauli_x=0.03), pmx=0.03)
 
-#%%
-import opensurfacesim
 
-toric_pm = opensurfacesim.code.toric.sim.PerfectMeasurements(3)
-toric_pm.init_errors("pauli")
-# %%
-import opensurfacesim
-
-toric = opensurfacesim.code.toric.sim.FaultyMeasurements(3)
-toric.init_errors("pauli", error_rates=dict(pmx=0.03))
+for _ in range(10):
+    toric_pm.simulate()
+    toric_fm.simulate()
+    planar_pm.simulate()
+    planar_fm.simulate()
 # %%

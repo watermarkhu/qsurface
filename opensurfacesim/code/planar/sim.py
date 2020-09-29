@@ -68,16 +68,13 @@ class PerfectMeasurements(ToricPM):
 
     def init_logical_operator(self, **kwargs) -> None:
         """Inititates the logical operators."""
-        operators = {
-            "x": [self.data_qubits[self.decode_layer][(i + 0.5, 0)].edges["x"] for i in self.range]
-        }
+        operators = {"x": [self.data_qubits[self.decode_layer][(i + 0.5, 0)].edges["x"] for i in self.range]}
         if self.dual:
-            operators.update({
-                "z": [self.data_qubits[self.decode_layer][(0.5, i)].edges["z"] for i in self.range]
-            })
+            operators.update({"z": [self.data_qubits[self.decode_layer][(0.5, i)].edges["z"] for i in self.range]})
         self.logical_operators = operators
 
 
-class FaultyMeasurements(PerfectMeasurements, ToricFM):
+class FaultyMeasurements(ToricFM, PerfectMeasurements):
     """Simulation planar code for faulty measurements."""
+
     pass

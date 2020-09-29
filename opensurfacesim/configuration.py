@@ -9,7 +9,7 @@ Contains methods of the simulation configuration
 import configparser
 import json
 import os
-from .info.benchmark import benchmarker
+from .info.benchmark import BenchMarker
 from .info.printing import print_setup
 from types import ModuleType
 
@@ -92,7 +92,7 @@ def setup_decoder(code, decode_module, size,
     '''
     Initilizes the graph and decoder type based on the lattice structure.
     '''  
-    bmarker = benchmarker() if benchmark else None
+    bmarker = BenchMarker() if benchmark else None
     kwargs["benchmarker"] = bmarker
 
     # Get graph object

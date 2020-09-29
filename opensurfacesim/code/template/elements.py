@@ -1,5 +1,7 @@
-#%%
-class Qubit(object):
+from abc import ABC
+
+
+class Qubit(ABC):
     """
     General type qubit object
 
@@ -21,12 +23,13 @@ class Qubit(object):
     -----
     This class mainly serves as a superclass or template to other more useful qubit types, which have the apprioate subclass attributes and subclass methods. For other types to to the 'See Also' section. 
     """
-    def __init__(self, loc=(0,0,0), Type="Qubit", *args, **kwargs):
-        self.Type = Type
+    def __init__(self, loc=(0,0), z=0, type="Qubit", *args, **kwargs):
+        self.type = type
         self.loc = loc
+        self.z = z
 
     def __repr__(self):
-        return "{}({},{}|{})".format(self.Type, *self.loc)
+        return "{}({},{}|{})".format(self.type, *self.loc)
 
     def picker(self):
         """Returns selftext for pick action during plotting. 
@@ -34,8 +37,7 @@ class Qubit(object):
         return self.__repr__()
 
 
-
-class Data_qubit(Qubit):
+class DataQubit(Qubit):
     """
     Data type qubit object
 
@@ -61,8 +63,8 @@ class Data_qubit(Qubit):
     Boundary
     Edge
     """
-    def __init__(self, *args, Type="data", **kwargs):
-        super().__init__(*args, Type=Type, **kwargs)
+    def __init__(self, *args, type="data", **kwargs):
+        super().__init__(*args, type=type, **kwargs)
         self.edges = dict()
 
     def reset(self):
@@ -91,7 +93,7 @@ class Data_qubit(Qubit):
             raise TypeError("new_state must be a dictionary")
 
 
-class Ancilla_qubit(Qubit):
+class AncillaQubit(Qubit):
     """
     General type qubit object
 
@@ -99,7 +101,7 @@ class Ancilla_qubit(Qubit):
     ----------
     loc : tuple or list of length 3
         Location of the qubit in (x,y,z) coordinates.
-    EdgeType : str, optional
+    ancilla_type : str, optional
         Type of edges belonging to the data qubits entangled to the current ancilla qubit for stabilizer measurements.
     Type : str, optional
         Name of the current qubit time. Short names withough spaces are preferred (the default is 'Qubit').
@@ -112,7 +114,7 @@ class Ancilla_qubit(Qubit):
     mstate : bool
         Boolean indicating a measurement error on this ancilla qubit.
     parity_qubits : dict of `Data_qubit` 
-        All data_qubits in this dictionary are entangled to the current ancilla qubit for stabilizer measurements. The entangled state is located at `Data_qubit.edges[Ancilla_qubit.EdgeType]`.
+        All data_qubits in this dictionary are entangled to the current ancilla qubit for stabilizer measurements. The entangled state is located at `Data_qubit.edges[Ancilla_qubit.ancilla_type]`.
     vertical_ancillas : dict of 'Ancilla_qubit`
         Vertically connected ancilla qubit that is an instance of the same qubit at a different time. Vertical elements are needed when `graph.faulty_measurements` is the graph class. Instances at `u` or `up` refer to instances later in time, and instances at `d` or `down` refer to an instances prior in time.
 
@@ -124,9 +126,9 @@ class Ancilla_qubit(Qubit):
     Edge
     """
 
-    def __init__(self, *args, EdgeType='default', Type="ancilla", **kwargs):
-        super().__init__(*args, Type=Type, **kwargs)
-        self.EdgeType = EdgeType
+    def __init__(self, *args, ancilla_type='default', type="ancilla", **kwargs):
+        super().__init__(*args, type=type, **kwargs)
+        self.ancilla_type = ancilla_type
         self.parity_qubits = {}
         self.vertical_ancillas = {}
         self.vertical_edges = {}
@@ -146,77 +148,13 @@ class Ancilla_qubit(Qubit):
         self.init_state()
 
 
-def pair_entangle(ancillaQ, dataQ, key, edge=None, **kwargs):
-    """Entangles one `data_qubit` to the current ancilla qubit
-
-    Parameters
-    ----------
-    key : str or int
-        Key for the `data_qubit` in the `parity_qubits` dictionary
-    data_qubit : Data_qubit
-        Qubit to entangle.
-    edge : Edge, optional
-        The `Edge` object related to the state of the `Data_qubit` to entangle to.
-    """
-    ancillaQ.parity_qubits[key] = dataQ
-    if edge is None:
-        edge = dataQ.edges[ancillaQ.EdgeType]
-    edge.nodes += [ancillaQ]
-
-
-def pair_time(newAQ, oldAQ, edge, **kwargs):
-    """Pair another instance of the current ancilla at 1 time unit prior or later.
-
-    Parameters
-    ----------
-    newAQ : Ancilla_qubit
-        Instance of the ancilla at time `t+1`.
-    oldAQ : Ancilla_qubit
-        Instance of the ancilla at time `t`.
-    edge : Edge
-        Edge object connecting the two instances
-
-    """
-    newAQ.vertical_ancillas["d"] = oldAQ
-    oldAQ.vertical_ancillas["u"] = newAQ
-    newAQ.vertical_edges["d"] = edge
-    oldAQ.vertical_edges["u"] = edge
-    edge.nodes += [newAQ, oldAQ]
-
-
-
-def measure_parity(ancillaQ, **kwargs):
-    """Applies a parity measurement on the ancilla.
-
-    The functions loops over all the data qubits in the `parity_qubits` attribute of `ancillaQ`. For every edge associated with the entangled state on the data qubit, the value of a `parity` boolean is flipped. 
-
-    Parameters
-    ----------
-    ancillaQ : Ancilla_qubit
-        The ancilla to apply the parity measurement on.
-
-    
-    Returns
-    -------
-    parity : bool
-        Result of the parity measurment.
-    """
-    parity = False
-    for qubit in ancillaQ.parity_qubits.values():
-        edge = qubit.edges[ancillaQ.EdgeType]
-        if edge.state:
-            parity = not parity
-    ancillaQ.state = parity
-    return parity
-
-
-class Boundary(Ancilla_qubit):
+class PseudoQubit(AncillaQubit):
     """Boundary element
     
-    Edges needs to be spanned by two nodes. For data qubits on the boudnary, one of its edges additionaly requires an ancilla qubit like node, which is the boundary element. 
+    Edges needs to be spanned by two nodes. For data qubits on the boundary, one of its edges additionaly requires an ancilla qubit like node, which is the boundary element. 
     """
-    def __init__(self, Type="bound", *args, **kwargs):
-        super().__init__(*args, Type=Type, **kwargs)
+    def __init__(self, type="pseudo", *args, **kwargs):
+        super().__init__(*args, type=type, **kwargs)
 
 
 class Edge(object):
@@ -277,3 +215,7 @@ class Edge(object):
         return self.__repr__()
 
 
+class PseudoEdge(Edge):
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*kwargs, rep=kwargs.pop("rep", "|"), **kwargs)

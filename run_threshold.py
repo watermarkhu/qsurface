@@ -34,6 +34,7 @@ key_arguments = [
     ["-bm", "--benchmark", "store_true", "enable statistics - toggle", dict()]
 ]
 
+
 add_args(parser, arguments)
 add_kwargs(parser, key_arguments)
 args=vars(parser.parse_args())

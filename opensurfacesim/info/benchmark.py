@@ -14,7 +14,7 @@ import time
 from collections import defaultdict as dd
 
 
-class benchmarker(object):
+class BenchMarker(object):
 
     def __init__(self):
         self.counters = dd(int)

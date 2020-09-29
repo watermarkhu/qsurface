@@ -1,9 +1,9 @@
 
 #%%
-from . import elements_base as eb
+from . import elements as el
 
 
-class Ancilla_qubit(eb.Ancilla_qubit):
+class Ancilla_qubit(el.Ancilla_qubit):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -23,15 +23,15 @@ class Ancilla_qubit(eb.Ancilla_qubit):
         self.uf_init
 
 
-class Boundary(eb.Boundary):
+class Boundary(el.Boundary):
     pass
 
 
-class Data_qubit(eb.Data_qubit):
+class Data_qubit(el.Data_qubit):
     pass
 
 
-class Edge(eb.Edge):
+class Edge(el.Edge):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

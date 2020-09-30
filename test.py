@@ -24,3 +24,6 @@ for _ in range(10):
     planar_pm.simulate()
     planar_fm.simulate()
 # %%
+import opensurfacesim
+
+opensurfacesim.plot.window.plot_config(True)

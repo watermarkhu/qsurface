@@ -14,7 +14,7 @@ from .info.printing import print_setup
 from types import ModuleType
 
 
-def readconfig(path):
+def read_config(path):
     '''Reads a config.ini file located and parses all data in it'''
 
     config = configparser.ConfigParser()
@@ -28,7 +28,7 @@ def readconfig(path):
     return data
 
 
-def writeconfig(path, configdict, sectionname=None):
+def write_config(path, configdict, sectionname=None):
     '''
     writes a config.ini file to the path
     If no sectionname is provided, the configdict must be a dict of dicts as 

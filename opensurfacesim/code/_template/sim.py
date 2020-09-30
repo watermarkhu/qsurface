@@ -236,12 +236,12 @@ class PerfectMeasurements(ABC):
         --------
         Load Pauli and erasure error modules via strings. Set default bit-flip rate to `0.1` and erasure to `0.03`.
 
-        >>> SurfaceCode.init_errors("pauli", "erasure", error_rates={"pauli_x": 0.1, "p_erasure": 0.03})
+            >>> SurfaceCode.init_errors("pauli", "erasure", error_rates={"pauli_x": 0.1, "p_erasure": 0.03})
 
         Load Pauli error module via module. Set default phase-flip rate to `0.05`.
 
-        >>> import opensurfacesim.error.pauli as pauli
-        >>> SurfaceCode.init_errors(pauli, error_rates={"pauli_z": 0.05})
+            >>> import opensurfacesim.error.pauli as pauli
+            >>> SurfaceCode.init_errors(pauli, error_rates={"pauli_z": 0.05})
         """
         for error_module in error_modules:
             if type(error_module) == str:

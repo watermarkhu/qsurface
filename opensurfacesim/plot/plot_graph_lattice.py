@@ -22,7 +22,7 @@ from time import time
 import random
 import os
 from opensurfacesim.info import printing as pr
-from opensurfacesim.configuration import readconfig, writeconfig
+from opensurfacesim.configuration import read_config, write_config
 
 
 mpl.rcParams['toolbar'] = 'None'
@@ -69,8 +69,8 @@ class plot_2D:
         
         configpath = 'simulator/plot/plot.ini'
         if not os.path.exists(configpath):
-            writeconfig(configpath, self.config)
-        data = readconfig(configpath)
+            write_config(configpath, self.config)
+        data = read_config(configpath)
         for key, value in data.items():
             setattr(self, key, value)
         

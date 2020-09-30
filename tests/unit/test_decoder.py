@@ -1,5 +1,5 @@
 
-from opensurfacesim.configuration import setup_decoder 
+from opensurfacesim.configuration2 import setup_decoder 
 from opensurfacesim import decoder
 import pytest
 

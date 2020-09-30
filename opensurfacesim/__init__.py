@@ -1,5 +1,6 @@
 import opensurfacesim.main
 import opensurfacesim.configuration
+import opensurfacesim.configuration2
 import opensurfacesim.decoder
 import opensurfacesim.code
 import opensurfacesim.error

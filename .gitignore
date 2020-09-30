@@ -15,7 +15,6 @@
 
 # data files
 *.xml
-*.ini
 *.pkl
 *.csv
 *.txt
@@ -31,3 +30,4 @@ __pycache__/
 .idea/
 .python-version
 .vscode/
+.pytest_cache/

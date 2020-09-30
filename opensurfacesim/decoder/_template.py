@@ -7,7 +7,7 @@ _____________________________________________
 Template file for decoder modules
 '''
 
-from opensurfacesim.configuration import decoderconfig
+from opensurfacesim.configuration2 import decoderconfig
 from opensurfacesim.info.benchmark import timeit
 
 

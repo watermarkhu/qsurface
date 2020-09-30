@@ -26,4 +26,9 @@ for _ in range(10):
 # %%
 import opensurfacesim
 
-opensurfacesim.plot.window.plot_config(True)
+class test_2D(opensurfacesim.plot.window.Template_2D):
+    def init_figure(self):
+        pass
+
+a = test_2D()
+# %%

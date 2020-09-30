@@ -22,7 +22,7 @@ from time import time
 import random
 import os
 from opensurfacesim.info import printing as pr
-from opensurfacesim.configuration import read_config, write_config
+from opensurfacesim.configuration2 import read_config, write_config
 
 
 mpl.rcParams['toolbar'] = 'None'
@@ -425,6 +425,8 @@ class plot_2D:
                 X, Y = [x + 0, x + 0], [y -.25, y + 0]
             elif dir == "s":
                 X, Y = [x + 0, x + 0], [y + 0, y + .25]
+            else:
+                raise KeyError
 
             line = self.draw_line(X, Y, Z=zb * self.z_distance, color=self.cl, lw=self.linewidth, ls=ls, alpha=alpha)
             stab.pg[dir] = line

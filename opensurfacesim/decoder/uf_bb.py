@@ -50,7 +50,7 @@ R1: [N1, M1],  N1: [R1],  M1: [R1, M0]
 '''
 from opensurfacesim.info import printing as pr
 from opensurfacesim.decoder import uf_db
-from opensurfacesim.configuration import decoderconfig
+from opensurfacesim.configuration2 import decoderconfig
 from opensurfacesim.decoder.modules_uf._decorators import *
 from opensurfacesim.decoder.modules_ufbb._decorators import * 
 from opensurfacesim.decoder.modules_ufbb.classes import * 

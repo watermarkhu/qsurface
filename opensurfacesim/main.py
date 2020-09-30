@@ -4,7 +4,7 @@ The graph type (2D/3D) and decoder (MWPM, unionfind...) are specified and are lo
 One can choose to run a simulated lattice for a single, multiple or many (multithreaded) multiple iterations.
 
 '''
-from .configuration import setup_decoder
+from .configuration2 import setup_decoder
 from progiter import ProgIter
 import multiprocessing as mp
 from collections import defaultdict as dd

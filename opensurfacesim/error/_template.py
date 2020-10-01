@@ -19,10 +19,11 @@ class Error(ABC):
     DataQubit
     """
 
-    def __init__(self, data_qubits: Dict[numtype, Dict[Tuple[numtype, numtype], DataQubit]], **kwargs) -> None:
-        self.data_qubits = data_qubits
+    def __init__(self, **kwargs) -> None:
         self.default_error_rates = {}
         self.type = str(self.__module__).split(".")[-1]
+        self.plot_attributes = {}
+        self.legend_attributes = {}
 
     def __repr__(self) -> str:
         return "{} error object with defaults: {}".format(self.type, self.default_error_rates)
@@ -31,17 +32,6 @@ class Error(ABC):
     def apply_error(self, qubit, **kwargs) -> None:
         """Applies the current error type to the `qubit`."""
         pass
-
-    def apply_error_layer(self, z: numtype = 0, **kwargs) -> None:
-        """Applies the current error type to all data-qubits in layer `z`.
-
-        Parameters
-        ----------
-        z : int or float, optional
-            Layer of qubits.
-        """
-        for qubit in self.data_qubits[z].values():
-            self.apply_error(qubit, **kwargs)
 
     def plot_error(self, qubit) -> None:
         """Optional plotting function associated with the current error type.

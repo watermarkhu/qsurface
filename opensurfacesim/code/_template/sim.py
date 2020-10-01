@@ -247,14 +247,15 @@ class PerfectMeasurements(ABC):
             if type(error_module) == str:
                 error_module = importlib.import_module(".error.{}".format(error_module), package="opensurfacesim")
             error_type = error_module.__name__.split(".")[-1]
-            self.errors[error_type] = error_module.Error(self.data_qubits, **error_rates)
+            self.errors[error_type] = error_module.Error(**error_rates)
 
     def apply_errors(self, z: numtype = 0, apply_order: Optional[List[Error]] = None, **kwargs: numtype) -> None:
 
         if not apply_order:
             apply_order = self.errors.values()
         for error_class in apply_order:
-            error_class.apply_error_layer(z=z, **kwargs)
+            for qubit in self.data_qubits[z].values():
+                error_class.apply_error(qubit, **kwargs)
 
     """
     ----------------------------------------------------------------------------------------

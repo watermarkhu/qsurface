@@ -31,3 +31,4 @@ __pycache__/
 .python-version
 .vscode/
 .pytest_cache/
+.ipynb_checkpoints/

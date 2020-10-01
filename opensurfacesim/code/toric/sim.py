@@ -84,7 +84,8 @@ class PerfectMeasurements(TemplatePM):
             "s": (x, (y - 0.5) % self.size),
         }
         for key, loc in checks.items():
-            self.entangle_pair(self.data_qubits[z][loc], ancilla_qubit, key)
+            if loc in self.data_qubits[z]:
+                self.entangle_pair(self.data_qubits[z][loc], ancilla_qubit, key)
 
     def init_logical_operator(self, **kwargs) -> None:
         """Inititates the logical operators."""

@@ -29,7 +29,7 @@ numtype = Union[int, float]
 
 
 class PerfectMeasurements(ToricPM):
-    def init_graph_layer(self, z: numtype = 0, **kwargs):
+    def init_surface(self, z: numtype = 0, **kwargs):
         """Initilizes the planar surface code on layer `z`.
 
         Parameters
@@ -76,5 +76,4 @@ class PerfectMeasurements(ToricPM):
 
 class FaultyMeasurements(ToricFM, PerfectMeasurements):
     """Simulation planar code for faulty measurements."""
-
     pass

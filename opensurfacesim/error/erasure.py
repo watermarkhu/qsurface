@@ -18,6 +18,12 @@ class Error(TemplateError):
     def __init__(self, *args, p_erasure: numtype = 0, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.default_error_rates = {"p_erasure": p_erasure}
+        self.plot_attributes = {"erasure": {"linestyle": "line_style_tertiary"}}
+        self.legend_attributes = {
+            "Erasure": dict(
+                mfc="color_background", marker="~$\u25CC$", mec="color_qubit_edge", mew="line_width_secundary", ms=12
+            )
+        }
 
     def apply_error(self, qubit, p_erasure: Optional[numtype] = None, **kwargs):
         """Applies an erasure error.

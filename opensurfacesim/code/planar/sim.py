@@ -1,35 +1,12 @@
-"""
-2020 Mark Shui Hu
-
-www.github.com/watermarkhu/OpenSurfaceSim
-_____________________________________________
-
-We define the unit cell, which contains two qubits, a star operator and plaquette operator.
-
-    |       |
-- Star  -  Q_0 -     also top (T) qubit
-    |       |
--  Q_1  - Plaq  -    also down (D) qubit
-    |       |
-
-Each cell is indicated by its y and x coordiantes. As such every qubit and stabilizer can by identified by a unique ID number:
-
-Qubits: qID (td, y, x)          Stabilizers: sID (ertype, y, x)
-    Q_0:    (0, y, x)               Star:   (0, y, x)
-    Q_1:    (1, y, x)               Plaq:   (1, y, x)
-
-The 2D graph (toric/planar) is a square lattice with 1 layer of these unit cells.
-"""
-
 from ..toric.sim import PerfectMeasurements as ToricPM, FaultyMeasurements as ToricFM
-from typing import Union
-
-
-numtype = Union[int, float]
 
 
 class PerfectMeasurements(ToricPM):
-    def init_surface(self, z: numtype = 0, **kwargs):
+    """Simulation planar code for perfect measurements."""
+
+    code = "planar"
+
+    def init_surface(self, z: float = 0, **kwargs):
         """Initilizes the planar surface code on layer `z`.
 
         Parameters
@@ -49,25 +26,25 @@ class PerfectMeasurements(ToricPM):
 
         # Add ancilla qubits to surface
         for yx in self.range:
-            self.add_pseudo_qubit((0, yx), z=z, ancilla_type="x")
-            self.add_pseudo_qubit((self.size, yx), z=z, ancilla_type="x")
+            self.add_pseudo_qubit((0, yx), z=z, state_type="x")
+            self.add_pseudo_qubit((self.size, yx), z=z, state_type="x")
         for yx in self.range:
             for xy in range(self.size - 1):
-                star = self.add_ancilla_qubit((xy + 1, yx), z=z, ancilla_type="x")
+                star = self.add_ancilla_qubit((xy + 1, yx), z=z, state_type="x")
                 self.init_parity_check(star)
 
         # Add ancillary qubits to dual lattice
         if self.dual:
             for yx in self.range:
-                self.add_pseudo_qubit((yx + 0.5, -0.5), z=z, ancilla_type="z")
-                self.add_pseudo_qubit((yx + 0.5, self.size - 0.5), z=z, ancilla_type="z")
+                self.add_pseudo_qubit((yx + 0.5, -0.5), z=z, state_type="z")
+                self.add_pseudo_qubit((yx + 0.5, self.size - 0.5), z=z, state_type="z")
             for yx in self.range:
                 for xy in range(self.size - 1):
-                    plaq = self.add_ancilla_qubit((yx + 0.5, xy + 0.5), z=z, ancilla_type="z")
+                    plaq = self.add_ancilla_qubit((yx + 0.5, xy + 0.5), z=z, state_type="z")
                     self.init_parity_check(plaq)
 
     def init_logical_operator(self, **kwargs) -> None:
-        """Inititates the logical operators."""
+        """Inititates the logical operators `[x,z]` of the planar code."""
         operators = {"x": [self.data_qubits[self.decode_layer][(i + 0.5, 0)].edges["x"] for i in self.range]}
         if self.dual:
             operators.update({"z": [self.data_qubits[self.decode_layer][(0.5, i)].edges["z"] for i in self.range]})
@@ -76,4 +53,5 @@ class PerfectMeasurements(ToricPM):
 
 class FaultyMeasurements(ToricFM, PerfectMeasurements):
     """Simulation planar code for faulty measurements."""
+
     pass

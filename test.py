@@ -32,7 +32,14 @@ a.draw_figure()
 # %%
 import opensurfacesim
 
-pf = opensurfacesim.code.toric.plot.PerfectMeasurements(3)
-pf.initialize("pauli")
-pf.init_figures()
+pf = opensurfacesim.code.toric.plot.PerfectMeasurements(4)
+pf.initialize("pauli", "erasure")
+
+print("hello")
+pf.figure._wait()
+print("world")
+pf.figure.close()
+
+# %%
+
 # %%

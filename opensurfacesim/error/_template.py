@@ -33,7 +33,7 @@ class Error(ABC):
         """Applies the current error type to the `qubit`."""
         pass
 
-    def plot_error(self, qubit) -> None:
+    def plot_error(self, figure, qubit, ax_name="", **kwargs) -> None:
         """Optional plotting function associated with the current error type.
 
         Parameters

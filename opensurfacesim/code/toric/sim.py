@@ -1,39 +1,13 @@
-"""
-2020 Mark Shui Hu
-
-www.github.com/watermarkhu/OpenSurfaceSim
-_____________________________________________
-
-We define the unit cell, which contains two qubits, a star operator and plaquette operator.
-
-    |       |
-- Star  -  Q_0 -     also top (T) qubit
-    |       |
--  Q_1  - Plaq  -    also down (D) qubit
-    |       |
-
-Each cell is indicated by its y and x coordiantes. As such every qubit and stabilizer can by identified by a unique ID number:
-
-Qubits: qID (td, y, x)          Stabilizers: sID (ertype, y, x)
-    Q_0:    (0, y, x)               Star:   (0, y, x)
-    Q_1:    (1, y, x)               Plaq:   (1, y, x)
-
-The 2D graph (toric/planar) is a square lattice with 1 layer of these unit cells.
-"""
-
-
 from .._template.elements import AncillaQubit
 from .._template.sim import PerfectMeasurements as TemplatePM, FaultyMeasurements as TemplateFM
-from typing import Union
-
-
-numtype = Union[int, float]
 
 
 class PerfectMeasurements(TemplatePM):
     """Simulation toric code for perfect measurements."""
 
-    def init_surface(self, z: numtype = 0, **kwargs):
+    code = "toric"
+
+    def init_surface(self, z: float = 0, **kwargs):
         """Initilizes the toric surface code on layer `z`.
 
         Parameters
@@ -52,14 +26,14 @@ class PerfectMeasurements(TemplatePM):
         # Add ancilla qubits to surface
         for y in self.range:
             for x in self.range:
-                star = self.add_ancilla_qubit((x, y), z=z, ancilla_type="x")
+                star = self.add_ancilla_qubit((x, y), z=z, state_type="x")
                 self.init_parity_check(star)
 
         # Add ancillary qubits to dual lattice
         if self.dual:
             for y in self.range:
                 for x in self.range:
-                    plaq = self.add_ancilla_qubit((x + 0.5, y + 0.5), z=z, ancilla_type="z")
+                    plaq = self.add_ancilla_qubit((x + 0.5, y + 0.5), z=z, state_type="z")
                     self.init_parity_check(plaq)
 
     def init_parity_check(self, ancilla_qubit: AncillaQubit, **kwargs) -> None:
@@ -88,7 +62,7 @@ class PerfectMeasurements(TemplatePM):
                 self.entangle_pair(self.data_qubits[z][loc], ancilla_qubit, key)
 
     def init_logical_operator(self, **kwargs) -> None:
-        """Inititates the logical operators."""
+        """Inititates the logical operators `[x1, x2, z1, z2]` of the toric code."""
         operators = {
             "x1": [self.data_qubits[self.decode_layer][(i + 0.5, 0)].edges["x"] for i in self.range],
             "x2": [self.data_qubits[self.decode_layer][(0, i + 0.5)].edges["x"] for i in self.range],

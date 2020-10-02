@@ -1,9 +1,9 @@
-import opensurfacesim.main
-import opensurfacesim.configuration
-import opensurfacesim.configuration2
-import opensurfacesim.decoder
-import opensurfacesim.code
-import opensurfacesim.error
-import opensurfacesim.info
-import opensurfacesim.plot
-import opensurfacesim.threshold
+from . import main
+from . import configuration
+from . import configuration2
+from . import decoder
+from . import code
+from . import error
+from . import info
+from . import plot
+from . import threshold

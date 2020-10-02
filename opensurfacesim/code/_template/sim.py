@@ -1,13 +1,10 @@
 from abc import ABC, abstractmethod
-from .elements import DataQubit, AncillaQubit, PseudoQubit, Edge, PseudoEdge
+from .elements import DataQubit, AncillaQubit, PseudoQubit, Edge, PseudoEdge, Qubit
 from ...info.benchmark import BenchMarker
 from ...error._template import Error
 from typing import List, Optional, Union, Tuple
 import importlib
 import random
-
-
-numtype = Union[int, float]
 
 
 class PerfectMeasurements(ABC):
@@ -19,51 +16,65 @@ class PerfectMeasurements(ABC):
         Size of the surface code in single dimension or two dimensions (y,x).
     dual : bool, optional
         Enables the dual graph. Turn off when only simulating for bit-flip errors.
-    dataQubit : DataQubit, optional
-        Data qubit class.
-    ancillaQubit: AncillaQubit, optional
-        Ancilla qubit class.
-    pseudoQubit : PseudoQubit, optional
-        Pseudo qubit class.
-    edge : Edge, optional
-        Edge class.
     benchmarker : Benchmarker, optional
         Benchmarker class. If a benchmarker class is attached, the benchmarker will start to collect the number of calls of to the code class and decoder class methods.
 
+    Attributes
+    ----------
+    ancilla_qubits : dict of dict of AncillaQubit
+        See notes.
+    data_qubits: dict of dict of DataQubit
+        See notes.
+    pseudo_qubits: dict of dict of PseudoQubit
+        See notes.
+    errors : dict of Error
+        Dictionary of error modules with the module name as key. All error modules loaded in `errors` will be applied during a simulation by `apply_errors`.
+    logical_operators : dict of list of Edge
+        Dictionary with lists of Edges that from a trivial loop over the surface and correspond to a logical operator. The logical state of each operator can be obtained by the state of each Edge in the list.
+    logical_state : dict of bool
+        Dictionary with the states corresponding to the logical operators in `logical_operators`.
+    no_error : bool
+        Indicator for whether there is a logical error in the last iteration. The value for `no_error` is updated after a call to `logical_state`.
+
     See Also
     --------
-    DataQubit
-    AncillaQubit
-    PseudoQubit
-    Edge
-    Benchmarker
+    opensurfacesim.code._template.elements.DataQubit : Data-qubit class.
+    opensurfacesim.code._template.elements.AncillaQubit : Ancilla-qubit class.
+    opensurfacesim.code._template.elements.PseudoQubit : Pseudo-qubit class.
+    opensurfacesim.code._template.elements.Edge : Edge class.
+    opensurfacesim.error : Error modules.
+    opensurfacesim.info.benchmark.BenchMarker : Benchmarking class.
+
+    Notes
+    -----
+    The qubits of the code class are stored in a double dictionary, with the keys in the outer dictionary corresponding to the qubit layer. For perfect measurements, there is a single layer. For faulty measurements, there are multiple layers (and defaults to `size`). In the nested dictionaries each qubit is stored by its `loc` as key. A qubit can thus be accesed by `self.qubits[layer][(x,y)]`.
+
+    The qubit and edge classes from the `elements` module can be replaced with inherited classes to store decoder dependent attributes.
     """
+
+    dataQubit = DataQubit
+    ancillaQubit = AncillaQubit
+    pseudoQubit = PseudoQubit
+    edge = Edge
+    code = "template"
+    x_names = ["x", "X", 0, "bit-flip"]
+    z_names = ["z", "Z", 1, "phase-flip"]
+    dim = 2
 
     def __init__(
         self,
         size: int,
         dual: bool = True,
-        dataQubit: DataQubit = DataQubit,
-        ancillaQubit: AncillaQubit = AncillaQubit,
-        pseudoQubit: PseudoQubit = PseudoQubit,
-        edge: Edge = Edge,
         benchmarker: Optional[BenchMarker] = None,
         **kwargs,
     ):
-        self.dim = 2
+        self.layers = 1
+        self.decode_layer = 0
         self.size = size
         self.dual = dual
         self.range = range(size)
-        self.dataQubit = dataQubit
-        self.ancillaQubit = ancillaQubit
-        self.pseudoQubit = pseudoQubit
-        self.edge = edge
         self.benchmarker = benchmarker
-        self.code = str(self.__module__).split(".")[-2]
-        self.x_names = ["x", "X", 0, "bit-flip"]
-        self.z_names = ["z", "Z", 1, "phase-flip"]
-        self.layers = 1
-        self.decode_layer = 0
+        self.no_error = True
 
         for key, value in kwargs.items():
             setattr(self, key, value)
@@ -72,9 +83,72 @@ class PerfectMeasurements(ABC):
         self.data_qubits = {}
         self.pseudo_qubits = {}
         self.errors = {}
+        self.logical_operators = {}
 
     def __repr__(self):
         return f"{self.code} {self.size} {self.__class__.__name__}"
+
+    """
+    ----------------------------------------------------------------------------------------
+                                        Main functions
+    ----------------------------------------------------------------------------------------
+    """
+
+    def initialize(self, *args, **kwargs) -> None:
+        """Initilizes all data objects of the code.
+
+        Error modules may be specified here in the same format as in `init_errors`.
+
+        See Also
+        --------
+        init_surface
+        init_logical_operator
+        init_errors
+        """
+        self.init_surface(**kwargs)
+        self.init_logical_operator(**kwargs)
+        self.init_errors(*args, **kwargs)
+
+    def simulate(self, z: float = 0, error_order: Optional[List[Error]] = None, **kwargs):
+        """Simulate an iteration or errors and measurement.
+
+        Parameters
+        ----------
+        z : int or float, optional
+            Layer of qubits.
+        error_order : List of Error, optional
+            Order in which the loaded error classes are applied.
+
+        See Also
+        --------
+        opensurfacesim.error : Error modules.
+        apply_errors
+        parity_measurement
+        """
+        self.apply_errors(z=z, apply_order=error_order, **kwargs)
+        self.parity_measurement(z=z, **kwargs)
+
+    @property
+    def logical_state(self) -> Tuple[List[bool], bool]:
+        # Loop over logical operators to find current state
+        logical_state = {}
+        for key, operator in self.logical_operators.items():
+            state = 0
+            for ancilla_qubit in operator:
+                if ancilla_qubit.state:
+                    state = 1 - state
+            logical_state[key] = state
+
+        # Compare with previous logical state to find error
+        if hasattr(self, "prev_logical_state"):
+            logical_error = {}
+            for key, state in logical_state.items():
+                logical_error[key] = state == self.prev_logical_state[key]
+            self.no_error = True if all(logical_error.values()) else False
+        else:
+            self.no_error = True if all(logical_state.values()) else False
+        self.prev_logical_state = logical_state
+        return logical_state
 
     """
     ----------------------------------------------------------------------------------------
@@ -82,139 +156,15 @@ class PerfectMeasurements(ABC):
     ----------------------------------------------------------------------------------------
     """
 
-    def initialize(self, *args, **kwargs) -> None:
-        """Initilizes all data objects of the code."""
-        self.init_surface(**kwargs)
-        self.init_logical_operator(**kwargs)
-        self.logical_state = {key: False for key in self.logical_operators}
-        self.init_errors(*args, **kwargs)
-
     @abstractmethod
     def init_surface(self):
         """Inititates the surface code."""
         pass
 
     @abstractmethod
-    def init_parity_check(self):
-        """Inititates a parity check measurement."""
-        pass
-
-    @abstractmethod
     def init_logical_operator(self):
         """Inititates the logical operators."""
         pass
-
-    def add_data_qubit(self, loc: Tuple[numtype, numtype], z: numtype = 0, **kwargs) -> DataQubit:
-        """Initilizes a data-qubit.
-
-        Parameters
-        ----------
-        loc : tuple of int, float or string
-            Location of the data qubit. Should be in the format of `loc=(x,y)`.
-        z : int or float, optional
-            Layer of qubit. Required for faulty measurements.
-
-        See Also
-        --------
-        DataQubit
-        """
-        data_qubit = self.dataQubit(loc, z)
-        data_qubit.edges["x"] = self.edge(data_qubit, "x")
-        if self.dual:
-            data_qubit.edges["z"] = self.edge(data_qubit, "z")
-        self.data_qubits[z][loc] = data_qubit
-        return data_qubit
-
-    def add_ancilla_qubit(
-        self,
-        loc: Tuple[numtype, numtype],
-        z: numtype = 0,
-        ancilla_type: str = "x",
-        **kwargs,
-    ) -> AncillaQubit:
-        """Initilizes an ancilla-qubit.
-
-        Parameters
-        ----------
-        loc : tuple of int, float or string
-            Location of the ancilla qubit. Should be in the format of `loc=(x,y)`.
-        z : int or float, optional
-            Layer of qubit. Required for faulty measurements.
-        ancilla_type : str, optional
-            Basis type of parity checks. Should be either `x` or `z`.
-
-        See Also
-        --------
-        AncillaQubit
-        """
-        ancilla = self.ancillaQubit(loc, z, ancilla_type=ancilla_type)
-        self.ancilla_qubits[z][loc] = ancilla
-        return ancilla
-
-    def add_pseudo_qubit(
-        self,
-        loc: Tuple[numtype, numtype],
-        z: numtype = 0,
-        ancilla_type: str = "x",
-        **kwargs,
-    ) -> PseudoQubit:
-        """Initilizes a pseudo-qubit on the boundary.
-
-        Parameters
-        ----------
-        loc : tuple of int, float or string
-            Location of the ancilla qubit. Should be in the format of `loc=(x,y)`.
-        z : int or float, optional
-            Layer of qubit. Required for faulty measurements.
-        ancilla_type : str, optional
-            Basis type of parity checks. Should be either `x` or `z`.
-
-        See Also
-        --------
-        PseudoQubit
-        AncillaQubit
-        """
-        pseudo_qubit = self.pseudoQubit(loc, z, ancilla_type=ancilla_type)
-        self.pseudo_qubits[z][loc] = pseudo_qubit
-        return pseudo_qubit
-
-    def entangle_pair(
-        self,
-        data_qubit: DataQubit,
-        ancilla_qubit: AncillaQubit,
-        key: Union[int, float, str],
-        edge: Optional[Edge] = None,
-        **kwargs,
-    ) -> None:
-        """Entangles one `data_qubit` to a `ancilla_qubit` for parity measurement.
-
-        Parameters
-        ----------
-        data_qubit : DataQubit
-            Data qubit.
-        ancilla_qubit: AncillaQubit
-            Ancilla qubit.
-        key : int, float or string
-            Key used to store the `data_qubit` in the `ancilla_qubit` .
-        edge : Edge, optional
-            The `Edge` object related to the state of the `Data_qubit` to entangle to.
-
-        See Also
-        --------
-        DataQubit
-        AncillaQubit
-        Edge
-        """
-        ancilla_qubit.parity_qubits[key] = data_qubit
-        if edge is None:
-            edge = data_qubit.edges[ancilla_qubit.ancilla_type]
-        edge.nodes += [ancilla_qubit]
-
-    """
-    ----------------------------------------------------------------------------------------
-                                            Errors
-    ----------------------------------------------------------------------------------------
-    """
 
     def init_errors(self, *error_modules: Union[str, Error], error_rates: dict = {}) -> None:
         """Initializes error modules.
@@ -230,7 +180,7 @@ class PerfectMeasurements(ABC):
 
         See Also
         --------
-        Error
+        opensurfacesim.error : Error modules.
 
         Examples
         --------
@@ -249,19 +199,97 @@ class PerfectMeasurements(ABC):
             error_type = error_module.__name__.split(".")[-1]
             self.errors[error_type] = error_module.Error(**error_rates)
 
-    def apply_errors(self, z: numtype = 0, apply_order: Optional[List[Error]] = None, **kwargs: numtype) -> None:
+    """
+    ----------------------------------------------------------------------------------------
+                                        Constructors
+    ----------------------------------------------------------------------------------------
+    """
 
+    def add_data_qubit(self, loc: Tuple[float, float], z: float = 0, **kwargs) -> DataQubit:
+        """Initilizes a data-qubit."""
+        data_qubit = self.dataQubit(loc, z)
+        data_qubit.edges["x"] = self.edge(data_qubit, "x")
+        if self.dual:
+            data_qubit.edges["z"] = self.edge(data_qubit, "z")
+        self.data_qubits[z][loc] = data_qubit
+        return data_qubit
+
+    def add_ancilla_qubit(
+        self,
+        loc: Tuple[float, float],
+        z: float = 0,
+        state_type: str = "x",
+        **kwargs,
+    ) -> AncillaQubit:
+        """Initilizes an ancilla-qubit."""
+        ancilla_qubit = self.ancillaQubit(loc, z, state_type=state_type)
+        self.ancilla_qubits[z][loc] = ancilla_qubit
+        return ancilla_qubit
+
+    def add_pseudo_qubit(
+        self,
+        loc: Tuple[float, float],
+        z: float = 0,
+        state_type: str = "x",
+        **kwargs,
+    ) -> PseudoQubit:
+        """Initilizes a pseudo-qubit on the boundary."""
+        pseudo_qubit = self.pseudoQubit(loc, z, state_type=state_type)
+        self.pseudo_qubits[z][loc] = pseudo_qubit
+        return pseudo_qubit
+
+    def entangle_pair(
+        self,
+        data_qubit: DataQubit,
+        ancilla_qubit: AncillaQubit,
+        key: Union[float, str],
+        edge: Optional[Edge] = None,
+        **kwargs,
+    ) -> None:
+        """Entangles one `data_qubit` to a `ancilla_qubit` for parity measurement.
+
+        See Also
+        --------
+        opensurfacesim.code._template.elements.DataQubit : Data-qubit class.
+        opensurfacesim.code._template.elements.AncillaQubit : Ancilla-qubit class.
+        opensurfacesim.code._template.elements.Edge : Edge class.
+        """
+        ancilla_qubit.parity_qubits[key] = data_qubit
+        if edge is None:
+            edge = data_qubit.edges[ancilla_qubit.state_type]
+        edge.add_node(ancilla_qubit)
+
+    """
+    ----------------------------------------------------------------------------------------
+                                    Errors and Measurement
+    ----------------------------------------------------------------------------------------
+    """
+
+    def apply_errors(self, z: float = 0, apply_order: Optional[List[Error]] = None, **kwargs) -> None:
+        """Applies all errors loaded in the `errors` class attribute to layer `z`.
+
+        If `apply_order` is specified, the error modules are applied in order of the error names in the list. If no order is specified, the errors are applied in a random order. Addionally, any error rate can be overriden by supplying the rate as a keyword argument e.g. `pauli_x = 0.1`.
+
+        Parameters
+        ----------
+        z : int or float, optional
+            Layer of qubits of parity measurments.
+        apply_order : list of string, optional
+            The order in which the error modules are applied.
+
+        See Also
+        --------
+        apply_error
+        """
         if not apply_order:
             apply_order = self.errors.values()
         for error_class in apply_order:
             for qubit in self.data_qubits[z].values():
-                error_class.apply_error(qubit, **kwargs)
+                self.apply_error(error_class, qubit, **kwargs)
 
-    """
-    ----------------------------------------------------------------------------------------
-                                        Measurement
-    ----------------------------------------------------------------------------------------
-    """
+    def apply_error(self, error_class: Error, qubit: Qubit, **kwargs):
+        """Applies error to qubit."""
+        error_class.apply_error(qubit, **kwargs)
 
     def measure_parity(self, ancilla_qubit: AncillaQubit, **kwargs) -> bool:
         """Applies a parity measurement on the ancilla.
@@ -284,13 +312,13 @@ class PerfectMeasurements(ABC):
         """
         parity = False
         for qubit in ancilla_qubit.parity_qubits.values():
-            edge = qubit.edges[ancilla_qubit.ancilla_type]
+            edge = qubit.edges[ancilla_qubit.state_type]
             if edge.state:
                 parity = not parity
         ancilla_qubit.state = parity
         return parity
 
-    def parity_measurement(self, z: numtype = 0, **kwargs) -> None:
+    def parity_measurement(self, z: float = 0, **kwargs) -> None:
         """Performs a round of parity measurements on layer `z`.
 
         Parameters
@@ -303,44 +331,11 @@ class PerfectMeasurements(ABC):
 
     """
     ----------------------------------------------------------------------------------------
-                                        Simulation
+                                        Others
     ----------------------------------------------------------------------------------------
     """
 
-    def simulate(self, z: numtype = 0, **kwargs):
-        """Simulate an iteration or errors and measurement.
-
-        Parameters
-        ----------
-        z : int or float, optional
-            Layer of qubits.
-        """
-        self.apply_errors(z=z, **kwargs)
-        self.parity_measurement(z=z, **kwargs)
-
-    def get_logical_state(self, z: numtype = 0, **kwargs) -> Tuple[List[bool], bool]:
-        """Returns the logical state on layer `z`.
-
-        Parameters
-        ----------
-        z : int or float, optional
-            Layer of qubits.
-        """
-        logical_state, logical_error = {}, {}
-
-        for key, operator in self.logical_operators.items():
-            state = 0
-            for ancilla_qubit in operator:
-                if ancilla_qubit.state:
-                    state = 1 - state
-            logical_state[key] = state
-            logical_error[key] = state == self.logical_state[key]
-
-        no_error = True if all(logical_error.values()) else False
-        self.logical_state = logical_state
-        return logical_state, no_error
-
-    def count_matching_weight(self, z: numtype = 0, **kwargs) -> int:
+    def count_matching_weight(self, z: float = 0, **kwargs) -> int:
         """Counts the number of matchings edges on layer `z`.
 
         Parameters
@@ -375,43 +370,56 @@ class FaultyMeasurements(PerfectMeasurements):
     ----------
     layers : int, optional
         Number of layers in 3D graph for faulty measurements.
-    pseudoEdge: PseudoEdge, optional
+    pseudoEdge : PseudoEdge, optional
         Pseudo edge class.
+    pmx : float or int, optional
+        Default bit-flip rate during measurements.
+    pmz : float or int, optional
+        Default phase-flip rate during measurements.
     """
+
+    pseudoEdge = PseudoEdge
+    dim = 3
 
     def __init__(
         self,
         size,
         *args,
         layers: Optional[int] = None,
-        pseudoEdge: PseudoEdge = PseudoEdge,
-        pmx: numtype = 0,
-        pmz: numtype = 0,
+        pmx: float = 0,
+        pmz: float = 0,
         **kwargs,
     ):
-        super().__init__(size, *args, dim=3, **kwargs)
-
+        super().__init__(size, *args, **kwargs)
         self.layers = layers if layers else size
         self.decode_layer = self.layers - 1
         self.default_faulty_measurements = dict(pmx=pmx, pmz=pmz)
-        self.pseudoEdge = pseudoEdge
         self.pseudo_edges = []
+
+    """
+    ----------------------------------------------------------------------------------------
+                                        Main functions
+    ----------------------------------------------------------------------------------------
+    """
+
+    def simulate(self, **kwargs):
+        """Simulate an iteration or errors and measurement.
+
+        On all but the final layer, the default or overriding error rates (via keyworded arguments) are applied. On the final layer, perfect measurements are applied by setting `pmx=0` and `pmz=0`.
+        """
+        # Simulate on all but final layers
+        for z in range(self.layers):
+            super().simulate(z=z, **kwargs)
+
+        # Simulate final layer with perfect measurements
+        kwargs.update(dict(pmx=0, pmz=0))
+        super().simulate(z=self.decode_layer, **kwargs)
 
     """
     ----------------------------------------------------------------------------------------
                                         Initialization
     ----------------------------------------------------------------------------------------
     """
-
-    def initialize(self, *args, **kwargs) -> None:
-        """Initilizes all data objects of the code."""
-        self.init_surface(**kwargs)
-        self.init_logical_operator(**kwargs)
-        self.logical_state = {key: False for key in self.logical_operators}
-        self.default_faulty_measurements = {
-            key: kwargs.pop(key, self.default_faulty_measurements[key]) for key in ["pmx", "pmz"]
-        }
-        self.init_errors(*args, **kwargs)
 
     def init_surface(self, **kwargs) -> None:
         """Inititates the surface code.
@@ -426,7 +434,7 @@ class FaultyMeasurements(PerfectMeasurements):
                 self.add_vertical_edge(lower, upper)
 
     def add_vertical_edge(self, lower_ancilla: AncillaQubit, upper_ancilla: AncillaQubit, **kwargs) -> None:
-        """Adds a `PseudoEdge` to connect two instances of an ancilla qubit in time.
+        """Adds a PseudoEdge to connect two instances of an ancilla qubit in time.
 
         A surface code with faulty measurements must be decoded in 3D. Instances of the same ancilla qubits in time must be connected with an edge. Here, `lower_ancilla` is an older instance of layer `z`, and 'upper_ancilla` is a newer instance of layer `z+1`.
 
@@ -439,10 +447,10 @@ class FaultyMeasurements(PerfectMeasurements):
 
         See Also
         --------
-        AncillaQubit
-        PseudoEdge
+        opensurfacesim.code._template.elementsAncillaQubit : Ancilla-qubit class.
+        opensurfacesim.code._template.elementsPseudoEdge : Pseudo-edge class.
         """
-        pseudo_edge = self.pseudoEdge(upper_ancilla, Type=upper_ancilla.ancilla_type)
+        pseudo_edge = self.pseudoEdge(upper_ancilla, edge_type=upper_ancilla.state_type)
         self.pseudo_edges.append(pseudo_edge)
         upper_ancilla.vertical_ancillas["d"] = lower_ancilla
         upper_ancilla.vertical_edges["d"] = pseudo_edge
@@ -457,7 +465,7 @@ class FaultyMeasurements(PerfectMeasurements):
     """
 
     def parity_measurement(
-        self, pmx: Optional[numtype] = None, pmz: Optional[numtype] = None, z: numtype = 0, **kwargs
+        self, pmx: Optional[float] = None, pmz: Optional[float] = None, z: float = 0, **kwargs
     ) -> None:
         """Performs a round of parity measurements on layer `z` with faulty measurements.
 
@@ -481,7 +489,7 @@ class FaultyMeasurements(PerfectMeasurements):
             self.measure_parity(ancilla_qubit)
 
             # Apply measurement error
-            pM = pmx if ancilla_qubit.ancilla_type in self.x_names else pmz
+            pM = pmx if ancilla_qubit.state_type in self.x_names else pmz
             if pM != 0 and random.random() < pM:
                 ancilla_qubit.state = 1 - ancilla_qubit.state
                 ancilla_qubit.mstate = 1
@@ -495,26 +503,9 @@ class FaultyMeasurements(PerfectMeasurements):
 
     """
     ----------------------------------------------------------------------------------------
-                                        Simulation
+                                        Others
     ----------------------------------------------------------------------------------------
     """
-
-    def simulate(self, **kwargs):
-        """Simulate an iteration or errors and measurement.
-
-        On all but the final layer, the default or overriding error rates (via keyworded arguments) are applied. On the final layer, perfect measurements are applied by setting `pmx=0` and `pmz=0`.
-        """
-        # Simulate on all but final layers
-        for z in range(self.layers):
-            super().simulate(z=z, **kwargs)
-
-        # Simulate final layer with perfect measurements
-        kwargs.update(dict(pmx=0, pmz=0))
-        super().simulate(z=self.decode_layer, **kwargs)
-
-    def get_logical_state(self, **kwargs) -> Tuple[List[bool], bool]:
-        """Returns the logical state on the decode layer."""
-        return super().get_logical_state(z=self.decode_layer)
 
     def count_matching_weight(self, *args, **kwargs) -> int:
         """Counts the number of matchings edges."""

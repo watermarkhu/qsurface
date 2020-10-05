@@ -40,6 +40,8 @@ class DataQubit(Qubit):
     ----------
     state : dict of bool
         The state of a DataQubit` is a class property that calls to each of the edges stored at the `edges` attribute and returns all edge states as a dictionary.
+    errors: dict of bool
+        Dictionary of current errors on the qubit.
     edges : dict of Edge
         Dictionary of Edge objects with the error type as key (e.g. "x" or "z").
 
@@ -55,6 +57,7 @@ class DataQubit(Qubit):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.edges = {}
+        self.errors = {}
 
     def reset(self):
         """Resets this qubit's attributes."""
@@ -119,7 +122,6 @@ class AncillaQubit(Qubit):
         self.state_type = state_type
         self.parity_qubits = {}
         self.vertical_ancillas = {}
-        self.vertical_edges = {}
         self.mstate = False
         self.state = False
 

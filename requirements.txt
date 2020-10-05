@@ -1,9 +1,8 @@
 matplotlib
+tkinter
 scipy
 numpy
 pandas
 networkx
 progiter
-pprint
-pyparsing
 termcolor

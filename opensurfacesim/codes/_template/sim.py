@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from .elements import DataQubit, AncillaQubit, PseudoQubit, Edge, PseudoEdge, Qubit
 from ...info.benchmark import BenchMarker
-from ...error._template import Error
+from ...errors._template import Error
 from typing import List, Optional, Union, Tuple
 import importlib
 import random
@@ -195,7 +195,7 @@ class PerfectMeasurements(ABC):
         """
         for error_module in error_modules:
             if type(error_module) == str:
-                error_module = importlib.import_module(".error.{}".format(error_module), package="opensurfacesim")
+                error_module = importlib.import_module(".errors.{}".format(error_module), package="opensurfacesim")
             error_type = error_module.__name__.split(".")[-1]
             self.errors[error_type] = error_module.Error(**error_rates)
 
@@ -285,11 +285,7 @@ class PerfectMeasurements(ABC):
             apply_order = self.errors.values()
         for error_class in apply_order:
             for qubit in self.data_qubits[z].values():
-                self.apply_error(error_class, qubit, **kwargs)
-
-    def apply_error(self, error_class: Error, qubit: Qubit, **kwargs):
-        """Applies error to qubit."""
-        error_class.apply_error(qubit, **kwargs)
+                error_class.apply_error(qubit, **kwargs)
 
     def measure_parity(self, ancilla_qubit: AncillaQubit, **kwargs) -> bool:
         """Applies a parity measurement on the ancilla.
@@ -453,9 +449,7 @@ class FaultyMeasurements(PerfectMeasurements):
         pseudo_edge = self.pseudoEdge(upper_ancilla, edge_type=upper_ancilla.state_type)
         self.pseudo_edges.append(pseudo_edge)
         upper_ancilla.vertical_ancillas["d"] = lower_ancilla
-        upper_ancilla.vertical_edges["d"] = pseudo_edge
         lower_ancilla.vertical_ancillas["u"] = upper_ancilla
-        lower_ancilla.vertical_edges["u"] = pseudo_edge
         pseudo_edge.nodes = [upper_ancilla, lower_ancilla]
 
     """

@@ -6,11 +6,11 @@ from matplotlib import pyplot as plt
 from matplotlib.lines import Line2D
 from matplotlib.widgets import Button
 from matplotlib.blocking_input import BlockingInput
-from ..configuration import flatten_dict, write_config, read_config
+from ..configuration import flatten_dict, get_attributes, init_config
 from collections import defaultdict as ddict
 from numpy import ndarray
 import tkinter
-import os
+
 
 
 mpl.use("TkAgg")
@@ -63,7 +63,7 @@ class Template2D(ABC):
             The current plot iteration.
         history_iter_names : list of str
             List of length `history_iters` containing a title for each iteration.
-        history_on_newest : bool
+        history_at_newest : bool
             Whether the current plot iteration is the latest or newest.
         history_event_iter : str
             String catching the keyboard input for the wanted plot iteration.
@@ -100,19 +100,20 @@ class Template2D(ABC):
                 }
             }
         """
-        config = flatten_dict(self._init_config())
+        config = flatten_dict(init_config("plot.ini"))
         for key, value in config.items():
             setattr(self, key, value)
         for key, value in kwargs.items():
             setattr(self, key, value)
+        self.plot_properties = ddict(dict)
 
         self.figure = None
+        self.figure_destroyed = False
         self.main_ax = None
         self.history_dict = ddict(dict)
         self.history_iters = 0
         self.history_iter = 0
         self.history_iter_names = ["Initial"]
-        self.history_on_newest = True
         self.history_event_iter = ""
         self.future_dict = ddict(dict)
 
@@ -134,7 +135,13 @@ class Template2D(ABC):
         self.text_box = plt.axes(self.ax_coordinates_text_box)
         self.text_box.axis("off")
         self.text = self.text_box.text(
-            0.5, 0.5, "", fontsize=10, va="center", ha="center", transform=self.text_box.transAxes
+            0.5,
+            0.5,
+            "",
+            fontsize=10,
+            va="center",
+            ha="center",
+            transform=self.text_box.transAxes,
         )
         self.canvas.draw()
 
@@ -145,36 +152,15 @@ class Template2D(ABC):
         """Closes the class figure."""
         plt.close(self.figure)
 
+    @property
+    def history_at_newest(self):
+        return self.history_iter == self.history_iters
+
     """
     -------------------------------------------------------------------------------
                                     Initialization
     -------------------------------------------------------------------------------
     """
-
-    def _init_config(self, write: bool = False, **kwargs):
-        """Reads the default and the user defined INI file.
-
-        First, the INI file stored in `opensurfaceim.plot` is read and parsed. If there exists another INI file in the working directory, the attributes defined there are read, parsed and overwrites and default values.
-
-        Parameters
-        ----------
-        write : bool
-            Writes the default configuration to the working direction of the user.
-
-        See Also
-        --------
-        opensurfacesim.configuration.write_config : Writes a INI file.
-        opensurfacesim.configuration.read_config : Reads a INI file.
-        """
-
-        config_dict = read_config(os.path.dirname(os.path.abspath(__file__)) + "/plot.ini")
-        config_path = "./plot.ini"
-        if write:
-            write_config(config_dict, config_path)
-        if os.path.exists(config_path):
-            read_config(config_path, config_dict)
-        return config_dict
-
     @abstractmethod
     def init_plot(self, **kwargs):
         """Initilizes the figure by plotting al main and recurring objects"""
@@ -213,6 +199,10 @@ class Template2D(ABC):
         if invert:
             ax.invert_yaxis()
 
+    def init_properties(self, property_dict: dict):
+        """Saves the plot properties from the class attributes into categories."""
+        for key, properties in property_dict.items():
+            self.plot_properties[key] = get_attributes(self, properties)
     """
     -------------------------------------------------------------------------------
                                     Event Handlers
@@ -235,27 +225,29 @@ class Template2D(ABC):
         wait = True
         while wait:
             try:
+
                 event = self.blocking_input(self.mpl_wait)
+
                 if event.key in ["enter", "right"]:
                     if self.history_event_iter == "":
-                        if self.history_on_newest:
+                        if self.history_at_newest:
                             wait = False
                         else:
-                            self._draw_next()
+                            wait = self._draw_next()
                     else:
                         target_iter = int(self.history_event_iter)
                         self.history_event_iter = ""
                         if target_iter <= self.history_iters:
-                            self._draw_iteration(target_iter)
+                            wait = self._draw_iteration(target_iter)
                         else:
                             print("Input iter not in range.")
                 elif event.key in ["backspace", "left"]:
-                    self._draw_prev()
+                    wait = self._draw_prev()
                 elif event.key in [str(i) for i in range(10)]:
                     self.history_event_iter += event.key
                     print("Go to iteration {} (press enter).".format(self.history_event_iter))
                 elif event.key == "n":
-                    self._draw_iteration(self.history_iters)
+                    wait = self._draw_iteration(self.history_iters)
                 elif event.key == "i":
                     print("Iterations:")
                     for i, iter_name in enumerate(self.history_iter_names):
@@ -265,10 +257,12 @@ class Template2D(ABC):
                     print(
                         "Usage:\nenter/right - next iteration\nbackspace/left - previous iteration\ni - show iterations\nn - go to newest iteration\n# - go to iteration #\n"
                     )
+                
             except tkinter.TclError:
                 print("Figure has been destroyed. Future plots will be ignored.")
                 wait = False
                 return True
+        return False
 
     """
     -------------------------------------------------------------------------------
@@ -276,20 +270,23 @@ class Template2D(ABC):
     -------------------------------------------------------------------------------
     """
 
-    def _legend_circle(self, label, marker="o", ms=10, color="w", mfc=None, mec="k", mew=2, ls="-", lw=0) -> Line2D:
+    def _legend_circle(
+        self, label, marker="o", ms=10, color="w", mfc=None, mec="k", ls="-", **kwargs
+    ) -> Line2D:
         """Returns a Line2D object that is used on the plot legend."""
         return Line2D(
             [0],
             [0],
-            lw=lw,
+            lw=self.line_width_primary,
             ls=ls,
             marker=marker,
             color=color,
             mec=mec,
-            mew=mew,
+            mew=self.line_width_primary,
             mfc=mfc,
             ms=ms,
             label=label,
+            **kwargs,
         )
 
     """
@@ -298,64 +295,110 @@ class Template2D(ABC):
     -------------------------------------------------------------------------------
     """
 
-    def draw_figure(self, output: bool = True, **kwargs):
-        text = self.history_iter_names[self.history_iter]
-        self.text.set_text(text)
-        for obj, changes in self.future_dict.pop(text, {}):
-            self.change_attributes(obj, changes)
-        for obj, changes in self.future_dict.pop(self.history_iter, {}):
-            self.change_attributes(obj, changes)
+    def draw_figure(self, new_iter_name: Optional[str] = None, output: bool = True, **kwargs):
+        """Blit the canvas and block code execution.
+
+        Blits all changes to the plot objects drawn by `draw_artist()` onto the canvas and calls for `_wait()` which blocks the code execution and catches user input for history navigation. If a new iteration is called by supplying a `new_iter_name`, we additionally check for future property changes in the `history_dict`, and draw all these planned changes before the canvas is blit.
+
+        Parameters
+        ----------
+        new_iter_name : str, optional
+            Name of the new iteration. If no name is supplied, no new iteration is called.
+        output : bool, optional
+            Prints information to the console.
+
+        See Also
+        --------
+        _wait
+        change_properties
+        """
+        if new_iter_name:
+            if self.history_at_newest:
+                self.history_iter_names.append(new_iter_name)
+                self.history_iters += 1
+                self.history_iter += 1
+                for obj, changes in self.future_dict.pop(new_iter_name, {}):
+                    self.change_properties(obj, changes)
+                for obj, changes in self.future_dict.pop(self.history_iter, {}):
+                    self.change_properties(obj, changes)
+            else:
+                print(f"Cannot add iteration {new_iter_name} to history, currently not on most recent iteration.")
+        if not (new_iter_name and self.history_at_newest):
+            new_iter_name = self.history_iter_names[self.history_iter]
+        self.text.set_text(new_iter_name)
         if output:
-            print("Drawing {}/{}: {}".format(self.history_iter, self.history_iters, text))
+            print("Drawing {}/{}: {}".format(self.history_iter, self.history_iters, new_iter_name))
         self.canvas.blit(self.main_ax.bbox)
-        return self._wait(**kwargs)
+        self.figure_destroyed = self._wait(**kwargs)
 
-    def new_iter(self, name: str = ""):
-        """Initiates new plot iteration"""
-        self.history_iter_names.append(name)
-        self.history_iters += 1
-        self.history_iter += 1
+    def _draw_from_history(self, condition: bool, direction: int, draw: bool = True, **kwargs) -> bool:
+        """Draws all stored object properties of in either +1 or -1 `direction` in the history if the `condition` is met.
 
-    def _draw_from_history(self, condition: bool, direction: int, draw: bool = True, **kwargs) -> None:
+        See Also
+        --------
+        change_properties
+        draw_figure
+        """
         if condition:
             self.history_iter += direction
             for obj, changes in self.history_dict[self.history_iter].items():
-                self.change_attributes(obj, changes)
-            self.on_newest = True if self.history_iter == self.history_iters else False
+                self.change_properties(obj, changes)
             if draw:
                 self.draw_figure(**kwargs)
         else:
             print("No history exists for this operation.")
+            return True
+        return False
 
-    def _draw_next(self, *args, **kwargs) -> None:
-        """Redraws all changes from next plot iteration onto the plot"""
-        self._draw_from_history(self.history_iter < self.history_iters, 1, **kwargs)
+    def _draw_next(self, *args, **kwargs) -> bool:
+        """Redraws all changes from next plot iteration onto the plot
 
-    def _draw_prev(self, *args, **kwargs) -> None:
-        """Redraws all changes from previous plot iteration onto the plot"""
-        self._draw_from_history(self.history_iter > 0, -1, **kwargs)
+        See Also
+        --------
+        _draw_from_history
+        """
+        return self._draw_from_history(self.history_iter < self.history_iters, 1, **kwargs)
 
-    def _draw_iteration(self, target_iter: int, **kwargs) -> None:
-        if target_iter == self.history_iter:
-            print("Already on this plot iteration.")
-        else:
-            diff = target_iter - self.history_iter
+    def _draw_prev(self, *args, **kwargs) -> bool:
+        """Redraws all changes from previous plot iteration onto the plot
+
+        See Also
+        --------
+        _draw_from_history
+        """
+        return self._draw_from_history(self.history_iter > 0, -1, **kwargs)
+
+    def _draw_iteration(self, target: int, draw: bool = True, **kwargs) -> bool:
+        """Loops over `_draw_next()` or `_draw_prev()` until the `target` plot iteration is reached.
+
+        See Also
+        --------
+        _draw_next
+        _draw_prev
+        """
+        if target != self.history_iter:
+            diff = target - self.history_iter
             if diff > 0:
                 for _ in range(diff):
                     self._draw_next(draw=False, output=False)
             else:
                 for _ in range(-diff):
                     self._draw_prev(draw=False, output=False)
-            self.draw_figure(**kwargs)
+            if draw:
+                self.draw_figure(**kwargs)
+        else:
+            print("Already on this plot iteration.")
+            return True
+        return False
 
     """
     -------------------------------------------------------------------------------
-                                    Object attributes
+                                    Object properties
     -------------------------------------------------------------------------------
     """
 
-    def _get_nested_attribute(self, attribute):
-        """Get nested color and makes np.array, which is sometimes but not at all times used for color values, to a list."""
+    def _get_nested_property(self, prop):
+        """Get nested color and makes np.array, which is sometimes used for color values, to a list."""
 
         def get_nested(value):
             if type(value) == list and type(value[0]) == list:
@@ -363,69 +406,60 @@ class Template2D(ABC):
             else:
                 return value
 
-        if type(attribute) == ndarray:
-            return get_nested(attribute.tolist())
-        elif type(attribute) == list:
-            return get_nested(attribute)
+        if type(prop) == ndarray:
+            return get_nested(prop.tolist())[:3]
+        elif type(prop) == list:
+            return get_nested(prop)[:3]
         else:
-            return attribute
+            return prop
 
-    def new_attributes(self, obj, attr_dict, overwrite=False):
+    def new_properties(self, obj, prop_dict, **kwargs):
+        """Finds the differences of the plot properties between this iteration and the previous iteration and store in history.
+
+        Changes to the plot objects in the figure can be requested via this function. New properties are supplied via the `prop_dict` that contains the properties stored at the appropiate keyword. If any of the new properties is different from its current value, this is seen as a property change. The old property value is stored in history in the previous iteration, and the new property value is stored at the new iteration. The group of new properties, stored in `next_dict`, are draw with `change_properties()`.
+
+        Parameters
+        ----------
+        obj : matplotlib object
+            Plot object whose properties are changed.
+        prop_dict : dict
+            Dictory with plot properties to change.
+
+        See Also
+        --------
+        change_properties
         """
-        Finds the differences of the plot attributes between this iteration and the previous iterations. All differences are stored as dictionaries in the history variable.
-        Makes sure that all changes are stored correctly and plot attributes are not overwritten if not explicitly defined.
-        """
-        prev_changes = self.history_dict[self.history_iter - 1]
-        next_changes = self.history_dict[self.history_iter]
+        prev_changes = self.history_dict[self.history_iter]
+        next_changes = self.history_dict[self.history_iter + 1]
         prev_dict, next_dict = {}, {}
 
-        def find_attributes(attr_dict, old_dict=None):
-            for key, new_value in attr_dict.items():
+        def find_properties(prop_dict, old_dict=None):
+            for key, new_value in prop_dict.items():
                 if old_dict and key in old_dict:
                     current_value = old_dict[key]
                 else:
-                    current_value = self.get_nested_attribute(plt.getp(obj, key))
-                new_value = self.get_nested_attribute(new_value)
+                    current_value = self._get_nested_property(plt.getp(obj, key))
+                new_value = self._get_nested_property(new_value)
                 if current_value != new_value:
                     prev_dict[key], next_dict[key] = current_value, new_value
 
-        # If record exists, find difference in object attributes
-        if not overwrite or obj not in prev_changes:
-            find_attributes(attr_dict)
+        # If record exists, find difference in object properties
+        if obj not in prev_changes:
+            find_properties(prop_dict)
         else:
             old_dict = prev_changes[obj]
-            find_attributes(attr_dict, old_dict)
-
+            find_properties(prop_dict, old_dict)
         if prev_dict:
-            if overwrite or obj not in prev_changes:
+            if obj not in prev_changes:
                 prev_changes[obj] = prev_dict
             else:
                 prev_changes[obj].update(prev_dict)
-
         if next_dict:
             next_changes[obj] = next_dict
-            self.change_attributes(obj, next_dict)
+            self.change_properties(obj, next_dict)
 
-    def change_attributes(self, object, attr_dict):
-        """
-        Redraws the attributes from the dictionary onto the plot object
-        """
-        if attr_dict:
-            plt.setp(object, **attr_dict)
-        self.main_ax.draw_artist(object)
-
-    def get_attributes(self, attribute_names: dict, name: str = "") -> dict:
-        attributes = {}
-        for key, attribute in attribute_names.items():
-            if type(attribute) == str:
-                if attribute[0] == "~":
-                    attributes[key] = attribute[1:]
-                else:
-                    try:
-                        attributes[key] = getattr(self, attribute)
-                    except:
-                        if name:
-                            print("Parameter {} from {} is not defined in plot.ini.".format(attribute, name))
-                        else:
-                            print("Parameter {} is not defined in plot.ini.".format(attribute))
-        return attributes
+    def change_properties(self, obj, prop_dict):
+        """Changes the plot properties and draw the plot object or artist."""
+        if prop_dict:
+            plt.setp(obj, **prop_dict)
+        self.main_ax.draw_artist(obj)

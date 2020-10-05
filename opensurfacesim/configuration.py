@@ -1,20 +1,19 @@
-
 from collections import defaultdict as ddict
 import configparser
 import ast
 import os
 
 
-def write_config(config_dict: dict, path:str) -> None:
-    '''Writes a configuration file to the path.
+def write_config(config_dict: dict, path: str) -> None:
+    """Writes a configuration file to the path.
 
     Parameters
     ----------
     config_dict : dict
         Dictionary of configuration parameters. Can be nested.
     path : str
-        Path to the file. Must include the desired extension. 
-    '''
+        Path to the file. Must include the desired extension.
+    """
     config = configparser.ConfigParser()
 
     for key, value in config_dict.items():
@@ -23,19 +22,19 @@ def write_config(config_dict: dict, path:str) -> None:
         else:
             config["main"][key] = value
 
-    with open(path, 'w') as configfile:
+    with open(path, "w") as configfile:
         config.write(configfile)
 
 
 def read_config(path: str, config_dict: dict = ddict(dict)) -> dict:
-    '''Reads an INI formatted configuration file and parses it to a nested dict
-    
+    """Reads an INI formatted configuration file and parses it to a nested dict
+
     Each category in the INI file will be parsed as a separate nested dictionary. A default `config_dict` can be provided with default values for the parameters. Parameters under the "main" section will be parsed in the main dictionary. All data types will be converted by `ast.literal_eval()`.
 
     Parameters
     ----------
     path : str
-        Path to the file. Must include the desired extension. 
+        Path to the file. Must include the desired extension.
     config_dict : dict, optional
         Nested dictionary of default parameters
 
@@ -65,7 +64,7 @@ def read_config(path: str, config_dict: dict = ddict(dict)) -> dict:
                 "param3": 0.1
             }
         }
-    '''
+    """
 
     config = configparser.ConfigParser()
     config.read(path)
@@ -78,7 +77,31 @@ def read_config(path: str, config_dict: dict = ddict(dict)) -> dict:
     return config_dict
 
 
-def flatten_dict(nested_dict: dict, flat_dict : dict = {}, key_prefix: str = "") -> dict:
+def init_config(ini_file, write: bool = False, **kwargs):
+    """Reads the default and the user defined INI file.
+
+    First, the INI file stored in file directory is read and parsed. If there exists another INI file in the working directory, the attributes defined there are read, parsed and overwrites and default values.
+
+    Parameters
+    ----------
+    write : bool
+        Writes the default configuration to the working direction of the user.
+
+    See Also
+    --------
+    write_config
+    read_config
+    """
+    config_dict = read_config(os.path.dirname(os.path.abspath(__file__)) + "/" + ini_file)
+    config_path = "./" + ini_file
+    if write:
+        write_config(config_dict, config_path)
+    if os.path.exists(config_path):
+        read_config(config_path, config_dict)
+    return config_dict
+
+
+def flatten_dict(nested_dict: dict, flat_dict: dict = {}, key_prefix: str = "") -> dict:
     """Flattens al nested dictionaries in `nested_dict` to a single dictionary
 
     Parameters
@@ -97,3 +120,41 @@ def flatten_dict(nested_dict: dict, flat_dict : dict = {}, key_prefix: str = "")
         else:
             flat_dict[key_prefix + key] = value
     return flat_dict
+
+
+def get_attributes(obj, attribute_names: dict, name: str = "unknown") -> dict:
+    """Gets a list of attributes stored in some object.
+
+    For most attributes from `attribute_names`, this function tries to find the attribute with the same name as the value from the dictionary. If the attribute value begins with `"~"` however, the literal value after `"~"` is taken as the attribute value.
+
+    Parameters
+    ----------
+    obj : object
+        Object to extract the attributes from.
+    attribute_names : dict of str
+        A dictionary with strings names of attributes to extract from `obj`.
+    name : str, optional
+        Optional name hint for error report.
+
+    Returns
+    -------
+    dict
+        Parsed attribute dictionary.
+
+    Example
+    -------
+        >>> get_attributes(obj, {"obj_attr": "attr_name", "literal_attr": "~red"})
+        {"obj_attr": obj.attr_name, "literal_attr": "red"}
+    """
+    attributes = {}
+    for key, attr in attribute_names.items():
+        if type(attr) == str:
+            if attr[0] == "~":
+                attributes[key] = attr[1:]
+            else:
+                try:
+                    attributes[key] = getattr(obj, attr)
+                except:
+                    print("Parameter {} from {} is not defined in {}.".format(attr, name, obj))
+
+    return attributes

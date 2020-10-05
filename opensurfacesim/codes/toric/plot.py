@@ -2,14 +2,6 @@ from .sim import PerfectMeasurements as SimPM, FaultyMeasurements as SimFM
 from .._template.plot import PerfectMeasurements as TemplatePPM, CodePlotPM as TemplateCPPM
 
 
-class PerfectMeasurements(SimPM, TemplatePPM):
-    """Plotting toric code class for perfect measurements."""
-
-    def initialize(self, *args, **kwargs) -> None:
-        super().initialize(*args, **kwargs)
-        self.figure = CodePlotPM(self, **kwargs)
-
-
 class CodePlotPM(TemplateCPPM):
     """Toric code plot for perfect measurements."""
 
@@ -29,3 +21,7 @@ class CodePlotPM(TemplateCPPM):
             for option, args in options.items()
         }
         return options[min(diff, key=diff.get)]
+
+class PerfectMeasurements(SimPM, TemplatePPM):
+    """Plotting toric code class for perfect measurements."""
+    FigureClass = CodePlotPM

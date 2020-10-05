@@ -27,19 +27,27 @@
 
 import opensurfacesim
 
-a = opensurfacesim.code._template.plot.Code_Plot_2D(0)
-a.draw_figure()
+sc = opensurfacesim.code.toric.sim.PerfectMeasurements(4)
+sc.initialize("pauli")
+sc.simulate(pauli_x=0.1)
+
+
 # %%
 import opensurfacesim
 
-pf = opensurfacesim.code.toric.plot.PerfectMeasurements(4)
-pf.initialize("pauli", "erasure")
+pf = opensurfacesim.codes.toric.sim.PerfectMeasurements(4)
+pf.initialize("pauli")
 
-print("hello")
-pf.figure._wait()
-print("world")
-pf.figure.close()
+dc = opensurfacesim.decoders.mwpm.sim.Toric(pf)
+pf.simulate(pauli_x=0.1)
+print(pf.logical_state, pf.no_error)
+dc.decode()
 
-# %%
+
+print(pf.logical_state, pf.no_error)
+# pf.plot_errors("Decoded")
+# pf.figure.close()
+
+
 
 # %%

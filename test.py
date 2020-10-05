@@ -35,16 +35,18 @@ sc.simulate(pauli_x=0.1)
 # %%
 import opensurfacesim
 
-pf = opensurfacesim.codes.toric.sim.PerfectMeasurements(4)
+pf = opensurfacesim.codes.toric.sim.PerfectMeasurements(12)
 pf.initialize("pauli")
 
 dc = opensurfacesim.decoders.mwpm.sim.Toric(pf)
-pf.simulate(pauli_x=0.1)
-print(pf.logical_state, pf.no_error)
-dc.decode()
+pf.simulate(pauli_z=0.1)
 
 
-print(pf.logical_state, pf.no_error)
+# print(pf.logical_state, pf.no_error)
+# dc.decode()
+
+
+# print(pf.logical_state, pf.no_error)
 # pf.plot_errors("Decoded")
 # pf.figure.close()
 

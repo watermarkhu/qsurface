@@ -76,6 +76,47 @@ class PerfectMeasurements(TemplatePM):
             )
         self.logical_operators = operators
 
+    def _emoji_ancilla(self, ancilla):
+        if ancilla.state_type == "x":
+            return "🟧" if ancilla.state else "🟦"
+        else:
+            return "🔶" if ancilla.state else "🔷"
+    
+    def _emoji_data(self, data):
+        if data.state["x"] and data.state["z"]:
+            return "🟡"
+        elif data.state["x"]:
+            return "🟢"
+        elif data.state["z"]:
+            return "🔴"
+        else:
+            return "⚫"
+
+
+    def emoji_print(self, z=0):
+        """
+        🟦⚫🟦⚫🟦⚫
+        ⚫🔷⚫🔷⚫🔷
+        🟦⚫🟦⚫🟦⚫
+        ⚫🔷⚫🔷⚫🔷
+        🟦⚫🟦⚫🟦⚫
+        ⚫🔷⚫🔷⚫🔷
+        """
+        surface = ""
+        for y in self.range:
+            for x in self.range:
+                surface += self._emoji_ancilla(self.ancilla_qubits[z][(x,y)])
+                surface += self._emoji_data(self.data_qubits[z][(x + .5, y)])
+            surface += "\n" 
+            for x in self.range:
+                surface += self._emoji_data(self.data_qubits[z][(x, y + .5)])
+                surface += self._emoji_ancilla(self.ancilla_qubits[z][(x+.5, y+.5)])
+            surface += "\n" 
+        print(surface)
+
+
+
+
 
 class FaultyMeasurements(TemplateFM, PerfectMeasurements):
     """Simulation toric code for faulty measurements."""

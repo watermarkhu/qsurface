@@ -101,7 +101,6 @@ class Toric(DecoderTemplate):
             dx0 = (x0 - x1) % self.code.size
             dy1 = (y1 - y0) % self.code.size
             dx1 = (x1 - x0) % self.code.size
-
             dy, yd = (dy0, "n") if dy0 < dy1 else (dy1, "s")
             dx, xd = (dx0, "e") if dx0 < dx1 else (dx1, "w")
             xv = self.walk_and_flip(v0, m0, dy, yd)

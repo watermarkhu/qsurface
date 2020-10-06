@@ -1,4 +1,4 @@
-from typing import List, Tuple
+from typing import List, Optional, Tuple
 from matplotlib import transforms
 from matplotlib.lines import Line2D
 import matplotlib.pyplot as plt
@@ -27,19 +27,19 @@ class CodePlotPM(TemplatePlotPM):
         "x_ancilla_0": {
             "facecolor": "color_qubit_face",
             "edgecolor": "color_qubit_edge",
-            },
+        },
         "x_ancilla_1": {
             "edgecolor": "color_qubit_edge",
             "facecolor": "color_x_secundary",
-            },
+        },
         "z_ancilla_0": {
             "facecolor": "color_qubit_face",
             "edgecolor": "color_qubit_edge",
-            },
+        },
         "z_ancilla_1": {
             "facecolor": "color_z_secundary",
             "edgecolor": "color_qubit_edge",
-            },
+        },
     }
 
     def __init__(self, code: TemplateSimPM, plot_properties: dict, *args, **kwargs) -> None:
@@ -49,7 +49,9 @@ class CodePlotPM(TemplatePlotPM):
         self.init_properties(plot_properties)
         self.init_plot()
 
-    def init_legend(self, legend_loc: Tuple[float, float], items: List[Line2D] = [], **kwargs) -> None:
+    def init_legend(
+        self, legend_loc: Tuple[float, float], items: List[Line2D] = [], **kwargs
+    ) -> None:
         """Initilizes the legend of the main axis of the figure.
 
         The legend of the main axis `main_ax` constists of a series of matplotlib.line.Line2D objects. The qubit, vertex and plaquettes are always in the legend for a surface code plot. Any error loaded in the code at `code.errors` will add an extra element to the legend for differentiation if an error occurs. The 'Line2D' attributes are stored at `Error.legend_attributes` of the `Error` class. Additional items can be added via the `items` argument.
@@ -75,7 +77,7 @@ class CodePlotPM(TemplatePlotPM):
                 mfc=self.color_qubit_face,
                 mec=self.color_qubit_edge,
                 marker="s",
-                ms=5
+                ms=5,
             ),
             self._legend_circle(
                 "Plaquette",
@@ -84,7 +86,7 @@ class CodePlotPM(TemplatePlotPM):
                 mfc=self.color_qubit_face,
                 mec=self.color_qubit_edge,
                 marker="D",
-                ms=5
+                ms=5,
             ),
             self._legend_circle("Qubit", mec=self.color_qubit_edge, mfc=self.color_qubit_face),
         ]
@@ -109,12 +111,12 @@ class CodePlotPM(TemplatePlotPM):
             self._plot_data(item)
         for item in self.code.ancilla_qubits[0].values():
             self._plot_ancilla(item)
-        if self.code.pseudo_qubits:
-            for item in self.code.pseudo_qubits[0].values():
-                self._plot_ancilla(item)
+        # if self.code.pseudo_qubits:
+        #     for item in self.code.pseudo_qubits[0].values():
+        #         self._plot_ancilla(item)
         self.draw_figure()
 
-    def parse_boundary_coordinates(self, *args: float) -> List[float]:
+    def parse_boundary_coordinates(self, size, *args: float) -> List[float]:
         """Parse two locations on the lattice.
 
         An unbounded surface cannot be plotted on a 2D figure. The lines on the boundary consisting of two coordinates must thus be parsed such that all lines will be plotted within the given window.
@@ -138,28 +140,29 @@ class CodePlotPM(TemplatePlotPM):
         """
         linestyles = {"x": self.line_style_primary, "z": self.line_style_secundary}
         rotations = {"x": 0, "z": 45}
+        
         trans = {
-            "x": self.main_ax.transData + transforms.ScaledTranslation(
-                -self.patch_rectangle_2d/2,
-                self.patch_rectangle_2d/2,
-                self.figure.dpi_scale_trans
+            "x": self.main_ax.transData
+            + transforms.ScaledTranslation(
+                -self.patch_rectangle_2d / 2,
+                self.patch_rectangle_2d / 2,
+                self.figure.dpi_scale_trans,
             ),
-            "z" : self.main_ax.transData + transforms.ScaledTranslation(
-                0, 
-                self.patch_rectangle_2d/2*(1/2)**(1/2),
-                self.figure.dpi_scale_trans
+            "z": self.main_ax.transData
+            + transforms.ScaledTranslation(
+                0, self.patch_rectangle_2d / 2, self.figure.dpi_scale_trans
             ),
         }
 
         item.surface_lines = {}
         for key, data in item.parity_qubits.items():
             line = Line2D(
-                self.parse_boundary_coordinates(item.loc[0], data.loc[0]),
-                self.parse_boundary_coordinates(item.loc[1], data.loc[1]),
+                self.parse_boundary_coordinates(self.code.size[0], item.loc[0], data.loc[0]),
+                self.parse_boundary_coordinates(self.code.size[1], item.loc[1], data.loc[1]),
                 ls=linestyles[item.state_type],
                 zorder=0,
                 lw=self.line_width_primary,
-                color=self.color_edge
+                color=self.color_edge,
             )
             item.surface_lines[key] = line
             self.main_ax.add_artist(line)
@@ -209,15 +212,12 @@ class PerfectMeasurements(TemplateSimPM):
             plot_properties.update(error.plot_properties)
         self.figure = self.FigureClass(self, plot_properties, **kwargs)
 
-    def apply_error(self, error_class, qubit, **kwargs):
-        """Applies error to qubit and plots via error module."""
-        error_class.apply_error(qubit, **kwargs)
-
     def apply_errors(self, *args, z: float = 0, **kwargs):
         super().apply_errors(*args, z=z, **kwargs)
-        self.plot_errors("Errors applied", z=z, **kwargs)
+        self.plot_data("Errors applied", z=z, **kwargs)
+        self.plot_ancilla("Ancilla-qubits measured", z=z, **kwargs)
 
-    def plot_errors(self, iter_name, *args, z: float = 0, **kwargs):
+    def plot_data(self, iter_name: Optional[str] = None, z: float = 0, **kwargs):
         for qubit in self.data_qubits[z].values():
             properties = {}
             for error in self.errors.values():
@@ -228,15 +228,14 @@ class PerfectMeasurements(TemplateSimPM):
             if not properties:
                 properties = self.figure.plot_properties["data_qubit"]
             self.figure.new_properties(qubit.surface_plot, properties)
-        self.figure.draw_figure(new_iter_name=iter_name)
+        if iter_name:
+            self.figure.draw_figure(new_iter_name=iter_name)
 
-
-    def parity_measurement(self, z: float = 0, **kwargs) -> None:
-
+    def plot_ancilla(self, iter_name: Optional[str] = None, z: float = 0, **kwargs) -> None:
         for ancilla_qubit in self.ancilla_qubits[z].values():
-            parity = self.measure_parity(ancilla_qubit)
-            properties = self.figure.plot_properties["{}_ancilla_{}".format(ancilla_qubit.state_type, int(parity))]
+            properties = self.figure.plot_properties[
+                "{}_ancilla_{}".format(ancilla_qubit.state_type, int(ancilla_qubit.state))
+            ]
             self.figure.new_properties(ancilla_qubit.surface_plot, properties)
-                    
-        self.figure.draw_figure(new_iter_name="Ancilla-qubits measured")
-        
+        if iter_name:
+            self.figure.draw_figure(new_iter_name=iter_name)

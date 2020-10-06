@@ -23,7 +23,7 @@ class Qubit(ABC):
     This class mainly serves as a superclass or template to other more useful qubit types, which have the apprioate subclass attributes and subclass methods. For other types to to the 'See Also' section.
     """
 
-    qubit_type = "qubit"
+    qubit_type = "Q"
 
     def __init__(self, loc: Tuple[float, float], z: float = 0, *args, **kwargs):
         self.loc = loc
@@ -52,7 +52,7 @@ class DataQubit(Qubit):
     Edge : Edge class.
     """
 
-    qubit_type = "data"
+    qubit_type = "D"
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -79,6 +79,17 @@ class DataQubit(Qubit):
                 edge.state = state
         else:
             raise TypeError("new_state must be a dictionary or tuple")
+    
+    def state_icon(self):
+        """Returns the qubit state in a colored emoji."""
+        if self.state["x"] and self.state["z"]:
+            return "🟡"
+        elif self.state["x"]:
+            return "🔴"
+        elif self.state["z"]:
+            return "🟢"
+        else:
+            return "⚪"
 
 
 class AncillaQubit(Qubit):
@@ -115,16 +126,33 @@ class AncillaQubit(Qubit):
         True
     """
 
-    qubit_type = "ancilla"
+    qubit_type = "A"
 
     def __init__(self, *args, state_type: str = "default", **kwargs):
         super().__init__(*args, **kwargs)
         self.state_type = state_type
         self.parity_qubits = {}
         self.vertical_ancillas = {}
-        self.mstate = False
-        self.state = False
+    
+    @property
+    def state(self):
+        """Applies a parity measurement on the ancilla.
 
+        The functions loops over all the data qubits in the `parity_qubits` attribute. For every edge associated with the entangled state on the data qubit, the value of a `parity` boolean is flipped.
+        """
+        parity = False
+        for data_qubit in self.parity_qubits.values():
+            edge = data_qubit.edges[self.state_type]
+            if edge.state:
+                parity = not parity
+        return parity
+
+    def state_icon(self):
+        """Returns the qubit state in a colored emoji."""
+        if self.state_type == "x":
+            return "🟧" if self.state else "🟦"
+        else:
+            return "🔶" if self.state else "🔷"
 
 class Edge(object):
     """An edge object belonging to a qubit
@@ -161,6 +189,9 @@ class Edge(object):
         self.qubit = qubit
         self.state_type = state_type
         self._nodes = []
+        self.reset()
+        
+    def reset(self):
         self.state = False
 
     def __call__(self):
@@ -184,7 +215,7 @@ class Edge(object):
             if len(self._nodes) == 2:
                 self._nodes == tuple(self._nodes)
         else:
-            raise ValueError("This edge already has two nodes.")
+            raise ValueError("This edge already has two nodes: {}".format(self._nodes))
 
 
 class PseudoQubit(AncillaQubit):
@@ -193,7 +224,7 @@ class PseudoQubit(AncillaQubit):
     Edges needs to be spanned by two nodes. For data qubits on the boundary, one of its edges additionaly requires an ancilla qubit like node, which is the PseudoQubit.
     """
 
-    qubity_type = "pseudo"
+    qubit_type = "pA"
 
 
 class PseudoEdge(Edge):

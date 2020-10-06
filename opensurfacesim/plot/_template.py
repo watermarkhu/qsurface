@@ -1,4 +1,5 @@
 from abc import ABC, abstractmethod
+import os
 from typing import Optional, Tuple
 import matplotlib
 import matplotlib as mpl
@@ -10,7 +11,6 @@ from ..configuration import flatten_dict, get_attributes, init_config
 from collections import defaultdict as ddict
 from numpy import ndarray
 import tkinter
-
 
 
 mpl.use("TkAgg")
@@ -100,7 +100,8 @@ class Template2D(ABC):
                 }
             }
         """
-        config = flatten_dict(init_config("plot.ini"))
+        file = os.path.dirname(os.path.abspath(__file__)) + "/plot.ini"
+        config = flatten_dict(init_config(file))
         for key, value in config.items():
             setattr(self, key, value)
         for key, value in kwargs.items():
@@ -123,22 +124,33 @@ class Template2D(ABC):
         self.canvas.mpl_connect("pick_event", self._pick_handler)
         self.blocking_input = BlockingKeyInput(self.figure)
 
-        # Init main axis
+
+        # Init buttons and boxes
         self.main_ax = plt.axes(self.ax_coordinates_main)
         self.main_ax.set_aspect("equal")
 
-        # Init buttons and boxes
-        self.prev_button = Button(plt.axes(self.ax_coordinates_prev_button), "Previous")
-        self.next_button = Button(plt.axes(self.ax_coordinates_next_button), "Next")
-        self.prev_button.on_clicked(self._draw_prev)
-        self.next_button.on_clicked(self._draw_next)
+        self.interact_axes = {
+            "prev_button": plt.axes(self.ax_coordinates_prev_button), 
+            "next_button": plt.axes(self.ax_coordinates_next_button)
+        }
+
+        self.interact_bodies = {
+            "prev_button": Button(self.interact_axes["prev_button"], "Previous"), 
+            "next_button": Button(self.interact_axes["next_button"], "Next")
+        }
+        self.interact_bodies["prev_button"].on_clicked(self._draw_prev)
+        self.interact_bodies["next_button"].on_clicked(self._draw_next)
+
+        self.block_box = plt.axes(self.ax_coordinates_block_box)
+        self.block_box.axis("off")
+        self.block_icon = self.block_box.scatter(0,0, color='r')
         self.text_box = plt.axes(self.ax_coordinates_text_box)
         self.text_box.axis("off")
         self.text = self.text_box.text(
             0.5,
             0.5,
             "",
-            fontsize=10,
+            fontsize=self.font_default_size,
             va="center",
             ha="center",
             transform=self.text_box.transAxes,
@@ -161,6 +173,7 @@ class Template2D(ABC):
                                     Initialization
     -------------------------------------------------------------------------------
     """
+
     @abstractmethod
     def init_plot(self, **kwargs):
         """Initilizes the figure by plotting al main and recurring objects"""
@@ -193,7 +206,7 @@ class Template2D(ABC):
             ax.set_xlim(limits[0], limits[0] + limits[2])
             ax.set_ylim(limits[1], limits[1] + limits[3])
         if title:
-            ax.set_title(title)
+            ax.set_title(title, fontsize=self.font_title_size)
         for bound in ["top", "right", "bottom", "left"]:
             ax.spines[bound].set_visible(False)
         if invert:
@@ -203,6 +216,7 @@ class Template2D(ABC):
         """Saves the plot properties from the class attributes into categories."""
         for key, properties in property_dict.items():
             self.plot_properties[key] = get_attributes(self, properties)
+
     """
     -------------------------------------------------------------------------------
                                     Event Handlers
@@ -224,10 +238,9 @@ class Template2D(ABC):
         """
         wait = True
         while wait:
+            self._set_state('g', True)
             try:
-
                 event = self.blocking_input(self.mpl_wait)
-
                 if event.key in ["enter", "right"]:
                     if self.history_event_iter == "":
                         if self.history_at_newest:
@@ -257,12 +270,22 @@ class Template2D(ABC):
                     print(
                         "Usage:\nenter/right - next iteration\nbackspace/left - previous iteration\ni - show iterations\nn - go to newest iteration\n# - go to iteration #\n"
                     )
-                
+
             except tkinter.TclError:
                 print("Figure has been destroyed. Future plots will be ignored.")
                 wait = False
                 return True
+        self._set_state("r", False)
         return False
+
+    def _set_state(self, color, axis_visibility):
+        "Set color of blocking icon."
+        for axis in self.interact_axes.values():
+            axis.set_visible(axis_visibility)
+            self.canvas.blit(axis.bbox)
+        self.block_icon.set_color(color)
+        self.block_box.draw_artist(self.block_icon)
+        self.canvas.blit(self.block_box.bbox)
 
     """
     -------------------------------------------------------------------------------
@@ -314,15 +337,17 @@ class Template2D(ABC):
         """
         if new_iter_name:
             if self.history_at_newest:
+                for obj, changes in self.future_dict.pop(new_iter_name, {}).items():
+                    self.new_properties(obj, changes)
+                for obj, changes in self.future_dict.pop(self.history_iter + 1, {}).items():
+                    self.new_properties(obj, changes)
                 self.history_iter_names.append(new_iter_name)
                 self.history_iters += 1
                 self.history_iter += 1
-                for obj, changes in self.future_dict.pop(new_iter_name, {}):
-                    self.change_properties(obj, changes)
-                for obj, changes in self.future_dict.pop(self.history_iter, {}):
-                    self.change_properties(obj, changes)
             else:
-                print(f"Cannot add iteration {new_iter_name} to history, currently not on most recent iteration.")
+                print(
+                    f"Cannot add iteration {new_iter_name} to history, currently not on most recent iteration."
+                )
         if not (new_iter_name and self.history_at_newest):
             new_iter_name = self.history_iter_names[self.history_iter]
         self.text.set_text(new_iter_name)
@@ -331,7 +356,9 @@ class Template2D(ABC):
         self.canvas.blit(self.main_ax.bbox)
         self.figure_destroyed = self._wait(**kwargs)
 
-    def _draw_from_history(self, condition: bool, direction: int, draw: bool = True, **kwargs) -> bool:
+    def _draw_from_history(
+        self, condition: bool, direction: int, draw: bool = True, **kwargs
+    ) -> bool:
         """Draws all stored object properties of in either +1 or -1 `direction` in the history if the `condition` is met.
 
         See Also
@@ -462,4 +489,3 @@ class Template2D(ABC):
         """Changes the plot properties and draw the plot object or artist."""
         if prop_dict:
             plt.setp(obj, **prop_dict)
-        self.main_ax.draw_artist(obj)

@@ -18,23 +18,21 @@ class PerfectMeasurements(TemplatePM):
         self.ancilla_qubits[z], self.data_qubits[z] = {}, {}
 
         # Add data qubits to surface
-        for y in self.range:
-            for x in self.range:
+        for y in range(self.size[1]):
+            for x in range(self.size[0]):
                 self.add_data_qubit((x + 0.5, y), z=z)
                 self.add_data_qubit((x, y + 0.5), z=z)
 
         # Add ancilla qubits to surface
-        for y in self.range:
-            for x in self.range:
+        for y in range(self.size[1]):
+            for x in range(self.size[0]):
                 star = self.add_ancilla_qubit((x, y), z=z, state_type="x")
                 self.init_parity_check(star)
 
-        # Add ancillary qubits to dual lattice
-        if self.dual:
-            for y in self.range:
-                for x in self.range:
-                    plaq = self.add_ancilla_qubit((x + 0.5, y + 0.5), z=z, state_type="z")
-                    self.init_parity_check(plaq)
+        for y in range(self.size[1]):
+            for x in range(self.size[0]):
+                plaq = self.add_ancilla_qubit((x + 0.5, y + 0.5), z=z, state_type="z")
+                self.init_parity_check(plaq)
 
     def init_parity_check(self, ancilla_qubit: AncillaQubit, **kwargs) -> None:
         """Inititates a parity check measurement.
@@ -52,10 +50,10 @@ class PerfectMeasurements(TemplatePM):
         """
         (x, y), z = ancilla_qubit.loc, ancilla_qubit.z
         checks = {
-            "e": ((x + 0.5) % self.size, y),
-            "w": ((x - 0.5) % self.size, y),
-            "n": (x, (y + 0.5) % self.size),
-            "s": (x, (y - 0.5) % self.size),
+            "e": ((x + 0.5) % self.size[0], y),
+            "w": ((x - 0.5) % self.size[0], y),
+            "n": (x, (y + 0.5) % self.size[1]),
+            "s": (x, (y - 0.5) % self.size[1]),
         }
         for key, loc in checks.items():
             if loc in self.data_qubits[z]:
@@ -64,61 +62,29 @@ class PerfectMeasurements(TemplatePM):
     def init_logical_operator(self, **kwargs) -> None:
         """Inititates the logical operators `[x1, x2, z1, z2]` of the toric code."""
         operators = {
-            "x1": [self.data_qubits[self.decode_layer][(i + 0.5, 0)].edges["x"] for i in self.range],
-            "x2": [self.data_qubits[self.decode_layer][(0, i + 0.5)].edges["x"] for i in self.range],
+            "x1": [self.data_qubits[self.decode_layer][(i, 0.5)].edges["x"] for i in range(self.size[0])],
+            "x2": [self.data_qubits[self.decode_layer][(0.5, i)].edges["x"] for i in range(self.size[1])],
+            "z1": [self.data_qubits[self.decode_layer][(i + 0.5, 0)].edges["z"] for i in range(self.size[0])],
+            "z2": [self.data_qubits[self.decode_layer][(0, i + 0.5)].edges["z"] for i in range(self.size[1])],
         }
-        if self.dual:
-            operators.update(
-                {
-                    "z1": [self.data_qubits[self.decode_layer][(i, 0.5)].edges["z"] for i in self.range],
-                    "z2": [self.data_qubits[self.decode_layer][(0.5, i)].edges["z"] for i in self.range],
-                }
-            )
         self.logical_operators = operators
 
-    def _emoji_ancilla(self, ancilla):
-        if ancilla.state_type == "x":
-            return "🟧" if ancilla.state else "🟦"
-        else:
-            return "🔶" if ancilla.state else "🔷"
-    
-    def _emoji_data(self, data):
-        if data.state["x"] and data.state["z"]:
-            return "🟡"
-        elif data.state["x"]:
-            return "🟢"
-        elif data.state["z"]:
-            return "🔴"
-        else:
-            return "⚫"
 
-
-    def emoji_print(self, z=0):
-        """
-        🟦⚫🟦⚫🟦⚫
-        ⚫🔷⚫🔷⚫🔷
-        🟦⚫🟦⚫🟦⚫
-        ⚫🔷⚫🔷⚫🔷
-        🟦⚫🟦⚫🟦⚫
-        ⚫🔷⚫🔷⚫🔷
-        """
+    def state_icons(self, z=0):
+        """Returns the surface to the console using emojies."""
         surface = ""
-        for y in self.range:
-            for x in self.range:
-                surface += self._emoji_ancilla(self.ancilla_qubits[z][(x,y)])
-                surface += self._emoji_data(self.data_qubits[z][(x + .5, y)])
+        for y in range(self.size[1]):
+            for x in range(self.size[0]):
+                surface += self.ancilla_qubits[z][(x,y)].state_icon()
+                surface += self.data_qubits[z][(x + .5, y)].state_icon()
             surface += "\n" 
-            for x in self.range:
-                surface += self._emoji_data(self.data_qubits[z][(x, y + .5)])
-                surface += self._emoji_ancilla(self.ancilla_qubits[z][(x+.5, y+.5)])
+            for x in range(self.size[0]):
+                surface += self.data_qubits[z][(x, y + .5)].state_icon()
+                surface += self.ancilla_qubits[z][(x+.5, y+.5)].state_icon()
             surface += "\n" 
         print(surface)
 
 
-
-
-
 class FaultyMeasurements(TemplateFM, PerfectMeasurements):
     """Simulation toric code for faulty measurements."""
-
     pass

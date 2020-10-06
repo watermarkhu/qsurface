@@ -25,7 +25,7 @@ class Error(TemplateError):
         "Y-error": {"mfc": "color_y_primary", "mec": "color_y_primary"},
         "Z-error": {"mfc": "color_z_primary", "mec": "color_z_primary"},
         "Erasure": dict(
-            mfc="color_background", marker="~$\u25CC$", mec="color_qubit_edge", mew="line_width_secundary", ms=12
+            mfc="color_background", marker="~$\u25CC$", mec="color_qubit_edge", ms=12
         )}
 
     def __init__(self, *args, p_erasure: numtype = 0, **kwargs) -> None:
@@ -54,7 +54,6 @@ class Error(TemplateError):
             rand = random.random()
             if rand < 0.25:
                 qubit.edges["x"].state = 1 - qubit.edges["x"].state
-
             elif rand >= 0.25 and rand < 0.5:
                 qubit.edges["z"].state = 1 - qubit.edges["z"].state
             elif rand >= 0.5 and rand < 0.75:

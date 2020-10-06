@@ -27,29 +27,41 @@
 
 import opensurfacesim
 
-sc = opensurfacesim.code.toric.sim.PerfectMeasurements(4)
-sc.initialize("pauli")
-sc.simulate(pauli_x=0.1)
-
+opensurfacesim.decoders.mwpm.get_blossom5.run()
 
 # %%
 import opensurfacesim
+pf = opensurfacesim.codes.planar.plot.PerfectMeasurements(10)
+pf.initialize("pauli", "erasure")
+dc = opensurfacesim.decoders.mwpm.plot.Planar(pf, check_compatibility=True)
 
-pf = opensurfacesim.codes.toric.sim.PerfectMeasurements(12)
+#%%
+
+pf.apply_errors(pauli_x=0.1)
+pf.state_icons()
+
+dc.decode(use_blossom5=1)
+pf.state_icons()
+print(pf.logical_state, pf.no_error)
+
+# %%
+pf.figure.close()
+
+
+
+# %%
+
+pf = opensurfacesim.codes.planar.sim.PerfectMeasurements(10)
 pf.initialize("pauli")
+dc = opensurfacesim.decoders.mwpm.sim.Planar(pf)
+succes = []
+num = 1000
+for _ in range(num):
 
-dc = opensurfacesim.decoders.mwpm.sim.Toric(pf)
-pf.simulate(pauli_z=0.1)
+    pf.apply_errors(pauli_x=0.1)
+    dc.decode(use_blossom5=1)
+    pf.logical_state
+    succes.append(pf.no_error)
 
-
-# print(pf.logical_state, pf.no_error)
-# dc.decode()
-
-
-# print(pf.logical_state, pf.no_error)
-# pf.plot_errors("Decoded")
-# pf.figure.close()
-
-
-
+print(sum(succes)/num)
 # %%

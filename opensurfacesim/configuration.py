@@ -92,8 +92,8 @@ def init_config(ini_file, write: bool = False, **kwargs):
     write_config
     read_config
     """
-    config_dict = read_config(os.path.dirname(os.path.abspath(__file__)) + "/" + ini_file)
-    config_path = "./" + ini_file
+    config_dict = read_config(ini_file)
+    config_path = "./" + ini_file.split("/")[-1]
     if write:
         write_config(config_dict, config_path)
     if os.path.exists(config_path):

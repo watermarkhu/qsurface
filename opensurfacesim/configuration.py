@@ -2,6 +2,7 @@ from collections import defaultdict as ddict
 import configparser
 import ast
 import os
+from typing import Optional
 
 
 def write_config(config_dict: dict, path: str) -> None:
@@ -26,7 +27,7 @@ def write_config(config_dict: dict, path: str) -> None:
         config.write(configfile)
 
 
-def read_config(path: str, config_dict: dict = ddict(dict)) -> dict:
+def read_config(path: str, config_dict: Optional[dict] = None) -> dict:
     """Reads an INI formatted configuration file and parses it to a nested dict
 
     Each category in the INI file will be parsed as a separate nested dictionary. A default `config_dict` can be provided with default values for the parameters. Parameters under the "main" section will be parsed in the main dictionary. All data types will be converted by `ast.literal_eval()`.
@@ -65,6 +66,8 @@ def read_config(path: str, config_dict: dict = ddict(dict)) -> dict:
             }
         }
     """
+    if config_dict is None:
+        config_dict = ddict(dict)
 
     config = configparser.ConfigParser()
     config.read(path)
@@ -72,8 +75,10 @@ def read_config(path: str, config_dict: dict = ddict(dict)) -> dict:
     for section_name, section in config._sections.items():
         section_config = config_dict if section_name == "main" else config_dict[section_name]
         for key, item in section.items():
-            section_config[key] = ast.literal_eval(item)
-
+            try: 
+                section_config[key] = ast.literal_eval(item)
+            except:
+                section_config[key] = item
     return config_dict
 
 
@@ -122,10 +127,10 @@ def flatten_dict(nested_dict: dict, flat_dict: dict = {}, key_prefix: str = "") 
     return flat_dict
 
 
-def get_attributes(obj, attribute_names: dict, name: str = "unknown") -> dict:
+def get_attributes(obj, attribute_names: dict, **kwargs) -> dict:
     """Gets a list of attributes stored in some object.
 
-    For most attributes from `attribute_names`, this function tries to find the attribute with the same name as the value from the dictionary. If the attribute value begins with `"~"` however, the literal value after `"~"` is taken as the attribute value.
+    For most attributes from `attribute_names`, this function tries to find the attribute with the same name as the value from the dictionary. If the attribute value begins with `"~"` however, the literal value after `"~"` is taken as the attribute value. A nested dictionary for `attribute_names` is also allowed. 
 
     Parameters
     ----------
@@ -143,18 +148,33 @@ def get_attributes(obj, attribute_names: dict, name: str = "unknown") -> dict:
 
     Example
     -------
+    Get attribute `attr_name` from object and parse `literal_attr` as string. 
+
         >>> get_attributes(obj, {"obj_attr": "attr_name", "literal_attr": "~red"})
         {"obj_attr": obj.attr_name, "literal_attr": "red"}
+    
+    Parsed nested dict of attribute names.
+
+        >>> get_attributes(obj {
+                "nested_attributes": {
+                    "obj_attr": "attr_name",
+                }
+                "unnested_attribute": "unnested_name"
+            })
+        {"nested_attributes": {"obj_attr": obj.attr_name}, "unnested_attribute": obj.unnested_name}
     """
     attributes = {}
     for key, attr in attribute_names.items():
-        if type(attr) == str:
-            if attr[0] == "~":
+        if type(attr) == dict:      # Get nested dictionaries
+            attributes[key] = get_attributes(obj, attr)
+        elif type(attr) == str:     # Parse if attribute is string
+            if attr[0] == "~":      # Save literal string value
                 attributes[key] = attr[1:]
-            else:
+            else:                   # Get attribute from obj
                 try:
                     attributes[key] = getattr(obj, attr)
                 except:
-                    print("Parameter {} from {} is not defined in {}.".format(attr, name, obj))
-
+                    attributes[key] = attr
+        else:
+            attributes[key] = attr
     return attributes

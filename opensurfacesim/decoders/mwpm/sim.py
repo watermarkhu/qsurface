@@ -38,7 +38,7 @@ class Toric(DecoderTemplate):
                         plaqs.append(ancilla)
                         dplaqs.append(ancillas[dlayer][ancilla.loc])
                     else:
-                        plaqs.append(ancilla)
+                        stars.append(ancilla)
                         dstars.append(ancillas[dlayer][ancilla.loc])
         self.decode_group(plaqs, dplaqs, **kwargs)
         self.decode_group(stars, dstars, **kwargs)
@@ -112,9 +112,9 @@ class Toric(DecoderTemplate):
             (x0, y0), z0 = q0.loc, q0.z
             for i1, q1 in enumerate(qubits[i0 + 1 :]):
                 (x1, y1), z1 = q1.loc, q1.z
-                wx = (x0 - x1) % (size[0])
-                wy = (y0 - y1) % (size[1])
-                wz = abs(z0 - z1)
+                wx = int(x0 - x1) % (size[0])
+                wy = int(y0 - y1) % (size[1])
+                wz = int(abs(z0 - z1))
                 weight = min([wy, size[1] - wy]) + min([wx, size[0] - wx]) + wz
                 edges.append([i0, i1 + i0 + 1, weight])
         return edges
@@ -219,9 +219,9 @@ class Planar(Toric):
             (x0, y0), z0 = q0.loc, q0.z
             for i1, q1 in enumerate(qubits[i0 + 1 : mid]):
                 (x1, y1), z1 = q1.loc, q1.z
-                wx = abs(x0 - x1)
-                wy = abs(y0 - y1)
-                wz = abs(z0 - z1)
+                wx = int(abs(x0 - x1))
+                wy = int(abs(y0 - y1))
+                wz = int(abs(z0 - z1))
                 weight = wy + wx + wz
                 edges.append([i0, i1 + i0 + 1, weight])
 
@@ -234,8 +234,8 @@ class Planar(Toric):
         for i in range(mid):
             (xs, ys) = qubits[i].loc
             (xb, yb) = qubits[mid + i].loc
-            weight = abs(xb - xs) if qubits[i].state_type == "x" else abs(yb - ys)
-            edges.append([i, mid + i, weight])
+            weight = xb - xs if qubits[i].state_type == "x" else yb - ys
+            edges.append([i, mid + i, int(abs(weight))])
         return edges
 
     def apply_matching(self, layered_matchings, decode_matchings, size):
@@ -252,7 +252,7 @@ class Planar(Toric):
         Computes the distance or number of walks and direction between inputted nodes in x and y directions
         """
         (x0, y0), (x1, y1) = q0.loc, q1.loc
-        dx, dy = x0 - x1, y0 - y1
+        dx, dy = int(x0 - x1), int(y0 - y1)
         yd = "s" if dy > 0 else "n"
         xd = "e" if dx > 0 else "w"
         return abs(dx), abs(dy), xd, yd

@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from .elements import DataQubit, AncillaQubit, PseudoQubit, Edge, PseudoEdge, Qubit
 from ...info.benchmark import BenchMarker
-from ...errors._template import Error
+from ...errors._template import Sim as Error
 from typing import List, Optional, Union, Tuple
 import importlib
 import random
@@ -28,7 +28,7 @@ class PerfectMeasurements(ABC):
     pseudo_qubits: dict of dict of PseudoQubit
         See notes.
     errors : dict of Error
-        Dictionary of error modules with the module name as key. All error modules loaded in `errors` will be applied during a simulation by `apply_errors`.
+        Dictionary of error modules with the module name as key. All error modules loaded in `errors` will be applied during a simulation by `random_errors`.
     logical_operators : dict of list of Edge
         Dictionary with lists of Edges that from a trivial loop over the surface and correspond to a logical operator. The logical state of each operator can be obtained by the state of each Edge in the list.
     logical_state : dict of bool
@@ -121,10 +121,10 @@ class PerfectMeasurements(ABC):
         #     See Also
         #     --------
         #     opensurfacesim.error : Error modules.
-        #     apply_errors
+        #     random_errors
         #     parity_measurement
         #     """
-        #     self.apply_errors(z=z, apply_order=error_order, **kwargs)
+        #     self.random_errors(z=z, apply_order=error_order, **kwargs)
         #     self.parity_measurement(z=z, **kwargs)
 
     @property
@@ -165,6 +165,7 @@ class PerfectMeasurements(ABC):
         """Inititates the logical operators."""
         pass
 
+
     def init_errors(
         self, *error_modules: Union[str, Error], error_rates: dict = {}
     ) -> None:
@@ -199,8 +200,12 @@ class PerfectMeasurements(ABC):
                 error_module = importlib.import_module(
                     ".errors.{}".format(error_module), package="opensurfacesim"
                 )
-            error_type = error_module.__name__.split(".")[-1]
-            self.errors[error_type] = error_module.Error(**error_rates)
+            self._init_error(error_module, error_rates)
+
+    def _init_error(self, error_module, error_rates):
+        error_type = error_module.__name__.split(".")[-1]
+        self.errors[error_type] = error_module.Sim(**error_rates)
+
 
     """
     ----------------------------------------------------------------------------------------
@@ -270,7 +275,7 @@ class PerfectMeasurements(ABC):
     ----------------------------------------------------------------------------------------
     """
 
-    def apply_errors(
+    def random_errors(
         self, z: float = 0, apply_order: Optional[List[Error]] = None, **kwargs
     ) -> None:
         """Applies all errors loaded in the `errors` class attribute to layer `z`.
@@ -288,7 +293,7 @@ class PerfectMeasurements(ABC):
             apply_order = self.errors.values()
         for error_class in apply_order:
             for qubit in self.data_qubits[z].values():
-                error_class.apply_error(qubit, **kwargs)
+                error_class.random_error(qubit, **kwargs)
 
     # @staticmethod
     # def measure_parity(ancilla_qubit: AncillaQubit, **kwargs) -> bool:

@@ -124,7 +124,6 @@ class Template2D(ABC):
         self.canvas.mpl_connect("pick_event", self._pick_handler)
         self.blocking_input = BlockingKeyInput(self.figure)
 
-
         # Init buttons and boxes
         self.main_ax = plt.axes(self.ax_coordinates_main)
         self.main_ax.set_aspect("equal")
@@ -185,6 +184,7 @@ class Template2D(ABC):
         title: str = "",
         invert: bool = True,
         ax: Optional[mpl.axes.Axes] = None,
+        **kwargs
     ) -> None:
         """(Main) Axis settings function.
 
@@ -211,11 +211,6 @@ class Template2D(ABC):
             ax.spines[bound].set_visible(False)
         if invert:
             ax.invert_yaxis()
-
-    def init_properties(self, property_dict: dict):
-        """Saves the plot properties from the class attributes into categories."""
-        for key, properties in property_dict.items():
-            self.plot_properties[key] = get_attributes(self, properties)
 
     """
     -------------------------------------------------------------------------------
@@ -292,22 +287,14 @@ class Template2D(ABC):
                                     Legend functions
     -------------------------------------------------------------------------------
     """
-
-    def _legend_circle(
-        self, label, marker="o", ms=10, color="w", mfc=None, mec="k", ls="-", **kwargs
-    ) -> Line2D:
+    #marker="o", ms=10, color="w", mfc=None, mec="k", ls="-"
+    def _legend_circle(self, label: str, **kwargs) -> Line2D:
         """Returns a Line2D object that is used on the plot legend."""
         return Line2D(
             [0],
             [0],
-            lw=self.line_width_primary,
-            ls=ls,
-            marker=marker,
-            color=color,
-            mec=mec,
-            mew=self.line_width_primary,
-            mfc=mfc,
-            ms=ms,
+            lw=self.legend_line_width,
+            mew=self.legend_line_width,
             label=label,
             **kwargs,
         )

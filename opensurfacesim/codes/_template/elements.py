@@ -104,9 +104,9 @@ class AncillaQubit(Qubit):
     Attributes
     ----------
     state : bool
-        Result of the stabilizer measurement on this ancilla qubit.
-    mstate : bool
-        Boolean indicating a measurement error on this ancilla qubit.
+        Property attribute that measures the parity of the qubits in `parity_qubits`.
+    measured_state : bool
+        The result of the last parity measurement.
     parity_qubits : dict of DataQubit
         All data_qubits in this dictionary are entangled to the current ancilla qubit for stabilizer measurements.
     vertical_ancillas : dict of AncillaQubit
@@ -131,6 +131,7 @@ class AncillaQubit(Qubit):
     def __init__(self, *args, state_type: str = "default", **kwargs):
         super().__init__(*args, **kwargs)
         self.state_type = state_type
+        self.measured_state = None
         self.parity_qubits = {}
         self.vertical_ancillas = {}
     
@@ -145,6 +146,7 @@ class AncillaQubit(Qubit):
             edge = data_qubit.edges[self.state_type]
             if edge.state:
                 parity = not parity
+        self.measured_state = parity
         return parity
 
     def state_icon(self):

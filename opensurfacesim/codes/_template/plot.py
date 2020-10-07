@@ -1,9 +1,10 @@
+import os
 from typing import List, Optional, Tuple
 from matplotlib import transforms
 from matplotlib.lines import Line2D
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import plot
-from ...configuration import get_attributes
+from ...configuration import get_attributes, init_config
 from ...plot._template import Template2D as TemplatePlotPM
 from .sim import PerfectMeasurements as TemplateSimPM, FaultyMeasurements as TemplateSimFM
 
@@ -18,39 +19,34 @@ class CodePlotPM(TemplatePlotPM):
     """
 
     main_boundary = None
-    legend_loc = (1, 1)
-    base_properties = {
-        "data_qubit": {
-            "facecolor": "color_qubit_face",
-            "edgecolor": "color_qubit_edge",
-        },
-        "x_ancilla_0": {
-            "facecolor": "color_qubit_face",
-            "edgecolor": "color_qubit_edge",
-        },
-        "x_ancilla_1": {
-            "edgecolor": "color_qubit_edge",
-            "facecolor": "color_x_secundary",
-        },
-        "z_ancilla_0": {
-            "facecolor": "color_qubit_face",
-            "edgecolor": "color_qubit_edge",
-        },
-        "z_ancilla_1": {
-            "facecolor": "color_z_secundary",
-            "edgecolor": "color_qubit_edge",
-        },
-    }
 
-    def __init__(self, code: TemplateSimPM, plot_properties: dict, *args, **kwargs) -> None:
+    def __init__(self, code: TemplateSimPM, *args, **kwargs) -> None:
         self.code = code
         super().__init__(*args, init_plot=False, **kwargs)
-        plot_properties.update(self.base_properties)
-        self.init_properties(plot_properties)
-        self.init_plot()
+        self.plot_properties.update(
+            get_attributes(
+                self,
+                init_config(
+                    os.path.abspath(
+                        os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir)
+                    )
+                    + "/plot_codes.ini"
+                ),
+            )
+        )
+
+    def init_plot(self, **kwargs) -> None:
+        title = "{} lattice".format(str(self.code.__class__.__module__).split(".")[-2])
+        self.init_axis(self.main_boundary, title=title, **kwargs)
+        self.init_legend(self.legend_main_loc, loc="upper right", ncol=1, **kwargs)
+        for item in self.code.data_qubits[0].values():
+            self._plot_data(item)
+        for item in self.code.ancilla_qubits[0].values():
+            self._plot_ancilla(item)
+        self.draw_figure()
 
     def init_legend(
-        self, legend_loc: Tuple[float, float], items: List[Line2D] = [], **kwargs
+        self, legend_loc: Tuple[float, float], legend_items: List[Line2D] = [], **kwargs
     ) -> None:
         """Initilizes the legend of the main axis of the figure.
 
@@ -71,50 +67,25 @@ class CodePlotPM(TemplatePlotPM):
         # Main legend items
         self.lh = [
             self._legend_circle(
-                "Vertex",
-                ls="-",
+                "Qubit",
+                marker="o",
                 color=self.color_edge,
-                mfc=self.color_qubit_face,
                 mec=self.color_qubit_edge,
-                marker="s",
-                ms=5,
-            ),
-            self._legend_circle(
-                "Plaquette",
-                ls="--",
-                color=self.color_edge,
                 mfc=self.color_qubit_face,
-                mec=self.color_qubit_edge,
-                marker="D",
-                ms=5,
-            ),
-            self._legend_circle("Qubit", mec=self.color_qubit_edge, mfc=self.color_qubit_face),
+                ms=self.legend_marker_size,
+            )
         ]
-        item_names = ["Vertex", "Plaquette"]
+        item_names = []
         # Error legend items
         for error in self.code.errors.values():
-            for name, attribute_names in error.legend_attributes.items():
+            for name, properties in error._get_legend_properties().items():
                 if name not in item_names:
-                    attributes = get_attributes(self, attribute_names, name=name)
-                    self.lh.append(self._legend_circle(name, **attributes))
+                    self.lh.append(self._legend_circle(name, **properties))
                     item_names.append(name)
 
-        self.lh += items
+        self.lh += legend_items
         if legend_loc:
             self.main_ax.legend(handles=self.lh, bbox_to_anchor=legend_loc, **kwargs)
-
-    def init_plot(self, **kwargs) -> None:
-        title = "{} lattice".format(str(self.code.__class__.__module__).split(".")[-2])
-        self.init_axis(self.main_boundary, title=title)
-        self.init_legend(self.legend_loc, loc="upper right", ncol=1)
-        for item in self.code.data_qubits[0].values():
-            self._plot_data(item)
-        for item in self.code.ancilla_qubits[0].values():
-            self._plot_ancilla(item)
-        # if self.code.pseudo_qubits:
-        #     for item in self.code.pseudo_qubits[0].values():
-        #         self._plot_ancilla(item)
-        self.draw_figure()
 
     def parse_boundary_coordinates(self, size, *args: float) -> List[float]:
         """Parse two locations on the lattice.
@@ -140,7 +111,7 @@ class CodePlotPM(TemplatePlotPM):
         """
         linestyles = {"x": self.line_style_primary, "z": self.line_style_secundary}
         rotations = {"x": 0, "z": 45}
-        
+
         trans = {
             "x": self.main_ax.transData
             + transforms.ScaledTranslation(
@@ -189,7 +160,7 @@ class CodePlotPM(TemplatePlotPM):
             picker=self.interact_pick_radius,
             zorder=1,
             lw=self.line_width_primary,
-            **self.plot_properties["data_qubit"]
+            **self.plot_properties["data_00"]
         )
         self.main_ax.add_artist(item.surface_plot)
         item.surface_plot.object = item
@@ -206,28 +177,48 @@ class PerfectMeasurements(TemplateSimPM):
         self.figure_destroyed = False
 
     def initialize(self, *args, **kwargs) -> None:
+        # First load figure to get properties
+        self.figure = self.FigureClass(self, **kwargs)
+        # Initialize lattice, error initilization must have figure properties
         super().initialize(*args, **kwargs)
-        plot_properties = {}
-        for error in self.errors.values():
-            plot_properties.update(error.plot_properties)
-        self.figure = self.FigureClass(self, plot_properties, **kwargs)
+        # Draw figure with plot elements from errors
+        self.figure.init_plot()
 
-    def apply_errors(self, *args, z: float = 0, **kwargs):
-        super().apply_errors(*args, z=z, **kwargs)
+    def _init_error(self, error_module, error_rates):
+        error_type = error_module.__name__.split(".")[-1]
+        self.errors[error_type] = error_module.Plot(self.figure, **error_rates)
+
+    def random_errors(self, *args, z: float = 0, **kwargs):
+        super().random_errors(*args, z=z, **kwargs)
+        # self.figure.draw_figure(new_iter_name="Errors applied")
         self.plot_data("Errors applied", z=z, **kwargs)
         self.plot_ancilla("Ancilla-qubits measured", z=z, **kwargs)
 
     def plot_data(self, iter_name: Optional[str] = None, z: float = 0, **kwargs):
         for qubit in self.data_qubits[z].values():
-            properties = {}
-            for error in self.errors.values():
-                names = error.get_draw_properties(qubit)
-                for name in names:
-                    if name not in properties:
-                        properties.update(self.figure.plot_properties[name])
-            if not properties:
-                properties = self.figure.plot_properties["data_qubit"]
+
+            x_state = int(qubit.edges["x"].state)
+            z_state = int(qubit.edges["z"].state)
+            properties = self.figure.plot_properties["data_{}{}".format(x_state,z_state)]
             self.figure.new_properties(qubit.surface_plot, properties)
+
+            # if qubit.edges["x"].state and qubit.edges["z"].state:
+            # elif qubit.edges["x"].state:
+            #     self.figure.new_properties(qubit.surface_plot, self.plot_properties["x_state"])
+            # elif qubit.edges["z"].state:
+            #     self.figure.new_properties(qubit.surface_plot, self.plot_properties["z_state"])
+            # else:
+            #     self.figure.new_properties(qubit.surface_plot, self.plot_properties["normal"])
+
+            # properties = {}
+            # for error in self.errors.values():
+            #     names = error.get_draw_properties(qubit)
+            #     for name in names:
+            #         if name not in properties:
+            #             properties.update(self.figure.plot_properties[name])
+            # if not properties:
+            #     properties = self.figure.plot_properties["data_qubit"]
+            # self.figure.new_properties(qubit.surface_plot, properties)
         if iter_name:
             self.figure.draw_figure(new_iter_name=iter_name)
 

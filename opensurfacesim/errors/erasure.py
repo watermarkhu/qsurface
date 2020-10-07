@@ -1,12 +1,9 @@
-from typing import List, Optional, Union
-from ._template import Error as TemplateError
+from typing import Optional
+from ._template import Sim as TemplateSim, Plot as TemplatePlot
 import random
 
 
-numtype = Union[int, float]
-
-
-class Error(TemplateError):
+class Sim(TemplateSim):
     """Erasure error class.
 
     Parameters
@@ -14,25 +11,12 @@ class Error(TemplateError):
     p_erasure : float or int, optional
         Default probability of erasure errors.
     """
-    plot_properties = {
-        "x_error": {"facecolor": "color_x_primary", "edgecolor": "color_qubit_edge"},
-        "y_error": {"facecolor": "color_y_primary", "edgecolor": "color_qubit_edge"},
-        "z_error": {"facecolor": "color_z_primary", "edgecolor": "color_qubit_edge"},
-        "erasure": {"linestyle": "line_style_tertiary"}
-    }
-    legend_attributes = {
-        "X-error": {"mfc": "color_x_primary", "mec": "color_x_primary"},
-        "Y-error": {"mfc": "color_y_primary", "mec": "color_y_primary"},
-        "Z-error": {"mfc": "color_z_primary", "mec": "color_z_primary"},
-        "Erasure": dict(
-            mfc="color_background", marker="~$\u25CC$", mec="color_qubit_edge", ms=12
-        )}
 
-    def __init__(self, *args, p_erasure: numtype = 0, **kwargs) -> None:
+    def __init__(self, *args, p_erasure: float = 0, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.default_error_rates = {"p_erasure": p_erasure}
 
-    def apply_error(self, qubit, p_erasure: Optional[numtype] = None, **kwargs):
+    def random_error(self, qubit, p_erasure: Optional[float] = None, **kwargs):
         """Applies an erasure error.
 
         Parameters
@@ -50,26 +34,24 @@ class Error(TemplateError):
             p_erasure = self.default_error_rates["p_erasure"]
 
         if p_erasure != 0 and random.random() < p_erasure:
-            qubit.errors["erasure"] = True
-            rand = random.random()
-            if rand < 0.25:
-                qubit.edges["x"].state = 1 - qubit.edges["x"].state
-            elif rand >= 0.25 and rand < 0.5:
-                qubit.edges["z"].state = 1 - qubit.edges["z"].state
-            elif rand >= 0.5 and rand < 0.75:
-                qubit.edges["x"].state = 1 - qubit.edges["x"].state
-                qubit.edges["z"].state = 1 - qubit.edges["z"].state
+            self.erasure_error(qubit)
+
+    def erasure_error(self, qubit):
+        qubit.reset()
 
 
-    def get_draw_properties(self, qubit, **kwargs) -> List[str]:
+class Plot(TemplatePlot, Sim):
 
-        property_names = []
-        if qubit.errors.get("erasure", False):
-            property_names.append("erasure")
-        if qubit.edges["x"].state and qubit.edges["z"].state:
-            property_names.append("y_error")
-        elif qubit.edges["x"].state:
-            property_names.append("x_error")
-        elif qubit.edges["z"].state:
-            property_names.append("z_error")
-        return property_names
+    legend_items = ["Erasure"]
+
+    def erasure_error(self, qubit):
+        super().erasure_error(qubit)
+        self.figure.new_properties(qubit.surface_plot, self.plot_properties["erased"])
+        future_properties = self.plot_properties["non_erased"]
+        future_objs = self.figure.future_dict[self.figure.history_iter + 2]
+
+        if qubit.surface_plot in future_objs:
+            future_objs[qubit.surface_plot].update(future_properties)
+        else:
+            future_objs[qubit.surface_plot] = future_properties
+

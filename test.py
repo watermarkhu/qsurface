@@ -31,21 +31,14 @@ opensurfacesim.decoders.mwpm.get_blossom5.run()
 
 # %%
 import opensurfacesim
-pf = opensurfacesim.codes.planar.plot.PerfectMeasurements(6)
+pf = opensurfacesim.codes.planar.plot.PerfectMeasurements(8)
 pf.initialize("pauli", "erasure")
 dc = opensurfacesim.decoders.mwpm.plot.Planar(pf, check_compatibility=True)
 
 #%%
 
-pf.random_errors(p_erasure=0.1, p_bitflip=0)
+pf.random_errors(p_erasure=0.07, p_bitflip=0.05, p_phaseflip=0.05)
 pf.state_icons()
-
-#%%
-
-pf.random_errors(p_bitflip=0.11)
-pf.state_icons()
-
-#%%
 
 dc.decode(use_blossom5=1)
 pf.state_icons()

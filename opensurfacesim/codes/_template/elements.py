@@ -79,7 +79,7 @@ class DataQubit(Qubit):
                 edge.state = state
         else:
             raise TypeError("new_state must be a dictionary or tuple")
-    
+
     def state_icon(self):
         """Returns the qubit state in a colored emoji."""
         if self.state["x"] and self.state["z"]:
@@ -134,7 +134,7 @@ class AncillaQubit(Qubit):
         self.measured_state = None
         self.parity_qubits = {}
         self.vertical_ancillas = {}
-    
+
     @property
     def state(self):
         """Applies a parity measurement on the ancilla.
@@ -155,6 +155,7 @@ class AncillaQubit(Qubit):
             return "🟧" if self.state else "🟦"
         else:
             return "🔶" if self.state else "🔷"
+
 
 class Edge(object):
     """An edge object belonging to a qubit
@@ -192,7 +193,7 @@ class Edge(object):
         self.state_type = state_type
         self._nodes = []
         self.reset()
-        
+
     def reset(self):
         self.state = False
 

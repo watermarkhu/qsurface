@@ -21,28 +21,6 @@ class CodePlotPM(TemplateCPPM):
         }
         return options[min(diff, key=diff.get)]
     
-    def init_plot(self, **kwargs) -> None:
-        items = [
-            self._legend_circle(
-                "Vertex",
-                ls="-",
-                color=self.color_edge,
-                mfc=self.color_qubit_face,
-                mec=self.color_qubit_edge,
-                marker="s",
-                ms=5,
-            ),
-            self._legend_circle(
-                "Plaquette",
-                ls="--",
-                color=self.color_edge,
-                mfc=self.color_qubit_face,
-                mec=self.color_qubit_edge,
-                marker="D",
-                ms=5,
-            )
-        ]
-        super().init_plot(legend_items=items, **kwargs)
 
 class PerfectMeasurements(SimPM, TemplatePPM):
     """Plotting toric code class for perfect measurements."""

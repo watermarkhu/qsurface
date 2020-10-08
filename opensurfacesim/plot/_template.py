@@ -7,6 +7,7 @@ from matplotlib import pyplot as plt
 from matplotlib.lines import Line2D
 from matplotlib.widgets import Button
 from matplotlib.blocking_input import BlockingInput
+from numpy.core import overrides
 from ..configuration import flatten_dict, get_attributes, init_config
 from collections import defaultdict as ddict
 from numpy import ndarray
@@ -117,6 +118,8 @@ class Template2D(ABC):
         self.history_iter_names = ["Initial"]
         self.history_event_iter = ""
         self.future_dict = ddict(dict)
+        self.temporary_changes = ddict(dict)
+        self.temporary_saved = ddict(dict)
 
         # Init figure object
         self.figure = plt.figure(figsize=(self.scale_figure_length, self.scale_figure_height))
@@ -127,11 +130,15 @@ class Template2D(ABC):
         # Init buttons and boxes
         self.main_ax = plt.axes(self.ax_coordinates_main)
         self.main_ax.set_aspect("equal")
+        self.legend_ax = plt.axes(self.ax_coordinates_legend_box)
+        self.legend_ax.axis("off")
 
         self.interact_axes = {
             "prev_button": plt.axes(self.ax_coordinates_prev_button), 
             "next_button": plt.axes(self.ax_coordinates_next_button)
         }
+        for body in self.interact_axes.values():
+            body.active = True
 
         self.interact_bodies = {
             "prev_button": Button(self.interact_axes["prev_button"], "Previous"), 
@@ -233,9 +240,15 @@ class Template2D(ABC):
         """
         wait = True
         while wait:
-            self._set_state('g', True)
+            self._set_figure_state('g')
             try:
                 event = self.blocking_input(self.mpl_wait)
+
+                # Catch next button if on most recent
+                if hasattr(event, "button"):
+                    if event.button == 1 and event.inaxes == self.interact_axes["next_button"] and self.history_iter == self.history_iters:
+                        wait = False
+                
                 if event.key in ["enter", "right"]:
                     if self.history_event_iter == "":
                         if self.history_at_newest:
@@ -270,17 +283,21 @@ class Template2D(ABC):
                 print("Figure has been destroyed. Future plots will be ignored.")
                 wait = False
                 return True
-        self._set_state("r", False)
+        self._set_figure_state("r", False)
+        self.canvas.draw()
         return False
 
-    def _set_state(self, color, axis_visibility):
+    def _set_figure_state(self, color, override=None):
         "Set color of blocking icon."
-        for axis in self.interact_axes.values():
-            axis.set_visible(axis_visibility)
-            self.canvas.blit(axis.bbox)
+        for ax in self.interact_axes.values():
+            if override is None:
+                ax.set_visible(ax.active)
+            else:
+                ax.set_visible(override)
         self.block_icon.set_color(color)
         self.block_box.draw_artist(self.block_icon)
         self.canvas.blit(self.block_box.bbox)
+
 
     """
     -------------------------------------------------------------------------------
@@ -337,9 +354,11 @@ class Template2D(ABC):
                 )
         if not (new_iter_name and self.history_at_newest):
             new_iter_name = self.history_iter_names[self.history_iter]
-        self.text.set_text(new_iter_name)
+                
+        text =  "{}/{}: {}".format(self.history_iter, self.history_iters, new_iter_name)
+        self.text.set_text(text)
         if output:
-            print("Drawing {}/{}: {}".format(self.history_iter, self.history_iters, new_iter_name))
+            print("Drawing", text)
         self.canvas.blit(self.main_ax.bbox)
         self.figure_destroyed = self._wait(**kwargs)
 
@@ -354,6 +373,12 @@ class Template2D(ABC):
         draw_figure
         """
         if condition:
+            # Save temporary changes
+            if self.temporary_changes:
+                for obj, prop_dict in self.temporary_changes.items():
+                    self.new_properties(obj, prop_dict, saved_dict=self.temporary_saved.pop(obj))
+                self.temporary_changes = {}
+
             self.history_iter += direction
             for obj, changes in self.history_dict[self.history_iter].items():
                 self.change_properties(obj, changes)
@@ -410,8 +435,8 @@ class Template2D(ABC):
                                     Object properties
     -------------------------------------------------------------------------------
     """
-
-    def _get_nested_property(self, prop):
+    @staticmethod
+    def _get_nested_property(prop):
         """Get nested color and makes np.array, which is sometimes used for color values, to a list."""
 
         def get_nested(value):
@@ -427,7 +452,21 @@ class Template2D(ABC):
         else:
             return prop
 
-    def new_properties(self, obj, prop_dict, **kwargs):
+    @classmethod
+    def find_properties(cls, obj, new_changes, old_changes):
+        prev_dict, next_dict = {}, {}
+        for key, new_value in new_changes.items():
+            if key in old_changes:
+                current_value = old_changes[key]
+            else:
+                current_value = cls._get_nested_property(plt.getp(obj, key))
+            new_value = cls._get_nested_property(new_value)
+            if current_value != new_value:
+                prev_dict[key], next_dict[key] = current_value, new_value
+        return prev_dict, next_dict
+
+
+    def new_properties(self, obj, prop_dict, saved_dict={}, **kwargs):
         """Finds the differences of the plot properties between this iteration and the previous iteration and store in history.
 
         Changes to the plot objects in the figure can be requested via this function. New properties are supplied via the `prop_dict` that contains the properties stored at the appropiate keyword. If any of the new properties is different from its current value, this is seen as a property change. The old property value is stored in history in the previous iteration, and the new property value is stored at the new iteration. The group of new properties, stored in `next_dict`, are draw with `change_properties()`.
@@ -443,34 +482,42 @@ class Template2D(ABC):
         --------
         change_properties
         """
-        prev_changes = self.history_dict[self.history_iter]
-        next_changes = self.history_dict[self.history_iter + 1]
-        prev_dict, next_dict = {}, {}
-
-        def find_properties(prop_dict, old_dict=None):
-            for key, new_value in prop_dict.items():
-                if old_dict and key in old_dict:
-                    current_value = old_dict[key]
-                else:
-                    current_value = self._get_nested_property(plt.getp(obj, key))
-                new_value = self._get_nested_property(new_value)
-                if current_value != new_value:
-                    prev_dict[key], next_dict[key] = current_value, new_value
+        if saved_dict:
+            prev_properties = self.history_dict[self.history_iter - 1]
+            next_properties = self.history_dict[self.history_iter]
+        else:
+            prev_properties = self.history_dict[self.history_iter]
+            next_properties = self.history_dict[self.history_iter + 1]
 
         # If record exists, find difference in object properties
-        if obj not in prev_changes:
-            find_properties(prop_dict)
+        if obj not in prev_properties:
+            old_dict = saved_dict
         else:
-            old_dict = prev_changes[obj]
-            find_properties(prop_dict, old_dict)
+            old_dict = prev_properties[obj]
+            old_dict.update(saved_dict)
+            
+        prev_dict, next_dict = self.find_properties(obj, prop_dict, old_dict)
+
         if prev_dict:
-            if obj not in prev_changes:
-                prev_changes[obj] = prev_dict
+            if obj not in prev_properties:
+                prev_properties[obj] = prev_dict
             else:
-                prev_changes[obj].update(prev_dict)
+                prev_properties[obj].update(prev_dict)
         if next_dict:
-            next_changes[obj] = next_dict
-            self.change_properties(obj, next_dict)
+            next_properties[obj] = next_dict
+            if not saved_dict:
+                self.change_properties(obj, next_dict)
+
+    def temporary_properties(self, obj, prop_dict):
+        if self.history_at_newest:
+            self.temporary_changes[obj].update(prop_dict)
+            for prop_name in prop_dict:
+                if prop_name not in self.temporary_saved[obj]:
+                    self.temporary_saved[obj][prop_name] = plt.getp(obj, prop_name)
+            self.change_properties(obj, prop_dict)
+        else:
+            print("Must be at newest iteration to apply changes.")
+
 
     def change_properties(self, obj, prop_dict):
         """Changes the plot properties and draw the plot object or artist."""

@@ -17,6 +17,7 @@ class Sim(TemplateSim):
         super().__init__(*args, **kwargs)
         self.default_error_rates = {"p_bitflip": p_bitflip, "p_phaseflip": p_phaseflip}
 
+
     def random_error(
         self,
         qubit: Qubit,
@@ -60,3 +61,7 @@ class Sim(TemplateSim):
 class Plot(TemplatePlot, Sim):
 
     legend_items = ["X flip", "Y flip", "Z flip"]
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, *kwargs)
+        self.error_methods = {"bitflip": self.bitflip_error, "phaseflip": self.phaseflip_error}

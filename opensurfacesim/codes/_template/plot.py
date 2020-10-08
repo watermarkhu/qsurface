@@ -3,7 +3,7 @@ from typing import List, Optional, Tuple
 from matplotlib import transforms
 from matplotlib.lines import Line2D
 import matplotlib.pyplot as plt
-from matplotlib.pyplot import plot
+from matplotlib.widgets import RadioButtons
 from ...configuration import get_attributes, init_config
 from ...plot._template import Template2D as TemplatePlotPM
 from .sim import PerfectMeasurements as TemplateSimPM, FaultyMeasurements as TemplateSimFM
@@ -38,7 +38,17 @@ class CodePlotPM(TemplatePlotPM):
     def init_plot(self, **kwargs) -> None:
         title = "{} lattice".format(str(self.code.__class__.__module__).split(".")[-2])
         self.init_axis(self.main_boundary, title=title, **kwargs)
-        self.init_legend(self.legend_main_loc, loc="upper right", ncol=1, **kwargs)
+        self.init_legend(ncol=1, **kwargs)
+
+        self.error_methods = {}
+        for error_module in self.code.errors.values():
+            for name, method in error_module.error_methods.items():
+                self.error_methods[name] = method
+
+        self.interact_axes["error_buttons"] = plt.axes(self.ax_coordinates_radio_box)
+        self.interact_bodies["error_buttons"] = RadioButtons(self.interact_axes["error_buttons"], ["info"] + list(self.error_methods.keys()))
+        self.interact_axes["error_buttons"].active = False
+
         for item in self.code.data_qubits[0].values():
             self._plot_data(item)
         for item in self.code.ancilla_qubits[0].values():
@@ -46,7 +56,7 @@ class CodePlotPM(TemplatePlotPM):
         self.draw_figure()
 
     def init_legend(
-        self, legend_loc: Tuple[float, float], legend_items: List[Line2D] = [], **kwargs
+        self, legend_items: List[Line2D] = [], **kwargs
     ) -> None:
         """Initilizes the legend of the main axis of the figure.
 
@@ -54,8 +64,6 @@ class CodePlotPM(TemplatePlotPM):
 
         Parameters
         ----------
-        legend_loc : tuple of float or int
-            Relative position to the main axis `main_ax`.
         items : list of matplotlib.lines.Line2D, optional
             Additional elements to the legend.
 
@@ -83,9 +91,28 @@ class CodePlotPM(TemplatePlotPM):
                     self.lh.append(self._legend_circle(name, **properties))
                     item_names.append(name)
 
+        self.lh += [
+            self._legend_circle(
+                "Vertex",
+                ls="-",
+                color=self.color_edge,
+                mfc=self.color_qubit_face,
+                mec=self.color_qubit_edge,
+                marker="s",
+                ms=5,
+            ),
+            self._legend_circle(
+                "Plaquette",
+                ls="--",
+                color=self.color_edge,
+                mfc=self.color_qubit_face,
+                mec=self.color_qubit_edge,
+                marker="D",
+                ms=5,
+            )
+        ]
         self.lh += legend_items
-        if legend_loc:
-            self.main_ax.legend(handles=self.lh, bbox_to_anchor=legend_loc, **kwargs)
+        self.legend_ax.legend(handles=self.lh, **kwargs)
 
     def parse_boundary_coordinates(self, size, *args: float) -> List[float]:
         """Parse two locations on the lattice.
@@ -112,17 +139,9 @@ class CodePlotPM(TemplatePlotPM):
         linestyles = {"x": self.line_style_primary, "z": self.line_style_secundary}
         rotations = {"x": 0, "z": 45}
 
-        trans = {
-            "x": self.main_ax.transData
-            + transforms.ScaledTranslation(
-                -self.patch_rectangle_2d / 2,
-                self.patch_rectangle_2d / 2,
-                self.figure.dpi_scale_trans,
-            ),
-            "z": self.main_ax.transData
-            + transforms.ScaledTranslation(
-                0, self.patch_rectangle_2d / 2, self.figure.dpi_scale_trans
-            ),
+        loc_parse = {
+            "x": lambda x,y: (x-self.patch_rectangle_2d/2, y-self.patch_rectangle_2d/2),
+            "z": lambda x,y: (x, y-self.patch_rectangle_2d*2**(1/2)/2)
         }
 
         item.surface_lines = {}
@@ -139,14 +158,14 @@ class CodePlotPM(TemplatePlotPM):
             self.main_ax.add_artist(line)
             line.object = item
         item.surface_plot = plt.Rectangle(
-            item.loc,
+            loc_parse[item.state_type](*item.loc),
             self.patch_rectangle_2d,
             self.patch_rectangle_2d,
             rotations[item.state_type],
             picker=self.interact_pick_radius,
             zorder=1,
             lw=self.line_width_primary,
-            transform=trans[item.state_type],
+            # transform=trans[item.state_type],
             **self.plot_properties["{}_ancilla_0".format(item.state_type)]
         )
         self.main_ax.add_artist(item.surface_plot)
@@ -164,6 +183,34 @@ class CodePlotPM(TemplatePlotPM):
         )
         self.main_ax.add_artist(item.surface_plot)
         item.surface_plot.object = item
+    
+    def _update_data(self, qubit, temporary=False):
+        x_state = int(qubit.edges["x"].state)
+        z_state = int(qubit.edges["z"].state)
+        properties = self.plot_properties["data_{}{}".format(x_state,z_state)]
+        if temporary:
+            self.temporary_properties(qubit.surface_plot, properties)
+        else:
+            self.new_properties(qubit.surface_plot, properties)
+
+    def _update_ancilla(self, qubit, temporary=False):
+        properties = self.plot_properties[
+            "{}_ancilla_{}".format(qubit.state_type, int(qubit.state))
+        ]
+        self.new_properties(qubit.surface_plot, properties)
+
+
+    def _pick_handler(self, event):
+        """Function on when an object in the figure is picked"""
+        selected = self.interact_bodies["error_buttons"].value_selected
+        if selected == "info":
+            print(event.artist.object)
+        else:
+            qubit = event.artist.object
+            print(selected, qubit)
+            self.error_methods[selected](qubit)
+            self._update_data(qubit, temporary=True)
+
 
 
 class PerfectMeasurements(TemplateSimPM):
@@ -190,43 +237,21 @@ class PerfectMeasurements(TemplateSimPM):
 
     def random_errors(self, *args, z: float = 0, **kwargs):
         super().random_errors(*args, z=z, **kwargs)
-        # self.figure.draw_figure(new_iter_name="Errors applied")
+        self.figure.interact_axes["error_buttons"].active = True
         self.plot_data("Errors applied", z=z, **kwargs)
+        self.figure.interact_bodies["error_buttons"].set_active(0)
+        self.figure.interact_axes["error_buttons"].active = False
         self.plot_ancilla("Ancilla-qubits measured", z=z, **kwargs)
 
     def plot_data(self, iter_name: Optional[str] = None, z: float = 0, **kwargs):
         for qubit in self.data_qubits[z].values():
+            self.figure._update_data(qubit)
 
-            x_state = int(qubit.edges["x"].state)
-            z_state = int(qubit.edges["z"].state)
-            properties = self.figure.plot_properties["data_{}{}".format(x_state,z_state)]
-            self.figure.new_properties(qubit.surface_plot, properties)
-
-            # if qubit.edges["x"].state and qubit.edges["z"].state:
-            # elif qubit.edges["x"].state:
-            #     self.figure.new_properties(qubit.surface_plot, self.plot_properties["x_state"])
-            # elif qubit.edges["z"].state:
-            #     self.figure.new_properties(qubit.surface_plot, self.plot_properties["z_state"])
-            # else:
-            #     self.figure.new_properties(qubit.surface_plot, self.plot_properties["normal"])
-
-            # properties = {}
-            # for error in self.errors.values():
-            #     names = error.get_draw_properties(qubit)
-            #     for name in names:
-            #         if name not in properties:
-            #             properties.update(self.figure.plot_properties[name])
-            # if not properties:
-            #     properties = self.figure.plot_properties["data_qubit"]
-            # self.figure.new_properties(qubit.surface_plot, properties)
         if iter_name:
             self.figure.draw_figure(new_iter_name=iter_name)
 
     def plot_ancilla(self, iter_name: Optional[str] = None, z: float = 0, **kwargs) -> None:
-        for ancilla_qubit in self.ancilla_qubits[z].values():
-            properties = self.figure.plot_properties[
-                "{}_ancilla_{}".format(ancilla_qubit.state_type, int(ancilla_qubit.state))
-            ]
-            self.figure.new_properties(ancilla_qubit.surface_plot, properties)
+        for qubit in self.ancilla_qubits[z].values():
+            self.figure._update_ancilla(qubit)
         if iter_name:
             self.figure.draw_figure(new_iter_name=iter_name)

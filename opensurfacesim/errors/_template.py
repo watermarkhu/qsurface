@@ -40,6 +40,8 @@ class Plot(Sim):
         super().__init__(*args, *kwargs)
         self.figure = figobj
 
+        self.error_methods = {}
+
         self.plot_properties = get_attributes(
             figobj, init_config(os.path.dirname(os.path.abspath(__file__)) + "/plot_errors.ini")
         )

@@ -44,6 +44,11 @@ class Plot(TemplatePlot, Sim):
 
     legend_items = ["Erasure"]
 
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, *kwargs)
+        self.error_methods = {"erasure": self.erasure_error}
+
+
     def erasure_error(self, qubit):
         super().erasure_error(qubit)
         self.figure.new_properties(qubit.surface_plot, self.plot_properties["erased"])

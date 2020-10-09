@@ -3,8 +3,9 @@ from typing import Optional
 from ._template import Sim as TemplateSim, Plot as TemplatePlot
 import random
 
+
 class Sim(TemplateSim):
-    """Pauli error class.
+    """Simulation Pauli error class.
 
     Parameters
     ----------
@@ -13,10 +14,10 @@ class Sim(TemplateSim):
     p_phaseflip : float or int, optional
         Default probability of Z-errors or phase-flip errors.
     """
+
     def __init__(self, *args, p_bitflip: float = 0, p_phaseflip: float = 0, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.default_error_rates = {"p_bitflip": p_bitflip, "p_phaseflip": p_phaseflip}
-
 
     def random_error(
         self,
@@ -29,8 +30,6 @@ class Sim(TemplateSim):
 
         Parameters
         ----------
-        qubit : DataQubit
-            Qubit on which the error is (conditionally) applied.
         p_bitflip : float or int, optional
             Overriding probability of X-errors or bit-flip errors.
         p_phaseflip : float or int, optional
@@ -49,16 +48,18 @@ class Sim(TemplateSim):
             self.bitflip_error(qubit)
         if p_phaseflip != 0 and random.random() < p_phaseflip:
             self.phaseflip_error(qubit)
-    
 
     def bitflip_error(self, qubit):
+        """Applies a bitflip or Pauli X on ``qubit``."""
         qubit.edges["x"].state = not qubit.edges["x"].state
 
     def phaseflip_error(self, qubit):
+        """Applies a phaseflip or Pauli Z on ``qubit``."""
         qubit.edges["z"].state = not qubit.edges["z"].state
 
 
 class Plot(TemplatePlot, Sim):
+    """Plotp Pauli error class."""
 
     legend_items = ["X flip", "Y flip", "Z flip"]
 

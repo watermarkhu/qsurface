@@ -1,12 +1,12 @@
 import ctypes
 from opensurfacesim.codes._template.elements import AncillaQubit
 import networkx as nx
-from .._template.sim import Code as DecoderTemplate
+from .._template import SimCode
 from numpy.ctypeslib import ndpointer
 import os
 
 
-class Toric(DecoderTemplate):
+class Toric(SimCode):
     """
     MWPM decoder for the toric lattice (2D and 3D).
     Edges between all qubits are considered.

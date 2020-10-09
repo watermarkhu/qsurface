@@ -7,16 +7,12 @@ from matplotlib import pyplot as plt
 
 
 class Sim(ABC):
-    """Template class for errors.
+    """Template simulation class for errors.
 
-    Parameters
+    Attributes
     ----------
-    data_qubits: dict of dict of DataQubit
-        Data-qubit database supplied by `code.<type>.init_errors`.
-
-    See Also
-    --------
-    DataQubit
+    default_error_rates : dict of float
+        The error rates that are applied at default.
     """
 
     def __init__(self, **kwargs) -> None:
@@ -28,27 +24,49 @@ class Sim(ABC):
 
     @abstractmethod
     def random_error(self, qubit, **kwargs) -> None:
-        """Applies the current error type to the `qubit`."""
+        """Applies the current error type to the `qubit`.
+
+        Parameters
+        ----------
+        qubit : DataQubit
+            Qubit on which the error is (conditionally) applied.
+        """
         pass
 
 
 class Plot(Sim):
+    """Template plot class for errors,
+
+    Attributes
+    ----------
+    legend_items : list
+        The legend items in 'plot_legend_errors.ini' to include if this error is loaded.
+    error_methods : dict
+        Dictionary of error methods. Used by :meth:`opensurfacesim.code._template.plot.PerfectMeasurements.Figure._pickhandler` to apply the error directly on the figure. Each method must be of the following form.
+
+            def error_method(qubit, rate=0):
+                pass
+
+    plot_properties : dict of dict
+        Dictionary of plot properties for each specific error class, defined in 'plot_errors.ini'.
+    legend_properties : dict of dict
+        Dictionary of `matplotlib.lines.Line2D` properties for each legend item, defined in 'plot_errors_legend.ini'.
+    """
 
     legend_items = []
 
-    def __init__(self, figobj, *args, **kwargs) -> None:
+    def __init__(self, figure, *args, **kwargs) -> None:
         super().__init__(*args, *kwargs)
-        self.figure = figobj
-
+        self.figure = figure
         self.error_methods = {}
-
         self.plot_properties = get_attributes(
-            figobj, init_config(os.path.dirname(os.path.abspath(__file__)) + "/plot_errors.ini")
+            figure.rc, init_config(os.path.dirname(os.path.abspath(__file__)) + "/plot_errors.ini")
         )
-
         self.legend_properties = get_attributes(
-            figobj, init_config(os.path.dirname(os.path.abspath(__file__)) + "/plot_legend.ini")
+            figure.rc,
+            init_config(os.path.dirname(os.path.abspath(__file__)) + "/plot_errors_legend.ini"),
         )
 
     def _get_legend_properties(self):
+        """Returns the dictionary of properties for `matplotlib.lines.Line2D` of the errors in the current class."""
         return {key: self.legend_properties[key] for key in self.legend_items}

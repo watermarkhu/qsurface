@@ -496,7 +496,7 @@ class Qubit(object):
     [fixed parameters]
     qID         (td, y, x)
     z           layer of graph to which this stab belongs
-    E           list countaining the two edges of the primal and secundary lattice
+    E           list countaining the two edges of the primal and secondary lattice
 
     [iteration parameters]
     erasure     boolean of erased qubit
@@ -532,7 +532,7 @@ class Edge(object):
     qubit           qubit object this edge belongs to
     z               layer of graph to which this stab belongs
     ertype          0 for primal lattice connecting X-type vertices,
-                    1 for secundary lattice connecting Z-type vertices
+                    1 for secondary lattice connecting Z-type vertices
 
     [iteration parameters]
     cluster         Cluster object of which this edge is apart of

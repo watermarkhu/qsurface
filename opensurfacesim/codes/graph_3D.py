@@ -281,7 +281,7 @@ class Bridge(object):
 
     qID         (td, y, x)
     z           layer of graph to which this stab belongs
-    E           list countaining the two edges of the primal and secundary lattice
+    E           list countaining the two edges of the primal and secondary lattice
     erasure     placeholder to ensure decoder works
     '''
     def __init__(self, qID, z=0):

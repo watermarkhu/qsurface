@@ -1,8 +1,23 @@
-from collections import defaultdict as ddict
+from collections import defaultdict
 import configparser
 import ast
 import os
 from typing import Optional
+
+
+    
+class AttributeDict(defaultdict):
+    def __init__(self):
+        super(AttributeDict, self).__init__(AttributeDict)
+
+    def __getattr__(self, key):
+        try:
+            return self[key]
+        except KeyError:
+            raise AttributeError(key)
+
+    def __setattr__(self, key, value):
+        self[key] = value
 
 
 def write_config(config_dict: dict, path: str) -> None:
@@ -67,7 +82,7 @@ def read_config(path: str, config_dict: Optional[dict] = None) -> dict:
         }
     """
     if config_dict is None:
-        config_dict = ddict(dict)
+        config_dict = defaultdict(dict)
 
     config = configparser.ConfigParser()
     config.read(path)
@@ -106,6 +121,7 @@ def init_config(ini_file, write: bool = False, **kwargs):
     return config_dict
 
 
+
 def flatten_dict(nested_dict: dict, flat_dict: dict = {}, key_prefix: str = "") -> dict:
     """Flattens al nested dictionaries in `nested_dict` to a single dictionary
 
@@ -127,7 +143,7 @@ def flatten_dict(nested_dict: dict, flat_dict: dict = {}, key_prefix: str = "") 
     return flat_dict
 
 
-def get_attributes(obj, attribute_names: dict, **kwargs) -> dict:
+def get_attributes(rc_dict: dict, attribute_names: dict, **kwargs) -> dict:
     """Gets a list of attributes stored in some object.
 
     For most attributes from `attribute_names`, this function tries to find the attribute with the same name as the value from the dictionary. If the attribute value begins with `"~"` however, the literal value after `"~"` is taken as the attribute value. A nested dictionary for `attribute_names` is also allowed. 
@@ -166,13 +182,13 @@ def get_attributes(obj, attribute_names: dict, **kwargs) -> dict:
     attributes = {}
     for key, attr in attribute_names.items():
         if type(attr) == dict:      # Get nested dictionaries
-            attributes[key] = get_attributes(obj, attr)
+            attributes[key] = get_attributes(rc_dict, attr)
         elif type(attr) == str:     # Parse if attribute is string
             if attr[0] == "~":      # Save literal string value
                 attributes[key] = attr[1:]
             else:                   # Get attribute from obj
                 try:
-                    attributes[key] = getattr(obj, attr)
+                    attributes[key] = rc_dict[attr]
                 except:
                     attributes[key] = attr
         else:

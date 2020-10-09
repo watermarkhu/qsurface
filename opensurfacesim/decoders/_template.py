@@ -1,12 +1,13 @@
 from abc import ABC, abstractmethod
 import os 
 from typing import Optional
-from ...configuration import flatten_dict, init_config
-from ...info.benchmark import timeit, BenchMarker
-from ...codes._template.sim import PerfectMeasurements, FaultyMeasurements
+from ..configuration import flatten_dict, init_config
+from ..info.benchmark import timeit, BenchMarker
+from ..codes._template.sim import PerfectMeasurements, FaultyMeasurements
+from matplotlib.lines import Line2D
 
 
-class Code(ABC):
+class SimCode(ABC):
     '''
     Decoder template class with code specific class methods
     '''
@@ -25,8 +26,7 @@ class Code(ABC):
         self.code = code
         self.benchmarker = benchmarker
         current_folder = os.path.dirname(os.path.abspath(__file__))
-        parent_folder = os.path.abspath(os.path.join(current_folder, os.pardir))
-        file = parent_folder + "/decoders.ini"
+        file = current_folder + "/decoders.ini"
         config = flatten_dict(init_config(file))
         for key, value in config.items():
             setattr(self, key, value)
@@ -75,3 +75,37 @@ class Code(ABC):
     def do_decode(*args, **kwargs):
         pass
 
+
+class PlotCode(SimCode):
+
+    name = "Template plot decoder",
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, **kwargs)
+
+        self.line_color_normal = {
+            "x": dict(color = self.code.figure.rc["color_edge"]),
+            "z": dict(color = self.code.figure.rc["color_edge"])
+        }
+        self.line_color_match = {
+            "x": dict(color = self.code.figure.rc["color_x_secondary"]),
+            "z": dict(color = self.code.figure.rc["color_z_secondary"])
+        }
+
+    @timeit()
+    def decode(self, *args, **kwargs):
+        #Inherited docstrings
+       self.do_decode(*args, **kwargs)
+       self.code.plot_data()
+       self.code.plot_ancilla("Decoded.")
+    
+    def plot_matching_edge(self, line: Optional[Line2D] = None):
+        """Plots the matching edge. 
+
+        Based on the colors defined in ``self.line_color_match``, if a `matplotlib.lines.Line2D` object is supplied, the color of the edge is changed. A future change back to its original color is immediately saved in ``figure.future_dict``. 
+        """
+        if line: 
+            figure = self.code.figure
+            next_iter = figure.history_iter + 2
+            state_type = line.object.state_type
+            figure.new_properties(line, self.line_color_match[state_type])
+            figure.future_dict[next_iter][line] = self.line_color_normal[state_type]

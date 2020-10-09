@@ -344,7 +344,7 @@ class plot_2D:
         self.ax.legend(handles=self.lh, bbox_to_anchor=(x, y), loc=loc, ncol=1)
 
 
-    def init_axis(self, min, max):
+    def _init_axis(self, min, max):
         '''
         Initilizes the 2D axis by settings axis limits, flipping y axis and removing the axis border
         '''
@@ -370,7 +370,7 @@ class plot_2D:
         Qubits are plotted with Circle objects
         '''
         plt.sca(self.ax)
-        self.init_axis(-.25, self.size-.25)
+        self._init_axis(-.25, self.size-.25)
 
         # Plot stabilizers
         for stab in self.graph.S[z].values():
@@ -701,7 +701,7 @@ class plot_3D(plot_2D):
         self.ax.set_zlim3d([z_middle - plot_radius, z_middle + plot_radius])
 
 
-    def init_axis(self, min, max, zl):
+    def _init_axis(self, min, max, zl):
         '''
         Initilizes the 3D axis by removing the background panes, changing the grid tics, alpha and linestyle, setting the labels and title.
         '''
@@ -748,7 +748,7 @@ class plot_3D(plot_2D):
         Stabilizers are plotted with Axes3D.line objects
         Qubits are plotted with Axes3D.scatter objects
         '''
-        self.init_axis(-.25, self.size-.25, self.z_distance)
+        self._init_axis(-.25, self.size-.25, self.z_distance)
 
         # Plot stabilizers
         for layer in self.graph.S.values():

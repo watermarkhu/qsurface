@@ -114,7 +114,7 @@ class toric(go.toric):
         measurey=0,
         **kwargs):
         '''
-        Initilizes errors on the qubits and measures the stabilizers on the graph on each layer of the cubic lattice.
+        Initializes errors on the qubits and measures the stabilizers on the graph on each layer of the cubic lattice.
         For the first size-1 layers, measurement errors are applied.
         For the final layer, perfect measurements are applied to ensure anyon creation.
         '''

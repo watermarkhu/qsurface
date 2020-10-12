@@ -1,12 +1,12 @@
 import os
-from typing import List, Optional, Tuple
+from typing import List, Optional
 from matplotlib.lines import Line2D
 import matplotlib.pyplot as plt
 from matplotlib.widgets import RadioButtons
-from ...configuration import flatten_dict, get_attributes, init_config
+from ...configuration import get_attributes, init_config
 from ...plot import Template2D as TemplatePlotPM
 from .sim import PerfectMeasurements as TemplateSimPM, FaultyMeasurements as TemplateSimFM
-from .._template.elements import DataQubit, AncillaQubit
+from ..elements import DataQubit, AncillaQubit
 
 
 class PerfectMeasurements(TemplateSimPM):
@@ -22,12 +22,12 @@ class PerfectMeasurements(TemplateSimPM):
         super().__init__(*args, **kwargs)
         self.figure = self.Figure(self, **kwargs)
 
-    def initialize(self, *args, **kwargs) -> None:
+    def initialize(self, *args, **kwargs):
         """Initializes the code with a figure.  
         
-        Since each error object delivers extra plot properties to the figure, which are dependent on the `rc` values in the figure itself, we must initialize in the following sequence. 
+        Since each error object delivers extra plot properties to the figure, which are dependent on the ``self.rc`` values in the figure itself, we must initialize in the following sequence. 
 
-        - First load figure to get `rc` properties
+        - First load figure to get ``self.rc`` properties
         - Initialize lattice, error initialization must have figure properties
         - Draw figure with plot elements from errors
         """
@@ -35,7 +35,7 @@ class PerfectMeasurements(TemplateSimPM):
         self.figure.init_plot(**kwargs)
 
     def _init_error(self, error_module, error_rates):
-        # Inherited docstrings
+        """Initializes the ``Plot`` class of a error module."""
         error_type = error_module.__name__.split(".")[-1]
         self.errors[error_type] = error_module.Plot(self.figure, **error_rates)
 
@@ -55,7 +55,7 @@ class PerfectMeasurements(TemplateSimPM):
         if iter_name:
             self.figure.draw_figure(new_iter_name=iter_name)
 
-    def plot_ancilla(self, iter_name: Optional[str] = None, z: float = 0, **kwargs) -> None:
+    def plot_ancilla(self, iter_name: Optional[str] = None, z: float = 0, **kwargs):
         """Update plots of all ancilla-qubits in layer ``z``."""
         for qubit in self.ancilla_qubits[z].values():
             self.figure._update_ancilla(qubit)
@@ -66,11 +66,11 @@ class PerfectMeasurements(TemplateSimPM):
     class Figure(TemplatePlotPM):
         """Template surface code plot for perfect measurements.
 
-        The inner figure class that plots the surface code based on the `Qubit.loc` and `Qubit.z` values on the set of `code.data_qubits`, `code.ancilla_qubits` and `code.pseudo_qubits. This allows for a high amount of code inheritance. 
+        The inner figure class that plots the surface code based on the ``Qubit.loc`` and ``Qubit.z`` values on the set of ``code.data_qubits``, ``code.ancilla_qubits`` and ``code.pseudo_qubits``. This allows for a high amount of code inheritance. 
 
         An additional `matplotlib.widgets.RadioButtons` object is added to the figure which allows for the user to choose one of the loaded errors and apply then directly to a qubit via :meth:`_pick_handler`. 
 
-        Default values for code-plot properties such as colors and linewidths are saved in a 'plot_codes.ini` file. All parameters within the ini file are parsed by :meth:`~opensurfacesim.configuration.read_config` and saved to ``self.rc`` as a dictionary. The values defined in the ini file can be the predefined values in `plot.ini`. 
+        Default values for code-plot properties such as colors and linewidths are saved in a *plot_codes.ini* file. All parameters within the ini file are parsed by :meth:`~opensurfacesim.configuration.read_config` and saved to ``self.rc`` as a dictionary. The values defined in the ini file can be the predefined values in *plot.ini*. 
 
         Parameters
         ----------
@@ -100,7 +100,7 @@ class PerfectMeasurements(TemplateSimPM):
                 )
             )
 
-        def init_plot(self, **kwargs) -> None:
+        def init_plot(self, **kwargs):
             """Plots all elements of the surface code onto the figure."""
             title = "{} lattice".format(str(self.code.__class__.__module__).split(".")[-2])
             self._init_axis(self.main_boundary, title=title, **kwargs)
@@ -121,7 +121,7 @@ class PerfectMeasurements(TemplateSimPM):
                 self._plot_ancilla(qubit)
             self.draw_figure()
 
-        def init_legend(self, legend_items: List[Line2D] = [], **kwargs) -> None:
+        def init_legend(self, legend_items: List[Line2D] = [], **kwargs):
             """Initializes the legend of the main axis of the figure.
 
             The legend of the main axis ``self.main_ax`` consists of a series of `matplotlib.line.Line2D` objects. The qubit, vertex and stars are always in the legend for a surface code plot. Any error loaded in the code at ``code.errors`` in de outer class will add an extra element to the legend for differentiation if an error occurs. The 'Line2D' attributes are stored at ``Error.legend_attributes`` of the ``Error`` class.

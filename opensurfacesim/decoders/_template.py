@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 import os 
 from typing import Optional
 from ..configuration import flatten_dict, init_config
-from ..info.benchmark import timeit, BenchMarker
+from ..benchmark import timeit, BenchMarker
 from ..codes._template.sim import PerfectMeasurements, FaultyMeasurements
 from matplotlib.lines import Line2D
 

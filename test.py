@@ -4,9 +4,9 @@
 
 # %%
 import opensurfacesim
-pf = opensurfacesim.codes.toric.plot.PerfectMeasurements(8)
+pf = opensurfacesim.codes.toric.sim.PerfectMeasurements(8)
 pf.initialize("pauli", "erasure")
-dc = opensurfacesim.decoders.mwpm.plot.Toric(pf, check_compatibility=True)
+dc = opensurfacesim.decoders.mwpm.sim.Toric(pf, check_compatibility=True)
 
 #%%
 

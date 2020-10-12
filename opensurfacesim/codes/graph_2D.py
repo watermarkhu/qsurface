@@ -123,7 +123,7 @@ class toric(object):
 
     def apply_and_measure_errors(self, paulix=0, pauliy=0, erasure=0, **kwargs):
         '''
-        Initilizes errors on the qubits and measures the stabilizers on the graph
+        Initializes errors on the qubits and measures the stabilizers on the graph
         '''
 
         self.init_erasure(erasure)

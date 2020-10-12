@@ -1,5 +1,5 @@
 import ctypes
-from opensurfacesim.codes._template.elements import AncillaQubit
+from opensurfacesim.codes.elements import AncillaQubit
 import networkx as nx
 from .._template import SimCode
 from numpy.ctypeslib import ndpointer

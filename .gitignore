@@ -24,7 +24,8 @@
 simulations
 Simulations
 cartesiusdata
-docs/build/
+docs/
+sphinx/build/
 opensurfacesim/decoders/mwpm/blossom5-v2.05.src/
 
 __pycache__/

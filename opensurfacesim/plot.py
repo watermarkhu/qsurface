@@ -33,145 +33,145 @@ class BlockingKeyInput(BlockingInput):
 
 
 class Template2D(ABC):
-    def __init__(self, init_plot: bool = True, **kwargs) -> None:
-        """Template 2D plot object with history navigation.
+    """Template 2D plot object with history navigation.
 
-        This template 2D plot object has the following features:
+    This template 2D plot object has the following features:
 
-        - Fast plotting by use of "blitting".
-        - Redrawing past iterations of the figure by storing all changes in history.
-        - Keyboard navigation for iteration selection.
-        - Plot object information by picking.
+    - Fast plotting by use of "blitting".
+    - Redrawing past iterations of the figure by storing all changes in history.
+    - Keyboard navigation for iteration selection.
+    - Plot object information by picking.
 
-        To instance this class, one must inherit the current class and supply a :meth:`init_plot` method that draws the objects of the plot. The existing objects can then be altered by updating their plot properties by :meth:`new_properties`, where the changed properties must be a dictionary with keywords and values corresponding tho the respective matplotlib object. Every change in plot property is stored in `self.history_dict`. This allows to undo or redo changes by simply applying the saved changed properties in the dictionary.
+    To instance this class, one must inherit the current class and supply a :meth:`init_plot` method that draws the objects of the plot. The existing objects can then be altered by updating their plot properties by :meth:`new_properties`, where the changed properties must be a dictionary with keywords and values corresponding tho the respective matplotlib object. Every change in plot property is stored in `self.history_dict`. This allows to undo or redo changes by simply applying the saved changed properties in the dictionary.
 
-        Fast plotting is enabled by not drawing the figure after every queued change. Instead, each object is draw in the canvas individually after a property change and a series of changes is drawn to the figure when a new plot iteration is requested via :meth:`new_iter`. This is performed by *blitting* the canvas.
+    Fast plotting is enabled by not drawing the figure after every queued change. Instead, each object is draw in the canvas individually after a property change and a series of changes is drawn to the figure when a new plot iteration is requested via :meth:`new_iter`. This is performed by *blitting* the canvas.
 
-        Keyboard navigation and picking is enabled by blocking the code via a custom `.BlockingKeyInput` class. While the code is blocked, inputs are caught by the blocking class and processed for history navigation or picking navigation. Moving the iteration past the available history allows for the code to continue. The keyboard input is parsed by :meth:`focus`, and parses the following inputs. 
+    Keyboard navigation and picking is enabled by blocking the code via a custom `.BlockingKeyInput` class. While the code is blocked, inputs are caught by the blocking class and processed for history navigation or picking navigation. Moving the iteration past the available history allows for the code to continue. The keyboard input is parsed by :meth:`focus`, and parses the following inputs. 
 
-        ==================  ==============================================
-        key                 function
-        ==================  ==============================================
-        h                   show help
-        i                   show all iterations
-        enter or right      go to next iteration, enter iteration number
-        backspace or left   go to previous iteration
-        n                   go to newest iteration
-        0-9                 input iteration number
-        ==================  ==============================================
+    ==================  ==============================================
+    key                 function
+    ==================  ==============================================
+    h                   show help
+    i                   show all iterations
+    enter or right      go to next iteration, enter iteration number
+    backspace or left   go to previous iteration
+    n                   go to newest iteration
+    0-9                 input iteration number
+    ==================  ==============================================
 
-        Default values for plot properties such as colors and linewidths are saved in a 'plot.ini` file. All parameters within the ini file are parsed by :meth:`~opensurfacesim.configuration.read_config` and saved to ``self.rc`` as a dictionary.
+    Default values for plot properties such as colors and linewidths are saved in a 'plot.ini` file. All parameters within the ini file are parsed by :meth:`~opensurfacesim.configuration.read_config` and saved to ``self.rc`` as a dictionary.
 
-        Parameters
-        ----------
-        init_plot : bool, optional
-            Enables drawing all base objects at class initialization.
+    Parameters
+    ----------
+    init_plot : bool, optional
+        Enables drawing all base objects at class initialization.
 
-        Attributes
-        ----------
-        figure : `matplotlib.figure.Figure`
-            Main figure.
-        main_ax : `matplotlib.axes.Axes`
-            Main axis of the figure.
-        history_dict : `.collections.defaultdict`
-            For each iteration, for every plot object with changed properties, the properties are stored as a nested dictionary. See the example below.
+    Attributes
+    ----------
+    figure : `matplotlib.figure.Figure`
+        Main figure.
+    main_ax : `matplotlib.axes.Axes`
+        Main axis of the figure.
+    history_dict : `.collections.defaultdict`
+        For each iteration, for every plot object with changed properties, the properties are stored as a nested dictionary. See the example below.
 
-                >>> history_dict = {
-                        0: {
-                            "<Line2D object>": {
-                                "color": "k",
-                            },
-                            "<Circle object>": {
-                                "linestyle": "-",
-                            }
-                        }
-                        1: {
-                            "<Line2D object>": {
-                                "color": "r",
-                            },
-                            "<Circle object>": {
-                                "linestyle": ":",
-                            }
+            >>> history_dict = {
+                    0: {
+                        "<Line2D object>": {
+                            "color": "k",
+                        },
+                        "<Circle object>": {
+                            "linestyle": "-",
                         }
                     }
+                    1: {
+                        "<Line2D object>": {
+                            "color": "r",
+                        },
+                        "<Circle object>": {
+                            "linestyle": ":",
+                        }
+                    }
+                }
 
-        history_iters : int
-            Total number of iterations in history.
-        history_iter : int
-            The current plot iteration.
-        history_iter_names : list of str
-            List of length `history_iters` containing a title for each iteration.
-        history_at_newest : bool
-            Whether the current plot iteration is the latest or newest.
-        history_event_iter : str
-            String catching the keyboard input for the wanted plot iteration.
-        future_dict : `.collections.defaultdict`
-            Same as `history_dict` but for changes for future iterations.
-        temporary_changes : `.collections.defaultdict`
-            Temporary changes for plot properties, requested by :meth:`temporary_properties`, which are immediately drawn to the figure. These properties can be overwritten or undone before a new iteration is requested via :meth:`new_iter`. When a new iteration is requested, we need to find the difference in properties of the queued changes with the current iteration and save all differences to `self.history_dict`.
-        temporary_saved : `.collections.defaultdict`
-            Temporary changes are saved to the current iteration ``iter``. Thus when a new iteration ``iter + 1`` is requested, we need to recalculate the differences of the properties in ``iter -1`` and the current iteration with the temporary changes. The previous property values when temporary changes are requested by :meth:`temporary_properties` are saved to `self.temporary_saved` and used as the property changes for ``iter -``.
-        interact_axes : dict of `matplotlib.axes.Axes'
-            All iteractive elements should have their own axis saved in ``self.interact_axes``. The ``axis.active`` attribute must be added to define when the axis is shown. If the focus on the figure is lost, all axes in ``self.interact_axes`` are hidden by setting ``axis.active`` to ``False``. See :meth:`_set_figure_state`.
-        interact_bodies : dict
-            All interactive elements such as buttons, radiobuttons, sliders, should be saved to this dictionary with the same key as their axes in ``s`elf.interact_axes``
+    history_iters : int
+        Total number of iterations in history.
+    history_iter : int
+        The current plot iteration.
+    history_iter_names : list of str
+        List of length `history_iters` containing a title for each iteration.
+    history_at_newest : bool
+        Whether the current plot iteration is the latest or newest.
+    history_event_iter : str
+        String catching the keyboard input for the wanted plot iteration.
+    future_dict : `.collections.defaultdict`
+        Same as `history_dict` but for changes for future iterations.
+    temporary_changes : `.collections.defaultdict`
+        Temporary changes for plot properties, requested by :meth:`temporary_properties`, which are immediately drawn to the figure. These properties can be overwritten or undone before a new iteration is requested via :meth:`new_iter`. When a new iteration is requested, we need to find the difference in properties of the queued changes with the current iteration and save all differences to `self.history_dict`.
+    temporary_saved : `.collections.defaultdict`
+        Temporary changes are saved to the current iteration ``iter``. Thus when a new iteration ``iter + 1`` is requested, we need to recalculate the differences of the properties in ``iter -1`` and the current iteration with the temporary changes. The previous property values when temporary changes are requested by :meth:`temporary_properties` are saved to `self.temporary_saved` and used as the property changes for ``iter -``.
+    interact_axes : dict of `matplotlib.axes.Axes'
+        All iteractive elements should have their own axis saved in ``self.interact_axes``. The ``axis.active`` attribute must be added to define when the axis is shown. If the focus on the figure is lost, all axes in ``self.interact_axes`` are hidden by setting ``axis.active`` to ``False``. See :meth:`_set_figure_state`.
+    interact_bodies : dict
+        All interactive elements such as buttons, radiobuttons, sliders, should be saved to this dictionary with the same key as their axes in ``s`elf.interact_axes``
 
 
-        Notes
-        -----
-        Note all backends support blitting. You can check if a given canvas does via the `matplotlib.backend_bases.FigureCanvasBase.supports_blit` property. It does not work with the OSX backend (but does work with other GUI backends on mac).
+    Notes
+    -----
+    Note all backends support blitting. You can check if a given canvas does via the `matplotlib.backend_bases.FigureCanvasBase.supports_blit` property. It does not work with the OSX backend (but does work with other GUI backends on mac).
 
-        Example
-        -------
-        A `matplotlib.lines.Line2D` object is initiated with ``color="k"`` and ``ls="-"``. We request that the color of the object is red in a new plot iteration.
+    Examples
+    --------
+    A `matplotlib.lines.Line2D` object is initiated with ``color="k"`` and ``ls="-"``. We request that the color of the object is red in a new plot iteration.
 
-            >>> import matplotlib.pyplot as plt
-            ... class Example(Template2D):
-            ...     def init_plot(self):
-            ...         self.line = plt.plot(0, 0, color="k", ls="-")[0]    # Line located at [0] after plot
-            >>> fig = Example()
-            >>> fig.new_properties(fig.line, {"color": "r})
-            >>> fig.new_iter()
-            >>> fig.history_dict
-            {
-                0: {"<Line2D>": {"color": "k"}},
-                1: {"<Line2D>": {"color": "r"}},
-            }
+        >>> import matplotlib.pyplot as plt
+        ... class Example(Template2D):
+        ...     def init_plot(self):
+        ...         self.line = plt.plot(0, 0, color="k", ls="-")[0]    # Line located at [0] after plot
+        >>> fig = Example()
+        >>> fig.new_properties(fig.line, {"color": "r})
+        >>> fig.new_iter()
+        >>> fig.history_dict
+        {
+            0: {"<Line2D>": {"color": "k"}},
+            1: {"<Line2D>": {"color": "r"}},
+        }
 
-        The attribute ``self.history_dict` thus only contain changes to plot properties. If we request another iteration but change the linestyle to ``":"``, the initial linestyle will be saved to iteration 1.
+    The attribute ``self.history_dict` thus only contain changes to plot properties. If we request another iteration but change the linestyle to ``":"``, the initial linestyle will be saved to iteration 1.
 
-            >>> fig.new_properties(fig.line, {"ls": ":"})
-            >>> fig.new_iter()
-            >>> fig.history_dict
-            {
-                0: {"<Line2D>": {"color": "k"}},
-                1: {"<Line2D>": {"color": "r", "ls: "-"}},
-                2: {"<Line2D>": {ls: ":"}},
-            }
+        >>> fig.new_properties(fig.line, {"ls": ":"})
+        >>> fig.new_iter()
+        >>> fig.history_dict
+        {
+            0: {"<Line2D>": {"color": "k"}},
+            1: {"<Line2D>": {"color": "r", "ls: "-"}},
+            2: {"<Line2D>": {ls: ":"}},
+        }
 
-        We temporarily alter the linewidth to 2, and then to 1.5. After we are satisfied with the temporary changes. we request a new iteration with the final change of color to green.
+    We temporarily alter the linewidth to 2, and then to 1.5. After we are satisfied with the temporary changes. we request a new iteration with the final change of color to green.
 
-            >>> fig.temporary_properties(fig.line, {"lw": 2})
-            >>> fig.temporary_properties(fig.line, {"lw": 1.5})
-            >>> fig.temporary_changes
-            {"<Line2D>": {"lw": 1.5}}
-            >>> fig.temporary_saved
-            {"<Line2D>": {"lw": 1}}      # default value
-            >>> fig.new_properties(fig.line, {"color": "g"})
-            >>> fig.new_iter()
-            >>> fig.history_dict
-            {
-                0: {"<Line2D>": {"color": "k"}},
-                1: {"<Line2D>": {"color": "r", "ls: "-", "lw": 1}},
-                2: {"<Line2D>": {"lw": 1.5, color": "r"},
-                3: {"<Line2D>": {"color": "g"}},
-            }
+        >>> fig.temporary_properties(fig.line, {"lw": 2})
+        >>> fig.temporary_properties(fig.line, {"lw": 1.5})
+        >>> fig.temporary_changes
+        {"<Line2D>": {"lw": 1.5}}
+        >>> fig.temporary_saved
+        {"<Line2D>": {"lw": 1}}      # default value
+        >>> fig.new_properties(fig.line, {"color": "g"})
+        >>> fig.new_iter()
+        >>> fig.history_dict
+        {
+            0: {"<Line2D>": {"color": "k"}},
+            1: {"<Line2D>": {"color": "r", "ls: "-", "lw": 1}},
+            2: {"<Line2D>": {"lw": 1.5, color": "r"},
+            3: {"<Line2D>": {"color": "g"}},
+        }
 
-        Properties in ``self.temporary_saved`` are saved to ``self.history_dict`` in the previous iteration, properties in ``self.temporary_changes`` are saved to the current iteration, and new properties are saved to the new iteration.
+    Properties in ``self.temporary_saved`` are saved to ``self.history_dict`` in the previous iteration, properties in ``self.temporary_changes`` are saved to the current iteration, and new properties are saved to the new iteration.
 
-        The ``history_dict`` for a plot with a Line2D object and a Circle object. In the second iteration, the color of the Line2D object is updated from black to red, and the linestyle of the Circle object is changed from ``"-"`` to ``":"``.
+    The ``history_dict`` for a plot with a Line2D object and a Circle object. In the second iteration, the color of the Line2D object is updated from black to red, and the linestyle of the Circle object is changed from ``"-"`` to ``":"``.
+    """
+    def __init__(self, init_plot: bool = True, **kwargs):
 
-        """
         file = os.path.dirname(os.path.abspath(__file__)) + "/plot.ini"
         self.rc = flatten_dict(init_config(file))
         self.rc.update(kwargs)
@@ -258,7 +258,7 @@ class Template2D(ABC):
         invert: bool = True,
         ax: Optional[mpl.axes.Axes] = None,
         **kwargs,
-    ) -> None:
+    ):
         """(Main) Axis settings function.
 
         Parameters
@@ -295,7 +295,7 @@ class Template2D(ABC):
         """Function on when an object in the figure is picked"""
         print(event)
 
-    def focus(self) -> None:
+    def focus(self):
         """Enables the blocking object, catches input for history navigation.
 
         The BlockingKeyInput object is called which blocks the execution of the code. During this block, the user input is received by the blocking object and return to the current method. From here, we can manipulate the plot or move through the plot history and call :meth:`focus` again when all changes in the history have been drawn and blit.
@@ -365,7 +365,7 @@ class Template2D(ABC):
         self.canvas.draw()  # Draw before focus is lost
 
 
-    def _set_figure_state(self, color, override: Optional[bool] = None) -> None:
+    def _set_figure_state(self, color, override: Optional[bool] = None):
         """Set color of blocking icon and updates interactive axes visibility.
 
         Parameters
@@ -407,7 +407,7 @@ class Template2D(ABC):
     -------------------------------------------------------------------------------
     """
 
-    def draw_figure(self, new_iter_name: Optional[str] = None, output: bool = True, **kwargs) -> None:
+    def draw_figure(self, new_iter_name: Optional[str] = None, output: bool = True, **kwargs):
         """Blit the canvas and block code execution.
 
         Blits the queued plot changes onto the canvas and calls for :meth:`focus` which blocks the code execution and catches user input for history navigation. If a new iteration is called by supplying a `new_iter_name`, we additionally check for future property changes in the `self.future_dict`, and draw all these planned changes before the canvas is blit.
@@ -586,7 +586,7 @@ class Template2D(ABC):
                 prev_dict[key], next_dict[key] = current_value, new_value
         return prev_dict, next_dict
 
-    def new_properties(self, artist: Artist, properties: dict, saved_properties: dict = {}, **kwargs) -> None:
+    def new_properties(self, artist: Artist, properties: dict, saved_properties: dict = {}, **kwargs):
         """Parses a dictionary of proposed changes to a *matplotlib* artist. 
 
         If ``saved_properties`` is empty, this function saves the difference of plot properties in ``self.history_dict`` of the *matplotlib Artist* ``artist`` of the current iteration `self.history_iter` and the next iteration. If ``saved_properties`` is not empty, the difference is saved for the previous and the current iteration, where ``saved_properties`` overrides the current object properties as a the saved state prior to temporary changes. 
@@ -628,7 +628,7 @@ class Template2D(ABC):
             if not saved_properties:
                 self.change_properties(artist, next_dict)
 
-    def temporary_properties(self, artist: Artist, properties: dict, **kwargs) -> None:
+    def temporary_properties(self, artist: Artist, properties: dict, **kwargs):
         """Applies temporary property changes to a *matplotlib* artist. 
 
         Only available on the newest iteration, as we cannot change what is already in the past. All values in ``properties`` are immediately applied to `artist`. Since temporary changes can be overwritten within the same iteration, the first time a temporary property change is requested, the previous value is saved to ``self.temporary_saved``. When the iteration changes, the property differences of the previous and current iteration are recomputed and saved to ``self.history_dict`` in :meth:`_draw_from_history`. 

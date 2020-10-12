@@ -1,4 +1,4 @@
-from opensurfacesim.codes._template.elements import AncillaQubit
+from opensurfacesim.codes.elements import AncillaQubit
 from ..toric.sim import PerfectMeasurements as ToricPM, FaultyMeasurements as ToricFM
 
 
@@ -8,7 +8,7 @@ class PerfectMeasurements(ToricPM):
     code = "planar"
 
     def init_surface(self, z: float = 0, **kwargs):
-        """Initilizes the planar surface code on layer `z`.
+        """Initializes the planar surface code on layer `z`.
 
         Parameters
         ----------
@@ -41,8 +41,8 @@ class PerfectMeasurements(ToricPM):
             for y in range(self.size[1] - 1): 
                 parity(self.add_ancilla_qubit((x + 0.5, y + 0.5), z=z, state_type="z"))
 
-    def init_parity_check(self, ancilla_qubit: AncillaQubit, **kwargs) -> None:
-        """Inititates a parity check measurement.
+    def init_parity_check(self, ancilla_qubit: AncillaQubit, **kwargs):
+        """Initiates a parity check measurement.
 
         For every ancilla qubit on `(x,y)`, four neighboring data qubits are entangled for parity check measurements. They are stored via the wind-directional keys.
 
@@ -66,8 +66,8 @@ class PerfectMeasurements(ToricPM):
             if loc in self.data_qubits[z]:
                 self.entangle_pair(self.data_qubits[z][loc], ancilla_qubit, key)
 
-    def init_logical_operator(self, **kwargs) -> None:
-        """Inititates the logical operators `[x,z]` of the planar code."""
+    def init_logical_operator(self, **kwargs):
+        """Initiates the logical operators `[x,z]` of the planar code."""
         operators = {
             "x": [self.data_qubits[self.decode_layer][(0.5, i)].edges["x"] for i in range(self.size[0])],
             "z": [self.data_qubits[self.decode_layer][(i + 0.5, 0)].edges["z"] for i in range(self.size[1])]

@@ -8,7 +8,7 @@ from .configuration2 import setup_decoder
 from progiter import ProgIter
 import multiprocessing as mp
 from collections import defaultdict as dd
-from .info import printing as pr
+from . import printing as pr
 import numpy as np
 import random
 import time

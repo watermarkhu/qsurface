@@ -20,7 +20,7 @@ class AttributeDict(defaultdict):
         self[key] = value
 
 
-def write_config(config_dict: dict, path: str) -> None:
+def write_config(config_dict: dict, path: str):
     """Writes a configuration file to the path.
 
     Parameters
@@ -162,8 +162,8 @@ def get_attributes(rc_dict: dict, attribute_names: dict, **kwargs) -> dict:
     dict
         Parsed attribute dictionary.
 
-    Example
-    -------
+    Examples
+    --------
     Get attribute `attr_name` from object and parse `literal_attr` as string. 
 
         >>> get_attributes(obj, {"obj_attr": "attr_name", "literal_attr": "~red"})

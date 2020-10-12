@@ -37,7 +37,7 @@ class plot_2D(gp.plot_2D):
 
     def init_legend(self, x, y, loc="upper right"):
         '''
-        Initilizes the legend of the plot.
+        Initializes the legend of the plot.
         The qubits, errors and stabilizers are added.
         Aditional legend items can be inputted through the items paramter
         '''
@@ -62,7 +62,7 @@ class plot_2D(gp.plot_2D):
 
     def init_plot(self, z=0):
         '''
-        Initilizes a 2D plot of torc/planar uf-lattice
+        Initializes a 2D plot of torc/planar uf-lattice
         '''
         plt.sca(self.ax)
         self.init_axis(0-.2, self.size+.2)

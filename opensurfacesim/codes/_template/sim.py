@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
-from .elements import DataQubit, AncillaQubit, PseudoQubit, Edge, PseudoEdge, Qubit
-from ...info.benchmark import BenchMarker
+from ..elements import DataQubit, AncillaQubit, PseudoQubit, Edge, PseudoEdge
+from ...benchmark import BenchMarker
 from ...errors._template import Sim as Error
 from typing import List, Optional, Union, Tuple
 import importlib
@@ -10,46 +10,51 @@ import random
 class PerfectMeasurements(ABC):
     """Simulation template code class for perfect measurements.
 
+    The qubits of the code class are stored in a double dictionary, with the keys in the outer dictionary corresponding to the qubit layer. For perfect measurements, there is a single layer. For faulty measurements, there are multiple layers (and defaults to ``self.size``). In the nested dictionaries each qubit is stored by ``qubit.loc`` as key. A qubit can thus be accessed by ``self.qubits[layer][(x,y)]``.
+
+    The qubit and edge classes from :doc:`elements` can be replaced with inherited classes to store decoder dependent attributes.
+
     Parameters
     ----------
-    size : int, tuple
-        Size of the surface code in single dimension or two dimensions (y,x).
-    dual : bool, optional
-        Enables the dual graph. Turn off when only simulating for bit-flip errors.
-    benchmarker : Benchmarker, optional
-        Benchmarker class. If a benchmarker class is attached, the benchmarker will start to collect the number of calls of to the code class and decoder class methods.
+    size : int or tuple 
+        Size of the surface code in single dimension or two dimensions ``(x,y)``.
+    benchmarker : `~opensurfacesim.benchmark.Benchmarker`, optional
+        If a benchmarker class is attached, the benchmarker will start to collect the number of calls of to the code class and decoder class methods.
 
     Attributes
     ----------
-    ancilla_qubits : dict of dict of AncillaQubit
-        See notes.
-    data_qubits: dict of dict of DataQubit
-        See notes.
-    pseudo_qubits: dict of dict of PseudoQubit
-        See notes.
-    errors : dict of Error
-        Dictionary of error modules with the module name as key. All error modules loaded in `errors` will be applied during a simulation by `random_errors`.
-    logical_operators : dict of list of Edge
-        Dictionary with lists of Edges that from a trivial loop over the surface and correspond to a logical operator. The logical state of each operator can be obtained by the state of each Edge in the list.
+    dataQubit : `~opensurfacesim.code.elements.AncillaQubit`
+        Data-qubit class to use for the current code. 
+
+    ancillaQubit : `~opensurfacesim.code.elements.DataQubit`
+        Ancilla-qubit class to use for the current code. 
+
+    pseudoQubit : `~opensurfacesim.code.elements.PseudoQubit`
+        Pseudo-qubit class to use for the current code.
+
+    edge : `~opensurfacesim.code.elements.Edge`
+        Edge class to use for the current code.
+
+    ancilla_qubits : dict of dict 
+        Nested dictionary of `~opensurfacesim.code.elements.AncillaQubit`\ s.
+
+    data_qubits : dict of dict 
+        Nested dictionary of `~opensurfacesim.code.elements.DataQubit`\ s.
+
+    pseudo_qubits : dict of dict 
+        Nested dictionary of `~opensurfacesim.code.elements.PseudoQubit`\ s.
+
+    errors : dict
+        Dictionary of error modules with the module name as key. All error modules from :doc:`../errors/index` loaded in ``self.errors`` will be applied during a simulation by :meth:`random_errors`.
+
+    logical_operators : dict of list
+        Dictionary with lists of `~opensurfacesim.code.elements.Edge`\ s that from a trivial loop over the surface and correspond to a logical operator. The logical state of each operator can be obtained by the state of each Edge in the list.
+
     logical_state : dict of bool
-        Dictionary with the states corresponding to the logical operators in `logical_operators`.
+        Dictionary with the states corresponding to the logical operators in ``self.logical_operators``.
+
     no_error : bool
-        Indicator for whether there is a logical error in the last iteration. The value for `no_error` is updated after a call to `logical_state`.
-
-    See Also
-    --------
-    opensurfacesim.code._template.elements.DataQubit : Data-qubit class.
-    opensurfacesim.code._template.elements.AncillaQubit : Ancilla-qubit class.
-    opensurfacesim.code._template.elements.PseudoQubit : Pseudo-qubit class.
-    opensurfacesim.code._template.elements.Edge : Edge class.
-    opensurfacesim.error : Error modules.
-    opensurfacesim.info.benchmark.BenchMarker : Benchmarking class.
-
-    Notes
-    -----
-    The qubits of the code class are stored in a double dictionary, with the keys in the outer dictionary corresponding to the qubit layer. For perfect measurements, there is a single layer. For faulty measurements, there are multiple layers (and defaults to `size`). In the nested dictionaries each qubit is stored by its `loc` as key. A qubit can thus be accesed by `self.qubits[layer][(x,y)]`.
-
-    The qubit and edge classes from the `elements` module can be replaced with inherited classes to store decoder dependent attributes.
+        Indicator for whether there is a logical error in the last iteration. The value for ``self.no_error`` is updated after a call to ``self.logical_state``.
     """
 
     dataQubit = DataQubit
@@ -64,68 +69,21 @@ class PerfectMeasurements(ABC):
     def __init__(
         self,
         size: Union[int, Tuple[int, int]],
-        dual: bool = True,
         benchmarker: Optional[BenchMarker] = None,
         **kwargs,
     ):
         self.layers = 1
         self.decode_layer = 0
         self.size = size if type(size) == tuple else (size, size)
-        self.dual = dual
         self.benchmarker = benchmarker
         self.no_error = True
-
         for key, value in kwargs.items():
             setattr(self, key, value)
-
         self.ancilla_qubits = {}
         self.data_qubits = {}
         self.pseudo_qubits = {}
         self.errors = {}
         self.logical_operators = {}
-
-    def __repr__(self):
-        return f"{self.code} {self.size} {self.__class__.__name__}"
-
-    """
-    ----------------------------------------------------------------------------------------
-                                        Main functions
-    ----------------------------------------------------------------------------------------
-    """
-
-    def initialize(self, *args, **kwargs) -> None:
-        """Initilizes all data objects of the code.
-
-        Error modules may be specified here in the same format as in `init_errors`.
-
-        See Also
-        --------
-        init_surface
-        init_logical_operator
-        init_errors
-        """
-        self.init_surface(**kwargs)
-        self.init_logical_operator(**kwargs)
-        self.init_errors(*args, **kwargs)
-
-        # def simulate(self, z: float = 0, error_order: Optional[List[Error]] = None, **kwargs):
-        #     """Simulate an iteration or errors and measurement.
-
-        #     Parameters
-        #     ----------
-        #     z : int or float, optional
-        #         Layer of qubits.
-        #     error_order : List of Error, optional
-        #         Order in which the loaded error classes are applied.
-
-        #     See Also
-        #     --------
-        #     opensurfacesim.error : Error modules.
-        #     random_errors
-        #     parity_measurement
-        #     """
-        #     self.random_errors(z=z, apply_order=error_order, **kwargs)
-        #     self.parity_measurement(z=z, **kwargs)
 
     @property
     def logical_state(self) -> Tuple[List[bool], bool]:
@@ -149,29 +107,40 @@ class PerfectMeasurements(ABC):
         self.prev_logical_state = logical_state
         return logical_state
 
+    def __repr__(self):
+        return f"{self.code} {self.size} {self.__class__.__name__}"
+
     """
     ----------------------------------------------------------------------------------------
                                         Initialization
     ----------------------------------------------------------------------------------------
     """
+    def initialize(self, *args, **kwargs):
+        """Initializes all data objects of the code.
+
+        Builds the surface with `init_surface`, adds the logical operators with `init_logical_operator`, and loads error modules with `init_errors`. All keyword arguments from these methods can be used for `initialize`.
+        """
+        self.init_surface(**kwargs)
+        self.init_logical_operator(**kwargs)
+        self.init_errors(*args, **kwargs)
 
     @abstractmethod
     def init_surface(self):
-        """Inititates the surface code."""
+        """Initiates the surface code."""
         pass
 
     @abstractmethod
     def init_logical_operator(self):
-        """Inititates the logical operators."""
+        """Initiates the logical operators."""
         pass
 
 
     def init_errors(
         self, *error_modules: Union[str, Error], error_rates: dict = {}
-    ) -> None:
+    ):
         """Initializes error modules.
 
-        Any error module from `opensurfacesim.error` can loaded as either a string equivalent to the module file name or as the module itself. The default error rates for all loaded error modules can be supplied as a dictionary with keywords corresponding to the default error rates of the associated error modules.
+        Any error module from :doc:`../errors/index` can loaded as either a string equivalent to the module file name or as the module itself. The default error rates for all loaded error modules can be supplied as a dictionary with keywords corresponding to the default error rates of the associated error modules.
 
         Parameters
         ----------
@@ -180,20 +149,21 @@ class PerfectMeasurements(ABC):
         error_rates : dict of floats
             The default error rates for the loaded modules. Must be a dictionary with probabilities with keywords corresponding to the default or overriding error rates of the associated error modules.
 
-        See Also
-        --------
-        opensurfacesim.error : Error modules.
 
         Examples
         --------
-        Load Pauli and erasure error modules via strings. Set default bit-flip rate to `0.1` and erasure to `0.03`.
+        Load :doc:`../errors/pauli` and :doc:`../errors/erasure/` modules via string names. Set default bit-flip rate to `0.1` and erasure to `0.03`.
 
-            >>> SurfaceCode.init_errors("pauli", "erasure", error_rates={"pauli_x": 0.1, "p_erasure": 0.03})
+            >>> SurfaceCode.init_errors(
+            ...    "pauli", 
+            ...    "erasure",
+            ...    error_rates={"p_bitflip": 0.1, "p_erasure": 0.03}
+            ... )
 
         Load Pauli error module via module. Set default phase-flip rate to `0.05`.
 
             >>> import opensurfacesim.error.pauli as pauli
-            >>> SurfaceCode.init_errors(pauli, error_rates={"pauli_z": 0.05})
+            >>> SurfaceCode.init_errors(pauli, error_rates={"p_phaseflip": 0.05})
         """
         for error_module in error_modules:
             if type(error_module) == str:
@@ -203,6 +173,7 @@ class PerfectMeasurements(ABC):
             self._init_error(error_module, error_rates)
 
     def _init_error(self, error_module, error_rates):
+        """Initializes the ``Sim`` class of a error module."""
         error_type = error_module.__name__.split(".")[-1]
         self.errors[error_type] = error_module.Sim(**error_rates)
 
@@ -216,11 +187,10 @@ class PerfectMeasurements(ABC):
     def add_data_qubit(
         self, loc: Tuple[float, float], z: float = 0, **kwargs
     ) -> DataQubit:
-        """Initilizes a data-qubit."""
+        """Initializes a `~.code.elements.DataQubit` with `dataQubit` and `edge`, and saved to ``self.data_qubits[z][loc]``."""
         data_qubit = self.dataQubit(loc, z)
         data_qubit.edges["x"] = self.edge(data_qubit, "x")
-        if self.dual:
-            data_qubit.edges["z"] = self.edge(data_qubit, "z")
+        data_qubit.edges["z"] = self.edge(data_qubit, "z")
         self.data_qubits[z][loc] = data_qubit
         return data_qubit
 
@@ -231,7 +201,7 @@ class PerfectMeasurements(ABC):
         state_type: str = "x",
         **kwargs,
     ) -> AncillaQubit:
-        """Initilizes an ancilla-qubit."""
+        """Initializes a `~.code.elements.AncillaQubit` with `ancillaQubit`, and saved to ``self.ancilla_qubits[z][loc]``."""
         ancilla_qubit = self.ancillaQubit(loc, z, state_type=state_type)
         self.ancilla_qubits[z][loc] = ancilla_qubit
         return ancilla_qubit
@@ -243,7 +213,7 @@ class PerfectMeasurements(ABC):
         state_type: str = "x",
         **kwargs,
     ) -> PseudoQubit:
-        """Initilizes a pseudo-qubit on the boundary."""
+        """Initializes a `~.code.elements.PseudoQubit` with `pseudoQubit`, and saved to ``self.pseudo_qubits[z][loc]``."""
         pseudo_qubit = self.pseudoQubit(loc, z, state_type=state_type)
         self.pseudo_qubits[z][loc] = pseudo_qubit
         return pseudo_qubit
@@ -255,14 +225,18 @@ class PerfectMeasurements(ABC):
         key: Union[float, str],
         edge: Optional[Edge] = None,
         **kwargs,
-    ) -> None:
-        """Entangles one `data_qubit` to a `ancilla_qubit` for parity measurement.
+    ):
+        """Entangles one `~.code.elements.DataQubit` to a `~.code.elements.AncillaQubit` for parity measurement.
 
-        See Also
-        --------
-        opensurfacesim.code._template.elements.DataQubit : Data-qubit class.
-        opensurfacesim.code._template.elements.AncillaQubit : Ancilla-qubit class.
-        opensurfacesim.code._template.elements.Edge : Edge class.
+        Parameters
+        data_qubit : `~.code.elements.DataQubit`
+            Control qubit.
+        ancilla_qubit : `~.code.elements.AncillaQubit`
+            Controlled qubit.
+        key : float or str
+            The entanglement is saved by adding the `~.code.elements.DataQubit` to `~.code.elements.AncillaQubit`\ ``.parity_qubits[key]``
+        edge : `~.code.elements.Edge`, optional
+            The edge of the data-qubit to entangle to.
         """
         ancilla_qubit.parity_qubits[key] = data_qubit
         if edge is None:
@@ -277,15 +251,15 @@ class PerfectMeasurements(ABC):
 
     def random_errors(
         self, z: float = 0, apply_order: Optional[List[Error]] = None, **kwargs
-    ) -> None:
-        """Applies all errors loaded in the `errors` class attribute to layer `z`.
+    ):
+        """Applies all errors loaded in ``self.errors`` attribute to layer ``z``.
 
-        If `apply_order` is specified, the error modules are applied in order of the error names in the list. If no order is specified, the errors are applied in a random order. Addionally, any error rate can be overriden by supplying the rate as a keyword argument e.g. `pauli_x = 0.1`.
+        The random error is applied for each loaded error module by calling ``error_module.random_error()``. If ``apply_order`` is specified, the error modules are applied in order of the error names in the list. If no order is specified, the errors are applied in a random order. Addionally, any error rate can set by supplying the rate as a keyword argument e.g. ``p_bitflip = 0.1``.
 
         Parameters
         ----------
         z : int or float, optional
-            Layer of qubits of parity measurments.
+            Layer of qubits of parity measurements.
         apply_order : list of string, optional
             The order in which the error modules are applied.
         """
@@ -323,7 +297,7 @@ class PerfectMeasurements(ABC):
     #     ancilla_qubit.state = parity
     #     return parity
 
-    # def parity_measurement(self, z: float = 0, **kwargs) -> None:
+    # def parity_measurement(self, z: float = 0, **kwargs):
     #     """Performs a round of parity measurements on layer `z`.
 
     #     Parameters
@@ -340,7 +314,7 @@ class PerfectMeasurements(ABC):
     ----------------------------------------------------------------------------------------
     """
 
-    def reset(self) -> None:
+    def reset(self):
         """Resets the simulator by resetting all of its components."""
         for dlayer in self.data_qubits.values():
             for qubit in dlayer.values():
@@ -409,8 +383,8 @@ class FaultyMeasurements(PerfectMeasurements):
     ----------------------------------------------------------------------------------------
     """
 
-    def init_surface(self, **kwargs) -> None:
-        """Inititates the surface code.
+    def init_surface(self, **kwargs):
+        """Initiates the surface code.
 
         The 3D lattice is initilized by first building the ground layer. After that each consecutive layer is built and pseudo-edges are added to connect the ancilla qubits of each layer.
         """
@@ -423,7 +397,7 @@ class FaultyMeasurements(PerfectMeasurements):
 
     def add_vertical_edge(
         self, lower_ancilla: AncillaQubit, upper_ancilla: AncillaQubit, **kwargs
-    ) -> None:
+    ):
         """Adds a PseudoEdge to connect two instances of an ancilla qubit in time.
 
         A surface code with faulty measurements must be decoded in 3D. Instances of the same ancilla qubits in time must be connected with an edge. Here, `lower_ancilla` is an older instance of layer `z`, and 'upper_ancilla` is a newer instance of layer `z+1`.
@@ -437,8 +411,8 @@ class FaultyMeasurements(PerfectMeasurements):
 
         See Also
         --------
-        opensurfacesim.code._template.elementsAncillaQubit : Ancilla-qubit class.
-        opensurfacesim.code._template.elementsPseudoEdge : Pseudo-edge class.
+        opensurfacesim.code.elementsAncillaQubit : Ancilla-qubit class.
+        opensurfacesim.code.elementsPseudoEdge : Pseudo-edge class.
         """
         pseudo_edge = self.pseudoEdge(upper_ancilla, state_type=upper_ancilla.state_type)
         self.pseudo_edges.append(pseudo_edge)
@@ -458,7 +432,7 @@ class FaultyMeasurements(PerfectMeasurements):
         pmz: Optional[float] = None,
         z: float = 0,
         **kwargs,
-    ) -> None:
+    ):
         """Performs a round of parity measurements on layer `z` with faulty measurements.
 
         On all ancilla qubits of layer `z`, a parity check measurement is performed. Additionally tot he `PerferctMeasurements` class, an additional measurement error is applied, dependent on the type of the ancilla qubit.

@@ -9,20 +9,18 @@
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-#
+
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../..'))
-
+sys.path.insert(0, os.path.abspath('../../'))
+import sphinx
+from m2r2 import MdInclude
 
 # -- Project information -----------------------------------------------------
 
-project = 'OpenSurfaceSim'
+project = 'Open Surface code Simulations'
 copyright = '2020, Mark Shui Hu'
 author = 'Mark Shui Hu'
-
-# The full version, including alpha/beta/rc tags
-release = '0.1'
 
 
 # -- General configuration ---------------------------------------------------
@@ -31,13 +29,17 @@ release = '0.1'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    "sphinx.ext.autodoc",
-    "sphinx.ext.viewcode",
+    'sphinx.ext.autodoc',
+    'sphinx.ext.todo',
     "sphinx.ext.githubpages",
-    # "numpydoc",
-    "m2r2"
+    "sphinx.ext.intersphinx",
+    "numpydoc",
+    "sphinx_autodoc_typehints",
+    "recommonmark",
 ]
-source_suffix = ['.rst', '.md']
+
+intersphinx_mapping = {'matplotlib': ('https://matplotlib.org/', None)}
+
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -55,27 +57,47 @@ exclude_patterns = []
 #
 html_theme = 'alabaster'
 
-# Theme options are theme-specific and customize the look and feel of a theme
-# further.  For a list of options available for each theme, see the
-# documentation.
 html_theme_options = {
-    'description': 'Open Surface code Simulations',
+    'description': 'Open source library for simulating and visualizing the surface code and its decoders.',
     'github_user': 'watermarkhu',
     'github_repo': 'OpenSurfaceSim',
-    'github_banner': True,
-    'github_type': 'mark',
-    'github_count': False,
-    'font_family': '"Charis SIL", "Noto Serif", serif',
-    'head_font_family': 'Lato, sans-serif',
-    'code_font_family': '"Code new roman", "Ubuntu Mono", monospace',
-    'code_font_size': '1rem',
+    'github_button': True,
+    'codecov_button': True,
+    "extra_nav_links": {"Contact author": "https://watermarkhu.nl"},
+    "sidebar_collapse": False,
+    "show_powered_by": False,
+    # 'font_family': '"Charis SIL", "Noto Serif", serif',
+    # 'head_font_family': 'Lato, sans-serif',
+    # 'code_font_family': '"Code new roman", "Ubuntu Mono", monospace',
+    # 'code_font_size': '1rem',
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ['_static']
+# html_sidebars = {
+#     '**': [
+#         'globaltoc.html', 
+#         'localtoc.html',
+#         'relations.html',
+#         'sourcelink.html',
+#         'searchbox.html',
+#         # located at _templates/
+#         #  'foo.html',
+#     ]
 
-m2r_parse_relative_links = True
-m2r_anonymous_references = False
-m2r_disable_inline_math = False
+# }
+
+# -- Extension configuration -------------------------------------------------
+
+# m2r_parse_relative_links = True
+# m2r_anonymous_references = False
+# m2r_disable_inline_math = False
+
+# -- Options for todo extension ----------------------------------------------
+
+# If true, `todo` and `todoList` produce output, else they produce nothing.
+todo_include_todos = True
+
+default_role = 'obj' 

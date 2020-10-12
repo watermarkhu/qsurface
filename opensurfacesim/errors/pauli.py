@@ -1,4 +1,4 @@
-from ..codes._template.elements import Qubit
+from ..codes.elements import Qubit
 from typing import Optional
 from ._template import Sim as TemplateSim, Plot as TemplatePlot
 import random

@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from opensurfacesim.configuration import get_attributes, init_config
 import os
-from ..codes._template.elements import DataQubit
+from ..codes.elements import DataQubit
 from typing import Dict, List, Tuple, Union
 from matplotlib import pyplot as plt
 

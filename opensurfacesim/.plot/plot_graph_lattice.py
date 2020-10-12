@@ -325,7 +325,7 @@ class plot_2D:
 
     def init_legend(self, x, y, items=[], loc="upper right"):
         '''
-        Initilizes the legend of the plot.
+        Initializes the legend of the plot.
         The qubits, errors and stabilizers are added.
         Aditional legend items can be inputted through the items paramter
         '''
@@ -346,7 +346,7 @@ class plot_2D:
 
     def _init_axis(self, min, max):
         '''
-        Initilizes the 2D axis by settings axis limits, flipping y axis and removing the axis border
+        Initializes the 2D axis by settings axis limits, flipping y axis and removing the axis border
         '''
         # plt.grid(alpha = self.alpha, ls=":", lw=self.linewidth)
         self.ax.set_xlim(min, max)
@@ -703,7 +703,7 @@ class plot_3D(plot_2D):
 
     def _init_axis(self, min, max, zl):
         '''
-        Initilizes the 3D axis by removing the background panes, changing the grid tics, alpha and linestyle, setting the labels and title.
+        Initializes the 3D axis by removing the background panes, changing the grid tics, alpha and linestyle, setting the labels and title.
         '''
         plt.sca(self.ax)
 

@@ -1,8 +1,7 @@
-matplotlib
-tkinter
-scipy
 numpy
 pandas
 networkx
+matplotlib
+scipy
 progiter
 termcolor

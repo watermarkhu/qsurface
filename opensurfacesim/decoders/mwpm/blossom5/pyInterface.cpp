@@ -1,3 +1,5 @@
+// PyInterface by https://github.com/naominickerson/fault_tolerance_simulations
+
 #include <stdio.h>
 #include "PerfectMatching.h"
 #include "GEOM/GeomPerfectMatching.h"

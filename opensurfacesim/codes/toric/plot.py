@@ -12,7 +12,8 @@ class PerfectMeasurements(SimPM, TemplatePM):
             self.main_boundary = [-0.25, -0.25, code.size[0] + 0.5, code.size[1] + 0.5]
             super().__init__(code, *args, **kwargs)
 
-        def parse_boundary_coordinates(self, size, *args):
+        @staticmethod
+        def _parse_boundary_coordinates(size, *args):
             # Inherited docstrings
             options = {-1: [*args]}
             for i, arg in enumerate(args):

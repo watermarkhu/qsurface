@@ -46,7 +46,7 @@ class toric(go.toric):
         measure_stab()
         logical_error()
         count_matching_weight()
-        reset()
+        _reset()
 
     3D graph is initilized by calling the init_graph_layer() method of the parent graph_2D.toric object.
     From here, we call that method size-1 times again, on each layer of the cubic lattice. Furthermore, qubit-like objects bridges containing vertical edges are added between the layers.
@@ -239,14 +239,14 @@ class toric(go.toric):
     ########################################################################################
     '''
 
-    def reset(self):
+    def _reset(self):
         '''
-        Applies reset() method of parent graph_2D object. Also resets all the bridge objects present in the 3D graph.
+        Applies _reset() method of parent graph_2D object. Also resets all the bridge objects present in the 3D graph.
         '''
-        super().reset()
+        super()._reset()
         for layer in self.G.values():
             for bridge in layer.values():
-                bridge.reset()
+                bridge._reset()
 
 '''
 ########################################################################################
@@ -297,8 +297,8 @@ class Bridge(object):
     def picker(self):
         return self.__repr__()
 
-    def reset(self):
+    def _reset(self):
         """
         Changes all iteration paramters to their initial value
         """
-        self.E.reset()
+        self.E._reset()

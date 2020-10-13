@@ -1,5 +1,5 @@
 import os
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from matplotlib.lines import Line2D
 import matplotlib.pyplot as plt
 from matplotlib.widgets import RadioButtons
@@ -14,7 +14,7 @@ class PerfectMeasurements(TemplateSimPM):
     
     Attributes
     ----------
-    figure : `.Figure`
+    figure : `~.codes._template.plot.PerfectMeasurements.Figure`
         Figure object of the current code. 
     """
 
@@ -23,7 +23,7 @@ class PerfectMeasurements(TemplateSimPM):
         self.figure = self.Figure(self, **kwargs)
 
     def initialize(self, *args, **kwargs):
-        """Initializes the code with a figure.  
+        """Initializes the code with a figure. Also takes keyword arguments for `~.codes._template.plot.PerfectMeasurements.Figure.init_plot`. 
         
         Since each error object delivers extra plot properties to the figure, which are dependent on the ``self.rc`` values in the figure itself, we must initialize in the following sequence. 
 
@@ -35,7 +35,7 @@ class PerfectMeasurements(TemplateSimPM):
         self.figure.init_plot(**kwargs)
 
     def _init_error(self, error_module, error_rates):
-        """Initializes the ``Plot`` class of a error module."""
+        """Initializes the ``error_module.Plot`` class of a error module."""
         error_type = error_module.__name__.split(".")[-1]
         self.errors[error_type] = error_module.Plot(self.figure, **error_rates)
 
@@ -49,14 +49,14 @@ class PerfectMeasurements(TemplateSimPM):
         self.plot_ancilla("Ancilla-qubits measured", z=z, **kwargs)
 
     def plot_data(self, iter_name: Optional[str] = None, z: float = 0, **kwargs):
-        """Update plots of all data-qubits in layer ``z``."""
+        """Update plots of all data-qubits in layer ``z``. A plot iteration is added if a ``iter_name`` is supplied. See `.plot.Template2D.draw_figure`."""
         for qubit in self.data_qubits[z].values():
             self.figure._update_data(qubit)
         if iter_name:
             self.figure.draw_figure(new_iter_name=iter_name)
 
     def plot_ancilla(self, iter_name: Optional[str] = None, z: float = 0, **kwargs):
-        """Update plots of all ancilla-qubits in layer ``z``."""
+        """Update plots of all ancilla-qubits in layer ``z``. A plot iteration is added if a ``iter_name`` is supplied. See `.plot.Template2D.draw_figure`."""
         for qubit in self.ancilla_qubits[z].values():
             self.figure._update_ancilla(qubit)
         if iter_name:
@@ -68,13 +68,13 @@ class PerfectMeasurements(TemplateSimPM):
 
         The inner figure class that plots the surface code based on the ``Qubit.loc`` and ``Qubit.z`` values on the set of ``code.data_qubits``, ``code.ancilla_qubits`` and ``code.pseudo_qubits``. This allows for a high amount of code inheritance. 
 
-        An additional `matplotlib.widgets.RadioButtons` object is added to the figure which allows for the user to choose one of the loaded errors and apply then directly to a qubit via :meth:`_pick_handler`. 
+        An additional `matplotlib.widgets.RadioButtons` object is added to the figure which allows for the user to choose one of the loaded errors and apply the error directly to a qubit via `_pick_handler`. 
 
-        Default values for code-plot properties such as colors and linewidths are saved in a *plot_codes.ini* file. All parameters within the ini file are parsed by :meth:`~opensurfacesim.configuration.read_config` and saved to ``self.rc`` as a dictionary. The values defined in the ini file can be the predefined values in *plot.ini*. 
+        Default values for code-plot properties such as colors and linewidths are saved in a *plot_codes.ini* file. All parameters within the ini file are parsed by `~.configuration.read_config` and saved to the ``self.rc`` dictionary. The values defined in the ini file can be the predefined values in *plot.ini*. 
 
         Parameters
         ----------
-        code : `.PerfectMeasurements`
+        code : `~codes._template.plot.PerfectMeasurements`
 
         Attributes
         ----------
@@ -101,7 +101,10 @@ class PerfectMeasurements(TemplateSimPM):
             )
 
         def init_plot(self, **kwargs):
-            """Plots all elements of the surface code onto the figure."""
+            """Plots all elements of the surface code onto the figure. Also takes keyword arguments for `~.codes._template.plot.PerfectMeasurements.Figure.init_legend`. 
+
+            An additional `matplotlib.widgets.RadioButtons` object is added to the figure which allows for the user to choose one of the loaded errors and apply the error directly to a qubit via `_pick_handler`. This object is added via the `init_plot` method to make sure that the errors are already loaded in `self.code.errors`. The method for each loaded error is saved to `self.error_methods`. 
+            """
             title = "{} lattice".format(str(self.code.__class__.__module__).split(".")[-2])
             self._init_axis(self.main_boundary, title=title, **kwargs)
             self.init_legend(ncol=1, **kwargs)
@@ -122,19 +125,14 @@ class PerfectMeasurements(TemplateSimPM):
             self.draw_figure()
 
         def init_legend(self, legend_items: List[Line2D] = [], **kwargs):
-            """Initializes the legend of the main axis of the figure.
+            """Initializes the legend of the main axis of the figure. Also takes keyword arguments for `~matplotlib.axes.Axes.legend`. 
 
-            The legend of the main axis ``self.main_ax`` consists of a series of `matplotlib.line.Line2D` objects. The qubit, vertex and stars are always in the legend for a surface code plot. Any error loaded in the code at ``code.errors`` in de outer class will add an extra element to the legend for differentiation if an error occurs. The 'Line2D' attributes are stored at ``Error.legend_attributes`` of the ``Error`` class.
+            The legend of the main axis ``self.main_ax`` consists of a series of `~matplotlib.line.Line2D` objects. The qubit, vertex and stars are always in the legend for a surface code plot. Any error from :doc:`../errors/index/` loaded in the code at ``code.errors`` in de outer class will add an extra element to the legend for differentiation if an error occurs. The 'Line2D' attributes are stored at ``error.Plot.legend_properties`` of the error module. 
 
             Parameters
             ----------
-            legend_items : list of `matplotlib.lines.Line2D`, optional
+            legend_items : list of `~matplotlib.lines.Line2D`, optional
                 Additional elements to the legend.
-
-            See Also
-            --------
-            opensurfacesim.error._template.Error : Template error module.
-            _legend_circle : creates a matplotlib.line.Line2D object.
             """
             # Main legend items
             self.lh = [
@@ -181,7 +179,7 @@ class PerfectMeasurements(TemplateSimPM):
         def _pick_handler(self, event):
             """Function on when an object in the figure is picked
             
-            If a specific error is selected, the error is applied via the selected error in``self.error_methods. The plot of the qubit is immediately updated. ``
+            If a specific error is selected, the error is applied via the selected error in ``self.error_methods``. The plot of the qubit is immediately updated.
             """
             selected = self.interact_bodies["error_buttons"].value_selected
             if selected == "info":
@@ -192,27 +190,23 @@ class PerfectMeasurements(TemplateSimPM):
                 self.error_methods[selected](qubit)
                 self._update_data(qubit, temporary=True)
 
-        def parse_boundary_coordinates(self, size, *args: float) -> List[float]:
+        @staticmethod
+        def _parse_boundary_coordinates(size, *args: float) -> List[float]:
             """Parse two locations on the lattice.
 
             An unbounded surface cannot be plotted on a 2D figure. The lines on the boundary consisting of two coordinates must thus be parsed such that all lines will be plotted within the given window.
-
-            Parameters
-            ----------
-            args : int or float
-                Coordinates.
-
-            Returns
-            -------
-            list of int or float
-                Parsed coordinates
             """
             return args
 
         def _plot_ancilla(self, qubit: AncillaQubit):
             """plots an ancilla-qubit.
 
-            For an ancilla-qubit, a `matplotlib.patches.Rectangle` object is plotted. Based on the type of ancilla, the patch is rotated at a 45 degree angle. Additionally, a line is plotted towards each of the data-qubits in the `parity_qubits` attribute.
+            For an ancilla-qubit, a `matplotlib.patches.Rectangle` object is plotted. Based on the type of ancilla, the patch is rotated at a 45 degree angle. Additionally, a line is plotted towards each of the data-qubits in ``self.parity_qubits`` that represent the edges of the graph.
+
+            Parameters
+            ----------
+            qubit : `~.codes.elements.AncillaQubit`
+                Ancilla-qubit to plot.
             """
             linestyles = {"x": self.rc["line_style_primary"], "z": self.rc["line_style_secondary"]}
             rotations = {"x": 0, "z": 45}
@@ -222,11 +216,12 @@ class PerfectMeasurements(TemplateSimPM):
                 "z": lambda x, y: (x, y - self.rc["patch_rectangle_2d"] * 2 ** (1 / 2) / 2),
             }
 
+            # Plot graph edges
             qubit.surface_lines = {}
             for key, data in qubit.parity_qubits.items():
                 line = Line2D(
-                    self.parse_boundary_coordinates(self.code.size[0], qubit.loc[0], data.loc[0]),
-                    self.parse_boundary_coordinates(self.code.size[1], qubit.loc[1], data.loc[1]),
+                    self._parse_boundary_coordinates(self.code.size[0], qubit.loc[0], data.loc[0]),
+                    self._parse_boundary_coordinates(self.code.size[1], qubit.loc[1], data.loc[1]),
                     ls=linestyles[qubit.state_type],
                     zorder=0,
                     lw=self.rc["line_width_primary"],
@@ -234,7 +229,9 @@ class PerfectMeasurements(TemplateSimPM):
                 )
                 qubit.surface_lines[key] = line
                 self.main_ax.add_artist(line)
-                line.object = qubit
+                line.object = qubit                                 # Save qubit to artist
+            
+            # Plot ancilla object
             qubit.surface_plot = plt.Rectangle(
                 loc_parse[qubit.state_type](*qubit.loc),
                 self.rc["patch_rectangle_2d"],
@@ -246,10 +243,32 @@ class PerfectMeasurements(TemplateSimPM):
                 **self.rc["{}ancilla0".format(qubit.state_type)]
             )
             self.main_ax.add_artist(qubit.surface_plot)
-            qubit.surface_plot.object = qubit
+            qubit.surface_plot.object = qubit                       # Save qubit to artist
+
+        def _update_ancilla(self, qubit : AncillaQubit, temporary=False):
+            """Update properties of ancilla qubit plot.
+
+            Parameters
+            ----------
+            qubit : `~.codes.elements.AncillaQubit`
+                Ancilla-qubit to plot.
+            temporary : bool, optional
+                Makes update a temporary change. 
+            """
+            properties = self.rc[
+                "{}ancilla{}".format(qubit.state_type, int(qubit.state))
+            ]
+            self.new_properties(qubit.surface_plot, properties)
+
 
         def _plot_data(self, qubit: DataQubit):
-            """Plots a circle representing a data-qubit."""
+            """Plots a circle representing a data-qubit.
+            
+            Parameters
+            ----------
+            qubit : `~.codes.elements.DataQubit`
+                Data-qubit to plot.
+            """
             qubit.surface_plot = plt.Circle(
                 qubit.loc,
                 self.rc["patch_circle_2d"],
@@ -259,10 +278,18 @@ class PerfectMeasurements(TemplateSimPM):
                 **self.rc["data00"]
             )
             self.main_ax.add_artist(qubit.surface_plot)
-            qubit.surface_plot.object = qubit
+            qubit.surface_plot.object = qubit                       # Save qubit to artist
 
         def _update_data(self, qubit : DataQubit, temporary=False):
-            """Update properties of data qubit plot."""
+            """Update properties of data qubit plot.
+            
+            Parameters
+            ----------
+            qubit : `~.codes.elements.DataQubit`
+                Data-qubit to plot.
+            temporary : bool, optional
+                Makes update a temporary change. 
+            """
             x_state = int(qubit.edges["x"].state)
             z_state = int(qubit.edges["z"].state)
             properties = self.rc["data{}{}".format(x_state, z_state)]
@@ -271,10 +298,4 @@ class PerfectMeasurements(TemplateSimPM):
             else:
                 self.new_properties(qubit.surface_plot, properties)
 
-        def _update_ancilla(self, qubit : AncillaQubit, temporary=False):
-            """Update properties of ancilla qubit plot."""
-            properties = self.rc[
-                "{}ancilla{}".format(qubit.state_type, int(qubit.state))
-            ]
-            self.new_properties(qubit.surface_plot, properties)
 

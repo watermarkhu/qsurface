@@ -23,47 +23,56 @@ In the case of only Pauli errors, a 2D graph is generated for the simulation. If
 Several decoder algorithms are supported. The *Mininum-Weight Perfect Matching* (MWPM) decoder uses Kolmogorov's [Blossom V](https://pub.ist.ac.at/~vnk/software.html) algorithm. Furthermore, we implement Delfosse's and Nickerson's [Union-Find decoder](https://arxiv.org/pdf/1709.06218.pdf), which has *almost-linear* complexity. Finally, we present our modification to the Union-Find decoder; the **Balanced Bloom** algorithm, which improves the threshold of the Union-Find decoder to near MWPM performance, while retaining low complexity.
 
 ## Requirements
-### MWPM decoder
-
-The Blossom V algorithm is written in C, and can simply be compiled using the included makefile. The integration with the Python code is taken from [this repository](https://github.com/naominickerson/fault_tolerance_simulations) and provided by `PyMatch.py`. For more information we refer to the readme within the *blossom5* folder.
 
 ### Python packages
 
 Though this repository, several non-standard python libraries are used, which includes:
 
-**core packages**
+#### Core packages
+
 * matplotlib
 * networkx
 * scipy
 * numpy
 * pandas
 
-**printing and info**
+#### Printing and info
+
 * progiter
-* pprint
-* git-python
-* pyparsing
 * termcolor
 
 All required packages can be installed through:
-```
+
+```bash
 pip install -r requirements.txt
 ```
+
+Interactive plotting requires **Tkinter**. Your Python distribution may or may not bundled Tkinter already. Check out [this guide from Realpython.com](https://realpython.com/python-gui-tkinter/) to install Tkinter if you encounter any problems.
+
+### MWPM decoder
+
+The Blossom V algorithm is written in C, and can simply be compiled using the included makefile. The integration with the Python code is taken from [this repository](https://github.com/naominickerson/fault_tolerance_simulations) and provided by `PyMatch.py`. For more information we refer to the readme within the *blossom5* folder.
 
 ## Usage simulation
 
 ### Command line
+
 The file `run_oopsc.py` supports command line arguments. A simulation on a 3D planar 8x8x8 lattice with Pauli X and measurent error rate `px = pmx = 0.03` for 1000 iterations can be initiated with:
-```
+
+```bash
 python run_oopsc.py 8 -l planar -px 0.03 -pmx 0.03 -i 1000
 ```
+
 For more information on command line arguments type:
-```
+
+```bash
 python run_oopsc.py --help
 ```
 
 ### built-in methods
+
 In `oopsc.oopsc.py`, there are 3 methods to start a computation.
+
 ```python
 output = single(size, dec, go, config, **kwargs)
 output = multiple(size, dec, go, config, iters, **kwargs)
@@ -71,6 +80,7 @@ output = multiprocess(size, dec, go, config, iters, processes=None, **kwargs)
 ```
 
 each accepting the following keyword arguments:
+
 ```python
 kwargs = dict(
     code="toric",
@@ -81,11 +91,15 @@ kwargs = dict(
     measurez=0
   )
 ```
+
 The `config` parameter is a dictionary containing decoder and plotting parameters and must be complete. It contains all long arguments listed by `python run_oopsc.py --help`. A complete config dictionary can be called by:
+
 ```python
 config = oopsc.default_config()
 ```
+
 The config can be changed by inputting keyworded arguments into the default config function:
+
 ```python
 config = oopsc.default_config(plot3D=True, step_bucket=True)
 ```
@@ -95,6 +109,7 @@ The `go` and `dec` parameters stand for *graph object* and *decoder*, respective
 ## Plotting
 
 Most of the config parameters are on the plotting of the lattice, which can be toggled on. There are 3 types of plots that can be toggled:
+
 * 2D lattice plot (also final layer of 3D lattice)
 ![alt text][planar12]
 
@@ -103,27 +118,31 @@ Most of the config parameters are on the plotting of the lattice, which can be t
 * UF-graph plot
 ![alt text][uftoric6]
 
-
 For all options, view the command line help:
-```
+
+```bash
 python run_oopsc.py --help
 ```
 
 ## Usage thresholds
 
 Threshold calculations can be done via `threshold_run.py`, e.g. a threshold calculation on a toric lattice with the MWPM decoder for p-error `[0.09, 0.1, 0.11]` and lattices `[8, 10, 12]` including measurement errors with each 1000 iterations:
-```
+
+```bash
 python run_threshold.py mwpm toric 1000 -l 8 10 12 -p 0.09 0.1 0.11
 ```
+
 for all options, view the command line help:
-```
+
+```bash
 python run_threshold.py --help
 ```
+
 The threshold values is stored in a csv file in the `\data` folder in the main directory, or in the directory indicated. One could recalculate the threshold using different fitting parameters using `threshold_fit.py` (see `python threshold_fit.py --help`) and replot the data with `threshold_plot.py` (see `python threshold_plot.py --help`)
 
 ## License
 
-OpenSurfaceSim is distributed under the [BSD-3 license](https://github.com/watermarkhu/OpenSurfaceSim/blob/master/LICENSE), and is therefore available for private and commercial use. However, the *blossom5* decoder, located at `simulator/decoder/blossom5.py`, uses a external package *BlossomV* [1] located at `simulator/decoder/modules_blossom5/` that has its own [license](https://github.com/watermarkhu/OpenSurfaceSim/blob/master/LICENSE), which is **not** avaiable for commercial use. 
+OpenSurfaceSim is distributed under the [BSD-3 license](https://github.com/watermarkhu/OpenSurfaceSim/blob/master/LICENSE), and is therefore available for private and commercial use. However, the *blossom5* decoder, located at `simulator/decoder/blossom5.py`, uses a external package *BlossomV* [1] located at `simulator/decoder/modules_blossom5/` that has its own [license](https://github.com/watermarkhu/OpenSurfaceSim/blob/master/LICENSE), which is **not** avaiable for commercial use.
 
 We provide an alternative decoder using the Minimum-Weight Perfect Matching method via the `mwpm` decoder, lcoated at `simulator/decoder/mwpm.py`, which utilizes *networkx* instead of *BlossomV*. The *networkx* implementation is considerably slower than *BlossomV*, but falls under the BSD-3 license.  
 
@@ -132,21 +151,22 @@ We provide an alternative decoder using the Minimum-Weight Perfect Matching meth
 ## Issues
 
 ### Windows
+
 Interactive plotting on windows might require installation of Python via the [Anaconda](https://www.anaconda.com/) or [Canopy](https://assets.enthought.com/downloads/) distributions that will work out of the box.
 
 We have not been able to use the Blossom V algorithm on Windows due to compile errors. We do not recommend the installation of *Cygwin*, *GNU make* or similar executables as all have failed in our own experience. In stead, we encourage users to install the [Windows Subsystem for Linux (WSL)](https://docs.microsoft.com/en-us/windows/wsl/install-win10) on Windows.
 
 After installation of WSL, one needs to do a few more steps in order to display plots and other GUI's.
+
 1. Download a X-server such as [Xming](https://sourceforge.net/projects/xming/) or [VcsXrv](https://sourceforge.net/projects/vcxsrv/) (recommended).
 2. Check your WSL version. Open a Powershell or CMD window and input `wsl -l -v`.
 3. If your WSL version is 1, set `export DISPLAY=localhost:0.0` (add to `~/.bashrc` to make permanent). If you WSL is version 2, set `export DISPLAY=$(cat /etc/resolv.conf | grep nameserver | awk '{print $2}'):0` and add `-ac` to your X-server startup commands.
-4. Make sure that your firewall is not blocking any connections to WSL. This can be done by the following PowerShell script `Set-NetFirewallProfile -Name public -DisabledInterfaceAliases "vEthernet (WSL)`. 
+4. Make sure that your firewall is not blocking any connections to WSL. This can be done by the following PowerShell script `Set-NetFirewallProfile -Name public -DisabledInterfaceAliases "vEthernet (WSL)`.
 
 ### Linux/WSL
+
 Make sure to install tkinter via `sudo apt-get update` and `sudo apt-get install python3-tk`.
 In case of any errors involvig the *backend* or *renderer* please uninstall via `pip uninstall matplotlib` and reinstall via the package manager. On Debian/Ubuntu this is done via `sudo apt-get install python-matplotlib`.
-
-
 
 *This project is proudly funded by the [Unitary Fund](https://unitary.fund/).*
 

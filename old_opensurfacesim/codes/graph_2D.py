@@ -240,17 +240,17 @@ class toric(object):
         vN.neighbors["s"] = (vS, E2)
         vS.neighbors["n"] = (vN, E2)
 
-    def reset(self):
+    def _reset(self):
         """
         Resets the graph by deleting all clusters and resetting the edges and vertices
         """
         self.C, self.cID = {}, 0
         for qlayer in self.Q.values():
             for qubit in qlayer.values():
-                qubit.reset()
+                qubit._reset()
         for slayer in self.S.values():
             for stab in slayer.values():
-                stab.reset()
+                stab._reset()
 
 '''
 ########################################################################################
@@ -273,7 +273,7 @@ class planar(toric):
         methods:
             init_graph_layer()
             logical_error()
-            reset()
+            _reset()
     '''
     def __init__(self, *args, **kwargs):
         self.B = {}
@@ -341,14 +341,14 @@ class planar(toric):
         return logical_error, errorless
 
 
-    def reset(self):
+    def _reset(self):
         """
         Resets the graph by resetting all boudaries and interited objects
         """
-        super().reset()
+        super()._reset()
         for layer in self.B.values():
             for bound in layer.values():
-                bound.reset()
+                bound._reset()
 
 '''
 ########################################################################################
@@ -460,7 +460,7 @@ class Stab(object):
             return "{}-{}".format(self.__repr__(), cluster)
 
 
-    def reset(self):
+    def _reset(self):
         """
         Changes all iteration paramters to their initial value
         """
@@ -513,12 +513,12 @@ class Qubit(object):
     def picker(self):
         return self.__repr__()
 
-    def reset(self):
+    def _reset(self):
         """
         Changes all iteration parameters to their default value
         """
-        self.E[0].reset()
-        self.E[1].reset()
+        self.E[0]._reset()
+        self.E[1]._reset()
         self.erasure = 0
 
 
@@ -565,7 +565,7 @@ class Edge(object):
     def picker(self):
         return "{}-{}".format(self.__repr__(), self.qubit)
 
-    def reset(self):
+    def _reset(self):
         """
         Changes all iteration paramters to their initial value
         """

@@ -1,5 +1,6 @@
 from abc import ABC
-from typing import Any, List, Tuple, Union
+import random
+from typing import Tuple, Union
 
 
 class Qubit(ABC):
@@ -48,10 +49,10 @@ class DataQubit(Qubit):
         super().__init__(*args, **kwargs)
         self.edges = {}
 
-    def reset(self):
+    def _reset(self):
         """Resets this qubit's attributes."""
         for edge in self.edges.values():
-            edge.reset()
+            edge._reset()
 
     @property
     def state(self):
@@ -120,19 +121,32 @@ class AncillaQubit(Qubit):
         self.parity_qubits = {}
         self.vertical_ancillas = {}
 
-    @property
-    def state(self):
-        """Applies a parity measurement on the ancilla.
+    def get_state(self, p_bitflip: int = 0) -> bool:
+        """Applies a parity measurement on the ancilla with probability ``p_bitflip``.
 
         The functions loops over all the data qubits in ``self.parity_qubits``. For every edge associated with the entangled state on the data qubit, the value of a ``parity`` boolean is flipped.
+
+        Parameters
+        ----------
+        p_bitflip : float
+            Bitflip probability. 
         """
         parity = False
         for data_qubit in self.parity_qubits.values():
             edge = data_qubit.edges[self.state_type]
             if edge.state:
                 parity = not parity
+
+        if p_bitflip != 0 and random.random() < p_bitflip:
+            parity = not parity
+
         self.measured_state = parity
+
         return parity
+
+    @property
+    def state(self):
+        return self.get_state(0)
 
     def state_icon(self):
         """Returns the qubit state in a colored icon."""
@@ -173,9 +187,9 @@ class Edge(object):
         self.qubit = qubit
         self.state_type = state_type
         self._nodes = []
-        self.reset()
+        self.state = False
 
-    def reset(self):
+    def _reset(self):
         self.state = False
 
     def __call__(self):

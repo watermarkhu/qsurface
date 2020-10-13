@@ -38,7 +38,7 @@ class Sim(TemplateSim):
 
     def erasure_error(self, qubit):
         """Erases the `qubit` by resetting its attributes. """
-        qubit.reset()
+        qubit._reset()
 
 
 class Plot(TemplatePlot, Sim):

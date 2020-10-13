@@ -18,8 +18,8 @@ class Ancilla_qubit(el.Ancilla_qubit):
         cluster = self.cluster.parent if self.cluster else None
         return "{}-{}".format(self.__repr__(), cluster)
 
-    def reset(self):
-        super().reset()
+    def _reset(self):
+        super()._reset()
         self.uf_init
 
 
@@ -43,8 +43,8 @@ class Edge(el.Edge):
         self.matching = 0
         self.forest = 0
 
-    def reset(self):
-        super().reset()
+    def _reset(self):
+        super()._reset()
         self.uf_init()
 
 

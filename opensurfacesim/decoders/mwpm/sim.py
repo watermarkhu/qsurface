@@ -1,18 +1,21 @@
-import ctypes
+from typing import List, Tuple
 from opensurfacesim.codes.elements import AncillaQubit
-import networkx as nx
 from .._template import SimCode
+import networkx as nx
 from numpy.ctypeslib import ndpointer
+import ctypes
 import os
+
+
+LA = List[AncillaQubit]
 
 
 class Toric(SimCode):
     """
-    MWPM decoder for the toric lattice (2D and 3D).
-    Edges between all qubits are considered.
+    Minimum-Weight Perfect Matching decoder for the toric lattice.
     """
 
-    name = ("Minimum-Weight Perfect Matching",)
+    name = "Minimum-Weight Perfect Matching"
 
     compatibility_measurements = dict(
         PerfectMeasurements=True,
@@ -24,48 +27,87 @@ class Toric(SimCode):
     )
 
     def do_decode(self, **kwargs):
-        """
-        Decode functions for the MWPM toric decoder
-        Returns all qubits in the graph, as well ans their respective qubits on the decode layer.
-        This is the same for a 2D graph, but the most recent layer in the 3D case
-        """
-        plaqs, dplaqs, stars, dstars = [], [], [], []
-        dlayer, ancillas = self.code.decode_layer, self.code.ancilla_qubits
-        for layer in ancillas.values():
-            for ancilla in layer.values():
-                if ancilla.state:
-                    if ancilla.state_type == "x":
-                        plaqs.append(ancilla)
-                        dplaqs.append(ancillas[dlayer][ancilla.loc])
-                    else:
-                        stars.append(ancilla)
-                        dstars.append(ancillas[dlayer][ancilla.loc])
-        self.decode_group(plaqs, dplaqs, **kwargs)
-        self.decode_group(stars, dstars, **kwargs)
+        # Inherited docstring
+        plaqs, stars = self.get_syndrome()
+        self.correct_matching(plaqs, self.match_syndromes(plaqs, **kwargs))
+        self.correct_matching(stars, self.match_syndromes(stars, **kwargs))
 
-    def decode_group(self, layer_ancillas, decode_ancillas, use_blossom5=False, **kwargs):
+    def match_syndromes(
+        self,
+        syndromes : LA,
+        use_blossomv : bool = False,
+        **kwargs
+    ) -> list:  
+        """Decodes a list of syndromes of the same type.
 
-        matching_graph = self.matching_blossom5 if use_blossom5 else self.matching_networkx
-        edges = self.get_qubit_distances(layer_ancillas, self.code.size)
-        output = matching_graph(
+        A graph is constructed with the syndromes in ``syndromes`` as nodes and the distances between each of the syndromes as the edges. The distances are dependent on the boundary conditions of the code and is calculated by `_get_qubit_distances`. A minimum-weight matching is then found by either `match_networkx` or `match_blossomv`. 
+
+        Parameters
+        ----------
+        syndromes : list of `~.codes.elements.AncillaQubit`
+            Syndromes of the code.
+        use_blossomv : bool
+            Use external C++ Blossom V library for minimum-weight matching. Needs to be downloaded and compiled by calling `.get_blossomv`.
+
+        Returns
+        -------
+        list of `~.codes.elements.AncillaQubit`
+            Minimum-weight matched ancilla-qubits. 
+
+        """
+        matching_graph = self.match_blossomv if use_blossomv else self.match_networkx
+        edges = self._get_qubit_distances(syndromes, self.code.size)
+        matching = matching_graph(
             edges,
-            num_nodes=len(layer_ancillas),
             maxcardinality=self.mwpm_max_cardinality,
             **kwargs,
         )
-        layer_matchings = [[layer_ancillas[i0], layer_ancillas[i1]] for i0, i1 in output]
-        decode_matchings = [[decode_ancillas[i0], decode_ancillas[i1]] for i0, i1 in output]
-        self.apply_matching(layer_matchings, decode_matchings, self.code.size)
+        return matching
+
+    def correct_matching(self, syndromes : LA, matching : list, **kwargs):
+        """Applies the matchings as a correction to the code."""
+        weight = 0
+        for i0, i1 in matching:
+            weight += self._correct_matched_qubits(syndromes[i0], syndromes[i1])
+        return weight
 
     @staticmethod
-    def matching_networkx(edges, num_nodes, **kwargs):
+    def match_networkx(edges : list, maxcardinality : float, **kwargs) -> list:
+        """Finds the minimum-weight matching of a list of ``edges`` using `networkx.algorithms.matching.max_weight_matching`. 
+
+        Parameters
+        ----------
+        edges : list of [nodeA, nodeB, distance(nodeA,nodeB)]
+            A graph defined by a list of edges.
+        maxcardinality : float
+            See `networkx.algorithms.matching.max_weight_matching`.
+
+        Returns
+        -------
+        list
+            Minimum weight matching in the form of [[nodeA, nodeB],..]. 
+        """
         nxgraph = nx.Graph()
         for i0, i1, weight in edges:
             nxgraph.add_edge(i0, i1, weight=-weight)
-        return nx.algorithms.matching.max_weight_matching(nxgraph, **kwargs)
+        return nx.algorithms.matching.max_weight_matching(nxgraph, maxcardinality=maxcardinality, **kwargs)
 
     @staticmethod
-    def matching_blossom5(edges, num_nodes, **kwargs):
+    def match_blossomv(edges: list, **kwargs) -> list:
+        """Finds the minimum-weight matching of a list of ``edges`` using `Blossom V <https://pub.ist.ac.at/~vnk/software.html>`_. 
+
+        Parameters
+        ----------
+        edges : list of [nodeA, nodeB, distance(nodeA,nodeB)]
+            A graph defined by a list of edges.
+
+        Returns
+        -------
+        list
+            Minimum weight matching in the form of [[nodeA, nodeB],..]. 
+        """
+        num_nodes = set([n0 for (n0, _, _) in edges])
+
         if num_nodes == 0:
             return []
         try:
@@ -73,7 +115,7 @@ class Toric(SimCode):
             PMlib = ctypes.CDLL(folder + "/blossom5-v2.05.src/PMlib.so")
         except:
             raise FileExistsError(
-                "Blossom5 library not found. Prepare library with 'get_blossom5.py'."
+                "Blossom5 library not found. See docs."
             )
 
         PMlib.pyMatching.argtypes = [
@@ -102,10 +144,10 @@ class Toric(SimCode):
         return [[i0, i1] for i0, i1 in enumerate(matching) if i0 > i1]
 
     @staticmethod
-    def get_qubit_distances(qubits, size):
-        """
-        Computes all edges and their respective weights between all all nodes that are inputted.
-        Periodic boundary conditions are applied in x and y directions.
+    def _get_qubit_distances(qubits : LA, size: Tuple[float, float]):
+        """Computes the distance between a list of qubits.
+        
+        On a toric lattice, the shortest distance between two qubits may be one in four directions due to the periodic boundary conditions. The ``size`` parameters indicates the length in both x and y directions to find the shortest distance in all directions.
         """
         edges = []
         for i0, q0 in enumerate(qubits[:-1]):
@@ -119,21 +161,18 @@ class Toric(SimCode):
                 edges.append([i0, i1 + i0 + 1, weight])
         return edges
 
+    def _correct_matched_qubits(self, aq0 : AncillaQubit, aq1 : AncillaQubit) -> float:
+        """Flips the values of edges between two matched qubits by doing a walk in between."""
+        dq0 = self.code.ancilla_qubits[self.code.decode_layer][aq0.loc]
+        dq1 = self.code.ancilla_qubits[self.code.decode_layer][aq1.loc]
+        dx, dy, xd, yd = self._walk_direction(aq0, aq1, self.code.size)
+        xv = self._walk_and_correct(dq0, dy, yd)
+        self._walk_and_correct(dq1, dx, xd)
+        return dy + dx + abs(aq0.z - aq1.z)
 
-    def apply_matching(self, layered_matchings, decode_matchings, size):
-        """
-        Applies the matchings returned from the MWPM algorithm by doing a walk between nodes of the matching
-        """
-        weight = 0
-        for (lm0, lm1), (dm0, dm1) in zip(layered_matchings, decode_matchings):
-            dx, dy, xd, yd = self.walk_direction(lm0, lm1, size)
-            xv = self.walk_and_flip(dm0, dy, yd)
-            self.walk_and_flip(dm1, dx, xd)
-            weight += dy + dx + abs(lm0.z - lm1.z)
-        return weight
-    
     @staticmethod
-    def walk_direction(q0, q1, size):
+    def _walk_direction(q0 : AncillaQubit, q1 : AncillaQubit, size : Tuple[float, float]):
+        """Finds the closest walking distance and direction."""
         (x0, y0) = q0.loc
         (x1, y1) = q1.loc
         dx0 = int(x0 - x1) % size[0]
@@ -144,15 +183,15 @@ class Toric(SimCode):
         dy, yd = (dy0, "s") if dy0 < dy1 else (dy1, "n")
         return dx, dy, xd, yd
 
-
-    def walk_and_flip(self, flipnode, length, key):
+    def _walk_and_correct(self, qubit: AncillaQubit, length : float, key : str):
+        """Corrects the state of a qubit as it traversed during a walk."""
         for _ in range(length):
             try: 
-                (flipnode, flipedge) = self.get_neighbor(flipnode, key)
+                (qubit, edge) = self.get_neighbor(qubit, key)
             except:
                 break
-            flipedge.state = 1 - flipedge.state
-        return flipnode
+            edge.state = 1 - edge.state
+        return qubit
 
 
 class Planar(Toric):
@@ -163,94 +202,57 @@ class Planar(Toric):
     Edges between all virtual qubits are added with weight zero.
     """
     def do_decode(self, **kwargs):
-        """
-        Returns all qubits in the graph, as well as their respective virtual qubits in the boundary, for both their current layer as well as on the decode layer.
-        This is the same for a 2D graph, but the most recent layer in the 3D case
-        """
-        stars, plaqs, pstars, pplaqs = [], [], [], []
-        dstar, dplaq, dpstar, dpplaq = [], [], [], []
-        dlayer, size = self.code.decode_layer, self.code.size
-        ancillas, pseudos = self.code.ancilla_qubits, self.code.pseudo_qubits
+        # Inherited docstring
+        plaqs, stars = self.get_syndrome(find_pseudo=True)
+        self.apply_matching(plaqs, self.match_syndromes(plaqs, **kwargs))
+        self.apply_matching(stars, self.match_syndromes(stars, **kwargs))
 
-        for layer in ancillas.values():
-            for ancilla in layer.values():
-                if ancilla.state:
-                    if ancilla.state_type == "x":
-                        plaqs.append(ancilla)
-                        dplaq.append(ancillas[dlayer][ancilla.loc])
-                        if ancilla.loc[0] < size[0] / 2:
-                            loc = (0, ancilla.loc[1])
-                            pplaqs.append(pseudos[ancilla.z][loc])
-                            dpplaq.append(pseudos[dlayer][loc])
-                        else:
-                            loc = (size[0], ancilla.loc[1])
-                            pplaqs.append(pseudos[ancilla.z][loc])
-                            dpplaq.append(pseudos[dlayer][loc])
-
-                    else:
-                        stars.append(ancilla)
-                        dstar.append(ancillas[dlayer][ancilla.loc])
-                        if ancilla.loc[1] < self.code.size[1] / 2:
-                            loc = (ancilla.loc[0], -0.5)
-                            pstars.append(pseudos[ancilla.z][loc])
-                            dpstar.append(pseudos[dlayer][loc])
-                        else:
-                            loc = (ancilla.loc[0], size[1] - 0.5)
-                            pstars.append(pseudos[ancilla.z][loc])
-                            dpstar.append(pseudos[dlayer][loc])
-
-        stars += pstars
-        plaqs += pplaqs
-        dstar += dpstar
-        dplaq += dpplaq
-        self.decode_group(plaqs, dplaq, **kwargs)
-        self.decode_group(stars, dstar, **kwargs)
+    def correct_matching(self, syndromes : List[Tuple[AncillaQubit, AncillaQubit]], matching : list):
+        # Inherited docstring
+        weight = 0
+        for i0, i1 in matching:
+            if i0 < len(syndromes) or i1 < len(syndromes):
+                aq0 = syndromes[i0][0] if i0 < len(syndromes) else syndromes[i0-len(syndromes)][1]
+                aq1 = syndromes[i1][0] if i1 < len(syndromes) else syndromes[i1-len(syndromes)][1]
+                weight += self._correct_matched_qubits(aq0, aq1)
+        return weight
 
     @staticmethod
-    def get_qubit_distances(qubits, *args):
-        """
-        Computes all edges and their respective weights between all all qubits that are inputted, between all virtual qubits and between qubits and virtual qubits.
+    def _get_qubit_distances(qubits, *args):
+        """Computes the distance between a list of qubits.
+
+        On a planar lattice, any qubit can be paired with the boundary, which is inhabited by `~.codes.elements.PseudoQubit`\ s. The graph of syndromes that supports minimum-weight matching algorithms must be fully connected, with each syndrome connecting additionally to its boundary pseudo-qubit, and a fully connected graph between all pseudo-qubits with weight 0. 
         """
         edges = []
-        mid = len(qubits) // 2
 
-        # Add edges between all qubits
-        for i0, q0 in enumerate(qubits[: mid - 1]):
-            (x0, y0), z0 = q0.loc, q0.z
-            for i1, q1 in enumerate(qubits[i0 + 1 : mid]):
-                (x1, y1), z1 = q1.loc, q1.z
+        # Add edges between all ancilla-qubits
+        for i0, (a0, _) in enumerate(qubits):
+            (x0, y0), z0 = a0.loc, a0.z
+            for i1, (a1, _) in enumerate(qubits[i0 + 1], start= i0 + 1):
+                (x1, y1), z1 = a1.loc, a1.z
                 wx = int(abs(x0 - x1))
                 wy = int(abs(y0 - y1))
                 wz = int(abs(z0 - z1))
                 weight = wy + wx + wz
-                edges.append([i0, i1 + i0 + 1, weight])
+                edges.append([i0, i1, weight])
 
-        # Add edges of weight 0 between all virtual qubits
-        for i0, q0 in enumerate(qubits[mid:-1], start=mid):
-            for i1, q1 in enumerate(qubits[i0 + 1 :], start=i0 + 1):
-                edges.append([i0, i1, 0])
-
-        # Add edges between virtual qubits and real qubits
-        for i in range(mid):
-            (xs, ys) = qubits[i].loc
-            (xb, yb) = qubits[mid + i].loc
+        # Add edges between ancilla-qubits and their boundary pseudo-qubits
+        for i, (ancilla, pseudo) in enumerate(qubits):
+            (xs, ys) = ancilla.loc
+            (xb, yb) = pseudo.loc
             weight = xb - xs if qubits[i].state_type == "x" else yb - ys
-            edges.append([i, mid + i, int(abs(weight))])
+            edges.append([i, len(qubits) + i, int(abs(weight))])
+
+        # Add edges of weight 0 between all pseudo-qubits
+        for i0 in range(len(qubits), len(qubits)):
+            for i1 in range(i0 + 1, len(qubits) - 1):
+                edges.append([i0, i1, 0])
         return edges
 
-    def apply_matching(self, layered_matchings, decode_matchings, size):
-        ancilla_layer, ancilla_decode = [], []
-        for (lm0, lm1), decode in zip(layered_matchings, decode_matchings):
-            if not (type(lm0) != AncillaQubit and type(lm1) != AncillaQubit):
-                ancilla_layer.append((lm0, lm1))
-                ancilla_decode.append(decode)
-        super().apply_matching(ancilla_layer, ancilla_decode, size)
 
     @staticmethod
-    def walk_direction(q0, q1, *args):
-        """
-        Computes the distance or number of walks and direction between inputted nodes in x and y directions
-        """
+    def _walk_direction(q0, q1, *args):
+        # Inherited docsting
         (x0, y0), (x1, y1) = q0.loc, q1.loc
         dx, dy = int(x0 - x1), int(y0 - y1)
         yd = "s" if dy > 0 else "n"

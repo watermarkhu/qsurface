@@ -1,3 +1,15 @@
+"""
+The most popular decoder for surface codes is the Minimum-Weight Perfect Matching (MWPM) decoder. It performs near-optimal for a pauli noise model [dennis2002]_ on a standard toric code with a threshold of :math:`p_{\\text{th}} = 10.3\\%`, and for a phenomenological noise model (including faulty measurements) [wang2003]_, which includes faulty measurements, with :math:`p_{\\text{th}} = 2.9\\%`. The main idea is to approximate the error with the minimum-weight error configuration compatible with the syndrome. The minimum-weight configuration is found by constructing a fully connected graph between the nodes of the syndrome, which leads to a cubic worst-case time complexity [kolmogorov2009]_. 
+
+The decoder defaults to using a Python implementation of MWPM by `networkx.algorithms.matching.max_weight_matching`. This implementation is however quite slow. Optionally, `Blossom V <https://pub.ist.ac.at/~vnk/software.html>`_ [kolmogorov2009]_, a C++ algorithm, can be used to increase the speed of the decoder. Since this software has its own license, it is not bundeled with OpenSurfaceSim. A script is provided to download and compile the latest release of BlossomV in `.get_blossomv`. The interface of the C++ code and Python is taken from `Fault Tolerant Simulations <https://github.com/naominickerson/fault_tolerance_simulations>`_.
+
+.. [dennis2002] Dennis, Eric and Kitaev, Alexei and Landahl, Andrew and Preskill, John, *Topological quantum memory*, in **Journal of Mathematical Physics**, 2002, 43(9)4452-4505. 
+
+.. [wang2003] Wang, Chenyang and Harrington, Jim and Preskill, John, *Confinement-Higgs transition in a disordered gauge theory and the accuracy threshold for quantum memory*, in **Annals of Physics**, 2003, 303(1)31-58.
+
+.. [kolmogorov2009] Vladimir Kolmogorov. *Blossom V: A new implementation of a minimum cost perfect matching algorithm* in **Mathematical Programming Computation (MPC)**, July 2009, 1(1):43-67.
+"""
+
 from . import sim
 from . import plot
 from shutil import copyfile as copy
@@ -9,7 +21,8 @@ import os
 blossom5_dir = "blossom5-v2.05.src"
 
 
-def get_blossom5():
+def get_blossomv():
+    """Downloads and compiles the BlossomV algorithm for OpenSurfaceSim."""
 
     folder = os.path.dirname(os.path.abspath(__file__))
 

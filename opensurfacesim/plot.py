@@ -137,7 +137,7 @@ class Template2D(ABC):
             1: {"<Line2D>": {"color": "r"}},
         }
 
-    The attribute ``self.history_dict` thus only contain changes to plot properties. If we request another iteration but change the linestyle to ``":"``, the initial linestyle will be saved to iteration 1.
+    The attribute ``self.history_dict`` thus only contain changes to plot properties. If we request another iteration but change the linestyle to ``":"``, the initial linestyle will be saved to iteration 1.
 
         >>> fig.new_properties(fig.line, {"ls": ":"})
         >>> fig.new_iter()

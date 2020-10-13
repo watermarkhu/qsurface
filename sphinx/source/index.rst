@@ -6,61 +6,44 @@
 .. .. contents::
 ..    :depth: 2
 
-.. toctree::
-   :hidden:
-
-
-opensurfacesim
-==============
-
-.. toctree::
-   :maxdepth: 1
-
-   Readme <README.md>
+.. mdinclude:: ../../README.md
 
 Modules
 =======
 
-Surface code
-------------
 .. toctree::
    :maxdepth: 2
+   :caption: Surface code
    
    codes/elements
    codes/template
    codes/index
 
-Qubit errors
-------------
 .. toctree::
    :maxdepth: 2
+   :caption: Qubit errors
 
    errors/template
    errors/index
 
-Decoders
---------
 .. toctree::
    :maxdepth: 2
+   :caption: Decoders
 
    decoders/template
    decoders/index
 
-Others
-------
 .. toctree::
    :maxdepth: 1
+   :caption: Others
 
    others/configuration
    others/plot
-   others/benchmark
-
-
 
 
 License
 =======
-.. include:: LICENSE
+.. include:: ../../LICENSE
 
 
 Indices and tables

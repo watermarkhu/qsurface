@@ -8,12 +8,12 @@ class PerfectMeasurements(ToricPM):
     code = "planar"
 
     def init_surface(self, z: float = 0, **kwargs):
-        """Initializes the planar surface code on layer `z`.
+        """Initializes the planar surface code on layer ``z``.
 
         Parameters
         ----------
         z : int or float, optional
-            Layer of qubits, `z=0` for perfect measurements.
+            Layer of qubits, ``z=0`` for perfect measurements.
         """
         self.ancilla_qubits[z], self.data_qubits[z], self.pseudo_qubits[z] = {}, {}, {}
         parity = self.init_parity_check
@@ -44,16 +44,12 @@ class PerfectMeasurements(ToricPM):
     def init_parity_check(self, ancilla_qubit: AncillaQubit, **kwargs):
         """Initiates a parity check measurement.
 
-        For every ancilla qubit on `(x,y)`, four neighboring data qubits are entangled for parity check measurements. They are stored via the wind-directional keys.
+        For every ancilla qubit on ``(x,y)``, four neighboring data qubits are entangled for parity check measurements. They are stored via the wind-directional keys.
 
         Parameters
         ----------
-        ancilla_qubit : AncillaQubit
+        ancilla_qubit : `~.codes.elements.AncillaQubit`
             Ancilla qubit to initialize.
-
-        See Also
-        --------
-        AncillaQubit
         """
         (x, y), z = ancilla_qubit.loc, ancilla_qubit.z
         checks = {
@@ -67,7 +63,7 @@ class PerfectMeasurements(ToricPM):
                 self.entangle_pair(self.data_qubits[z][loc], ancilla_qubit, key)
 
     def init_logical_operator(self, **kwargs):
-        """Initiates the logical operators `[x,z]` of the planar code."""
+        """Initiates the logical operators [x,z] of the planar code."""
         operators = {
             "x": [self.data_qubits[self.decode_layer][(0.5, i)].edges["x"] for i in range(self.size[0])],
             "z": [self.data_qubits[self.decode_layer][(i + 0.5, 0)].edges["z"] for i in range(self.size[1])]
@@ -75,7 +71,7 @@ class PerfectMeasurements(ToricPM):
         self.logical_operators = operators
     
     def state_icons(self, z=0):
-        """Returns the surface to the console using emojies."""
+        """Prints the state of the surface of layer ``z`` to the console using icons."""
         surface = ""
         for y in range(self.size[1]-1):
             surface += self.data_qubits[z][(.5, y)].state_icon()

@@ -131,7 +131,7 @@ def single(
     decoder.graph.apply_and_measure_errors(**error_rates)
     decoder.decode()
     logical_error, correct = decoder.graph.logical_error()
-    decoder.reset()
+    decoder._reset()
 
     if called:
         output = dict(succes=correct)

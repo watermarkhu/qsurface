@@ -35,10 +35,12 @@ extensions = [
     "sphinx.ext.intersphinx",
     "numpydoc",
     "sphinx_autodoc_typehints",
-    "recommonmark",
+    "m2r2",
+    "sphinx_rtd_theme",
 ]
 
 intersphinx_mapping = {'matplotlib': ('https://matplotlib.org/', None)}
+intersphinx_mapping = {'networkx': ('https://networkx.github.io/documentation/stable/', None)}
 
 
 # Add any paths that contain templates here, relative to this directory.
@@ -52,30 +54,35 @@ exclude_patterns = []
 
 # -- Options for HTML output -------------------------------------------------
 
-# The theme to use for HTML and HTML Help pages.  See the documentation for
+# The theme to use for HTML and HTML Help pages.  See the documentation f~or
 # a list of builtin themes.
 #
-html_theme = 'alabaster'
+# html_theme = 'alabaster'
+# html_theme_options = {
+#     'description': 'Open source library for simulating and visualizing the surface code and its decoders.',
+#     'github_user': 'watermarkhu',
+#     'github_repo': 'OpenSurfaceSim',
+#     'github_button': True,
+#     'codecov_button': True,
+#     "extra_nav_links": {"Contact author": "https://watermarkhu.nl"},
+#     "sidebar_collapse": False,
+#     "show_powered_by": False,
+#     # 'font_family': '"Charis SIL", "Noto Serif", serif',
+#     # 'head_font_family': 'Lato, sans-serif',
+#     # 'code_font_family': '"Code new roman", "Ubuntu Mono", monospace',
+#     # 'code_font_size': '1rem',
+# }
 
+html_theme = "sphinx_rtd_theme"
 html_theme_options = {
-    'description': 'Open source library for simulating and visualizing the surface code and its decoders.',
-    'github_user': 'watermarkhu',
-    'github_repo': 'OpenSurfaceSim',
-    'github_button': True,
-    'codecov_button': True,
-    "extra_nav_links": {"Contact author": "https://watermarkhu.nl"},
-    "sidebar_collapse": False,
-    "show_powered_by": False,
-    # 'font_family': '"Charis SIL", "Noto Serif", serif',
-    # 'head_font_family': 'Lato, sans-serif',
-    # 'code_font_family': '"Code new roman", "Ubuntu Mono", monospace',
-    # 'code_font_size': '1rem',
+    'analytics_id': 'UA-180556212-1',
+    'includehidden': True,
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-html_static_path = ['_static']
+html_static_path = []
 # html_sidebars = {
 #     '**': [
 #         'globaltoc.html', 

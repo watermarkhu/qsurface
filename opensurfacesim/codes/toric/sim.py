@@ -8,12 +8,12 @@ class PerfectMeasurements(TemplatePM):
     code = "toric"
 
     def init_surface(self, z: float = 0, **kwargs):
-        """Initializes the toric surface code on layer `z`.
+        """Initializes the toric surface code on layer ``z``.
 
         Parameters
         ----------
         z : int or float, optional
-            Layer of qubits, `z=0` for perfect measurements.
+            Layer of qubits, ``z=0`` for perfect measurements.
         """
         self.ancilla_qubits[z], self.data_qubits[z] = {}, {}
 
@@ -37,16 +37,12 @@ class PerfectMeasurements(TemplatePM):
     def init_parity_check(self, ancilla_qubit: AncillaQubit, **kwargs):
         """Initiates a parity check measurement.
 
-        For every ancilla qubit on `(x,y)`, four neighboring data qubits are entangled for parity check measurements. They are stored via the wind-directional keys.
+        For every ancilla qubit on ``(x,y)``, four neighboring data qubits are entangled for parity check measurements. They are stored via the wind-directional keys.
 
         Parameters
         ----------
-        ancilla_qubit : AncillaQubit
-            Ancilla qubit to initialize.
-
-        See Also
-        --------
-        AncillaQubit
+        ancilla_qubit : `~.codes.elements.AncillaQubit`
+            Ancilla-qubit to initialize.
         """
         (x, y), z = ancilla_qubit.loc, ancilla_qubit.z
         checks = {
@@ -60,7 +56,7 @@ class PerfectMeasurements(TemplatePM):
                 self.entangle_pair(self.data_qubits[z][loc], ancilla_qubit, key)
 
     def init_logical_operator(self, **kwargs):
-        """Initiates the logical operators `[x1, x2, z1, z2]` of the toric code."""
+        """Initiates the logical operators [x1, x2, z1, z2] of the toric code."""
         operators = {
             "x1": [self.data_qubits[self.decode_layer][(i, 0.5)].edges["x"] for i in range(self.size[0])],
             "x2": [self.data_qubits[self.decode_layer][(0.5, i)].edges["x"] for i in range(self.size[1])],
@@ -71,7 +67,7 @@ class PerfectMeasurements(TemplatePM):
 
 
     def state_icons(self, z=0):
-        """Returns the surface to the console using emojies."""
+        """Prints the state of the surface of layer ``z`` to the console using icons."""
         surface = ""
         for y in range(self.size[1]):
             for x in range(self.size[0]):

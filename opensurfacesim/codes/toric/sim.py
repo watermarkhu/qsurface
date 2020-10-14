@@ -5,7 +5,7 @@ from .._template.sim import PerfectMeasurements as TemplatePM, FaultyMeasurement
 class PerfectMeasurements(TemplatePM):
     """Simulation toric code for perfect measurements."""
 
-    code = "toric"
+    name = "toric"
 
     def init_surface(self, z: float = 0, **kwargs):
         """Initializes the toric surface code on layer ``z``.

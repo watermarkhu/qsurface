@@ -1,13 +1,16 @@
 from abc import ABC, abstractmethod
-from opensurfacesim.configuration import get_attributes, init_config
+from ..configuration import get_attributes, init_config
 import os
-from ..codes.elements import DataQubit
-from typing import Dict, List, Tuple, Union
 from matplotlib import pyplot as plt
 
 
 class Sim(ABC):
     """Template simulation class for errors.
+
+    Parameters
+    ----------
+    code : `~.decoders._template.SimCode`
+        Simulation surface code class. 
 
     Attributes
     ----------
@@ -15,7 +18,8 @@ class Sim(ABC):
         The error rates that are applied at default.
     """
 
-    def __init__(self, **kwargs) -> None:
+    def __init__(self, code, **kwargs) -> None:
+        self.code = code
         self.default_error_rates = {}
         self.type = str(self.__module__).split(".")[-1]
 
@@ -35,7 +39,12 @@ class Sim(ABC):
 
 
 class Plot(Sim):
-    """Template plot class for errors,
+    """Template plot class for errors.
+
+    Parameters
+    ----------
+    code : `~.decoders._template.PlotCode`
+        Plotting surface code class. 
 
     Attributes
     ----------
@@ -55,15 +64,14 @@ class Plot(Sim):
 
     legend_items = []
 
-    def __init__(self, figure, *args, **kwargs) -> None:
-        super().__init__(*args, *kwargs)
-        self.figure = figure
+    def __init__(self, code, *args, **kwargs) -> None:
+        super().__init__(code, *args, *kwargs)
         self.error_methods = {}
         self.plot_properties = get_attributes(
-            figure.rc, init_config(os.path.dirname(os.path.abspath(__file__)) + "/plot_errors.ini")
+            self.code.figure.rc, init_config(os.path.dirname(os.path.abspath(__file__)) + "/plot_errors.ini")
         )
         self.legend_properties = get_attributes(
-            figure.rc,
+            self.code.figure.rc,
             init_config(os.path.dirname(os.path.abspath(__file__)) + "/plot_errors_legend.ini"),
         )
 

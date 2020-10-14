@@ -15,6 +15,7 @@ class Sim(TemplateSim):
     def __init__(self, *args, p_erasure: float = 0, **kwargs) -> None:
         super().__init__(*args, **kwargs)
         self.default_error_rates = {"p_erasure": p_erasure}
+        self.code.dataQubit.erasure = None
 
     def random_error(self, qubit, p_erasure: Optional[float] = None, **kwargs):
         """Applies an erasure error.
@@ -38,6 +39,7 @@ class Sim(TemplateSim):
 
     def erasure_error(self, qubit):
         """Erases the `qubit` by resetting its attributes. """
+        qubit.erasure = self.code.instance
         qubit._reset()
 
 
@@ -53,9 +55,9 @@ class Plot(TemplatePlot, Sim):
     def erasure_error(self, qubit):
         # Inherited docstrings
         super().erasure_error(qubit)
-        self.figure.new_properties(qubit.surface_plot, self.plot_properties["erased"])
+        self.code.figure.new_properties(qubit.surface_plot, self.plot_properties["erased"])
         properties = self.plot_properties["non_erased"]
-        future_properties = self.figure.future_dict[self.figure.history_iter + 2]
+        future_properties = self.code.figure.future_dict[self.code.figure.history_iter + 3]
         if qubit.surface_plot in future_properties:
             future_properties[qubit.surface_plot].update(properties)
         else:

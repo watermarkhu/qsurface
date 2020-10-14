@@ -37,7 +37,7 @@ class PerfectMeasurements(TemplateSimPM):
     def _init_error(self, error_module, error_rates):
         """Initializes the ``error_module.Plot`` class of a error module."""
         error_type = error_module.__name__.split(".")[-1]
-        self.errors[error_type] = error_module.Plot(self.figure, **error_rates)
+        self.errors[error_type] = error_module.Plot(self, **error_rates)
 
     def random_errors(self, *args, z: float = 0, **kwargs):
         # Inherited docstrings

@@ -11,11 +11,10 @@ LA = List[AncillaQubit]
 
 
 class Toric(SimCode):
-    """
-    Minimum-Weight Perfect Matching decoder for the toric lattice.
-    """
+    """Minimum-Weight Perfect Matching decoder for the toric lattice."""
 
     name = "Minimum-Weight Perfect Matching"
+    short = "mwpm"
 
     compatibility_measurements = dict(
         PerfectMeasurements=True,
@@ -59,7 +58,7 @@ class Toric(SimCode):
         edges = self._get_qubit_distances(syndromes, self.code.size)
         matching = matching_graph(
             edges,
-            maxcardinality=self.mwpm_max_cardinality,
+            maxcardinality=self.config["max_cardinality"],
             **kwargs,
         )
         return matching
@@ -187,10 +186,9 @@ class Toric(SimCode):
         """Corrects the state of a qubit as it traversed during a walk."""
         for _ in range(length):
             try: 
-                (qubit, edge) = self.get_neighbor(qubit, key)
+                qubit = self.correct_edge(qubit, key)
             except:
                 break
-            edge.state = 1 - edge.state
         return qubit
 
 

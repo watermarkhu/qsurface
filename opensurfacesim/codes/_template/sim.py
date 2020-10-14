@@ -1,9 +1,9 @@
 from abc import ABC, abstractmethod
+import time
 from ..elements import DataQubit, AncillaQubit, PseudoQubit, Edge, PseudoEdge
 from ...errors._template import Sim as Error
 from typing import List, Optional, Union, Tuple
 import importlib
-import random
 
 
 class PerfectMeasurements(ABC):
@@ -52,13 +52,16 @@ class PerfectMeasurements(ABC):
 
     no_error : bool
         Indicator for whether there is a logical error in the last iteration. The value for ``self.no_error`` is updated after a call to ``self.logical_state``.
+
+    instance : float
+        Time stamp that is renewed every time `random_errors` is called. Helps with identifying a 'round' of simulation when using class attributes. 
     """
 
     dataQubit = DataQubit
     ancillaQubit = AncillaQubit
     pseudoQubit = PseudoQubit
     edge = Edge
-    code = "template"
+    name = "template"
     x_names = ["x", "X", 0, "bit-flip"]
     z_names = ["z", "Z", 1, "phase-flip"]
     dim = 2
@@ -79,6 +82,7 @@ class PerfectMeasurements(ABC):
         self.pseudo_qubits = {}
         self.errors = {}
         self.logical_operators = {}
+        self.instance = time.time()
 
     @property
     def logical_state(self) -> Tuple[List[bool], bool]:
@@ -103,7 +107,7 @@ class PerfectMeasurements(ABC):
         return logical_state
 
     def __repr__(self):
-        return f"{self.code} {self.size} {self.__class__.__name__}"
+        return f"{self.name} {self.size} {self.__class__.__name__}"
 
     """
     ----------------------------------------------------------------------------------------
@@ -169,7 +173,7 @@ class PerfectMeasurements(ABC):
     def _init_error(self, error_module, error_rates):
         """Initializes the ``error_module.Sim`` class of a error module."""
         error_type = error_module.__name__.split(".")[-1]
-        self.errors[error_type] = error_module.Sim(**error_rates)
+        self.errors[error_type] = error_module.Sim(self, **error_rates)
 
 
     """
@@ -257,23 +261,24 @@ class PerfectMeasurements(ABC):
         apply_order : list of string, optional
             The order in which the error modules are applied. Items in the list must equal keys in `self.errors` or the names of the loaded error modules. 
         """
+        self.instance = time.time()
         if not apply_order:
             apply_order = self.errors.values()
         for error_class in apply_order:
             for qubit in self.data_qubits[z].values():
                 error_class.random_error(qubit, **kwargs)
 
-    """
-    ----------------------------------------------------------------------------------------
-                                        Others
-    ----------------------------------------------------------------------------------------
-    """
+        # """
+        # ----------------------------------------------------------------------------------------
+        #                                     Others
+        # ----------------------------------------------------------------------------------------
+        # """
 
-    def _reset(self):
-        """Resets the simulator by resetting all of its components."""
-        for dlayer in self.data_qubits.values():
-            for qubit in dlayer.values():
-                qubit._reset()
+        # def _reset(self):
+        #     """Resets the simulator by resetting all of its components."""
+        #     for dlayer in self.data_qubits.values():
+        #         for qubit in dlayer.values():
+        #             qubit._reset()
 
 
 class FaultyMeasurements(PerfectMeasurements):

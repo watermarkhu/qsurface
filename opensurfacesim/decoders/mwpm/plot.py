@@ -17,25 +17,6 @@ class Toric(PlotCode, ToricTemplate):
         super().do_decode(*args, **kwargs)
         self.code.figure.draw_figure(new_iter_name="Matchings found")
 
-
-    def _walk_and_correct(self, flipnode, length, key):
-        # Inherited docstrings
-        for _ in range(length):
-            try: 
-                (newnode, flipedge) = self.get_neighbor(flipnode, key)
-            except:
-                break
-            flipedge.state = 1 - flipedge.state
-
-            if hasattr(flipnode, "surface_lines"):
-                self.plot_matching_edge(flipnode.surface_lines.get(key, None))
-            if hasattr(newnode, "surface_lines"):
-                self.plot_matching_edge(newnode.surface_lines.get(self.opposite_keys[key], None))
-            flipnode = newnode
-
-        return flipnode
-
-
 class Planar(Toric, PlanarTemplate):
     """Plot MWPM decoder for the planar code."""
     pass

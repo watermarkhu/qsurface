@@ -1,8 +1,8 @@
 from abc import ABC, abstractmethod
 import os 
 from typing import List, Optional, Tuple, Union
-from ..configuration import flatten_dict, init_config
-from ..codes._template.sim import PerfectMeasurements, FaultyMeasurements
+from ..configuration import init_config
+from ..codes._template.sim import PerfectMeasurements
 from ..codes.elements import AncillaQubit, Edge, PseudoQubit
 from matplotlib.lines import Line2D
 
@@ -31,6 +31,8 @@ class SimCode(ABC):
 
     '''
     name = "Template simulation decoder",
+    short = "template"
+
     compatibility_measurements = dict(
         PerfectMeasurements = True,
         FaultyMeasurements = True,
@@ -45,11 +47,8 @@ class SimCode(ABC):
         self.code = code
         current_folder = os.path.dirname(os.path.abspath(__file__))
         file = current_folder + "/decoders.ini"
-        config = flatten_dict(init_config(file))
-        for key, value in config.items():
-            setattr(self, key, value)
-        for key, value in kwargs.items():
-            setattr(self, key, value)
+        self.config = init_config(file)[self.short]
+        self.config.update(kwargs)
         
         if check_compatibility:
             self.check_compatibility()
@@ -84,6 +83,15 @@ class SimCode(ABC):
         edge = data_qubit.edges[ancilla_qubit.state_type]
         neighbor = edge.nodes[not edge.nodes.index(ancilla_qubit)]
         return neighbor, edge
+
+    def correct_edge(self, ancilla_qubit: AncillaQubit, key: str, **kwargs) -> AncillaQubit:
+        """Applies a correction. 
+        
+        The correction is applied to the data-qubit located at ``ancilla_qubit.parity_qubits[key]``. More specifically, the correction is applied to the `~.codes.elements.Edge` object corresponding to the ``state_type`` of ``ancilla_qubit``. 
+        """
+        (next_qubit, edge) = self.get_neighbor(ancilla_qubit, key)
+        edge.state = 1 - edge.state
+        return next_qubit
 
     def get_syndrome(self, find_pseudo: bool = False) -> Union[Tuple[LA, LA], Tuple[LTAP, LTAP]]:
         """Finds the syndrome of the code. 
@@ -157,6 +165,17 @@ class PlotCode(SimCode):
        self.do_decode(*args, **kwargs)
        self.code.plot_data()
        self.code.plot_ancilla("Decoded.")
+
+    def correct_edge(self, qubit, key, **kwargs):
+        # Inherited docstring
+        (next_qubit, edge) = self.get_neighbor(qubit, key)
+        edge.state = 1 - edge.state
+        if hasattr(qubit, "surface_lines"):
+            self.plot_matching_edge(qubit.surface_lines.get(key, None))
+        if hasattr(next_qubit, "surface_lines"):
+            self.plot_matching_edge(next_qubit.surface_lines.get(self.opposite_keys[key], None))
+        return next_qubit
+
     
     def plot_matching_edge(self, line: Optional[Line2D] = None):
         """Plots the matching edge. 

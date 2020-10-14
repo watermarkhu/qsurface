@@ -5,7 +5,7 @@ from ..toric.sim import PerfectMeasurements as ToricPM, FaultyMeasurements as To
 class PerfectMeasurements(ToricPM):
     """Simulation planar code for perfect measurements."""
 
-    code = "planar"
+    name = "planar"
 
     def init_surface(self, z: float = 0, **kwargs):
         """Initializes the planar surface code on layer ``z``.

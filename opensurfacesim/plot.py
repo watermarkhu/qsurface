@@ -10,7 +10,7 @@ from collections import defaultdict
 from .configuration import flatten_dict, init_config
 import tkinter
 import numpy
-import os
+from pathlib import Path
 
 
 mpl.use("TkAgg")
@@ -35,7 +35,7 @@ class BlockingKeyInput(BlockingInput):
 class Template2D(ABC):
     """Template 2D plot object with history navigation.
 
-    This template 2D plot object has the following features:
+    This template plot object has the following features:
 
     - Fast plotting by use of "blitting".
     - Redrawing past iterations of the figure by storing all changes in history.
@@ -172,7 +172,7 @@ class Template2D(ABC):
     """
     def __init__(self, init_plot: bool = True, **kwargs):
 
-        file = os.path.dirname(os.path.abspath(__file__)) + "/plot.ini"
+        file = Path(__file__).resolve().parent / "plot.ini"
         self.rc = flatten_dict(init_config(file))
         self.rc.update(kwargs)
 
@@ -650,3 +650,6 @@ class Template2D(ABC):
             print("Must be at newest iteration to apply changes.")
 
 
+class Template3D(Template2D):
+    """Template 2D plot object with history navigation."""
+    pass

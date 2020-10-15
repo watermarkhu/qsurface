@@ -1,15 +1,15 @@
-from opensurfacesim.codes.elements import Edge
+from ...codes.elements import AncillaQubit, PseudoQubit
 from .._template import SimCode
+from collections import defaultdict
 
 
 class Cluster(object):
     """
     Cluster object with parameters:
-    cID         ID number of cluster
+    index         ID number of cluster
     size        size of this cluster based on the number contained vertices
     parity      parity of this cluster based on the number of contained anyons
     parent      the parent cluster of this cluster
-    childs      the children clusters of this cluster
     boundary    len(2) list containing 1) current boundary, 2) next boundary
     bucket      the appropiate bucket number of this cluster
     support     growth state of the cluster: 1 if False, 2 if True
@@ -19,31 +19,33 @@ class Cluster(object):
 
     """
     def __init__(self, index, instance, **kwargs):
-        # self.inf = {"cID": cID, "size": 0, "parity": 0}
         self.index      = index
         self.instance   = instance
         self.size       = 0
         self.parity     = 0
         self.parent     = self
-        self.children   = [[], []]
-        self.boundary   = [[], []]
-        self.bucket     = 0
+        self.bound      = []
+        self.new_bound  = []
+        self.bucket     = -1
         self.support    = 0
         self.on_bound   = 0
 
     def __repr__(self):
-        return "C" + str(self.index) + "(" + str(self.size) + ":" + str(self.parity) + ")"
+        sep = "|" if self.on_bound else ":"
+        return "C{}({}{}{})".format(self.index, self.size, sep, self.parity)
 
     def __hash__(self):
         return self.index, self.instance
 
     def add_vertex(self, vertex):
         """Adds a stabilizer to a cluster. Also update cluster value of this stabilizer."""
-        self.size += 1
-        if vertex.measured_state:
-            self.parity += 1
         vertex.cluster = self
-
+        if type(vertex) is AncillaQubit:
+            self.size += 1
+            if vertex.measured_state:
+                self.parity += 1
+        elif type(vertex) is PseudoQubit:
+            self.on_bound = True
 
     def union(self, cluster, **kwargs):
         """
@@ -55,7 +57,8 @@ class Cluster(object):
         cluster.parent = self
         self.size += cluster.size
         self.parity += cluster.parity
-        self.boundary[0].extend(cluster.boundary[0])   
+        self.new_bound.extend(cluster.new_bound)
+        self.on_bound = self.on_bound or cluster.on_bound
         return self
 
     def find(self, **kwargs):
@@ -69,7 +72,6 @@ class Cluster(object):
 
 
 class Toric(SimCode):
-
     """Union-Find decoder for the toric lattice."""
 
     name = "Union-Find"
@@ -81,7 +83,7 @@ class Toric(SimCode):
     )
     compatibility_errors = dict(
         pauli=True,
-        erasure=True,
+        erasure=False,
     )
 
     def __init__(self, *args, **kwargs) -> None:
@@ -90,6 +92,9 @@ class Toric(SimCode):
         self.config["step_growth"] = not (self.config["step_bucket"] or self.config["step_cluster"])
         self.code.ancillaQubit.cluster = None
         self.code.edge.peeled = None
+        if not self.config["dynamic_forest"]:
+            self.code.ancillaQubit.forest = None
+            self.code.edge.forest = None
 
         self.support = {}
         for layer in self.code.data_qubits.values():
@@ -101,21 +106,28 @@ class Toric(SimCode):
                 self.support[edge] = 0
 
         if self.config["weighted_growth"]:
-            self.buckets_num = self.code.size[0]*self.code.size[1]*self.code.layers//2
+            self.buckets_num = self.code.size[0]*self.code.size[1]*self.code.layers*2
         else:
             self.buckets_num = 2
 
-    def do_decode(self, **kwargs):
-        # Inherited docstrings
-        self.buckets = [[] for _ in range(self.buckets_num)]
+        self.buckets = defaultdict(list)
+        self.init_reset()
+
+    def init_reset(self):
         self.bucket_max_filled = 0
         self.cluster_index = 0
-        self.clusters, self.place, self.fusion = [], [], []
+        self.clusters = []
+        self.support = {edge: 0 for edge in self.support}
 
+
+    def do_decode(self, reset=True, **kwargs):
+        # Inherited docstrings
         self.find_clusters(**kwargs)
         self.grow_clusters(**kwargs)                          
-        # self.peel_clusters(**kwargs)
-        self.clean_up()
+        self.peel_clusters(**kwargs)
+
+        if reset:
+            self.init_reset()
 
     """
     ================================================================================================
@@ -132,13 +144,17 @@ class Toric(SimCode):
         plaqs, stars = self.get_syndrome()
 
         for vertex in plaqs + stars:
-            if vertex.cluster is None:
+            if vertex.cluster is None or vertex.cluster.instance != self.code.instance:
                 cluster = Cluster(self.cluster_index, self.code.instance)
                 cluster.add_vertex(vertex)
                 self._cluster_find_vertices(cluster, vertex)
-                self._cluster_place_bucket(cluster)
+                self._cluster_place_bucket(cluster, -1)
                 self.cluster_index += 1
                 self.clusters.append(cluster)
+
+        if self.config["print_steps"]:
+            print(f"Found clusters:\n" + ", ".join(map(str, self.clusters)) +"\n")
+
 
     """
     ================================================================================================
@@ -150,130 +166,174 @@ class Toric(SimCode):
         Loops over all buckets to grow each bucket iteratively.
         Skips empty buckets during loop and breaks out when the largest bucket has been reached (defined by self.maxbucket)
         '''
-
-        if self.config["print_steps"]:
-            self.show_clusters_state()
-
-        for bucket_i, bucket in enumerate(self.buckets[start_bucket:], start_bucket):
-            if bucket_i > self.bucket_max_filled:
-                break
-            if not bucket:  # no need to check empty bucket
-                continue
-
-            place = self._grow_bucket(bucket, bucket_i)
-            self._fuse_bucket(place)
-            for cluster in place:
-                self._cluster_place_bucket(cluster.find())
-
-            if self.config["print_steps"]:
-                self.show_clusters_state(printmerged=False)
+        if self.config["weighted_growth"]:
+            for bucket_i in range(start_bucket, self.buckets_num):
+                if bucket_i > self.bucket_max_filled:
+                    break
+                if bucket_i in self.buckets and self.buckets[bucket_i] != []:
+                    union_list, place_list = self._grow_bucket(self.buckets.pop(bucket_i), bucket_i)
+                    self._fuse_bucket(union_list)
+                    self._place_bucket(place_list, bucket_i)
+        else:
+            bucket_i = 0
+            while self.buckets[0]:
+                union_list, place_list = self._grow_bucket(self.buckets.pop(0), bucket_i)
+                self._fuse_bucket(union_list)
+                self._place_bucket(place_list, bucket_i)
+                bucket_i += 1
 
     def _grow_bucket(self, bucket, bucket_i, **kwargs):
         '''
         Grows the clusters which are contained in the current bucket.
         Skips the cluster if it is already contained in a higher bucket or if the support parameters does not equal the current bucket support
         '''
-        self.fusion, place = [], []  # Initiate Fusion list
+        if self.config["print_steps"]:
+            string = f"Growing bucket {bucket_i} of clusters:"
+            print("="*len(string) + "\n" + string)
+
+        union_list, place_list = [], [] 
         while bucket:  # Loop over all clusters in the current bucket\
             cluster = bucket.pop().find()
             if cluster.bucket == bucket_i and cluster.support == bucket_i % 2:
-                place.append(cluster)
-                cluster.support = 1 - cluster.support
-                self._grow_boundary(cluster)
-        return place
+                place_list.append(cluster)
+                self._grow_boundary(cluster, union_list)
+        
+        if self.config["print_steps"]:
+            print("\n")
+        
+        return union_list, place_list
 
-                
-    def _grow_boundary(self, cluster, **kwargs):
+    def _grow_boundary(self, cluster, union_list, **kwargs):
         '''
         Grows the boundary list that is stored at the current cluster.
-        Fully grown edges are added to the fusion list.
+        Fully grown edges are added to the union_list list.
         '''
-        cluster.boundary = [[], cluster.boundary[0]]     # Set boundary
+        cluster.support = 1 - cluster.support
+        cluster.bound, cluster.new_bound = cluster.new_bound, []
 
-        while cluster.boundary[1]:                       # grow boundary
-            bound = cluster.boundary[1].pop()
-            vertex, new_edge, _ = bound
+        while cluster.bound:                       # grow boundary
+            boundary = cluster.bound.pop()
+            new_edge = boundary[1]
 
             if self.support[new_edge] != 2:              # if not already fully grown
                 self.support[new_edge] += 1              # Grow boundaries by half-edge
                 if self.support[new_edge] == 2:          # if edge is fully grown
-                    self.fusion.append(bound)            # Append to fusion list of edges
+                    union_list.append(boundary)            # Append to union_list list of edges
                 else:
-                    cluster.boundary[0].append(bound)
+                    cluster.new_bound.append(boundary)
+
+        if self.config["print_steps"]:
+            print(f"{cluster}, ", end="")
 
     """
     ================================================================================================
-                                    2(b). Grow clusters fusion
+                                    2(b). Grow clusters union
     ================================================================================================
     """
-    def _fuse_bucket(self, bucket_i, **kwrags):
+    def _fuse_bucket(self, union_list, **kwargs):
         '''
         Put clusters in new buckets. Some will be added double, but will be skipped by the new_boundary check.
 
-        Fuse all edges in the fusion list by considering the vertex connectivity degeneracy.
-        During a union of two clusters, there may be multiple edges in the fusion list that connect these clusters. We loop over all edges to count the number of fusion edges that is connected to the nodes involved. Fusion edges that are connected to vertices with high fusion edge connectivity equals a higher degeneracy in the number of edges to connect two clusters.
-        We order the fusion edges by this vertex connectivity degeneracy and grows the largest degenerate edges first.
+        Fuse all edges in the union_list list by considering the vertex connectivity degeneracy.
+        During a union of two clusters, there may be multiple edges in the union_list list that connect these clusters. We loop over all edges to count the number of union_list edges that is connected to the nodes involved. union_list edges that are connected to vertices with high union_list edge connectivity equals a higher degeneracy in the number of edges to connect two clusters.
+        We order the union_list edges by this vertex connectivity degeneracy and grows the largest degenerate edges first.
         '''
-        if self.config["degenerate_fusion"]:
+        if union_list and self.config["print_steps"]:
+            print("Fusing clusters")
 
+        if self.config["degenerate_union"]:
             merging = []
-            for aV, edge, pV in self.fusion:
-                aC = self._get_vertex_cluster(aV)
-                pC = self._get_vertex_cluster(pV)
+            for vertex, edge, new_vertex in union_list:
+                cluster = self._get_vertex_cluster(vertex)
+                new_cluster = self._get_vertex_cluster(new_vertex)
 
                 '''
                 if:     Fully grown edge. New vertex is on the old boundary. Find new boundary on vertex
                 elif:   Edge grown on itself. This cluster is already connected. Cut half-edge
                 else:   Clusters merge by weighted union
                 '''
-                if self._edge_growth_choices(edge, aV, pV, aC, pC):
-                    aV.count, pV.count = 0, 0
-                    merging.append((edge, aV, pV))
+                if self._edge_union_options(edge, new_vertex, cluster, new_cluster):
+                    vertex.count, new_vertex.count = 0, 0
+                    merging.append((edge, vertex, new_vertex))
 
-            for edge, aV, pV in merging:
-                aV.count += 1
-                pV.count += 1
+            for edge, vertex, new_vertex in merging:
+                vertex.count += 1
+                new_vertex.count += 1
 
             merge_buckets = [[] for i in range(6)]
             for mergevertices in merging:
-                edge, aV, pV = mergevertices
-                index = 7 - (aV.count + pV.count)
+                edge, vertex, new_vertex = mergevertices
+                index = 7 - (vertex.count + new_vertex.count)
                 merge_buckets[index].append(mergevertices)
 
             for merge_bucket in merge_buckets:
                 for items in merge_bucket:
                     self._fully_grown_edge(*items)
         else:
-            for aV, edge, pV in self.fusion:
-                self._fully_grown_edge(edge, aV, pV)
+            for vertex, edge, new_vertex in union_list:
+                self._fully_grown_edge(edge, vertex, new_vertex)
+
+        if union_list and self.config["print_steps"]:
+            print("")
 
 
-    def _fully_grown_edge(self, edge, aV, pV, *args, **kwargs):
+    def _fully_grown_edge(self, edge, vertex, new_vertex, *args, **kwargs):
         '''
-        Performs union of two clusters (belonging to aV and pV vertices) on a fully grown edge if its eligible.
+        Performs union of two clusters (belonging to vertex and new_vertex vertices) on a fully grown edge if its eligible.
         '''
-        aC = self._get_vertex_cluster(aV)
-        pC = self._get_vertex_cluster(pV)
+        cluster = self._get_vertex_cluster(vertex)
+        new_cluster = self._get_vertex_cluster(new_vertex)
 
-        if self._edge_growth_choices(edge, aV, pV, aC, pC):
-            pC.union(aC)
+        if self._edge_union_options(edge, new_vertex, cluster, new_cluster):
+            string = "{} ∪ {} =".format(cluster, new_cluster) if self.config["print_steps"] else ""
+            uC = new_cluster.union(cluster)
+            if string:
+                print(string, uC)
 
 
-    def _edge_growth_choices(self, edge, aV, pV, aC, pC):
+    def _edge_union_options(self, edge, new_vertex, cluster, new_cluster):
         '''
         Checks the type of the fully grown edge.
         1. if:     Fully grown edge. New vertex is on the old boundary. Find new boundary on vertex
         2. elif:   Edge grown on itself. This cluster is already connected. Cut half-edge
         3. else:   Edge is between two separate clusters. Returns true to perform some function
         '''
-        if pC is None:
-            aC.add_vertex(pV)
-            self._cluster_find_vertices(aC, pV)
-        elif pC is aC:
-            self._edge_peel(edge)
+        if new_cluster is None or new_cluster.instance != self.code.instance:
+            cluster.add_vertex(new_vertex)
+            self._cluster_find_vertices(cluster, new_vertex)
+        elif new_cluster is cluster:
+            if self.config["dynamic_forest"]:
+                self._edge_peel(edge)
         else:
             return True
         return False
+    """
+    ================================================================================================
+                                    2(c). Place clusters in buckets
+    ================================================================================================
+    """
+    def _place_bucket(self, place_list, bucket_i):
+        for cluster in place_list:
+            self._cluster_place_bucket(cluster.find(), bucket_i)
+
+    def _cluster_place_bucket(self, cluster, bucket_i, **kwargs):
+        """
+        :param cluster      current cluster
+
+        The inputted cluster has undergone a size change, either due to cluster growth or during a cluster merge, in which case the new root cluster is inputted. We increase the appropriate bucket number of the cluster until the fitting bucket has been reached. The cluster is then appended to that bucket.
+        If the max bucket number has been reached. The cluster is appended to the wastebucket, which will never be selected for growth.
+        """
+        if (cluster.parity % 2 == 1 and not cluster.on_bound):
+            if self.config["weighted_growth"]:
+                cluster.bucket = 2 * (cluster.size - 1) + cluster.support
+                self.buckets[cluster.bucket].append(cluster)
+                if cluster.bucket > self.bucket_max_filled:
+                    self.bucket_max_filled = cluster.bucket
+            else:
+                self.buckets[0].append(cluster)
+                cluster.bucket = bucket_i + 1
+        else:
+            cluster.bucket = None
     """
     ================================================================================================
                                     3. Peel clusters
@@ -287,6 +347,8 @@ class Toric(SimCode):
         for layer in self.code.ancilla_qubits.values():
             for vertex in layer.values():
                 if vertex.cluster and vertex.cluster.instance == self.code.instance:
+                    if not self.config["dynamic_forest"]:
+                        self._static_forest(vertex)
                     cluster = self._get_vertex_cluster(vertex)
                     self._peel_leaf(cluster, vertex)
 
@@ -316,9 +378,21 @@ class Toric(SimCode):
                 (new_vertex, edge) = self.get_neighbor(vertex, connect_key)
                 edge.peeled = self.code.instance
                 if vertex.measured_state:
-                    new_vertex.state = not new_vertex.state
+                    new_vertex.measured_state = not new_vertex.measured_state
                     self.correct_edge(vertex, connect_key)
                 self._peel_leaf(cluster, new_vertex)
+
+    def _static_forest(self, vertex):
+        vertex.forest = self.code.instance
+        for key in vertex.parity_qubits:
+            (new_vertex, edge) = self.get_neighbor(vertex, key)
+            if self.support[edge] == 2:
+                if new_vertex.forest == self.code.instance:
+                    if edge.forest != self.code.instance:
+                        self._edge_peel(edge)
+                else:
+                    edge.forest = self.code.instance
+                    self._static_forest(new_vertex)
 
     """
     ================================================================================================
@@ -351,7 +425,7 @@ class Toric(SimCode):
         for key in vertex.parity_qubits:
             (new_vertex, edge) = self.get_neighbor(vertex, key)
 
-            if edge.qubit.erasure == self.code.instance:
+            if "erasure" in self.code.errors and edge.qubit.erasure == self.code.instance:
                 # if edge not already traversed
                 if self.support[edge] == 0 and edge.peeled != self.code.instance:
                     if new_vertex.cluster == cluster:   # cycle detected, peel edge
@@ -363,30 +437,7 @@ class Toric(SimCode):
             else:
                 # Make sure new bound does not lead to self
                 if new_vertex.cluster is not cluster:
-                    cluster.boundary[0].append((vertex, edge, new_vertex))
-
-
-    def _cluster_place_bucket(self, cluster, **kwargs):
-        """
-        :param cluster      current cluster
-
-        The inputted cluster has undergone a size change, either due to cluster growth or during a cluster merge, in which case the new root cluster is inputted. We increase the appropiate bucket number of the cluster intil the fitting bucket has been reached. The cluster is then appended to that bucket.
-        If the max bucket number has been reached. The cluster is appended to the wastebucket, which will never be selected for growth.
-            """
-
-        if self.config["weighted_growth"]:
-            cluster.bucket = 2 * (cluster.size - 1) + cluster.support
-            if (cluster.parity % 2 == 1 and not cluster.on_bound) and cluster.bucket < self.buckets_num:
-                self.buckets[cluster.bucket].append(cluster)
-                if cluster.bucket > self.bucket_max_filled:
-                    self.bucket_max_filled = cluster.bucket
-            else:
-                cluster.bucket = None
-        else:
-            if (cluster.parity % 2 == 1 and not cluster.on_bound) and cluster.bucket == 0:
-                self.buckets[-1].append(cluster)
-                cluster.bucket = 1
-
+                    cluster.new_bound.append((vertex, edge, new_vertex))
 
     def _edge_peel(self, edge):
         edge.peeled = self.code.instance
@@ -395,39 +446,62 @@ class Toric(SimCode):
     def _edge_full(self, edge):
         self.support[edge] = 2
 
-    def clean_up(self):
-        self.support = {edge: 0 for edge in self.support}
 
+class Planar(Toric):
+    """Union-Find decoder for the planar lattice."""
 
-    """
-    ================================================================================================
-                                            Information
-    ================================================================================================
-    """
-    def show_clusters_state(self, clusters=None, prestring="", poststring="", printmerged=1, include_even=0, show=True):
-        """
-        :param clusters     either None or a list of clusters
-        :param prestring    string to print before evertything else
+    def _edge_union_options(self, edge, new_vertex, cluster, new_cluster):
+        '''
+        Checks the type of the fully grown edge.
+        1. if:      Edge grown on own cluster or second connection to the boundary. Cut half-edge
+        2. elif:    Fully grown edge. New vertex is on the old boundary. Find new boundary on vertex
+        3. else:    Edge is between two separate clusters. Returns true to perform some function
+        '''
 
-        This function prints a cluster's size, parity, growth state and appropriate bucket number. If None is inputted, all clusters will be displayed.
-        """
-        string = ""
-        if clusters is None:
-            clusters = self.clusters
-            string += "Showing all clusters:\n" if include_even else "Showing active clusters:\n"
+        p_bound =  new_cluster is not None and new_cluster.instance == self.code.instance and new_cluster.on_bound 
+        if cluster.on_bound and type(new_vertex) == PseudoQubit:
+            if self.config["dynamic_forest"]:
+                self._edge_peel(edge)
+        elif new_cluster is None or new_cluster.instance != self.code.instance:
+            if self.config["print_steps"] and type(new_vertex) == PseudoQubit and not cluster.on_bound:
+                print("{} ∪ boundary".format(cluster))
+            cluster.add_vertex(new_vertex)
+            self._cluster_find_vertices(cluster, new_vertex)
+        elif new_cluster is cluster:
+            if self.config["dynamic_forest"]:
+                self._edge_peel(edge)
+        elif cluster.on_bound and p_bound:
+            if self.config["dynamic_forest"]:
+                self._edge_peel(edge)
+            else:
+                return True
+        else:
+            return True
+        return False
 
-        for cluster in clusters:
-            if include_even or (not include_even and cluster.bucket is not None):
-                if cluster.parent == cluster:
-                    string += prestring + f"{cluster} (S{cluster.support},"
-                    string += f"B{cluster.bucket}" if cluster.bucket is not None else "B_"
-                    string += f",{cluster.on_bound})" if self.code.name == "planar" else ")"
+    def _static_forest(self, vertex, found_bound = False, **kwargs):
 
-                    if cluster.cID != clusters[-1].cID: string += "\n"
-                elif printmerged:
-                    string += str(cluster) + " is merged with " + str(cluster.parent) + ""
-                    if cluster is not clusters[-1]: string += "\n"
-        string += "\n" + poststring
-        if show:
-            print(string)
-        return string
+        if not found_bound and vertex.cluster.find().parity % 2 == 0:
+            found_bound = True
+
+        vertex.forest = self.code.instance
+        for key in vertex.parity_qubits:
+            (new_vertex, edge) = self.get_neighbor(vertex, key)
+
+            if self.support[edge] == 2:
+                
+                if type(new_vertex) is PseudoQubit:
+                    if found_bound:
+                        self._edge_peel(edge)
+                    else:
+                        edge.forest = self.code.instance
+                        found_bound = True
+                    continue
+                    
+                if new_vertex.forest == self.code.instance:
+                    if edge.forest != self.code.instance:
+                        self._edge_peel(edge)
+                else:
+                    edge.forest = self.code.instance
+                    found_bound = self._static_forest(new_vertex, found_bound = found_bound)
+        return found_bound

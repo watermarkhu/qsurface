@@ -1,11 +1,10 @@
 from abc import ABC, abstractmethod
-import os 
 from typing import List, Optional, Tuple, Union
-from ..configuration import init_config
+from ..configuration import flatten_dict, init_config
 from ..codes._template.sim import PerfectMeasurements
 from ..codes.elements import AncillaQubit, Edge, PseudoQubit
 from matplotlib.lines import Line2D
-
+from pathlib import Path
 
 LA = List[AncillaQubit]
 LTAP = List[Tuple[AncillaQubit, PseudoQubit]]
@@ -45,8 +44,7 @@ class SimCode(ABC):
     def __init__(self, code : PerfectMeasurements, check_compatibility: bool = False, **kwargs):
         
         self.code = code
-        current_folder = os.path.dirname(os.path.abspath(__file__))
-        file = current_folder + "/decoders.ini"
+        file  = Path(__file__).resolve().parent / "decoders.ini"
         self.config = init_config(file)[self.short]
         self.config.update(kwargs)
         
@@ -151,14 +149,27 @@ class PlotCode(SimCode):
     name = "Template plot decoder",
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
+
+        if hasattr(self.code, "figure"):
+            self.rc = self.code.figure.rc
+        else:
+            file = Path(__file__).resolve().parent.parent / "plot.ini"
+            self.rc = flatten_dict(init_config(file))
+
         self.line_color_normal = {
-            "x": dict(color = self.code.figure.rc["color_edge"]),
-            "z": dict(color = self.code.figure.rc["color_edge"])
+            "x": dict(color = self.rc["color_edge"]),
+            "z": dict(color = self.rc["color_edge"])
         }
         self.line_color_match = {
-            "x": dict(color = self.code.figure.rc["color_x_secondary"]),
-            "z": dict(color = self.code.figure.rc["color_z_secondary"])
+            "x": dict(color = self.rc["color_x_secondary"]),
+            "z": dict(color = self.rc["color_z_secondary"])
         }
+
+    def do_decode(self, *args, **kwargs):
+        #Inherited docstrings
+        super().do_decode(*args, **kwargs)
+        if hasattr(self.code, "figure"):
+            self.code.figure.draw_figure(new_iter_name="Matchings found")
 
     def decode(self, *args, **kwargs):
         #Inherited docstrings

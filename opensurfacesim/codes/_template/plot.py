@@ -1,6 +1,7 @@
-import os
 from typing import List, Optional, Tuple
+from pathlib import Path
 from matplotlib.lines import Line2D
+from matplotlib.patches import Circle, Rectangle
 import matplotlib.pyplot as plt
 from matplotlib.widgets import RadioButtons
 from ...configuration import get_attributes, init_config
@@ -92,10 +93,7 @@ class PerfectMeasurements(TemplateSimPM):
                 get_attributes(
                     self.rc,
                     init_config(
-                        os.path.abspath(
-                            os.path.join(os.path.dirname(os.path.abspath(__file__)), os.pardir)
-                        )
-                        + "/plot_codes.ini"
+                        Path(__file__).resolve().parent.parent / "plot_codes.ini"
                     )
                 )
             )
@@ -232,7 +230,7 @@ class PerfectMeasurements(TemplateSimPM):
                 line.object = qubit                                 # Save qubit to artist
             
             # Plot ancilla object
-            qubit.surface_plot = plt.Rectangle(
+            qubit.surface_plot = Rectangle(
                 loc_parse[qubit.state_type](*qubit.loc),
                 self.rc["patch_rectangle_2d"],
                 self.rc["patch_rectangle_2d"],
@@ -269,7 +267,7 @@ class PerfectMeasurements(TemplateSimPM):
             qubit : `~.codes.elements.DataQubit`
                 Data-qubit to plot.
             """
-            qubit.surface_plot = plt.Circle(
+            qubit.surface_plot = Circle(
                 qubit.loc,
                 self.rc["patch_circle_2d"],
                 picker=self.rc["interact_pick_radius"],

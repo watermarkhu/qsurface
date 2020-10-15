@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from ..configuration import get_attributes, init_config
-import os
 from matplotlib import pyplot as plt
+from pathlib import Path
 
 
 class Sim(ABC):
@@ -68,11 +68,11 @@ class Plot(Sim):
         super().__init__(code, *args, *kwargs)
         self.error_methods = {}
         self.plot_properties = get_attributes(
-            self.code.figure.rc, init_config(os.path.dirname(os.path.abspath(__file__)) + "/plot_errors.ini")
+            self.code.figure.rc, init_config(Path(__file__).parent / "plot_errors.ini")
         )
         self.legend_properties = get_attributes(
             self.code.figure.rc,
-            init_config(os.path.dirname(os.path.abspath(__file__)) + "/plot_errors_legend.ini"),
+            init_config(Path(__file__).parent / "plot_errors_legend.ini"),
         )
 
     def _get_legend_properties(self):

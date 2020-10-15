@@ -3,7 +3,7 @@ import configparser
 import ast
 import os
 from typing import Optional
-
+from pathlib import Path
 
     
 class AttributeDict(defaultdict):
@@ -42,7 +42,7 @@ def write_config(config_dict: dict, path: str):
         config.write(configfile)
 
 
-def read_config(path: str, config_dict: Optional[dict] = None) -> dict:
+def read_config(path: Path, config_dict: Optional[dict] = None) -> dict:
     """Reads an INI formatted configuration file and parses it to a nested dict
 
     Each category in the INI file will be parsed as a separate nested dictionary. A default `config_dict` can be provided with default values for the parameters. Parameters under the "main" section will be parsed in the main dictionary. All data types will be converted by `ast.literal_eval()`.
@@ -113,7 +113,7 @@ def init_config(ini_file, write: bool = False, **kwargs):
     read_config
     """
     config_dict = read_config(ini_file)
-    config_path = "./" + ini_file.split("/")[-1]
+    config_path = Path.cwd() / ini_file.name
     if write:
         write_config(config_dict, config_path)
     if os.path.exists(config_path):

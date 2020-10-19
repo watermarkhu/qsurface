@@ -538,10 +538,10 @@ class Template2D(ABC):
 
 
     @staticmethod
-    def find_properties(artist: Artist, new_changes: dict, old_changes: dict = {}) -> Tuple[dict, dict]:
+    def find_properties(artist: Artist, new_prop: dict, old_prop: dict = {}, next_prop: dict = {}) -> Tuple[dict, dict]:
         """Finds the difference in plot properties. 
 
-        Finds the difference of a dict of changes in plot properties in `new_changes` with the current `artist` *matplotlib* object. If a key in `new_changes` also exists in `old_changes`, the value of `old_changes[key]` is saved as the old property in stead. 
+        Finds the difference of a dict of changes in plot properties in `new_prop` with the current `artist` *matplotlib* object. If a key in `new_changes` also exists in `old_prop`, the value of `old_changes[key]` is saved as the old property in stead. 
         
         Some color values from different *matplotlib* objects are nested, some are list or tuple, and others may be a `.numpy.ndarray`. The nested methods `get_nested()` and `get_nested_property()` make sure that the return type is always a list. 
 
@@ -549,9 +549,9 @@ class Template2D(ABC):
         ----------
         artist : `matplotlib` object
             Plot object to compare to. 
-        new_changes : dict
+        new_prop : dict
             Proposed changes to object. 
-        old_changes : dict
+        old_prop : dict
             Override of current object properties
         
         Returns
@@ -576,9 +576,11 @@ class Template2D(ABC):
                 return prop
 
         prev_dict, next_dict = {}, {}
-        for key, new_value in new_changes.items():
-            if key in old_changes:
-                current_value = old_changes[key]
+        for key, new_value in new_prop.items():
+            if key in next_prop and key in old_prop:
+                current_value = next_prop[key]
+            elif key in old_prop:
+                current_value = old_prop[key]
             else:
                 current_value = get_nested_property(plt.getp(artist, key))
             new_value = get_nested_property(new_value)
@@ -611,12 +613,13 @@ class Template2D(ABC):
 
         # If record exists, find difference in object properties
         if artist not in prev_properties:
-            old_dict = saved_properties
+            old_prop = saved_properties
         else:
-            old_dict = prev_properties[artist]
-            old_dict.update(saved_properties)
+            old_prop = prev_properties[artist]
+            old_prop.update(saved_properties)
 
-        prev_dict, next_dict = self.find_properties(artist, properties, old_dict)
+        next_prop = next_properties.pop(artist, {})
+        prev_dict, next_dict = self.find_properties(artist, properties, old_prop, next_prop)
 
         if prev_dict:
             if artist not in prev_properties:

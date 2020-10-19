@@ -80,6 +80,19 @@ class PerfectMeasurements(TemplatePM):
             surface += "\n" 
         print(surface)
 
+    @staticmethod
+    def _parse_boundary_coordinates(size, *args):
+        # Inherited docstrings
+        options = {-1: [*args]}
+        for i, arg in enumerate(args):
+            if arg == 0:
+                options[i] = [*args]
+                options[i][i] = size
+        diff = {
+            option: sum([abs(args[i] - args[j]) for i in range(len(args)) for j in range(i + 1, len(args))])
+            for option, args in options.items()
+        }
+        return options[min(diff, key=diff.get)]
 
 class FaultyMeasurements(TemplateFM, PerfectMeasurements):
     """Simulation toric code for faulty measurements."""

@@ -188,14 +188,6 @@ class PerfectMeasurements(TemplateSimPM):
                 self.error_methods[selected](qubit)
                 self._update_data(qubit, temporary=True)
 
-        @staticmethod
-        def _parse_boundary_coordinates(size, *args: float) -> List[float]:
-            """Parse two locations on the lattice.
-
-            An unbounded surface cannot be plotted on a 2D figure. The lines on the boundary consisting of two coordinates must thus be parsed such that all lines will be plotted within the given window.
-            """
-            return args
-
         def _plot_ancilla(self, qubit: AncillaQubit):
             """plots an ancilla-qubit.
 
@@ -218,8 +210,8 @@ class PerfectMeasurements(TemplateSimPM):
             qubit.surface_lines = {}
             for key, data in qubit.parity_qubits.items():
                 line = Line2D(
-                    self._parse_boundary_coordinates(self.code.size[0], qubit.loc[0], data.loc[0]),
-                    self._parse_boundary_coordinates(self.code.size[1], qubit.loc[1], data.loc[1]),
+                    self.code._parse_boundary_coordinates(self.code.size[0], qubit.loc[0], data.loc[0]),
+                    self.code._parse_boundary_coordinates(self.code.size[1], qubit.loc[1], data.loc[1]),
                     ls=linestyles[qubit.state_type],
                     zorder=0,
                     lw=self.rc["line_width_primary"],

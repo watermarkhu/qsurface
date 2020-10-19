@@ -418,6 +418,13 @@ class FaultyMeasurements(PerfectMeasurements):
                                         Others
     ----------------------------------------------------------------------------------------
     """
+    @staticmethod
+    def _parse_boundary_coordinates(size, *args: float) -> List[float]:
+        """Parse two locations on the lattice.
+
+        An unbounded surface cannot be plotted on a 2D figure. The lines on the boundary consisting of two coordinates must thus be parsed such that all lines will be plotted within the given window.
+        """
+        return args
 
     def _reset(self, **kwargs):
         # inherited docstrings

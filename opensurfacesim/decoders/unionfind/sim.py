@@ -91,7 +91,6 @@ class Toric(SimCode):
 
         self.config["step_growth"] = not (self.config["step_bucket"] or self.config["step_cluster"])
         self.code.ancillaQubit.cluster = None
-        self.code.edge.peeled = None
         if not self.config["dynamic_forest"]:
             self.code.ancillaQubit.forest = None
             self.code.edge.forest = None
@@ -111,7 +110,9 @@ class Toric(SimCode):
             self.buckets_num = 2
 
         self.buckets = defaultdict(list)
-        self.init_reset()
+        self.bucket_max_filled = 0
+        self.cluster_index = 0
+        self.clusters = []
 
     def init_reset(self):
         self.bucket_max_filled = 0
@@ -216,7 +217,7 @@ class Toric(SimCode):
             new_edge = boundary[1]
 
             if self.support[new_edge] != 2:              # if not already fully grown
-                self.support[new_edge] += 1              # Grow boundaries by half-edge
+                self._edge_grow(*boundary)               # Grow boundaries by half-edge
                 if self.support[new_edge] == 2:          # if edge is fully grown
                     union_list.append(boundary)            # Append to union_list list of edges
                 else:
@@ -224,6 +225,7 @@ class Toric(SimCode):
 
         if self.config["print_steps"]:
             print(f"{cluster}, ", end="")
+
 
     """
     ================================================================================================
@@ -303,7 +305,7 @@ class Toric(SimCode):
             self._cluster_find_vertices(cluster, new_vertex)
         elif new_cluster is cluster:
             if self.config["dynamic_forest"]:
-                self._edge_peel(edge)
+                self._edge_peel(edge, variant="cycle")
         else:
             return True
         return False
@@ -342,8 +344,9 @@ class Toric(SimCode):
     def peel_clusters(self, *args, **kwargs):
         """
         Loops over all vertices to find pendant vertices which are selected from peeling using {peel_edge}
-
         """
+        if self.config["print_steps"]:
+            print("================\nPeeling clusters")
         for layer in self.code.ancilla_qubits.values():
             for vertex in layer.values():
                 if vertex.cluster and vertex.cluster.instance == self.code.instance:
@@ -366,21 +369,29 @@ class Toric(SimCode):
 
         for key in vertex.parity_qubits:
             (new_vertex, edge) = self.get_neighbor(vertex, key)
-            if self.support[edge] == 2 and edge.peeled != self.code.instance:
+            if self.support[edge] == 2:
                 new_cluster = self._get_vertex_cluster(new_vertex)
                 if new_cluster is cluster:
                     num_connect += 1
                     connect_key = key
-                if num_connect > 1:
-                    break
+            if num_connect > 1:
+                break
         else:
             if num_connect == 1:
                 (new_vertex, edge) = self.get_neighbor(vertex, connect_key)
-                edge.peeled = self.code.instance
                 if vertex.measured_state:
-                    new_vertex.measured_state = not new_vertex.measured_state
+                    self._flip_edge(vertex, edge, new_vertex)
                     self.correct_edge(vertex, connect_key)
+                else:
+                    self._edge_peel(edge, variant="peel")
                 self._peel_leaf(cluster, new_vertex)
+    
+    def _flip_edge(self, vertex, edge, new_vertex, **kwargs):
+        vertex.measured_state = not vertex.measured_state
+        new_vertex.measured_state = not new_vertex.measured_state
+        self.support[edge] = -1
+        if self.config["print_steps"]:
+            print(f"{edge} to matching")
 
     def _static_forest(self, vertex):
         vertex.forest = self.code.instance
@@ -389,7 +400,7 @@ class Toric(SimCode):
             if self.support[edge] == 2:
                 if new_vertex.forest == self.code.instance:
                     if edge.forest != self.code.instance:
-                        self._edge_peel(edge)
+                        self._edge_peel(edge, variant="cycle")
                 else:
                     edge.forest = self.code.instance
                     self._static_forest(new_vertex)
@@ -427,23 +438,31 @@ class Toric(SimCode):
 
             if "erasure" in self.code.errors and edge.qubit.erasure == self.code.instance:
                 # if edge not already traversed
-                if self.support[edge] == 0 and edge.peeled != self.code.instance:
+                if self.support[edge] == 0:
                     if new_vertex.cluster == cluster:   # cycle detected, peel edge
-                        self._edge_peel(edge)
+                        self._edge_peel(edge, variant="cycle")
                     else:                               # if no cycle detected
                         cluster.add_vertex(new_vertex)
-                        self._edge_full(edge)
+                        self._edge_full(vertex, edge, new_vertex)
                         self._cluster_find_vertices(cluster, new_vertex)
             else:
                 # Make sure new bound does not lead to self
                 if new_vertex.cluster is not cluster:
                     cluster.new_bound.append((vertex, edge, new_vertex))
 
-    def _edge_peel(self, edge):
-        edge.peeled = self.code.instance
-        self.support[edge] = 0
+    def _edge_peel(self, edge, variant:str=""):
+        self.support[edge] = -1
+        if self.config["print_steps"]:
+            print(f"{edge} removed by {variant}")
 
-    def _edge_full(self, edge):
+    def _edge_grow(self, vertex, edge, new_vertex, **kwargs):
+        '''Grows the edge in support.'''
+        if self.support[edge] == 1:
+            self._edge_full(vertex, edge, new_vertex, **kwargs)
+        else:
+            self.support[edge] += 1
+
+    def _edge_full(self, vertex, edge, new_vertex, **kwargs):
         self.support[edge] = 2
 
 
@@ -461,7 +480,7 @@ class Planar(Toric):
         p_bound =  new_cluster is not None and new_cluster.instance == self.code.instance and new_cluster.on_bound 
         if cluster.on_bound and type(new_vertex) == PseudoQubit:
             if self.config["dynamic_forest"]:
-                self._edge_peel(edge)
+                self._edge_peel(edge, variant="cycle")
         elif new_cluster is None or new_cluster.instance != self.code.instance:
             if self.config["print_steps"] and type(new_vertex) == PseudoQubit and not cluster.on_bound:
                 print("{} ∪ boundary".format(cluster))
@@ -469,10 +488,10 @@ class Planar(Toric):
             self._cluster_find_vertices(cluster, new_vertex)
         elif new_cluster is cluster:
             if self.config["dynamic_forest"]:
-                self._edge_peel(edge)
+                self._edge_peel(edge, variant="cycle")
         elif cluster.on_bound and p_bound:
             if self.config["dynamic_forest"]:
-                self._edge_peel(edge)
+                self._edge_peel(edge, variant="cycle")
             else:
                 return True
         else:
@@ -492,7 +511,7 @@ class Planar(Toric):
                 
                 if type(new_vertex) is PseudoQubit:
                     if found_bound:
-                        self._edge_peel(edge)
+                        self._edge_peel(edge, variant="cycle")
                     else:
                         edge.forest = self.code.instance
                         found_bound = True
@@ -500,7 +519,7 @@ class Planar(Toric):
                     
                 if new_vertex.forest == self.code.instance:
                     if edge.forest != self.code.instance:
-                        self._edge_peel(edge)
+                        self._edge_peel(edge, variant="cycle")
                 else:
                     edge.forest = self.code.instance
                     found_bound = self._static_forest(new_vertex, found_bound = found_bound)

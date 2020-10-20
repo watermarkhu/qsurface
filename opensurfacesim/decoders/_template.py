@@ -133,12 +133,8 @@ class SimCode(ABC):
                             stars.append((ancilla, pseudo))
         return plaqs, stars
 
-    def decode(self, *args, **kwargs):
-        """Wrapper function of `do_decode`."""
-        self.do_decode(*args, **kwargs)
-
     @abstractmethod
-    def do_decode(*args, **kwargs):
+    def decode(self, *args, **kwargs):
         """Decodes the surface loaded at ``self.code`` after all ancilla-qubits have been measured."""
         pass
 
@@ -165,17 +161,11 @@ class PlotCode(SimCode):
             "z": dict(color = self.rc["color_z_secondary"])
         }
 
-    def do_decode(self, *args, **kwargs):
-        #Inherited docstrings
-        super().do_decode(*args, **kwargs)
-        if hasattr(self.code, "figure"):
-            self.code.figure.draw_figure(new_iter_name="Matchings found")
-
     def decode(self, *args, **kwargs):
         #Inherited docstrings
-       self.do_decode(*args, **kwargs)
-       self.code.plot_data()
-       self.code.plot_ancilla("Decoded.")
+        self.decode(*args, **kwargs)
+        if hasattr(self.code, "figure"):
+            self.code.figure.draw_figure(new_iter_name="Matchings found")
 
     def correct_edge(self, qubit, key, **kwargs):
         # Inherited docstring

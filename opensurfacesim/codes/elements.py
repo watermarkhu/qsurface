@@ -221,7 +221,7 @@ class PseudoQubit(AncillaQubit):
 
     Edges needs to be spanned by two nodes. For data qubits on the boundary, one of its edges additionally requires an ancilla qubit like node, which is the pseudo-qubit.
     """
-
+    
     qubit_type = "pA"
 
 

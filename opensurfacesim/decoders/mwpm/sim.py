@@ -25,7 +25,7 @@ class Toric(SimCode):
         erasure=True,
     )
 
-    def do_decode(self, **kwargs):
+    def decode(self, **kwargs):
         # Inherited docstring
         plaqs, stars = self.get_syndrome()
         self.correct_matching(plaqs, self.match_syndromes(plaqs, **kwargs))
@@ -199,7 +199,8 @@ class Planar(Toric):
     Additionally, virtual qubits are added to the boundary, which connect to their main qubits.
     Edges between all virtual qubits are added with weight zero.
     """
-    def do_decode(self, **kwargs):
+
+    def decode(self, **kwargs):
         # Inherited docstring
         plaqs, stars = self.get_syndrome(find_pseudo=True)
         self.apply_matching(plaqs, self.match_syndromes(plaqs, **kwargs))

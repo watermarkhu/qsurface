@@ -1,7 +1,7 @@
-from ...configuration import flatten_dict, get_attributes, init_config
+from opensurfacesim.codes.elements import AncillaQubit
 from ...plot import Template2D, Template3D
 from .._template import PlotCode
-from .sim import Toric as SimToric
+from .sim import Toric as SimToric, Planar as SimPlanar
 from pathlib import Path
 from matplotlib.patches import Circle, Rectangle
 from matplotlib.lines import Line2D
@@ -11,15 +11,15 @@ class Toric(SimToric, PlotCode):
 
     opposite_keys = dict(n="s", s="n", e="w", w="e")
 
-    def do_decode(self, *args, **kwargs):
+    def decode(self, *args, **kwargs):
+        # Inherited docstring
         if self.code.__class__.__name__ == "PerfectMeasurements":
             self.figure =  self.Figure2D(self.code, self.name, **kwargs)
         elif self.code.__class__.__name__ == "FaultyMeasurements":
             self.figure = self.Figure3D(self.code, self.name, **kwargs)
-        super().do_decode(*args, **kwargs)
+        super().decode(*args, **kwargs)
         self.figure.draw_figure("Press (->/enter) to close decoder figure.")
         self.figure.close()
-    
 
     def find_clusters(self, **kwargs):
         # Inherited docstring
@@ -61,6 +61,7 @@ class Toric(SimToric, PlotCode):
         return ret
     
     def _flip_edge(self, vertex, edge, new_vertex, **kwargs):
+        # Inherited docstring
         ret = super()._flip_edge(vertex, edge, new_vertex, **kwargs)
         self.figure._match_edge(edge)
         self.figure._flip_vertex(vertex)
@@ -109,51 +110,76 @@ class Toric(SimToric, PlotCode):
             self.code = code
             self.decoder = name
             super().__init__(*args, **kwargs)
-            self.rc.update(
-                flatten_dict(
-                    get_attributes(
-                        self.rc,
-                        init_config(
-                            Path(__file__).resolve().parent / "plot_unionfind.ini"
-                        )
-                    )
-                )
-            )
             self.colors1 = {"x": self.rc["color_x_primary"], "z": self.rc["color_z_primary"]} 
             self.colors2 = {"x": self.rc["color_x_secondary"], "z": self.rc["color_z_secondary"]}
         
         def init_plot(self, **kwargs):
             size = [xy + .25 for xy in self.code.size]
             self._init_axis([-.25, -.25] + size, title=self.decoder)
+            self.legend_ax.legend(handles = [
+                self._legend_circle(
+                    "Vertex",
+                    ls="-",
+                    color=self.rc["color_x_secondary"],
+                    mfc=self.rc["color_x_secondary"],
+                    mec=self.rc["color_x_primary"],
+                    marker="s",
+                    ms=5,
+                ),
+                self._legend_circle(
+                    "Star",
+                    ls="-",
+                    color=self.rc["color_z_secondary"],
+                    mfc=self.rc["color_z_secondary"],
+                    mec=self.rc["color_z_primary"],
+                    marker="D",
+                    ms=5,
+                ),
+                self._legend_circle(
+                    "Half edge",
+                    ls=self.rc["line_style_tertiary"],
+                    color=self.rc["color_edge"],
+                ),
+                self._legend_circle(
+                    "Full edge",
+                    ls=self.rc["line_style_primary"],
+                    color=self.rc["color_edge"],
+                ),
+                self._legend_circle(
+                    "X matching",
+                    ls=self.rc["line_style_primary"],
+                    color=self.rc["color_x_primary"],
+                ),
+                self._legend_circle(
+                    "Z matching",
+                    ls=self.rc["line_style_primary"],
+                    color=self.rc["color_z_primary"],
+                ),
+            ])
 
         def _plot_half_edge(self, edge, vertex, full=False):
-            
-            linestyle = self.rc["line_style_primary"] if full else self.rc["line_style_tertiary"]
-
             line = Line2D(
                 self.code._parse_boundary_coordinates(self.code.size[0], edge.qubit.loc[0], vertex.loc[0]),
                 self.code._parse_boundary_coordinates(self.code.size[0], edge.qubit.loc[1], vertex.loc[1]),
-                ls=linestyle,
+                ls=self.rc["line_style_primary"] if full else self.rc["line_style_tertiary"],
                 zorder=0,
                 lw=self.rc["line_width_primary"],
                 color=self.colors2[vertex.state_type],
             )
+            line.object = edge
             if hasattr(edge, "uf_plot"):
                 edge.uf_plot[vertex] = line
             else:
-                edge.uf_plot = {vertex: line} 
-            self.main_ax.add_artist(line)
-            self.history_dict[self.history_iter][line] = {"visible": False}
-            self.history_dict[self.history_iter+1][line] = {"visible": True}
+                edge.uf_plot = {vertex: line}
+
+            self.new_artist(line)
         
         def _plot_full_edge(self, edge, vertex):
             self.new_properties(edge.uf_plot[vertex], {"ls": self.rc["line_style_primary"]})
 
-
         def _hide_edge(self, edge):
-            if hasattr(edge, "uf_plot"):
-                for artist in edge.uf_plot.values():
-                    self.new_properties(artist, {"visible": False})
+            for artist in edge.uf_plot.values():
+                self.new_properties(artist, {"visible": False})
 
         def _match_edge(self, edge):
             for artist in edge.uf_plot.values():
@@ -164,14 +190,14 @@ class Toric(SimToric, PlotCode):
             rotations = {"x": 0, "z": 45}
 
             loc_parse = {
-                "x": lambda x, y: (x - self.rc["vertex_size_2d"] / 2, y - self.rc["vertex_size_2d"] / 2),
-                "z": lambda x, y: (x, y - self.rc["vertex_size_2d"] * 2 ** (1 / 2) / 2),
+                "x": lambda x, y: (x - self.rc["patch_rectangle_2d"] / 2, y - self.rc["patch_rectangle_2d"] / 2),
+                "z": lambda x, y: (x, y - self.rc["patch_rectangle_2d"] * 2 ** (1 / 2) / 2),
             }
             # Plot ancilla object
             vertex.uf_plot = Rectangle(
                 loc_parse[vertex.state_type](*vertex.loc),
-                self.rc["vertex_size_2d"],
-                self.rc["vertex_size_2d"],
+                self.rc["patch_rectangle_2d"],
+                self.rc["patch_rectangle_2d"],
                 rotations[vertex.state_type],
                 edgecolor = self.colors1[vertex.state_type],
                 facecolor = self.colors2[vertex.state_type],
@@ -179,10 +205,11 @@ class Toric(SimToric, PlotCode):
                 zorder=1,
                 lw=self.rc["line_width_primary"],
             )
-            self.main_ax.add_artist(vertex.uf_plot)
-            if not init:
-                self.history_dict[self.history_iter][vertex.uf_plot] = {"visible": False}
-                self.history_dict[self.history_iter+1][vertex.uf_plot] = {"visible": True}
+            vertex.uf_plot.object = vertex
+            if init:
+                self.main_ax.add_artist(vertex.uf_plot)
+            else:
+                self.new_artist(vertex.uf_plot)
         
         def _flip_vertex(self, vertex):
             if vertex.measured_state:
@@ -201,3 +228,14 @@ class Toric(SimToric, PlotCode):
 
     class Figure3D(Template3D, Figure2D):
         pass
+
+
+class Planar(SimPlanar, Toric):
+    def init_plot(self, **kwargs):
+        size = [xy - .5 for xy in self.code.size]
+        self._init_axis([-.25, -.25] + size, title=self.decoder)
+
+    class Figure2D(Toric.Figure2D):
+        def _plot_vertex(self, vertex, **kwargs):
+            if type(vertex) == AncillaQubit:
+                super()._plot_vertex(vertex, **kwargs)

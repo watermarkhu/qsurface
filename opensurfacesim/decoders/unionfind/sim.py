@@ -121,7 +121,7 @@ class Toric(SimCode):
         self.support = {edge: 0 for edge in self.support}
 
 
-    def do_decode(self, reset=True, **kwargs):
+    def decode(self, reset=True, **kwargs):
         # Inherited docstrings
         self.find_clusters(**kwargs)
         self.grow_clusters(**kwargs)                          

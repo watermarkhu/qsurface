@@ -48,6 +48,10 @@ class PerfectMeasurements(TemplateSimPM):
         self.figure.interact_bodies["error_buttons"].set_active(0)
         self.figure.interact_axes["error_buttons"].active = False
         self.plot_ancilla("Ancilla-qubits measured", z=z, **kwargs)
+    
+    def show_corrected(self, **kwargs):
+        self.plot_data()
+        self.plot_ancilla("Decoded.")
 
     def plot_data(self, iter_name: Optional[str] = None, z: float = 0, **kwargs):
         """Update plots of all data-qubits in layer ``z``. A plot iteration is added if a ``iter_name`` is supplied. See `.plot.Template2D.draw_figure`."""

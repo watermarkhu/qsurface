@@ -408,9 +408,11 @@ class Template2D(ABC):
     """
 
     def draw_figure(self, new_iter_name: Optional[str] = None, output: bool = True, **kwargs):
-        """Blit the canvas and block code execution.
+        """Draws the canvas and blocks code execution.
 
-        Blits the queued plot changes onto the canvas and calls for :meth:`focus` which blocks the code execution and catches user input for history navigation. If a new iteration is called by supplying a `new_iter_name`, we additionally check for future property changes in the `self.future_dict`, and draw all these planned changes before the canvas is blit.
+        Draws the queued plot changes onto the canvas and calls for :meth:`focus` which blocks the code execution and catches user input for history navigation. 
+        
+        If a new iteration is called by supplying a `new_iter_name`, we additionally check for future property changes in the `self.future_dict`, and add these changes to the queue. Finally, all queued property changes for the next iteration are applied by `change_properties`. 
 
         Parameters
         ----------
@@ -430,6 +432,8 @@ class Template2D(ABC):
                     self.new_properties(artist, changes)
                 for artist, changes in self.future_dict.pop(self.history_iter + 1, {}).items():
                     self.new_properties(artist, changes)
+                for artist, changes in self.history_dict[self.history_iter+1].items():
+                    self.change_properties(artist, changes)
                 self.history_iter_names.append(new_iter_name)
                 self.history_iters += 1
                 self.history_iter += 1
@@ -439,7 +443,6 @@ class Template2D(ABC):
                 )
         if not (new_iter_name and self.history_at_newest):
             new_iter_name = self.history_iter_names[self.history_iter]
-
         text = "{}/{}: {}".format(self.history_iter, self.history_iters, new_iter_name)
         self.text.set_text(text)
         if output:
@@ -530,16 +533,37 @@ class Template2D(ABC):
                                     Object properties
     -------------------------------------------------------------------------------
     """
+    
+    def new_artist(self, artist: mpl.artist.Artist, axis: Optional[mpl.axes.Axes] = None) -> None:
+        '''Adds a new artist to the ``axis``. 
+
+        Newly added artists must be hidden in the previous iteration. To make sure the history is properly logged, the visibility of the ``artist`` is set to ``False``, and a new property of shown visibility is added to the queue of the next iteration.
+
+        Parameters
+        ----------
+        artist : `matplotlib.artist.Artist`
+            New plot artist to add to the ``axis``.
+        axis : `matplotlib.axes.Axes`, optional
+            Axis to add the figure to.
+        '''
+        if axis is None:
+            axis = self.main_ax
+        axis.add_artist(artist)
+        self.change_properties(artist, {"visible": False})
+        self.new_properties(artist, {"visible": True})
+
     @staticmethod
     def change_properties(artist, prop_dict):
         """Changes the plot properties and draw the plot object or artist."""
         if prop_dict:
             plt.setp(artist, **prop_dict)
 
+    def new_properties(self, artist: Artist, properties: dict, saved_properties: dict = {}, **kwargs):
+        """Parses a dictionary of proposed changes to a *matplotlib* artist. 
 
-    @staticmethod
-    def find_properties(artist: Artist, new_prop: dict, old_prop: dict = {}, next_prop: dict = {}) -> Tuple[dict, dict]:
-        """Finds the difference in plot properties. 
+        If ``saved_properties`` is empty, this function saves the difference of plot properties in ``self.history_dict`` of the *matplotlib Artist* ``artist`` of the current iteration `self.history_iter` and the next iteration. If ``saved_properties`` is not empty, the difference is saved for the previous and the current iteration, where ``saved_properties`` overrides the current object properties as a the saved state prior to temporary changes. 
+
+        New properties are supplied via ``properties``. If any of the new properties is different from its current value (or in ``saved_properties``) this is seen as a property change. The old property value is stored in history in the current (or previous) iteration, and the new property value is stored at the new (or current) iteration.
 
         Finds the difference of a dict of changes in plot properties in `new_prop` with the current `artist` *matplotlib* object. If a key in `new_changes` also exists in `old_prop`, the value of `old_changes[key]` is saved as the old property in stead. 
         
@@ -547,19 +571,12 @@ class Template2D(ABC):
 
         Parameters
         ----------
-        artist : `matplotlib` object
-            Plot object to compare to. 
-        new_prop : dict
-            Proposed changes to object. 
-        old_prop : dict
-            Override of current object properties
-        
-        Returns
-        -------
-        dict
-            Old properties of difference. 
-        dict
-            New properties of difference. 
+        artist : `matplotlib.artist.Artist`
+            Plot object whose properties are changed.
+        properties : dict
+            Plot properties to change.
+        saved_properties : dict
+            Override current properties and parse previous and current history. 
         """
         def get_nested(value):
             if type(value) == list and type(value[0]) == list:
@@ -575,35 +592,6 @@ class Template2D(ABC):
             else:
                 return prop
 
-        prev_dict, next_dict = {}, {}
-        for key, new_value in new_prop.items():
-            if key in next_prop and key in old_prop:
-                current_value = next_prop[key]
-            elif key in old_prop:
-                current_value = old_prop[key]
-            else:
-                current_value = get_nested_property(plt.getp(artist, key))
-            new_value = get_nested_property(new_value)
-            if current_value != new_value:
-                prev_dict[key], next_dict[key] = current_value, new_value
-        return prev_dict, next_dict
-
-    def new_properties(self, artist: Artist, properties: dict, saved_properties: dict = {}, **kwargs):
-        """Parses a dictionary of proposed changes to a *matplotlib* artist. 
-
-        If ``saved_properties`` is empty, this function saves the difference of plot properties in ``self.history_dict`` of the *matplotlib Artist* ``artist`` of the current iteration `self.history_iter` and the next iteration. If ``saved_properties`` is not empty, the difference is saved for the previous and the current iteration, where ``saved_properties`` overrides the current object properties as a the saved state prior to temporary changes. 
-
-        New properties are supplied via ``properties``. If any of the new properties is different from its current value (or in ``saved_properties``) this is seen as a property change. The old property value is stored in history in the current (or previous) iteration, and the new property value is stored at the new (or current) iteration.
-
-        Parameters
-        ----------
-        artist : `matplotlib.artist.Artist`
-            Plot object whose properties are changed.
-        properties : dict
-            Plot properties to change.
-        saved_properties : dict
-            Override current properties and parse previous and current history. 
-        """
         if saved_properties:
             prev_properties = self.history_dict[self.history_iter - 1]
             next_properties = self.history_dict[self.history_iter]
@@ -611,25 +599,21 @@ class Template2D(ABC):
             prev_properties = self.history_dict[self.history_iter]
             next_properties = self.history_dict[self.history_iter + 1]
 
-        # If record exists, find difference in object properties
-        if artist not in prev_properties:
-            old_prop = saved_properties
-        else:
-            old_prop = prev_properties[artist]
-            old_prop.update(saved_properties)
-
+        prev_prop = prev_properties.pop(artist, {})
+        prev_prop.update(saved_properties)
         next_prop = next_properties.pop(artist, {})
-        prev_dict, next_dict = self.find_properties(artist, properties, old_prop, next_prop)
 
-        if prev_dict:
-            if artist not in prev_properties:
-                prev_properties[artist] = prev_dict
-            else:
-                prev_properties[artist].update(prev_dict)
-        if next_dict:
-            next_properties[artist] = next_dict
-            if not saved_properties:
-                self.change_properties(artist, next_dict)
+        # If record exists, find difference in object properties
+        for key, new_value in properties.items():
+            current_value = prev_prop.pop(key, get_nested_property(plt.getp(artist, key)))
+            next_prop.pop(key, None)
+            if current_value != new_value:
+                prev_prop[key], next_prop[key] = current_value, new_value
+
+        if prev_prop:
+            prev_properties[artist] = prev_prop
+        if next_prop:
+            next_properties[artist] = next_prop
 
     def temporary_properties(self, artist: Artist, properties: dict, **kwargs):
         """Applies temporary property changes to a *matplotlib* artist. 

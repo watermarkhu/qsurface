@@ -20,18 +20,6 @@ class PerfectMeasurements(ABC):
 
     Attributes
     ----------
-    dataQubit : `~opensurfacesim.code.elements.AncillaQubit`
-        Data-qubit class to use for the current code. 
-
-    ancillaQubit : `~opensurfacesim.code.elements.DataQubit`
-        Ancilla-qubit class to use for the current code. 
-
-    pseudoQubit : `~opensurfacesim.code.elements.PseudoQubit`
-        Pseudo-qubit class to use for the current code.
-
-    edge : `~opensurfacesim.code.elements.Edge`
-        Edge class to use for the current code.
-
     ancilla_qubits : dict of dict 
         Nested dictionary of `~opensurfacesim.code.elements.AncillaQubit`\ s.
 
@@ -227,13 +215,14 @@ class PerfectMeasurements(ABC):
         """Entangles one `~.code.elements.DataQubit` to a `~.code.elements.AncillaQubit` for parity measurement.
 
         Parameters
-        data_qubit : `~.code.elements.DataQubit`
+        ----------
+        data_qubit
             Control qubit.
-        ancilla_qubit : `~.code.elements.AncillaQubit`
+        ancilla_qubit 
             Controlled qubit.
-        key : float or str
+        key 
             The entanglement is saved by adding the `~.code.elements.DataQubit` to `~.code.elements.AncillaQubit`\ ``.parity_qubits[key]``
-        edge : `~.code.elements.Edge`, optional
+        edge 
             The edge of the data-qubit to entangle to.
         """
         ancilla_qubit.parity_qubits[key] = data_qubit
@@ -284,7 +273,7 @@ class PerfectMeasurements(ABC):
 class FaultyMeasurements(PerfectMeasurements):
     """Simulation template code class for faulty measurements.
 
-    A 3D graph is initiated with ``layers`` amount of 2D surfaces from `~.codes._template.PerfectMeasurement` stacked on top of each other. The structure of the ``self.data_qubits``, ``self.ancilla_qubits`` and ``self.pseudo_qubits`` dictionary attributes allows for the storage for various time instances of the same qubits in the first nested layer. E.g. ``self.data_qubits[0][(0,0)]`` and ``self.data_qubits[1][(0,0)]`` store the data-qubit at (0,0) at time instances 0 and 1, respectively. Consequtive instances of `~.codes.elements.AncillaQubit`\ s and `~.codes.elements.PseudoQubit`\ s are connected in the 3D graph by `~.codes.elements.PseudoEdge` objects. 
+    A 3D graph is initiated with ``layers`` amount of 2D surfaces from `~.codes._template.PerfectMeasurement` stacked on top of each other. The structure of the ``self.data_qubits``, ``self.ancilla_qubits`` and ``self.pseudo_qubits`` dictionary attributes allows for the storage for various time instances of the same qubits in the first nested layer. E.g. ``self.data_qubits[0][(0,0)]`` and ``self.data_qubits[1][(0,0)]`` store the data-qubit at (0,0) at time instances 0 and 1, respectively. Consecutive instances of `~.codes.elements.AncillaQubit`\ s and `~.codes.elements.PseudoQubit`\ s are connected in the 3D graph by `~.codes.elements.PseudoEdge` objects. 
 
     Parameters
     ----------

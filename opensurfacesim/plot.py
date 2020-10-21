@@ -46,18 +46,7 @@ class Template2D(ABC):
 
     Fast plotting is enabled by not drawing the figure after every queued change. Instead, each object is draw in the canvas individually after a property change and a series of changes is drawn to the figure when a new plot iteration is requested via :meth:`new_iter`. This is performed by *blitting* the canvas.
 
-    Keyboard navigation and picking is enabled by blocking the code via a custom `.BlockingKeyInput` class. While the code is blocked, inputs are caught by the blocking class and processed for history navigation or picking navigation. Moving the iteration past the available history allows for the code to continue. The keyboard input is parsed by :meth:`focus`, and parses the following inputs. 
-
-    ==================  ==============================================
-    key                 function
-    ==================  ==============================================
-    h                   show help
-    i                   show all iterations
-    enter or right      go to next iteration, enter iteration number
-    backspace or left   go to previous iteration
-    n                   go to newest iteration
-    0-9                 input iteration number
-    ==================  ==============================================
+    Keyboard navigation and picking is enabled by blocking the code via a custom `.BlockingKeyInput` class. While the code is blocked, inputs are caught by the blocking class and processed for history navigation or picking navigation. Moving the iteration past the available history allows for the code to continue. The keyboard input is parsed by :meth:`focus`.
 
     Default values for plot properties such as colors and linewidths are saved in a 'plot.ini` file. All parameters within the ini file are parsed by :meth:`~opensurfacesim.configuration.read_config` and saved to ``self.rc`` as a dictionary.
 
@@ -114,7 +103,6 @@ class Template2D(ABC):
         All iteractive elements should have their own axis saved in ``self.interact_axes``. The ``axis.active`` attribute must be added to define when the axis is shown. If the focus on the figure is lost, all axes in ``self.interact_axes`` are hidden by setting ``axis.active`` to ``False``. See :meth:`_set_figure_state`.
     interact_bodies : dict
         All interactive elements such as buttons, radiobuttons, sliders, should be saved to this dictionary with the same key as their axes in ``s`elf.interact_axes``
-
 
     Notes
     -----
@@ -312,10 +300,6 @@ class Template2D(ABC):
         ==================  ==============================================
 
         When the method is active, the focus is on the figure. This will be indicated by a green circle in the bottom right of the figure. When the focus is lost, the code execution is continued and the icon is red. The change is icon color is performed by :meth:`_set_figure_state`, which also hides the interactive elements when the focus is lost.
-
-        See Also
-        --------
-        BlockingKeyInput : Matplotlib blocking object.
         """
         wait = True
         while wait:
@@ -407,7 +391,7 @@ class Template2D(ABC):
     -------------------------------------------------------------------------------
     """
 
-    def draw_figure(self, new_iter_name: Optional[str] = None, output: bool = True, **kwargs):
+    def draw_figure(self, new_iter_name: Optional[str] = None, output: bool = True, carriage_return: bool = False, **kwargs):
         """Draws the canvas and blocks code execution.
 
         Draws the queued plot changes onto the canvas and calls for :meth:`focus` which blocks the code execution and catches user input for history navigation. 
@@ -420,6 +404,8 @@ class Template2D(ABC):
             Name of the new iteration. If no name is supplied, no new iteration is called.
         output : bool, optional
             Prints information to the console.
+        carriage_return : bool, optional
+            Applies carriage return to remove last line printed.
 
         See Also
         --------
@@ -446,7 +432,10 @@ class Template2D(ABC):
         text = "{}/{}: {}".format(self.history_iter, self.history_iters, new_iter_name)
         self.text.set_text(text)
         if output:
-            print("Drawing", text)
+            if carriage_return:
+                print("\rDrawing", text)
+            else:
+                print("Drawing", text)
         self.canvas.blit(self.main_ax.bbox)
         self.focus()
 
@@ -559,13 +548,11 @@ class Template2D(ABC):
             plt.setp(artist, **prop_dict)
 
     def new_properties(self, artist: Artist, properties: dict, saved_properties: dict = {}, **kwargs):
-        """Parses a dictionary of proposed changes to a *matplotlib* artist. 
+        """Parses a dictionary of property changes of a *matplotlib* artist. 
 
-        If ``saved_properties`` is empty, this function saves the difference of plot properties in ``self.history_dict`` of the *matplotlib Artist* ``artist`` of the current iteration `self.history_iter` and the next iteration. If ``saved_properties`` is not empty, the difference is saved for the previous and the current iteration, where ``saved_properties`` overrides the current object properties as a the saved state prior to temporary changes. 
+        New properties are supplied via ``properties``. If any of the new properties is different from its current value, this is seen as a property change. The old property value is stored in ``self.history_dict[self.history_iteration]``, and the new property value is stored at ``self.history_dict[self.history_iteration+1]``. These new properties are *queued* for the next interation. The queue is emptied by applying all changes when `draw_figure` is called. If the same property changes 2+ times within the same iteration, the previous property change is removed with ``next_prop.pop(key, None)``.
 
-        New properties are supplied via ``properties``. If any of the new properties is different from its current value (or in ``saved_properties``) this is seen as a property change. The old property value is stored in history in the current (or previous) iteration, and the new property value is stored at the new (or current) iteration.
-
-        Finds the difference of a dict of changes in plot properties in `new_prop` with the current `artist` *matplotlib* object. If a key in `new_changes` also exists in `old_prop`, the value of `old_changes[key]` is saved as the old property in stead. 
+        The ``saved_properties`` parameter is used when temporary property changes have been applied by `temporary_changes`, in which the original properties are saved to ``self.temporary_saved`` as the saved properties. Before a new iteration is drawn, the temporary changes, which can be overwritten, are compared with the saved changes and the differences in properties are saved to ``[self.history_dict[self.history_iter-1]]`` and ``self.history_dict[self.history_iteration]``. 
         
         Some color values from different *matplotlib* objects are nested, some are list or tuple, and others may be a `.numpy.ndarray`. The nested methods `get_nested()` and `get_nested_property()` make sure that the return type is always a list. 
 
@@ -605,7 +592,7 @@ class Template2D(ABC):
 
         # If record exists, find difference in object properties
         for key, new_value in properties.items():
-            current_value = prev_prop.pop(key, get_nested_property(plt.getp(artist, key)))
+            current_value = get_nested_property(plt.getp(artist, key))
             next_prop.pop(key, None)
             if current_value != new_value:
                 prev_prop[key], next_prop[key] = current_value, new_value

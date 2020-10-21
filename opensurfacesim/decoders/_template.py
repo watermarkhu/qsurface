@@ -16,9 +16,9 @@ class SimCode(ABC):
 
     Parameters
     ----------
-    code : `~.codes._template.PerfectMeasurements`
+    code
         A ``PerfectMeasurements`` or ``FaultyMeasurements`` class from the `sim` module of :doc:`../codes/index`. 
-    check_compatibility : bool, optional
+    check_compatibility
         Checks compatibility of the decoder with the code class and loaded errors by `check_compatibility`.
 
     Attributes
@@ -140,7 +140,10 @@ class SimCode(ABC):
 
 
 class PlotCode(SimCode):
-    """Decoder plotting class template."""
+    """Decoder plotting class template.
+    
+    The plotting class initiates a `opensurfacesim.plot` object. For its usage, see :ref:`plot-usage`. 
+    """
 
     name = "Template plot decoder",
     def __init__(self, *args, **kwargs) -> None:

@@ -4,11 +4,20 @@ Planar code
 Simulation
 ^^^^^^^^^^
 
-.. automodule:: opensurfacesim.codes.planar.sim
+.. autoclass:: opensurfacesim.codes.planar.sim.PerfectMeasurements
+    :member-order: bysource
+    :inherited-members:
+    :members:
+
+.. autoclass:: opensurfacesim.codes.planar.sim.FaultyMeasurements
+    :member-order: bysource
+    :inherited-members:
     :members:
 
 Plotting
 ^^^^^^^^
 
-.. automodule:: opensurfacesim.codes.planar.plot
+.. autoclass:: opensurfacesim.codes.planar.plot.PerfectMeasurements
+    :member-order: bysource
+    :inherited-members:
     :members:

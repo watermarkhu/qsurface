@@ -39,13 +39,13 @@ class Toric(SimCode):
     ) -> list:  
         """Decodes a list of syndromes of the same type.
 
-        A graph is constructed with the syndromes in ``syndromes`` as nodes and the distances between each of the syndromes as the edges. The distances are dependent on the boundary conditions of the code and is calculated by `_get_qubit_distances`. A minimum-weight matching is then found by either `match_networkx` or `match_blossomv`. 
+        A graph is constructed with the syndromes in ``syndromes`` as nodes and the distances between each of the syndromes as the edges. The distances are dependent on the boundary conditions of the code and is calculated by `get_qubit_distances`. A minimum-weight matching is then found by either `match_networkx` or `match_blossomv`. 
 
         Parameters
         ----------
-        syndromes : list of `~.codes.elements.AncillaQubit`
+        syndromes
             Syndromes of the code.
-        use_blossomv : bool
+        use_blossomv
             Use external C++ Blossom V library for minimum-weight matching. Needs to be downloaded and compiled by calling `.get_blossomv`.
 
         Returns
@@ -55,7 +55,7 @@ class Toric(SimCode):
 
         """
         matching_graph = self.match_blossomv if use_blossomv else self.match_networkx
-        edges = self._get_qubit_distances(syndromes, self.code.size)
+        edges = self.get_qubit_distances(syndromes, self.code.size)
         matching = matching_graph(
             edges,
             maxcardinality=self.config["max_cardinality"],
@@ -76,9 +76,9 @@ class Toric(SimCode):
 
         Parameters
         ----------
-        edges : list of [nodeA, nodeB, distance(nodeA,nodeB)]
+        edges :  [[nodeA, nodeB, distance(nodeA,nodeB)],...]
             A graph defined by a list of edges.
-        maxcardinality : float
+        maxcardinality
             See `networkx.algorithms.matching.max_weight_matching`.
 
         Returns
@@ -97,7 +97,7 @@ class Toric(SimCode):
 
         Parameters
         ----------
-        edges : list of [nodeA, nodeB, distance(nodeA,nodeB)]
+        edges : [[nodeA, nodeB, distance(nodeA,nodeB)],...]
             A graph defined by a list of edges.
 
         Returns
@@ -143,7 +143,7 @@ class Toric(SimCode):
         return [[i0, i1] for i0, i1 in enumerate(matching) if i0 > i1]
 
     @staticmethod
-    def _get_qubit_distances(qubits : LA, size: Tuple[float, float]):
+    def get_qubit_distances(qubits : LA, size: Tuple[float, float]):
         """Computes the distance between a list of qubits.
         
         On a toric lattice, the shortest distance between two qubits may be one in four directions due to the periodic boundary conditions. The ``size`` parameters indicates the length in both x and y directions to find the shortest distance in all directions.
@@ -193,11 +193,9 @@ class Toric(SimCode):
 
 
 class Planar(Toric):
-    """
-    Decodes the planar lattice (2D and 3D).
-    Edges between all qubits are considered.
-    Additionally, virtual qubits are added to the boundary, which connect to their main qubits.
-    Edges between all virtual qubits are added with weight zero.
+    """Minimum-Weight Perfect Matching decoder for the planar lattice.
+
+    Additionally to all edges, virtual qubits are added to the boundary, which connect to their main qubits.Edges between all virtual qubits are added with weight zero.
     """
 
     def decode(self, **kwargs):
@@ -217,7 +215,7 @@ class Planar(Toric):
         return weight
 
     @staticmethod
-    def _get_qubit_distances(qubits, *args):
+    def get_qubit_distances(qubits, *args):
         """Computes the distance between a list of qubits.
 
         On a planar lattice, any qubit can be paired with the boundary, which is inhabited by `~.codes.elements.PseudoQubit`\ s. The graph of syndromes that supports minimum-weight matching algorithms must be fully connected, with each syndrome connecting additionally to its boundary pseudo-qubit, and a fully connected graph between all pseudo-qubits with weight 0. 

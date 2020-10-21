@@ -13,3 +13,13 @@ The Minimum-Weight Perfect Matching decoder.
 
    mwpm
 
+Union-Find
+----------
+
+The Union-Find decoder.
+
+.. toctree:: 
+   :maxdepth: 1
+
+   unionfind
+

@@ -29,12 +29,13 @@ author = 'Mark Shui Hu'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx.ext.autodoc',
+    # "numpydoc",
+    "sphinx.ext.napoleon",
+    "sphinx.ext.autodoc",
+    "sphinx_autodoc_typehints",
     'sphinx.ext.todo',
     "sphinx.ext.githubpages",
     "sphinx.ext.intersphinx",
-    "numpydoc",
-    "sphinx_autodoc_typehints",
     "m2r2",
     "sphinx_rtd_theme",
 ]

@@ -3,7 +3,7 @@ Decoder types
 
 All decoder modules in this section inherit from the template decoder module, see :doc:`template`.
 
-MWPM
+mwpm
 ----
 
 The Minimum-Weight Perfect Matching decoder.
@@ -13,8 +13,8 @@ The Minimum-Weight Perfect Matching decoder.
 
    mwpm
 
-Union-Find
-----------
+unionfind
+---------
 
 The Union-Find decoder.
 
@@ -23,3 +23,13 @@ The Union-Find decoder.
 
    unionfind
 
+
+ufns
+----
+
+The Union-Find Node-Suspension decoder.
+
+.. torctree::
+   :maxdepth: 1
+
+   ufns

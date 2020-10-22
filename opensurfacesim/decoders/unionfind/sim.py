@@ -60,6 +60,7 @@ class Toric(SimCode):
 
     name = "Union-Find"
     short = "unionfind"
+    cluster = Cluster
 
     compatibility_measurements = dict(
         PerfectMeasurements=True,
@@ -119,6 +120,73 @@ class Toric(SimCode):
 
     """
     ================================================================================================
+                                    General helper functions
+    ================================================================================================
+    """
+
+    def get_cluster(self, ancilla: AncillaQubit) -> Optional[Cluster]:
+        """Returns the cluster to which ``ancilla`` belongs to.
+
+        If ``ancilla`` has no cluster or the cluster is not from the current simulation, none is returned. Otherwise, the root element of the cluster-tree is found, updated to ``ancilla.cluster`` and returned.
+
+        Parameters
+        ----------
+        ancilla
+            The ancilla for which the cluster is to be found.
+        """
+        if not (ancilla.cluster is None or ancilla.cluster.instance != self.code.instance):
+            ancilla.cluster = ancilla.cluster.find()
+            return ancilla.cluster
+
+    def cluster_find_ancillas(self, cluster: Cluster, ancilla: AncillaQubit, **kwargs):
+        """Recursively adds erased edges to ``cluster`` and finds the new boundary.
+
+        For a given ``ancilla``, this function finds the neighboring edges and ancillas that are in the the currunt cluster. If the newly found edge is erased, the edge and the corresponding ancilla will be added to the cluster, and the function applied recursively on the new ancilla. Otherwise, the neighbor is added to the new boundary ``self.new_bound``.
+
+        Parameters
+        ----------
+        cluster
+            Current active cluster
+        ancilla
+            Ancilla from which the connected erased edges or boundary are searched.
+        """
+
+        for key in ancilla.parity_qubits:
+            (new_ancilla, edge) = self.get_neighbor(ancilla, key)
+
+            if (
+                "erasure" in self.code.errors and edge.qubit.erasure == self.code.instance
+            ):  # if edge not already traversed
+                if self.support[edge] == 0:
+                    if new_ancilla.cluster == cluster:  # cycle detected, peel edge
+                        self._edge_peel(edge, variant="cycle")
+                    else:  # if no cycle detected
+                        cluster.add_ancilla(new_ancilla)
+                        self._edge_full(ancilla, edge, new_ancilla)
+                        self.cluster_find_ancillas(cluster, new_ancilla)
+            else:  # Make sure new bound does not lead to self
+                if new_ancilla.cluster is not cluster:
+                    cluster.new_bound.append((ancilla, edge, new_ancilla))
+
+    def _edge_peel(self, edge: Edge, variant: str = ""):
+        """Peels or removes an edge"""
+        self.support[edge] = -1
+        if self.config["print_steps"]:
+            print(f"del {edge} ({variant})")
+
+    def _edge_grow(self, ancilla, edge, new_ancilla, **kwargs):
+        """Grows the edge in support."""
+        if self.support[edge] == 1:
+            self._edge_full(ancilla, edge, new_ancilla, **kwargs)
+        else:
+            self.support[edge] += 1
+
+    def _edge_full(self, ancilla, edge, new_ancilla, **kwargs):
+        """Fully grows an edge."""
+        self.support[edge] = 2
+        
+    """
+    ================================================================================================
                                     1. Find clusters
     ================================================================================================
     """
@@ -134,7 +202,7 @@ class Toric(SimCode):
 
         for ancilla in plaqs + stars:
             if ancilla.cluster is None or ancilla.cluster.instance != self.code.instance:
-                cluster = Cluster(self.cluster_index, self.code.instance)
+                cluster = self.cluster(self.cluster_index, self.code.instance)
                 cluster.add_ancilla(ancilla)
                 self.cluster_find_ancillas(cluster, ancilla)
                 self.cluster_place_bucket(cluster, -1)
@@ -475,73 +543,6 @@ class Toric(SimCode):
                 else:
                     edge.forest = self.code.instance
                     self.static_forest(new_ancilla)
-
-    """
-    ================================================================================================
-                                    General helper functions
-    ================================================================================================
-    """
-
-    def get_cluster(self, ancilla: AncillaQubit) -> Optional[Cluster]:
-        """Returns the cluster to which ``ancilla`` belongs to.
-
-        If ``ancilla`` has no cluster or the cluster is not from the current simulation, none is returned. Otherwise, the root element of the cluster-tree is found, updated to ``ancilla.cluster`` and returned.
-
-        Parameters
-        ----------
-        ancilla
-            The ancilla for which the cluster is to be found.
-        """
-        if not (ancilla.cluster is None or ancilla.cluster.instance != self.code.instance):
-            ancilla.cluster = ancilla.cluster.find()
-            return ancilla.cluster
-
-    def cluster_find_ancillas(self, cluster: Cluster, ancilla: AncillaQubit, **kwargs):
-        """Recursively adds erased edges to ``cluster`` and finds the new boundary.
-
-        For a given ``ancilla``, this function finds the neighboring edges and ancillas that are in the the currunt cluster. If the newly found edge is erased, the edge and the corresponding ancilla will be added to the cluster, and the function applied recursively on the new ancilla. Otherwise, the neighbor is added to the new boundary ``self.new_bound``.
-
-        Parameters
-        ----------
-        cluster
-            Current active cluster
-        ancilla
-            Ancilla from which the connected erased edges or boundary are searched.
-        """
-
-        for key in ancilla.parity_qubits:
-            (new_ancilla, edge) = self.get_neighbor(ancilla, key)
-
-            if (
-                "erasure" in self.code.errors and edge.qubit.erasure == self.code.instance
-            ):  # if edge not already traversed
-                if self.support[edge] == 0:
-                    if new_ancilla.cluster == cluster:  # cycle detected, peel edge
-                        self._edge_peel(edge, variant="cycle")
-                    else:  # if no cycle detected
-                        cluster.add_ancilla(new_ancilla)
-                        self._edge_full(ancilla, edge, new_ancilla)
-                        self.cluster_find_ancillas(cluster, new_ancilla)
-            else:  # Make sure new bound does not lead to self
-                if new_ancilla.cluster is not cluster:
-                    cluster.new_bound.append((ancilla, edge, new_ancilla))
-
-    def _edge_peel(self, edge: Edge, variant: str = ""):
-        """Peels or removes an edge"""
-        self.support[edge] = -1
-        if self.config["print_steps"]:
-            print(f"del {edge} ({variant})")
-
-    def _edge_grow(self, ancilla, edge, new_ancilla, **kwargs):
-        """Grows the edge in support."""
-        if self.support[edge] == 1:
-            self._edge_full(ancilla, edge, new_ancilla, **kwargs)
-        else:
-            self.support[edge] += 1
-
-    def _edge_full(self, ancilla, edge, new_ancilla, **kwargs):
-        """Fully grows an edge."""
-        self.support[edge] = 2
 
 
 class Planar(Toric):

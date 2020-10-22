@@ -44,8 +44,8 @@ class SimCode(ABC):
     def __init__(self, code : PerfectMeasurements, check_compatibility: bool = False, **kwargs):
         
         self.code = code
-        file  = Path(__file__).resolve().parent / "decoders.ini"
-        self.config = init_config(file)[self.short]
+        self.config_file  = Path(__file__).resolve().parent / "decoders.ini"
+        self.config = init_config(self.config_file)[self.short]
         self.config.update(kwargs)
         
         if check_compatibility:

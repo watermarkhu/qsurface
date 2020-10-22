@@ -263,7 +263,7 @@ class Toric(SimToric, PlotCode):
         pass
 
 
-class Planar(SimPlanar, Toric):
+class Planar(Toric, SimPlanar):
     """Union-Find decoder for the planar lattice with union-find plot. 
 
     Has all class attributes and methods from `.unionfind.sim.Planar`, with additional parameters below. Default values for these parameters can be supplied via a *decoders.ini* file under the section of ``[unionfind]``.

@@ -23,7 +23,7 @@ class Qubit(ABC):
         self.z = z
 
     def __repr__(self):
-        return "{}{}|{})".format(self.qubit_type, self.loc, self.z)
+        return f"{self.qubit_type}{self.loc}|{self.z})"
 
 
 class DataQubit(Qubit):

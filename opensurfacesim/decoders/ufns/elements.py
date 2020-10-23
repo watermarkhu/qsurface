@@ -1,12 +1,16 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Optional, Tuple
-from opensurfacesim.codes.elements import AncillaQubit
-from ..unionfind.elements import Cluster
+from ...codes.elements import AncillaQubit
+
 
 
 class Node(ABC):
     """Element in the node-tree.
+
+    A subgraph :math:`\mathcal{V}\subseteq C` is a spanning-tree of a cluster :math:`C` if it is a connected acyclic subgraph that includes all vertices of :math:`C` and a minimum number of edges. We call the spanning-tree of a cluster its ancilla-tree. An acyclic connected spanning-forest is required for the Union-Find Decoder.
+
+    A node-tree :math:`\mathcal{N}` is a partition of a ancilla-tree :math:`\mathcal{V}`, such that each element of the partition -- which we call a *node* :math:`n` -- represents a set of adjacent vertices that lie at the same distance -- the *node radius} :math:`r` -- from the *primer ancilla*, which initializes the node and lies at its center. The node-tree is a directed acyclic graph, and its edges :math:`\m{E}_i` have lengths equal to the distance between the primer vertices of neighboring nodes. 
 
     Paramters
     ---------
@@ -65,11 +69,24 @@ class Node(ABC):
 
     @abstractmethod
     def ns_parity(self):
+        "Calculates and returns the parity of the current node."
         pass
 
-    def ns_delay(self, parent: Optional[Tuple[Node, int]] = None, min_delay: Optional[int] = None):
-        """
+    def ns_delay(self, parent: Optional[Tuple[Node, int]] = None, min_delay: Optional[int] = None) -> int:
+        """Calculates the node delay.
+
+        Head recursive function that calculates the delays of the current node and all its descendent nodes. 
+
         .. math:: n_d = m_d + \floor{n_r-m_r}- (-1)^{n_p}\abs{(n,m)}.
+
+        The minimal delay ``min_delay`` in the tree is maintained as the actual delay is relative to the minimal delay value within the entire node-tree. 
+
+        Parameters
+        ----------
+        parent
+            The parent node and the distance to the parent node.
+        min_delay
+            Minimal delay value encountered during the current calculation.
         """
         self.root_list = []
         self.waited = 0
@@ -90,8 +107,16 @@ class Node(ABC):
 class Syndrome(Node):
     short = "S"
     def ns_parity(self, parent_node: Optional[Node] = None) -> int:
-        """
-        .. math:: s_p &= \hspace{.6cm}\big( \sum_{\mathclap{n \in \text{ children of } s}} (1+s_p) \big ) \bmod 2,
+        """Calculates the node parity. 
+
+        Tail recursive function that calculates the parities of the current node and all its descendent nodes.
+
+        .. math:: s_p &= \hspace{.6cm}\big( \sum_{\mathclap{n \in \text{ children of } s}} (1+s_p) \big ) \bmod 2
+
+        Parameters
+        ----------
+        parent_node
+            Parent node in node-tree to indicate direction. 
         """
         self.parity = (
             sum(
@@ -105,8 +130,16 @@ class Junction(Node):
     short = "J"
 
     def ns_parity(self, parent_node: Optional[Node] = None) -> int:
-        """
+        """Calculates the node parity. 
+
+        Tail recursive function that calculates the parities of the current node and all its children. 
+
         .. math:: j_p &= 1 - \big(\sum_{\mathclap{n \in \text{ children of } j}} (1+n_p) \big) \bmod 2.
+
+        Parameters
+        ----------
+        parent_node
+            Parent node in node-tree to indicate direction.
         """
         self.parity = 1 - (
             sum(
@@ -126,6 +159,7 @@ class Boundary(Node):
         self.parity = 1
 
     def ns_parity(self, *args, **kwargs) -> int:
+        # Inherited docsting
         return self.parity
 
 
@@ -137,4 +171,5 @@ class Filler(Node):
         self.parity = 1
 
     def ns_parity(self, *args, **kwargs) -> int:
+        # Inherited docstring
         return self.parity

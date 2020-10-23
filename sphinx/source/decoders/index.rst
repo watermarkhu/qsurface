@@ -1,5 +1,5 @@
-Decoder types
-=============
+Decoders
+========
 
 All decoder modules in this section inherit from the template decoder module, see :doc:`template`.
 
@@ -29,7 +29,7 @@ ufns
 
 The Union-Find Node-Suspension decoder.
 
-.. torctree::
+.. toctree::
    :maxdepth: 1
 
    ufns

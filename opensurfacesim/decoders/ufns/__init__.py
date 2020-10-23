@@ -1,43 +1,9 @@
 """
-This implementation has full integrated the Balanced Bloom algorithm, where boundary edges are not stored at the cluster, but rather at the basetree-nodes.
-Two decoder classes are defined in this file, toric and planar for their respective lattice types.
-_____________________________________________
+The Union-Find Node-Suspension decoder [hu2020thesis]_ uses the potential matching weight as a heuristic to prioritize  growth in specific partitions -- the nodes -- of the Union-Find cluster (see :ref:`union-find-decoder`). The potential matching weight is approximated by levering a node-tree in the Node-Suspension Data-structure. The elements of the node-tree are descendent objects of `~.ufns.elements.Node`. 
 
-Objects and methods for the directed graph version of the Balanced Bloom algorithm
+The complexity of the algorithm is determined by the calculation of the *node parity* in `~.ufns.elements.Node.ns_parity`, the *node delay* in `~.ufns.elements.Node.ns_delay`, and the growth of the cluster, which is now applied as a recursive function that inspects all nodes in the node tree (`.ufns.sim.Toric.grow_node`). During cluster mergers, additional to `~.unionfind.elements.Cluster.union`, node-trees are joined by `~.ufns.sim.Toric.join_node_trees`. 
 
-A undirected graph refers to that each node in the graph has a parameter cons (connections) refereing to the edges and nodes connected to this node.
-During a merge of two tree's, these connections needs simply to be added in each of the nodes.
-
-merge between M0 and M1::
-
-      R0         R1
-     /  \       /  \\
-    N0   M0 == M1   N1
-
-Connections before:
-
-    R0: [N0, M0],  N0: [R0],  M0: [R0]
-    R1: [N1, M1],  N1: [R1],  M1: [R1]
-
-Tree after merge::
-
-      R0
-     /  \\
-    N0   M0
-          \\
-           M1
-            \\
-             R1
-              \\
-               N1
-
-Connection after:
-
-R0: [N0, M0],  N0: [R0],  M0: [R0, M1]
-R1: [N1, M1],  N1: [R1],  M1: [R1, M0]
-
-
-# TODO: Proper calculation of delay for erasures/empty nodes in the graph
+.. todo:: Proper calculation of delay for erasures/empty nodes in the graph
 """
 
 from . import sim

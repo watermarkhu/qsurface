@@ -1,3 +1,5 @@
+.. _union-find-decoder:
+
 Information
 -----------
 
@@ -21,8 +23,6 @@ The following description also applies to `.unionfind.sim.Planar`.
 
 Plotting
 --------
-
-.. automodule:: opensurfacesim.decoders.unionfind.plot
 
 .. autoclass:: opensurfacesim.decoders.unionfind.plot.Toric
 

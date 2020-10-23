@@ -22,8 +22,8 @@ The following description also applies to `.ufns.sim.Planar`.
 Plotting
 --------
 
-.. automodule:: opensurfacesim.decoders.ufns.plot
-
 .. autoclass:: opensurfacesim.decoders.ufns.plot.Toric
 
 .. autoclass:: opensurfacesim.decoders.ufns.plot.Planar
+
+.. [hu2020thesis] Hu, Mark Shui, *Quasilinear Time Decoding Algorithm for Topological Codes with High Error Threshold*, DOI: 10.13140/RG.2.2.13495.96162, 2020.

@@ -1,10 +1,9 @@
-from opensurfacesim.codes.elements import AncillaQubit
+from ...codes.elements import AncillaQubit, Edge
 from ...plot import Template2D, Template3D
 from .._template import PlotCode
 from .sim import Toric as SimToric, Planar as SimPlanar
-from matplotlib.patches import Circle, Rectangle
+from matplotlib.patches import Rectangle
 from matplotlib.lines import Line2D
-import sys
 
 
 class Toric(SimToric, PlotCode):
@@ -56,16 +55,16 @@ class Toric(SimToric, PlotCode):
         self._draw("Clusters grown.")
         return ret
 
-    def _grow_bucket(self, bucket, bucket_i, **kwargs):
-        ret = super()._grow_bucket(bucket, bucket_i, **kwargs)
+    def grow_bucket(self, bucket, bucket_i, **kwargs):
+        ret = super().grow_bucket(bucket, bucket_i, **kwargs)
         if self.config["step_bucket"] and self.config["step_cycle"]:
             self._draw(f"Bucket {bucket_i} grown.")
         return ret
 
-    def _grow_boundary(self, cluster, union_list, **kwargs):
+    def grow_boundary(self, cluster, union_list, **kwargs):
         # Inherited docstring
         draw = True if self.config["step_cluster"] and cluster.new_bound else False
-        ret = super()._grow_boundary(cluster, union_list, **kwargs)
+        ret = super().grow_boundary(cluster, union_list, **kwargs)
         if draw:
             self._draw(f"Cluster {cluster} grown.")
         return ret
@@ -93,22 +92,21 @@ class Toric(SimToric, PlotCode):
             self._draw(f"Edge {edge} to matching.")
         return ret
 
-    def cluster_find_ancillas(self, cluster, ancilla, **kwargs):
+    def cluster_add_ancilla(self, cluster, ancilla, **kwargs):
         # Inherited docstring
         if ancilla.measured_state:
             self.figure._plot_ancilla(ancilla, init=True)
-        return super().cluster_find_ancillas(cluster, ancilla, **kwargs)
+        return super().cluster_add_ancilla(cluster, ancilla, **kwargs)
 
     def _edge_full(self, ancilla, edge, new_ancilla, **kwargs):
         # Inherited docstring
         self.support[edge] = 2
-        if len(edge.uf_plot) == 1:
-            if ancilla in edge.uf_plot:
-                self.figure._plot_half_edge(edge, new_ancilla, full=True)
-                self.figure._plot_full_edge(edge, ancilla)
-            else:
-                self.figure._plot_half_edge(edge, ancilla, full=True)
-                self.figure._plot_full_edge(edge, new_ancilla)
+        if ancilla in edge.uf_plot and edge.uf_plot[ancilla][1] == self.code.instance:
+            self.figure._plot_half_edge(edge, new_ancilla, self.code.instance, full=True)
+            self.figure._plot_full_edge(edge, ancilla)
+        else:
+            self.figure._plot_half_edge(edge, ancilla, self.code.instance, full=True)
+            self.figure._plot_full_edge(edge, new_ancilla)
 
     def _edge_grow(self, ancilla, edge, new_ancilla, **kwargs):
         # Inherited docsting
@@ -116,7 +114,7 @@ class Toric(SimToric, PlotCode):
             self._edge_full(ancilla, edge, new_ancilla, **kwargs)
         else:
             self.support[edge] += 1
-            self.figure._plot_half_edge(edge, ancilla)
+            self.figure._plot_half_edge(edge, ancilla, self.code.instance)
 
     def _edge_peel(self, edge, variant="", **kwargs):
         # Inherited docstingS
@@ -183,7 +181,7 @@ class Toric(SimToric, PlotCode):
                 ]
             )
 
-        def _plot_half_edge(self, edge, ancilla, full=False):
+        def _plot_half_edge(self, edge : Edge, ancilla : AncillaQubit, instance: float, full: bool=False, ):
             line = Line2D(
                 self.code._parse_boundary_coordinates(
                     self.code.size[0], edge.qubit.loc[0], ancilla.loc[0]
@@ -198,21 +196,21 @@ class Toric(SimToric, PlotCode):
             )
             line.object = edge
             if hasattr(edge, "uf_plot"):
-                edge.uf_plot[ancilla] = line
+                edge.uf_plot[ancilla] = (line, instance)
             else:
-                edge.uf_plot = {ancilla: line}
+                edge.uf_plot = {ancilla: (line, instance)}
 
             self.new_artist(line)
 
         def _plot_full_edge(self, edge, ancilla):
-            self.new_properties(edge.uf_plot[ancilla], {"ls": self.rc["line_style_primary"]})
+            self.new_properties(edge.uf_plot[ancilla][0], {"ls": self.rc["line_style_primary"]})
 
         def _hide_edge(self, edge):
-            for artist in edge.uf_plot.values():
+            for artist, _ in edge.uf_plot.values():
                 self.new_properties(artist, {"visible": False})
 
         def _match_edge(self, edge):
-            for artist in edge.uf_plot.values():
+            for artist, _ in edge.uf_plot.values():
                 self.new_properties(artist, {"color": self.colors1[edge.state_type]})
 
         def _plot_ancilla(self, ancilla, init=False):

@@ -1,3 +1,4 @@
+from ...codes.elements import AncillaQubit, DataQubit, Edge
 from .sim import Toric as SimToric, Planar as SimPlanar
 from ..unionfind.plot import Toric as PlotToric, Planar as PlotPlanar
 
@@ -26,6 +27,17 @@ class Toric(PlotToric, SimToric):
         super()._grow_node_boundary(node, *args, **kwargs)
         if self.config["step_node"]:
             self._draw(f"Node {node._repr_status} grown.")
+
+    class Figure2D(PlotToric.Figure2D):
+        def _pick_handler(self, event):
+            """Function on when an object in the figure is picked"""
+            obj = event.artist.object
+            if type(obj) == Edge:
+                print(f"{obj}L{self.decoder.support[obj]}")
+            elif type(obj) == AncillaQubit:
+                print(f"{obj}-{obj.node._status}-{obj.cluster.find()}")
+            elif type(obj) == DataQubit:
+                print(obj)
         
 
 class Planar(Toric, PlotPlanar, SimPlanar):

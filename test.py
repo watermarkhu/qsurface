@@ -4,13 +4,13 @@
 
 # %%
 import opensurfacesim
-pf = opensurfacesim.codes.toric.plot.PerfectMeasurements(8)
+pf = opensurfacesim.codes.planar.plot.FaultyMeasurements(4, figure3d=0)
+# dc = opensurfacesim.decoders.ufns.plot.Toric(pf, step_bucket=True, print_steps=True)
 pf.initialize("pauli")
-dc = opensurfacesim.decoders.ufns.plot.Toric(pf, step_bucket=True)
+pf.random_errors(p_bitflip=0.05, pm_bitflip=0.05)
 
 #%%
 
-pf.random_errors(p_bitflip=0.1)
 pf.state_icons()
 
 

@@ -103,6 +103,10 @@ class AncillaQubit(Qubit):
         Property that measures the parity of the qubits in `self.parity_qubits`.
     measured_state : bool
         The result of the last parity measurement.
+    syndrome : bool
+        Whether the current ancilla is a syndrome.
+    measurement_error : bool
+        Whether an error occurred during the last measurement.
 
     Examples
     --------
@@ -117,11 +121,17 @@ class AncillaQubit(Qubit):
     def __init__(self, *args, state_type: str = "default", **kwargs):
         super().__init__(*args, **kwargs)
         self.state_type = state_type
-        self.measured_state = None
+        self.measured_state = False
+        self.syndrome = False
         self.parity_qubits = {}
         self.vertical_ancillas = {}
+        self.measurement_error = False
 
-    def get_state(self, p_bitflip: int = 0) -> bool:
+    @property
+    def state(self):
+        return self.get_state(0)
+
+    def get_state(self, pm_bitflip: float = 0, pm_phaseflip: float = 0, **kwargs) -> bool:
         """Applies a parity measurement on the ancilla with probability ``p_bitflip``.
 
         The functions loops over all the data qubits in ``self.parity_qubits``. For every edge associated with the entangled state on the data qubit, the value of a ``parity`` boolean is flipped.
@@ -137,16 +147,15 @@ class AncillaQubit(Qubit):
             if edge.state:
                 parity = not parity
 
-        if p_bitflip != 0 and random.random() < p_bitflip:
+        p_measure = pm_bitflip if self.state_type == "x" else pm_phaseflip
+        self.measurement_error = p_measure != 0 and random.random() < p_measure
+        if self.measurement_error:
             parity = not parity
 
         self.measured_state = parity
+        self.syndrome = parity
 
         return parity
-
-    @property
-    def state(self):
-        return self.get_state(0)
 
     def state_icon(self):
         """Returns the qubit state in a colored icon."""

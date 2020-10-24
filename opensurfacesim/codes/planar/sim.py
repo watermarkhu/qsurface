@@ -91,5 +91,4 @@ class PerfectMeasurements(ToricPM):
 
 class FaultyMeasurements(ToricFM, PerfectMeasurements):
     """Simulation planar code for faulty measurements."""
-
     pass

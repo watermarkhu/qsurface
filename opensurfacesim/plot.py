@@ -6,10 +6,11 @@ from matplotlib.artist import Artist
 from matplotlib.lines import Line2D
 from matplotlib.widgets import Button
 from matplotlib.blocking_input import BlockingInput
+from matplotlib.patches import Circle, Rectangle
 from collections import defaultdict
 from .configuration import flatten_dict, init_config
 import tkinter
-import numpy
+import numpy as np
 from pathlib import Path
 
 
@@ -158,7 +159,8 @@ class Template2D(ABC):
 
     The ``history_dict`` for a plot with a Line2D object and a Circle object. In the second iteration, the color of the Line2D object is updated from black to red, and the linestyle of the Circle object is changed from ``"-"`` to ``":"``.
     """
-    def __init__(self, init_plot: bool = True, **kwargs):
+
+    def __init__(self, init_plot: bool = True, projection: Optional[str] = None, **kwargs):
 
         file = Path(__file__).resolve().parent / "plot.ini"
         self.rc = flatten_dict(init_config(file))
@@ -184,8 +186,7 @@ class Template2D(ABC):
         self.blocking_input = BlockingKeyInput(self.figure)
 
         # Init buttons and boxes
-        self.main_ax = plt.axes(self.rc["axis_main"])
-        self.main_ax.set_aspect("equal")
+        self.main_ax = plt.axes(self.rc["axis_main"], projection=projection)
         self.legend_ax = plt.axes(self.rc["axis_legend"])
         self.legend_ax.axis("off")
 
@@ -244,6 +245,7 @@ class Template2D(ABC):
         limits: Optional[Tuple[float, float, float, float]] = None,
         title: str = "",
         invert: bool = True,
+        aspect: str = "",
         ax: Optional[mpl.axes.Axes] = None,
         **kwargs,
     ):
@@ -272,6 +274,9 @@ class Template2D(ABC):
             ax.spines[bound].set_visible(False)
         if invert:
             ax.invert_yaxis()
+        if aspect:
+            self.main_ax.set_aspect(aspect)
+
 
     """
     -------------------------------------------------------------------------------
@@ -348,7 +353,6 @@ class Template2D(ABC):
         self._set_figure_state("r", False)  # Hide all interactive axes
         self.canvas.draw()  # Draw before focus is lost
 
-
     def _set_figure_state(self, color, override: Optional[bool] = None):
         """Set color of blocking icon and updates interactive axes visibility.
 
@@ -377,13 +381,46 @@ class Template2D(ABC):
     def _legend_circle(self, label: str, **kwargs) -> Line2D:
         """Returns a Line2D object that is used on the plot legend."""
         return Line2D(
-            [0],
-            [0],
+            [],
+            [],
             lw=self.rc["legend_line_width"],
             mew=self.rc["legend_line_width"],
             label=label,
             **kwargs,
         )
+    
+    def _legend_scatter(self, label: str, **kwargs):
+        line = Line2D(
+            [],
+            [],
+            label=label,
+            lw=self.rc["legend_line_width"],
+            mew=self.rc["legend_line_width"],
+            color=self.rc["color_edge"]
+        )
+        scatter = plt.scatter(
+            [],
+            [],
+            s = 8**2,
+            linewidth=self.rc["legend_line_width"],
+            **kwargs
+        )
+        return (line, scatter)
+
+    def _draw_line(self, X: list, Y: list, *args, z: float = 0, **kwargs):
+        artist = Line2D(X, Y, *args, **kwargs)
+        self.main_ax.add_line(artist)
+        return artist
+
+    def _draw_circle(self, xy: tuple, size: float, *args, z: float = 0, **kwargs):
+        artist = Circle(xy, size, *args, **kwargs)
+        self.main_ax.add_patch(artist)
+        return artist
+
+    def _draw_rectangle(self, xy: tuple, size_x: float, size_y: float, *args, z: float = 0, **kwargs):
+        artist = Rectangle(xy, size_x, size_y, *args, **kwargs)
+        self.main_ax.add_patch(artist)
+        return artist
 
     """
     -------------------------------------------------------------------------------
@@ -391,12 +428,18 @@ class Template2D(ABC):
     -------------------------------------------------------------------------------
     """
 
-    def draw_figure(self, new_iter_name: Optional[str] = None, output: bool = True, carriage_return: bool = False, **kwargs):
+    def draw_figure(
+        self,
+        new_iter_name: Optional[str] = None,
+        output: bool = True,
+        carriage_return: bool = False,
+        **kwargs,
+    ):
         """Draws the canvas and blocks code execution.
 
-        Draws the queued plot changes onto the canvas and calls for :meth:`focus` which blocks the code execution and catches user input for history navigation. 
-        
-        If a new iteration is called by supplying a `new_iter_name`, we additionally check for future property changes in the `self.future_dict`, and add these changes to the queue. Finally, all queued property changes for the next iteration are applied by `change_properties`. 
+        Draws the queued plot changes onto the canvas and calls for :meth:`focus` which blocks the code execution and catches user input for history navigation.
+
+        If a new iteration is called by supplying a `new_iter_name`, we additionally check for future property changes in the `self.future_dict`, and add these changes to the queue. Finally, all queued property changes for the next iteration are applied by `change_properties`.
 
         Parameters
         ----------
@@ -418,7 +461,7 @@ class Template2D(ABC):
                     self.new_properties(artist, changes)
                 for artist, changes in self.future_dict.pop(self.history_iter + 1, {}).items():
                     self.new_properties(artist, changes)
-                for artist, changes in self.history_dict[self.history_iter+1].items():
+                for artist, changes in self.history_dict[self.history_iter + 1].items():
                     self.change_properties(artist, changes)
                 self.history_iter_names.append(new_iter_name)
                 self.history_iters += 1
@@ -442,23 +485,23 @@ class Template2D(ABC):
     def _draw_from_history(
         self, condition: bool, direction: int, draw: bool = True, **kwargs
     ) -> bool:
-        """Move a single plot iteration forward or backwards. 
-        
-        Draws all stored object properties of in either +1 or -1 `direction` in the history if the `condition` is met. If there are any properties stored in `self.temporary_changes`, these settings are first parsed and saved to the current and previous iterations. 
+        """Move a single plot iteration forward or backwards.
+
+        Draws all stored object properties of in either +1 or -1 `direction` in the history if the `condition` is met. If there are any properties stored in `self.temporary_changes`, these settings are first parsed and saved to the current and previous iterations.
 
         Parameters
         ----------
         condition : bool
             Must be true for navigation.
         direction : int, {1, -1}
-            Moves either a single iteration forward or backwards in time. 
+            Moves either a single iteration forward or backwards in time.
         draw : bool, optional
             Draws the figure and blocks the code immediately with :meth:`draw_figure`.
 
         Returns
         -------
         bool
-            True if focus is kept, False if lost. 
+            True if focus is kept, False if lost.
         """
         if condition:
             # Save temporary changes
@@ -486,21 +529,21 @@ class Template2D(ABC):
         return self._draw_from_history(self.history_iter > 0, -1, **kwargs)
 
     def _draw_iteration(self, target: int, draw: bool = True, **kwargs) -> bool:
-        """Redraws all changes until the `target` iteration. 
-        
-        Loops over :meth:`_draw_next` or :meth:`_draw_prev` until the `target` plot iteration is reached. Note that this means that all the changes from the current iteration until the target iteration in `self.history_dict` are applied. 
+        """Redraws all changes until the `target` iteration.
+
+        Loops over :meth:`_draw_next` or :meth:`_draw_prev` until the `target` plot iteration is reached. Note that this means that all the changes from the current iteration until the target iteration in `self.history_dict` are applied.
 
         Parameters
         ----------
         target : int
-            Target plot iteration. 
+            Target plot iteration.
         draw : bool, optional
             Draws the figure and blocks the code immediately with :meth:`draw_figure`.
 
         Returns
         -------
         bool
-            True if focus is kept, False if lost. 
+            True if focus is kept, False if lost.
         """
         if target != self.history_iter:
             diff = target - self.history_iter
@@ -522,9 +565,9 @@ class Template2D(ABC):
                                     Object properties
     -------------------------------------------------------------------------------
     """
-    
+
     def new_artist(self, artist: mpl.artist.Artist, axis: Optional[mpl.axes.Axes] = None) -> None:
-        '''Adds a new artist to the ``axis``. 
+        """Adds a new artist to the ``axis``.
 
         Newly added artists must be hidden in the previous iteration. To make sure the history is properly logged, the visibility of the ``artist`` is set to ``False``, and a new property of shown visibility is added to the queue of the next iteration.
 
@@ -534,10 +577,9 @@ class Template2D(ABC):
             New plot artist to add to the ``axis``.
         axis : `matplotlib.axes.Axes`, optional
             Axis to add the figure to.
-        '''
+        """
         if axis is None:
             axis = self.main_ax
-        axis.add_artist(artist)
         self.change_properties(artist, {"visible": False})
         self.new_properties(artist, {"visible": True})
 
@@ -547,14 +589,16 @@ class Template2D(ABC):
         if prop_dict:
             plt.setp(artist, **prop_dict)
 
-    def new_properties(self, artist: Artist, properties: dict, saved_properties: dict = {}, **kwargs):
-        """Parses a dictionary of property changes of a *matplotlib* artist. 
+    def new_properties(
+        self, artist: Artist, properties: dict, saved_properties: dict = {}, **kwargs
+    ):
+        """Parses a dictionary of property changes of a *matplotlib* artist.
 
         New properties are supplied via ``properties``. If any of the new properties is different from its current value, this is seen as a property change. The old property value is stored in ``self.history_dict[self.history_iteration]``, and the new property value is stored at ``self.history_dict[self.history_iteration+1]``. These new properties are *queued* for the next interation. The queue is emptied by applying all changes when `draw_figure` is called. If the same property changes 2+ times within the same iteration, the previous property change is removed with ``next_prop.pop(key, None)``.
 
-        The ``saved_properties`` parameter is used when temporary property changes have been applied by `temporary_changes`, in which the original properties are saved to ``self.temporary_saved`` as the saved properties. Before a new iteration is drawn, the temporary changes, which can be overwritten, are compared with the saved changes and the differences in properties are saved to ``[self.history_dict[self.history_iter-1]]`` and ``self.history_dict[self.history_iteration]``. 
-        
-        Some color values from different *matplotlib* objects are nested, some are list or tuple, and others may be a `.numpy.ndarray`. The nested methods `get_nested()` and `get_nested_property()` make sure that the return type is always a list. 
+        The ``saved_properties`` parameter is used when temporary property changes have been applied by `temporary_changes`, in which the original properties are saved to ``self.temporary_saved`` as the saved properties. Before a new iteration is drawn, the temporary changes, which can be overwritten, are compared with the saved changes and the differences in properties are saved to ``[self.history_dict[self.history_iter-1]]`` and ``self.history_dict[self.history_iteration]``.
+
+        Some color values from different *matplotlib* objects are nested, some are list or tuple, and others may be a `.numpy.ndarray`. The nested methods `get_nested()` and `get_nested_property()` make sure that the return type is always a list.
 
         Parameters
         ----------
@@ -563,8 +607,9 @@ class Template2D(ABC):
         properties : dict
             Plot properties to change.
         saved_properties : dict
-            Override current properties and parse previous and current history. 
+            Override current properties and parse previous and current history.
         """
+
         def get_nested(value):
             if type(value) == list and type(value[0]) == list:
                 return get_nested(value[0])
@@ -572,7 +617,7 @@ class Template2D(ABC):
                 return value
 
         def get_nested_property(prop):
-            if type(prop) == numpy.ndarray:
+            if type(prop) == np.ndarray:
                 return get_nested(prop.tolist())[:3]
             elif type(prop) == list:
                 return get_nested(prop)[:3]
@@ -603,9 +648,9 @@ class Template2D(ABC):
             next_properties[artist] = next_prop
 
     def temporary_properties(self, artist: Artist, properties: dict, **kwargs):
-        """Applies temporary property changes to a *matplotlib* artist. 
+        """Applies temporary property changes to a *matplotlib* artist.
 
-        Only available on the newest iteration, as we cannot change what is already in the past. All values in ``properties`` are immediately applied to `artist`. Since temporary changes can be overwritten within the same iteration, the first time a temporary property change is requested, the previous value is saved to ``self.temporary_saved``. When the iteration changes, the property differences of the previous and current iteration are recomputed and saved to ``self.history_dict`` in :meth:`_draw_from_history`. 
+        Only available on the newest iteration, as we cannot change what is already in the past. All values in ``properties`` are immediately applied to `artist`. Since temporary changes can be overwritten within the same iteration, the first time a temporary property change is requested, the previous value is saved to ``self.temporary_saved``. When the iteration changes, the property differences of the previous and current iteration are recomputed and saved to ``self.history_dict`` in :meth:`_draw_from_history`.
 
         Parameters
         ----------
@@ -624,6 +669,78 @@ class Template2D(ABC):
             print("Must be at newest iteration to apply changes.")
 
 
+from mpl_toolkits.mplot3d import art3d
+
+
 class Template3D(Template2D):
-    """Template 2D plot object with history navigation."""
-    pass
+    """Template 3D plot object with history navigation."""
+
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, projection="3d", **kwargs)
+
+    def _init_axis(
+        self,
+        limits: Optional[Tuple[float, float, float, float]] = None,
+        title: str = "",
+        ax: Optional[mpl.axes.Axes] = None,
+        z_limits: Optional[Tuple[float, float]] = None,
+        **kwargs,
+    ):
+        """
+        Initializes the 3D axis by removing the background panes, changing the grid tics, alpha and linestyle, setting the labels and title.
+        """
+        if ax is None:
+            ax = self.main_ax
+        ax.axis(False)
+        if title:
+            ax.set_title(title, fontsize=self.rc["font_title_size"])
+        if limits is not None:
+            ax.set_xlim(limits[0], limits[0] + limits[2])
+            ax.set_ylim(limits[1], limits[1] + limits[3])
+        if z_limits is not None:
+            ax.set_zlim(z_limits[0], z_limits[0] + z_limits[1])
+
+        ax.set_xlabel("z")
+        ax.set_ylabel("y")
+        ax.set_zlabel("t")
+        ax.w_xaxis.set_pane_color(self.rc["axis3d_pane_color"])
+        ax.w_yaxis.set_pane_color(self.rc["axis3d_pane_color"])
+        ax.w_zaxis.set_pane_color(self.rc["axis3d_pane_color"])
+        ax.w_xaxis.line.set_color(self.rc["axis3d_line_color"])
+        ax.w_yaxis.line.set_color(self.rc["axis3d_line_color"])
+        ax.w_zaxis.line.set_color(self.rc["axis3d_line_color"])
+        ax.xaxis._axinfo["grid"]["linestyle"] = self.rc["axis3d_grid_line_style"]
+        ax.yaxis._axinfo["grid"]["linestyle"] = self.rc["axis3d_grid_line_style"]
+        ax.zaxis._axinfo["grid"]["linestyle"] = self.rc["axis3d_grid_line_style"]
+        ax.xaxis._axinfo["grid"]["alpha"] = self.rc["axis3d_grid_line_alpha"]
+        ax.yaxis._axinfo["grid"]["alpha"] = self.rc["axis3d_grid_line_alpha"]
+        ax.zaxis._axinfo["grid"]["alpha"] = self.rc["axis3d_grid_line_alpha"]
+
+        x_limits = ax.get_xlim3d()
+        y_limits = ax.get_ylim3d()
+        z_limits = ax.get_zlim3d()
+        x_range = abs(x_limits[1] - x_limits[0])
+        x_middle = sum(x_limits)/len(x_limits)
+        y_range = abs(y_limits[1] - y_limits[0])
+        y_middle = sum(y_limits)/len(y_limits)
+        z_range = abs(z_limits[1] - z_limits[0])
+        z_middle = sum(z_limits)/len(z_limits)
+        plot_radius = 0.5*max([x_range, y_range, z_range])
+        ax.set_xlim3d([x_middle - plot_radius, x_middle + plot_radius])
+        ax.set_ylim3d([y_middle - plot_radius, y_middle + plot_radius])
+        ax.set_zlim3d([z_middle - plot_radius, z_middle + plot_radius])
+
+    def _draw_line(self, X, Y, *args, z: float = 0, **kwargs):
+        artist = super()._draw_line(np.array(X), np.array(Y), *args, **kwargs)
+        art3d.line_2d_to_3d(artist, zs=z)
+        return artist
+
+    def _draw_circle(self, *args, z: float = 0, **kwargs):
+        artist = super()._draw_circle(*args, **kwargs)
+        art3d.patch_2d_to_3d(artist, z=z)
+        return artist
+
+    def _draw_rectangle(self, *args, z: float = 0, **kwargs):
+        artist = super()._draw_rectangle(*args, **kwargs)
+        art3d.patch_2d_to_3d(artist, z=z)
+        return artist

@@ -15,18 +15,18 @@ class PerfectMeasurements(ABC):
 
     Parameters
     ----------
-    size : int or tuple 
+    size : int or tuple
         Size of the surface code in single dimension or two dimensions ``(x,y)``.
 
     Attributes
     ----------
-    ancilla_qubits : dict of dict 
+    ancilla_qubits : dict of dict
         Nested dictionary of `~opensurfacesim.code.elements.AncillaQubit`\ s.
 
-    data_qubits : dict of dict 
+    data_qubits : dict of dict
         Nested dictionary of `~opensurfacesim.code.elements.DataQubit`\ s.
 
-    pseudo_qubits : dict of dict 
+    pseudo_qubits : dict of dict
         Nested dictionary of `~opensurfacesim.code.elements.PseudoQubit`\ s.
 
     errors : dict
@@ -42,7 +42,7 @@ class PerfectMeasurements(ABC):
         Indicator for whether there is a logical error in the last iteration. The value for ``self.no_error`` is updated after a call to ``self.logical_state``.
 
     instance : float
-        Time stamp that is renewed every time `random_errors` is called. Helps with identifying a 'round' of simulation when using class attributes. 
+        Time stamp that is renewed every time `random_errors` is called. Helps with identifying a 'round' of simulation when using class attributes.
     """
 
     dataQubit = DataQubit
@@ -59,6 +59,7 @@ class PerfectMeasurements(ABC):
         size: Union[int, Tuple[int, int]],
         **kwargs,
     ):
+        self.layer = 0
         self.layers = 1
         self.decode_layer = 0
         self.size = size if type(size) == tuple else (size, size)
@@ -102,6 +103,7 @@ class PerfectMeasurements(ABC):
                                         Initialization
     ----------------------------------------------------------------------------------------
     """
+
     def initialize(self, *args, **kwargs):
         """Initializes all data objects of the code.
 
@@ -121,10 +123,7 @@ class PerfectMeasurements(ABC):
         """Initiates the logical operators."""
         pass
 
-
-    def init_errors(
-        self, *error_modules: Union[str, Error], error_rates: dict = {}, **kwargs
-    ):
+    def init_errors(self, *error_modules: Union[str, Error], error_rates: dict = {}, **kwargs):
         """Initializes error modules.
 
         Any error module from :doc:`../errors/index` can loaded as either a string equivalent to the module file name or as the module itself. The default error rates for all loaded error modules can be supplied as a dictionary with keywords corresponding to the default error rates of the associated error modules.
@@ -141,7 +140,7 @@ class PerfectMeasurements(ABC):
         Load :doc:`../errors/pauli` and :doc:`../errors/erasure/` modules via string names. Set default bit-flip rate to `0.1` and erasure to `0.03`.
 
             >>> SurfaceCode.init_errors(
-            ...    "pauli", 
+            ...    "pauli",
             ...    "erasure",
             ...    error_rates={"p_bitflip": 0.1, "p_erasure": 0.03}
             ... )
@@ -163,16 +162,13 @@ class PerfectMeasurements(ABC):
         error_type = error_module.__name__.split(".")[-1]
         self.errors[error_type] = error_module.Sim(self, **error_rates)
 
-
     """
     ----------------------------------------------------------------------------------------
                                         Constructors
     ----------------------------------------------------------------------------------------
     """
 
-    def add_data_qubit(
-        self, loc: Tuple[float, float], z: float = 0, **kwargs
-    ) -> DataQubit:
+    def add_data_qubit(self, loc: Tuple[float, float], z: float = 0, **kwargs) -> DataQubit:
         """Initializes a `~.code.elements.DataQubit` with `dataQubit` and `edge`, and saved to ``self.data_qubits[z][loc]``."""
         data_qubit = self.dataQubit(loc, z)
         data_qubit.edges["x"] = self.edge(data_qubit, "x")
@@ -218,11 +214,11 @@ class PerfectMeasurements(ABC):
         ----------
         data_qubit
             Control qubit.
-        ancilla_qubit 
+        ancilla_qubit
             Controlled qubit.
-        key 
+        key
             The entanglement is saved by adding the `~.code.elements.DataQubit` to `~.code.elements.AncillaQubit`\ ``.parity_qubits[key]``
-        edge 
+        edge
             The edge of the data-qubit to entangle to.
         """
         ancilla_qubit.parity_qubits[key] = data_qubit
@@ -236,9 +232,7 @@ class PerfectMeasurements(ABC):
     ----------------------------------------------------------------------------------------
     """
 
-    def random_errors(
-        self, z: float = 0, apply_order: Optional[List[Error]] = None, **kwargs
-    ):
+    def random_errors(self, apply_order: Optional[List[Error]] = None, **kwargs):
         """Applies all errors loaded in ``self.errors`` attribute to layer ``z``.
 
         The random error is applied for each loaded error module by calling ``error_module.random_error()``. If ``apply_order`` is specified, the error modules are applied in order of the error names in the list. If no order is specified, the errors are applied in a random order. Addionally, any error rate can set by supplying the rate as a keyword argument e.g. ``p_bitflip = 0.1``.
@@ -248,32 +242,28 @@ class PerfectMeasurements(ABC):
         z : int or float, optional
             Layer of qubits of parity measurements.
         apply_order : list of string, optional
-            The order in which the error modules are applied. Items in the list must equal keys in `self.errors` or the names of the loaded error modules. 
+            The order in which the error modules are applied. Items in the list must equal keys in `self.errors` or the names of the loaded error modules.
         """
         self.instance = time.time()
         if not apply_order:
             apply_order = self.errors.values()
         for error_class in apply_order:
-            for qubit in self.data_qubits[z].values():
+            for qubit in self.data_qubits[self.layer].values():
                 error_class.random_error(qubit, **kwargs)
 
-        # """
-        # ----------------------------------------------------------------------------------------
-        #                                     Others
-        # ----------------------------------------------------------------------------------------
-        # """
+    @staticmethod
+    def _parse_boundary_coordinates(size, *args: float) -> List[float]:
+        """Parse two locations on the lattice.
 
-        # def _reset(self):
-        #     """Resets the simulator by resetting all of its components."""
-        #     for dlayer in self.data_qubits.values():
-        #         for qubit in dlayer.values():
-        #             qubit._reset()
+        An unbounded surface cannot be plotted on a 2D figure. The lines on the boundary consisting of two coordinates must thus be parsed such that all lines will be plotted within the given window.
+        """
+        return args
 
 
 class FaultyMeasurements(PerfectMeasurements):
     """Simulation template code class for faulty measurements.
 
-    A 3D graph is initiated with ``layers`` amount of 2D surfaces from `~.codes._template.PerfectMeasurement` stacked on top of each other. The structure of the ``self.data_qubits``, ``self.ancilla_qubits`` and ``self.pseudo_qubits`` dictionary attributes allows for the storage for various time instances of the same qubits in the first nested layer. E.g. ``self.data_qubits[0][(0,0)]`` and ``self.data_qubits[1][(0,0)]`` store the data-qubit at (0,0) at time instances 0 and 1, respectively. Consecutive instances of `~.codes.elements.AncillaQubit`\ s and `~.codes.elements.PseudoQubit`\ s are connected in the 3D graph by `~.codes.elements.PseudoEdge` objects. 
+    A 3D graph is initiated with ``layers`` amount of 2D surfaces from `~.codes._template.PerfectMeasurement` stacked on top of each other. The structure of the ``self.data_qubits``, ``self.ancilla_qubits`` and ``self.pseudo_qubits`` dictionary attributes allows for the storage for various time instances of the same qubits in the first nested layer. E.g. ``self.data_qubits[0][(0,0)]`` and ``self.data_qubits[1][(0,0)]`` store the data-qubit at (0,0) at time instances 0 and 1, respectively. Consecutive instances of `~.codes.elements.AncillaQubit`\ s and `~.codes.elements.PseudoQubit`\ s are connected in the 3D graph by `~.codes.elements.PseudoEdge` objects.
 
     Parameters
     ----------
@@ -345,6 +335,9 @@ class FaultyMeasurements(PerfectMeasurements):
             for upper in self.ancilla_qubits[z].values():
                 lower = self.ancilla_qubits[z - 1][upper.loc]
                 self.add_vertical_edge(lower, upper)
+        for lower in self.ancilla_qubits[self.layers - 1].values():
+            upper = self.ancilla_qubits[0][lower.loc]
+            self.add_vertical_edge(lower, upper)
 
     def add_vertical_edge(
         self, lower_ancilla: AncillaQubit, upper_ancilla: AncillaQubit, **kwargs
@@ -372,12 +365,13 @@ class FaultyMeasurements(PerfectMeasurements):
     ----------------------------------------------------------------------------------------
     """
 
-    def measure_layer(
+    def random_errors(
         self,
-        z: float = 0,
         pm_bitflip: Optional[float] = None,
+        pm_phaseflip: Optional[float] = None,
         **kwargs,
     ):
+
         """Performs a round of parity measurements on layer `z` with faulty measurements.
 
         Parameters
@@ -389,34 +383,36 @@ class FaultyMeasurements(PerfectMeasurements):
         """
         if pm_bitflip is None:
             pm_bitflip = self.default_faulty_measurements["pm_bitflip"]
+        if pm_phaseflip is None:
+            pm_phaseflip = self.default_faulty_measurements["pm_phaseflip"]
 
-        for ancilla_qubit in self.ancilla_qubits[z].values():
+        for z in range(self.layers):
+            self.layer = z
+            self.random_errors_layer(**kwargs)
+            self.random_measure_layer(pm_bitflip=pm_bitflip, pm_phaseflip=pm_phaseflip)
 
-            ancilla_qubit.get_state(pm_bitflip)         # Get property state
-            
-            # Save vertex as anyon if parity different than previous layer
-            if "d" in ancilla_qubit.vertical_ancillas:
-                lower_state = ancilla_qubit.vertical_ancillas["d"].measured_state
-            else:
-                lower_state = 0
-            ancilla_qubit.measured_state = 0 if ancilla_qubit.measured_state == lower_state else 1
+    def random_errors_layer(self, **kwargs):
+        """Applies a layer of random errors loaded in ``self.errors``.
 
-
-    """
-    ----------------------------------------------------------------------------------------
-                                        Others
-    ----------------------------------------------------------------------------------------
-    """
-    @staticmethod
-    def _parse_boundary_coordinates(size, *args: float) -> List[float]:
-        """Parse two locations on the lattice.
-
-        An unbounded surface cannot be plotted on a 2D figure. The lines on the boundary consisting of two coordinates must thus be parsed such that all lines will be plotted within the given window.
+        Parameters
+        ----------
+        kwargs
+            Keyword arguments are passed on to `~._template.sim.PerfectMeasurements.random_errors`. 
         """
-        return args
+        for data in self.data_qubits[self.layer].values():
+            data.state = self.data_qubits[(self.layer-1) % self.layers][data.loc].state
+        super().random_errors(**kwargs)
 
-    def _reset(self, **kwargs):
-        # inherited docstrings
-        super()._reset()
-        for pseudo_edge in self.pseudo_edges:
-            pseudo_edge._reset()
+    def random_measure_layer(self, **kwargs):
+        """Measures a layer of ancillas. 
+
+        If the measured state of the current ancilla is not equal to the measured state of the previous instance, the current ancilla is a syndrome. 
+
+        Parameters
+        ----------
+        kwargs
+            Keyword arguments are passed on to `~.codes.elements.AncillaQubit.get_state`. 
+        """
+        for ancilla in self.ancilla_qubits[self.layer].values():
+            measured_state = ancilla.get_state(**kwargs)
+            ancilla.syndrome = measured_state != ancilla.vertical_ancillas["d"].measured_state

@@ -1,4 +1,4 @@
-from ...codes.elements import AncillaQubit, Edge
+from ...codes.elements import AncillaQubit, DataQubit, Edge
 from ...plot import Template2D, Template3D
 from .._template import PlotCode
 from .sim import Toric as SimToric, Planar as SimPlanar
@@ -36,9 +36,9 @@ class Toric(SimToric, PlotCode):
     def decode(self, *args, **kwargs):
         # Inherited docstring
         if self.code.__class__.__name__ == "PerfectMeasurements":
-            self.figure = self.Figure2D(self.code, self.name, **kwargs)
+            self.figure = self.Figure2D(self, self.name, **kwargs)
         elif self.code.__class__.__name__ == "FaultyMeasurements":
-            self.figure = self.Figure3D(self.code, self.name, **kwargs)
+            self.figure = self.Figure3D(self, self.name, **kwargs)
         super().decode(*args, **kwargs)
         self._draw("Press (->/enter) to close decoder figure.")
         self.figure.close()
@@ -127,8 +127,9 @@ class Toric(SimToric, PlotCode):
         return ret
 
     class Figure2D(Template2D):
-        def __init__(self, code, name, *args, **kwargs) -> None:
-            self.code = code
+        def __init__(self, decoder, name, *args, **kwargs) -> None:
+            self.decoder = decoder
+            self.code = decoder.code
             self.decoder = name
             super().__init__(*args, **kwargs)
             self.colors1 = {"x": self.rc["color_x_primary"], "z": self.rc["color_z_primary"]}
@@ -200,6 +201,7 @@ class Toric(SimToric, PlotCode):
             else:
                 edge.uf_plot = {ancilla: (line, instance)}
 
+            self.main_ax.add_line(line)
             self.new_artist(line)
 
         def _plot_full_edge(self, edge, ancilla):
@@ -237,9 +239,8 @@ class Toric(SimToric, PlotCode):
                 lw=self.rc["line_width_primary"],
             )
             ancilla.uf_plot.object = ancilla
-            if init:
-                self.main_ax.add_artist(ancilla.uf_plot)
-            else:
+            self.main_ax.add_patch(ancilla.uf_plot)
+            if not init:
                 self.new_artist(ancilla.uf_plot)
 
         def _flip_ancilla(self, ancilla):
@@ -256,6 +257,16 @@ class Toric(SimToric, PlotCode):
                     self._plot_ancilla(ancilla)
             else:
                 self.new_properties(ancilla.uf_plot, {"visible": False})
+
+        def _pick_handler(self, event):
+            """Function on when an object in the figure is picked"""
+            obj = event.artist.object
+            if type(obj) == Edge:
+                print(f"{obj}L{self.decoder.support[obj]}")
+            elif type(obj) == AncillaQubit:
+                print(f"{obj}-{obj.cluster.find()}")
+            elif type(obj) == DataQubit:
+                print(obj)
 
     class Figure3D(Template3D, Figure2D):
         pass

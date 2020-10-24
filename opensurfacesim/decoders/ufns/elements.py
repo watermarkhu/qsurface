@@ -93,7 +93,7 @@ class Node(ABC):
 
         if parent is not None:
             parent, edge = parent
-            self.delay = parent.delay + (self.radius/2 - parent.radius/2) % 1 - edge * (-1) ** parent.parity
+            self.delay = int(parent.delay + (self.radius/2 - parent.radius/2) % 1 - edge * (-1) ** self.parity)
             if min_delay is None or (self.delay < min_delay):
                 min_delay = self.delay
 

@@ -378,6 +378,7 @@ class Template2D(ABC):
     -------------------------------------------------------------------------------
     """
     # marker="o", ms=10, color="w", mfc=None, mec="k", ls="-"
+
     def _legend_circle(self, label: str, **kwargs) -> Line2D:
         """Returns a Line2D object that is used on the plot legend."""
         return Line2D(
@@ -402,7 +403,6 @@ class Template2D(ABC):
             [],
             [],
             s = 8**2,
-            linewidth=self.rc["legend_line_width"],
             **kwargs
         )
         return (line, scatter)

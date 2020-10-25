@@ -27,12 +27,6 @@ class Toric(SimToric, PlotCode):
 
     opposite_keys = dict(n="s", s="n", e="w", w="e")
 
-    def _draw(self, text: str = "", returns: int = 1):
-        if self.config["print_steps"]:
-            self.figure.draw_figure(text, carriage_return=returns)
-        else:
-            self.figure.draw_figure(text)
-
     def decode(self, *args, **kwargs):
         # Inherited docstring
         if self.code.__class__.__name__ == "PerfectMeasurements":
@@ -40,7 +34,7 @@ class Toric(SimToric, PlotCode):
         elif self.code.__class__.__name__ == "FaultyMeasurements":
             self.figure = self.Figure3D(self, self.name, **kwargs)
         super().decode(*args, **kwargs)
-        self._draw("Press (->/enter) to close decoder figure.")
+        self.figure.draw_figure("Press (->/enter) to close decoder figure.")
         self.figure.close()
 
     def find_clusters(self, **kwargs):
@@ -52,13 +46,13 @@ class Toric(SimToric, PlotCode):
     def grow_clusters(self, *args, **kwargs):
         # Inherited docstring
         ret = super().grow_clusters(*args, **kwargs)
-        self._draw("Clusters grown.")
+        self.figure.draw_figure("Clusters grown.")
         return ret
 
     def grow_bucket(self, bucket, bucket_i, **kwargs):
         ret = super().grow_bucket(bucket, bucket_i, **kwargs)
         if self.config["step_bucket"] and self.config["step_cycle"]:
-            self._draw(f"Bucket {bucket_i} grown.")
+            self.figure.draw_figure(f"Bucket {bucket_i} grown.")
         return ret
 
     def grow_boundary(self, cluster, union_list, **kwargs):
@@ -66,30 +60,30 @@ class Toric(SimToric, PlotCode):
         draw = True if self.config["step_cluster"] and cluster.new_bound else False
         ret = super().grow_boundary(cluster, union_list, **kwargs)
         if draw:
-            self._draw(f"Cluster {cluster} grown.")
+            self.figure.draw_figure(f"Cluster {cluster} grown.")
         return ret
 
-    def _place_bucket(self, place_list, bucket_i, **kwargs):
+    def place_bucket(self, place_list, bucket_i, **kwargs):
         # Inherited docstring
-        ret = super()._place_bucket(place_list, bucket_i, **kwargs)
+        ret = super().place_bucket(place_list, bucket_i, **kwargs)
         if self.config["step_bucket"] and not self.config["step_cycle"]:
-            self._draw(f"Bucket {bucket_i} grown.")
+            self.figure.draw_figure(f"Bucket {bucket_i} grown.")
         return ret
 
     def peel_clusters(self, *args, **kwargs):
         # Inherited docstring
         ret = super().peel_clusters(*args, **kwargs)
-        self._draw("Clusters peeled.")
+        self.figure.draw_figure("Clusters peeled.")
         return ret
 
-    def _flip_edge(self, ancilla, edge, new_ancilla, **kwargs):
+    def flip_edge(self, ancilla, edge, new_ancilla, **kwargs):
         # Inherited docstring
-        ret = super()._flip_edge(ancilla, edge, new_ancilla, **kwargs)
+        ret = super().flip_edge(ancilla, edge, new_ancilla, **kwargs)
         self.figure._match_edge(edge)
         self.figure._flip_ancilla(ancilla)
         self.figure._flip_ancilla(new_ancilla)
         if self.config["step_peel"]:
-            self._draw(f"Edge {edge} to matching.")
+            self.figure.draw_figure(f"Edge {edge} to matching.")
         return ret
 
     def cluster_add_ancilla(self, cluster, ancilla, **kwargs):
@@ -121,9 +115,9 @@ class Toric(SimToric, PlotCode):
         ret = super()._edge_peel(edge, variant=variant, **kwargs)
         self.figure._hide_edge(edge)
         if variant == "peel" and self.config["step_peel"]:
-            self._draw(f"Edge {edge} removed by peel.")
+            self.figure.draw_figure(f"Edge {edge} removed by peel.")
         elif variant == "cycle" and self.config["step_cycle"]:
-            self._draw(f"Edge {edge} removed by cycle.")
+            self.figure.draw_figure(f"Edge {edge} removed by cycle.")
         return ret
 
     class Figure2D(Template2D):
@@ -138,49 +132,45 @@ class Toric(SimToric, PlotCode):
         def init_plot(self, **kwargs):
             # Inherited docstring
             size = [xy + 0.25 for xy in self.code.size]
-            self._init_axis([-0.25, -0.25] + size, title=self.decoder)
-            self.legend_ax.legend(
-                handles=[
-                    self._legend_circle(
-                        "Vertex",
-                        ls="-",
-                        color=self.rc["color_x_secondary"],
-                        mfc=self.rc["color_x_secondary"],
-                        mec=self.rc["color_x_primary"],
-                        marker="s",
-                        ms=5,
-                    ),
-                    self._legend_circle(
-                        "Star",
-                        ls="-",
-                        color=self.rc["color_z_secondary"],
-                        mfc=self.rc["color_z_secondary"],
-                        mec=self.rc["color_z_primary"],
-                        marker="D",
-                        ms=5,
-                    ),
-                    self._legend_circle(
-                        "Half edge",
-                        ls=self.rc["line_style_tertiary"],
-                        color=self.rc["color_edge"],
-                    ),
-                    self._legend_circle(
-                        "Full edge",
-                        ls=self.rc["line_style_primary"],
-                        color=self.rc["color_edge"],
-                    ),
-                    self._legend_circle(
-                        "X matching",
-                        ls=self.rc["line_style_primary"],
-                        color=self.rc["color_x_primary"],
-                    ),
-                    self._legend_circle(
-                        "Z matching",
-                        ls=self.rc["line_style_primary"],
-                        color=self.rc["color_z_primary"],
-                    ),
-                ]
-            )
+            self._init_axis([-0.25, -0.25] + size, title=self.decoder, aspect="equal")
+            
+            handles=[
+                self._legend_scatter(
+                    "Syndrome vertex",
+                    facecolors=self.rc["color_x_secondary"],
+                    edgecolors=self.rc["color_x_primary"],
+                    marker="s",
+                ),
+                self._legend_scatter(
+                    "Syndrome star",
+                    facecolors=self.rc["color_z_secondary"],
+                    edgecolors=self.rc["color_z_primary"],
+                    marker="D",
+                ),
+                self._legend_circle(
+                    "Half edge",
+                    ls=self.rc["line_style_tertiary"],
+                    color=self.rc["color_edge"],
+                ),
+                self._legend_circle(
+                    "Full edge",
+                    ls=self.rc["line_style_primary"],
+                    color=self.rc["color_edge"],
+                ),
+                self._legend_circle(
+                    "X matching",
+                    ls=self.rc["line_style_primary"],
+                    color=self.rc["color_x_primary"],
+                ),
+                self._legend_circle(
+                    "Z matching",
+                    ls=self.rc["line_style_primary"],
+                    color=self.rc["color_z_primary"],
+                ),
+            ]
+            labels = [artist.get_label() if hasattr(artist, "get_label") else artist[0].get_label() for artist in handles]
+            self.legend_ax.legend(handles, labels, **kwargs)
+
 
         def _plot_half_edge(self, edge : Edge, ancilla : AncillaQubit, instance: float, full: bool=False, ):
             line = Line2D(
@@ -289,10 +279,12 @@ class Planar(Toric, SimPlanar):
         Waits for user after every edge removed due to cycle detection. Default is false.
     step_peel : bool, optional
         Waits for user after every edge removed during peeling. Default is false.
+    kwargs
+        Keyword arguments are passed on to `.unionfind.sim.Planar`.
     """
     def init_plot(self, **kwargs):
         size = [xy - 0.5 for xy in self.code.size]
-        self._init_axis([-0.25, -0.25] + size, title=self.decoder)
+        self._init_axis([-0.25, -0.25] + size, title=self.decoder, aspect="equal")
 
     class Figure2D(Toric.Figure2D):
         def _plot_ancilla(self, ancilla, **kwargs):

@@ -129,7 +129,7 @@ class AncillaQubit(Qubit):
 
     @property
     def state(self):
-        return self.get_state(0)
+        return self.get_state()
 
     def get_state(self, pm_bitflip: float = 0, pm_phaseflip: float = 0, **kwargs) -> bool:
         """Applies a parity measurement on the ancilla with probability ``p_bitflip``.
@@ -160,9 +160,9 @@ class AncillaQubit(Qubit):
     def state_icon(self):
         """Returns the qubit state in a colored icon."""
         if self.state_type == "x":
-            return "🟧" if self.state else "🟦"
+            return "🟧" if self.measured_state else "🟦"
         else:
-            return "🔶" if self.state else "🔷"
+            return "🔶" if self.measured_state else "🔷"
 
 
 class Edge(object):

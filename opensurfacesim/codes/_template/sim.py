@@ -385,11 +385,16 @@ class FaultyMeasurements(PerfectMeasurements):
             pm_bitflip = self.default_faulty_measurements["pm_bitflip"]
         if pm_phaseflip is None:
             pm_phaseflip = self.default_faulty_measurements["pm_phaseflip"]
-
-        for z in range(self.layers):
+        
+        for ancilla in self.ancilla_qubits[self.layers - 1].values():
+            ancilla.measured_state = False
+        for z in range(self.layers - 1):
             self.layer = z
             self.random_errors_layer(**kwargs)
             self.random_measure_layer(pm_bitflip=pm_bitflip, pm_phaseflip=pm_phaseflip)
+        self.layer = self.layers - 1
+        self.random_errors_layer(**kwargs)
+        self.random_measure_layer()
 
     def random_errors_layer(self, **kwargs):
         """Applies a layer of random errors loaded in ``self.errors``.

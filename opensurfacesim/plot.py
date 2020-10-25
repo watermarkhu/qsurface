@@ -298,6 +298,7 @@ class Template2D(ABC):
         ==================  ==============================================
         h                   show help
         i                   show all iterations
+        d                   redraw current iteration
         enter or right      go to next iteration, enter iteration number
         backspace or left   go to previous iteration
         n                   go to newest iteration
@@ -344,9 +345,9 @@ class Template2D(ABC):
                         print(i, iter_name)
                     print()
                 elif event.key == "h":
-                    print(
-                        "Usage:\nenter/right - next iteration\nbackspace/left - previous iteration\ni - show iterations\nn - go to newest iteration\n# - go to iteration #\n"
-                    )
+                    print(self.focus.__doc__)
+                elif event.key == "d":
+                    self.draw_figure()
             except tkinter.TclError:
                 print("Figure has been destroyed. Future plots will be ignored.")
                 wait = False
@@ -378,6 +379,7 @@ class Template2D(ABC):
     -------------------------------------------------------------------------------
     """
     # marker="o", ms=10, color="w", mfc=None, mec="k", ls="-"
+
     def _legend_circle(self, label: str, **kwargs) -> Line2D:
         """Returns a Line2D object that is used on the plot legend."""
         return Line2D(
@@ -402,7 +404,6 @@ class Template2D(ABC):
             [],
             [],
             s = 8**2,
-            linewidth=self.rc["legend_line_width"],
             **kwargs
         )
         return (line, scatter)
@@ -682,6 +683,7 @@ class Template3D(Template2D):
         self,
         limits: Optional[Tuple[float, float, float, float]] = None,
         title: str = "",
+        invert: bool = True,
         ax: Optional[mpl.axes.Axes] = None,
         z_limits: Optional[Tuple[float, float]] = None,
         **kwargs,
@@ -694,11 +696,6 @@ class Template3D(Template2D):
         ax.axis(False)
         if title:
             ax.set_title(title, fontsize=self.rc["font_title_size"])
-        if limits is not None:
-            ax.set_xlim(limits[0], limits[0] + limits[2])
-            ax.set_ylim(limits[1], limits[1] + limits[3])
-        if z_limits is not None:
-            ax.set_zlim(z_limits[0], z_limits[0] + z_limits[1])
 
         ax.set_xlabel("z")
         ax.set_ylabel("y")
@@ -716,6 +713,11 @@ class Template3D(Template2D):
         ax.yaxis._axinfo["grid"]["alpha"] = self.rc["axis3d_grid_line_alpha"]
         ax.zaxis._axinfo["grid"]["alpha"] = self.rc["axis3d_grid_line_alpha"]
 
+        if limits is not None:
+            ax.set_xlim(limits[0], limits[0] + limits[2])
+            ax.set_ylim(limits[1], limits[1] + limits[3])
+        if z_limits is not None:
+            ax.set_zlim(z_limits[0], z_limits[0] + z_limits[1])
         x_limits = ax.get_xlim3d()
         y_limits = ax.get_ylim3d()
         z_limits = ax.get_zlim3d()
@@ -729,6 +731,8 @@ class Template3D(Template2D):
         ax.set_xlim3d([x_middle - plot_radius, x_middle + plot_radius])
         ax.set_ylim3d([y_middle - plot_radius, y_middle + plot_radius])
         ax.set_zlim3d([z_middle - plot_radius, z_middle + plot_radius])
+        if invert:
+            ax.invert_yaxis()
 
     def _draw_line(self, X, Y, *args, z: float = 0, **kwargs):
         artist = super()._draw_line(np.array(X), np.array(Y), *args, **kwargs)

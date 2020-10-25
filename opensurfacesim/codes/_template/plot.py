@@ -47,21 +47,26 @@ class PerfectMeasurements(TemplateSimPM):
         self.plot_data("Errors applied", **kwargs)
         self.figure.interact_bodies["error_buttons"].set_active(0)
         self.figure.interact_axes["error_buttons"].active = False
-        self.plot_ancilla("Ancilla-qubits measured", **kwargs)
+        self.plot_ancilla("Ancilla-qubits measured", measure=True)
     
     def show_corrected(self, **kwargs):
+        """Redraws the qubits and ancillas to show their states after decoding."""
         self.plot_data()
         self.plot_ancilla("Decoded.", measure=True)
 
-    def plot_data(self, iter_name: Optional[str] = None, **kwargs):
+    def plot_data(self, iter_name: Optional[str] = None, layer:Optional[float]=None, **kwargs):
         """Update plots of all data-qubits. A plot iteration is added if a ``iter_name`` is supplied. See `.plot.Template2D.draw_figure`."""
-        for qubit in self.data_qubits[self.layer].values():
+        if not layer:
+            layer = self.layer
+        for qubit in self.data_qubits[layer].values():
             self.figure._update_data(qubit, **kwargs)
         if iter_name:
             self.figure.draw_figure(new_iter_name=iter_name)
 
-    def plot_ancilla(self, iter_name: Optional[str] = None, **kwargs):
+    def plot_ancilla(self, iter_name: Optional[str] = None, layer:Optional[float]=None, **kwargs):
         """Update plots of all ancilla-qubits. A plot iteration is added if a ``iter_name`` is supplied. See `.plot.Template2D.draw_figure`."""
+        if not layer:
+            layer = self.layer
         for qubit in self.ancilla_qubits[self.layer].values():
             self.figure._update_ancilla(qubit, **kwargs)
         if iter_name:
@@ -157,26 +162,14 @@ class PerfectMeasurements(TemplateSimPM):
                     "Vertex",
                     facecolors=self.rc["color_qubit_face"],
                     edgecolors=self.rc["color_qubit_edge"],
+                    linewidth=self.rc["line_width_primary"],
                     marker="s",
                 ),
                 self._legend_scatter(
                     "Star",
                     facecolors=self.rc["color_qubit_face"],
                     edgecolors=self.rc["color_qubit_edge"],
-                    marker="D",
-                ),
-                self._legend_scatter(
-                    "Syndrome vertex",
-                    linestyle=self.rc["faulty_line_style"],
-                    facecolors=self.rc["color_qubit_face"],
-                    edgecolors=self.rc["color_qubit_edge"],
-                    marker="s",
-                ),
-                self._legend_scatter(
-                    "Syndrome star",
-                    linestyle=self.rc["faulty_line_style"],
-                    facecolors=self.rc["color_qubit_face"],
-                    edgecolors=self.rc["color_qubit_edge"],
+                    linewidth=self.rc["line_width_primary"],
                     marker="D",
                 ),
             ]
@@ -214,6 +207,7 @@ class PerfectMeasurements(TemplateSimPM):
             qubit : `~.codes.elements.AncillaQubit`
                 Ancilla-qubit to plot.
             """
+
             linestyles = {"x": self.rc["line_style_primary"], "z": self.rc["line_style_secondary"]}
             rotations = {"x": 0, "z": 45}
 
@@ -269,7 +263,16 @@ class PerfectMeasurements(TemplateSimPM):
                 if qubit.measurement_error else
                 self.rc["color_qubit_edge"]
             )
-            properties["linestyle"] = self.rc["faulty_line_style"] if qubit.syndrome else self.rc["line_style_primary"]
+            if qubit.syndrome:
+                properties.update({
+                    "linestyle": self.rc["syndrome_line_style"],
+                    "linewidth": self.rc["syndrome_line_width"]
+                })
+            else:
+                properties.update({
+                    "linestyle": self.rc["line_style_primary"],
+                    "linewidth": self.rc["line_width_primary"]
+                })
 
             if not artist:
                 artist = qubit.surface_plot
@@ -323,7 +326,6 @@ class FaultyMeasurements(PerfectMeasurements, TemplateSimFM):
         TemplateSimFM.__init__(self, *args, **kwargs)
         self.figure = self.Figure3D(self, **kwargs) if figure3d else self.Figure2D(self, **kwargs)
 
-
     def random_errors(self, **kwargs):
         # Inherited docstring
         TemplateSimFM.random_errors(self, **kwargs)
@@ -332,21 +334,20 @@ class FaultyMeasurements(PerfectMeasurements, TemplateSimFM):
         # Inherited docstring
         super().random_errors_layer(**kwargs)
         self.figure.interact_axes["error_buttons"].active = True
-        self.plot_data(f"Layer {self.layer}: errors applied", **kwargs)
+        self.plot_data(f"Layer {self.layer}: errors applied")
     
     def random_measure_layer(self, **kwargs):
         # Inherited docstring
         super().random_measure_layer(**kwargs)
         self.figure.interact_bodies["error_buttons"].set_active(0)
         self.figure.interact_axes["error_buttons"].active = False
-        self.plot_ancilla(f"Layer {self.layer}: ancilla-qubits measured", **kwargs)
-
+        self.plot_ancilla(f"Layer {self.layer}: ancilla-qubits measured")
 
     def plot_data(self, iter_name: Optional[str] = None, **kwargs):
         """Update plots of all data-qubits in layer ``z``. A plot iteration is added if a ``iter_name`` is supplied. See `.plot.Template2D.draw_figure`."""
         for qubit in self.data_qubits[self.layer].values():
             artist = qubit.surface_plot if self.figure3d else self.data_qubits[0][qubit.loc].surface_plot
-            self.figure._update_data(qubit, artist)
+            self.figure._update_data(qubit, artist, **kwargs)
         if iter_name:
             self.figure.draw_figure(new_iter_name=iter_name)
 
@@ -363,15 +364,33 @@ class FaultyMeasurements(PerfectMeasurements, TemplateSimFM):
             # Inherited docstring
             items = [
                 self._legend_scatter(
+                    "Syndrome vertex",
+                    linestyle=self.rc["syndrome_line_style"],
+                    linewidth=self.rc["syndrome_line_width"],
+                    facecolors=self.rc["color_qubit_face"],
+                    edgecolors=self.rc["color_qubit_edge"],
+                    marker="s",
+                ),
+                self._legend_scatter(
+                    "Syndrome star",
+                    linestyle=self.rc["syndrome_line_style"],
+                    linewidth=self.rc["syndrome_line_width"],
+                    facecolors=self.rc["color_qubit_face"],
+                    edgecolors=self.rc["color_qubit_edge"],
+                    marker="D",
+                ),
+                self._legend_scatter(
                     "Faulty vertex",
                     facecolors=self.rc["color_qubit_face"],
                     edgecolors=self.rc["faulty_x_mec"],
+                    linewidth=self.rc["line_width_primary"],
                     marker="s",
                 ),
                 self._legend_scatter(
                     "Faulty star",
                     facecolors=self.rc["color_qubit_face"],
                     edgecolors=self.rc["faulty_z_mec"],
+                    linewidth=self.rc["line_width_primary"],
                     marker="D",
                 ),
             ]
@@ -392,15 +411,9 @@ class FaultyMeasurements(PerfectMeasurements, TemplateSimFM):
                 self.error_methods[selected](qubit)
                 self._update_data(qubit, artist=plot_qubit.surface_plot, temporary=True)
 
-    class Figure3D(PerfectMeasurements.Figure, TemplatePlotFM):
-
-        def init_legend(self, **kwargs):
-            # Inherited docstring
-            self.Figure2D.init_legend(self, **kwargs)
+    class Figure3D(Figure2D, TemplatePlotFM):
 
         def _plot_surface(self):
             # Inherited docstring
             for z in range(self.code.layers):
                 super()._plot_surface(z)
-
- 

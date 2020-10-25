@@ -125,7 +125,7 @@ class Toric(UFToric):
 
         Additionally, a syndrome-node is initiated on the non-trivial ancilla -- a syndrome -- with the ancilla as primer. New boundaries are saved to the nodes by ``bound_ancilla_to_node``. 
 
-        The cluster is then placed into a bucket based on its size and parity by `cluster_place_bucket`. See `grow_clusters` for more information on buckets.
+        The cluster is then placed into a bucket based on its size and parity by `place_bucket`. See `grow_clusters` for more information on buckets.
         """
         plaqs, stars = self.get_syndrome()
 
@@ -135,11 +135,11 @@ class Toric(UFToric):
                 cluster = self.cluster(self.cluster_index, self.code.instance)
                 cluster.root_node = node
                 self.cluster_add_ancilla(cluster, ancilla)
-                self.cluster_place_bucket(cluster, -1)
                 self.cluster_index += 1
                 self.clusters.append(cluster)
 
         self.bound_ancilla_to_node()
+        self.place_bucket(self.clusters, -1)
 
         if self.config["print_steps"]:
             print(f"Found clusters:\n" + ", ".join(map(str, self.clusters)) + "\n")
@@ -207,7 +207,7 @@ class Toric(UFToric):
             print(node._repr_status)
 
         if node.delay - node.waited == cluster.min_delay:
-            self._grow_node_boundary(node, union_list)
+            self.grow_node_boundary(node, union_list)
         else:
             node.waited += 1
 
@@ -215,8 +215,8 @@ class Toric(UFToric):
             if child_node is not parent_node:
                 self.grow_node(cluster, child_node, union_list, node)
 
-    def _grow_node_boundary(self, node: Node, union_list: UL):
-        """Grows the boundary of a node."""
+    def grow_node_boundary(self, node: Node, union_list: UL):
+        """Grows the boundary of a ``node``."""
         node.radius += 1
         node.old_bound, node.new_bound = node.new_bound, []
         while node.old_bound:
@@ -238,17 +238,17 @@ class Toric(UFToric):
         super().union_bucket(*args, **kwargs)
         self.bound_ancilla_to_node()
 
-    def _union_edge(
+    def union_edge(
         self, edge: Edge, ancilla: AncillaQubit, new_ancilla: AncillaQubit, *args, **kwargs
     ):
         """Potentially merges two neighboring ancillas. 
 
-        If the check by `_union_check` is passed, the clusters of ``ancilla`` and ``new_ancilla`` are merged. additionally, the node-trees either directly joined, or by the creation of a new *junction-node* which as ``new_ancilla`` as its primer. Weighted union is applied to ensure low operating complexity. 
+        If the check by `union_check` is passed, the clusters of ``ancilla`` and ``new_ancilla`` are merged. additionally, the node-trees either directly joined, or by the creation of a new *junction-node* which as ``new_ancilla`` as its primer. Weighted union is applied to ensure low operating complexity. 
         """
         cluster = self.get_cluster(ancilla)
         new_cluster = self.get_cluster(new_ancilla)
 
-        if self._union_check(edge, ancilla, new_ancilla, cluster, new_cluster):
+        if self.union_check(edge, ancilla, new_ancilla, cluster, new_cluster):
 
             node, new_node = ancilla.node, new_ancilla.node
             even = (cluster.parity + new_cluster.parity) % 2 == 0

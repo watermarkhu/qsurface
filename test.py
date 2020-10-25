@@ -1,16 +1,15 @@
 
 
-# opensurfacesim.decoders.mwpm.get_blossom5.run()
-
 # %%
 import opensurfacesim
-pf = opensurfacesim.codes.planar.plot.FaultyMeasurements(4, figure3d=0)
-# dc = opensurfacesim.decoders.ufns.plot.Toric(pf, step_bucket=True, print_steps=True)
+pf = opensurfacesim.codes.toric.plot.FaultyMeasurements(3, figure3d=True)
 pf.initialize("pauli")
-pf.random_errors(p_bitflip=0.05, pm_bitflip=0.05)
+
+dc = opensurfacesim.decoders.unionfind.plot.Toric(pf, use_blossom5=True)
 
 #%%
 
+pf.random_errors(p_bitflip=0.1, pm_bitflip=0.05)
 pf.state_icons()
 
 
@@ -22,8 +21,8 @@ pf.show_corrected()
 print(pf.logical_state, pf.no_error)
 
 
-# # %%
-# pf.figure.close()
+# %%
+pf.figure.close()
 # %%
 pf.figure.focus()
 

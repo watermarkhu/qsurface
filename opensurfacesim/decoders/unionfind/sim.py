@@ -28,6 +28,8 @@ class Toric(SimCode):
         Enables preference for union on ancillas with multiple connections to other clusters. Default is false.
     print_steps : bool, optional
         Prints additional decoding information. Default is false.
+    kwargs
+        Keyword arguments are forwarded to `~.decoders._template.SimCode`. 
 
     Attributes
     ----------
@@ -101,26 +103,33 @@ class Toric(SimCode):
         self.clusters = []
         self.cluster_index = 0
 
-    def reset(self):
-        """Resets the decoder for a new iteration."""
+
+    def decode(self, **kwargs):
+        """Decodes the code using the Union-Find algorithm.
+        
+        Decoding process can be subdivided into 3 sections:
+
+        1.  Finding the initial clusters.
+        2.  Growing and merging these clusters.
+        3.  Peeling the clusters using the Peeling algorithm.
+
+        Parameters
+        ----------
+        kwargs
+            Keyword arguments are passed on to `find_clusters`, `grow_clusters` and `peel_clusters`. 
+        """
         self.bucket_max_filled = 0
         self.cluster_index = 0
         self.clusters = []
         self.support = {edge: 0 for edge in self.support}
-
-    def decode(self, reset=True, **kwargs):
-        # Inherited docstrings
         self.find_clusters(**kwargs)
         self.grow_clusters(**kwargs)
         self.peel_clusters(**kwargs)
 
-        if reset:
-            self.reset()
-
     """
-    ================================================================================================
+    -------------------------------------------------------------------------------------------
                                     General helper functions
-    ================================================================================================
+    -------------------------------------------------------------------------------------------
     """
 
     def get_cluster(self, ancilla: AncillaQubit) -> Optional[Cluster]:
@@ -158,15 +167,14 @@ class Toric(SimCode):
                 and edge.qubit.erasure == self.code.instance
                 and new_ancilla is not parent
                 and self.support[edge] == 0
-            ):  # if edge not already traversed
-                if new_ancilla.cluster == cluster:  # cycle detected, peel edge
+            ):                                          # if edge not already traversed
+                if new_ancilla.cluster == cluster:      # cycle detected, peel edge
                     self._edge_peel(edge, variant="cycle")
-                else:  # if no cycle detected
+                else:                                   # if no cycle detected
                     self._edge_full(ancilla, edge, new_ancilla)
                     self.cluster_add_ancilla(cluster, new_ancilla, parent=ancilla)
-            else:  # Make sure new bound does not lead to self
-                if new_ancilla.cluster is not cluster:
-                    cluster.new_bound.append((ancilla, edge, new_ancilla))
+            elif new_ancilla.cluster is not cluster:    # Make sure new bound does not lead to self
+                cluster.new_bound.append((ancilla, edge, new_ancilla))
 
     def _edge_peel(self, edge: Edge, variant: str = ""):
         """Peels or removes an edge"""
@@ -186,9 +194,9 @@ class Toric(SimCode):
         self.support[edge] = 2
         
     """
-    ================================================================================================
+    -------------------------------------------------------------------------------------------
                                     1. Find clusters
-    ================================================================================================
+    -------------------------------------------------------------------------------------------
     """
 
     def find_clusters(self, **kwargs):
@@ -196,31 +204,31 @@ class Toric(SimCode):
 
         For every non-trivial ancilla on the lattice, a `~.unionfind.elements.Cluster` is initiated. If any set of ancillas are connected by some set of erased qubits, all connected ancillas are found by `cluster_add_ancilla` and a single cluster is initiated for the set.
 
-        The cluster is then placed into a bucket based on its size and parity by `cluster_place_bucket`. See `grow_clusters` for more information on buckets.
+        The cluster is then placed into a bucket based on its size and parity by `place_bucket`. See `grow_clusters` for more information on buckets.
         """
         plaqs, stars = self.get_syndrome()
-
         for ancilla in plaqs + stars:
             if ancilla.cluster is None or ancilla.cluster.instance != self.code.instance:
                 cluster = self.cluster(self.cluster_index, self.code.instance)
                 self.cluster_add_ancilla(cluster, ancilla)
-                self.cluster_place_bucket(cluster, -1)
                 self.cluster_index += 1
                 self.clusters.append(cluster)
+
+        self.place_bucket(self.clusters, -1)
 
         if self.config["print_steps"]:
             print(f"Found clusters:\n" + ", ".join(map(str, self.clusters)) + "\n")
 
     """
-    ================================================================================================
+    -------------------------------------------------------------------------------------------
                                     2(a). Grow clusters expansion
-    ================================================================================================
+    -------------------------------------------------------------------------------------------
     """
 
     def grow_clusters(self, **kwargs):
         """Grows odd-parity clusters outward for union with others until all clusters are even.
 
-        Lists of odd-parity clusters are maintained at ``self.buckets``. Starting from bucket 0, odd-parity clusters are popped from the bucket by 'grow_bucket and grown at the boundary by `grow_boundary` by adding 1 for every boundary edge in ``cluster.bound`` in ``self.support``. Grown clusters are then placed in a new bucket by `cluster_place_bucket` based on its size if it has odd parity.
+        Lists of odd-parity clusters are maintained at ``self.buckets``. Starting from bucket 0, odd-parity clusters are popped from the bucket by 'grow_bucket and grown at the boundary by `grow_boundary` by adding 1 for every boundary edge in ``cluster.bound`` in ``self.support``. Grown clusters are then placed in a new bucket by `place_bucket` based on its size if it has odd parity.
 
         Edges are fully added to the cluster per two growth iterations. Since a cluster with half-grown edges at the boundary has the same size (number of ancillas) as before growth, but is non-arguably *bigger*, the degeneracy in cluster size is differentiated by ``cluster.support``. When an union occurs between two clusters during growth, if the merged cluster is odd, it is placed in a new bucket. Thus the real bucket number is saved at the cluster locally as ``cluster.bucket``. These two checks are performed before a cluster is grown in `grow_bucket`.
 
@@ -250,13 +258,13 @@ class Toric(SimCode):
                         self.buckets.pop(bucket_i), bucket_i
                     )
                     self.union_bucket(union_list)
-                    self._place_bucket(place_list, bucket_i)
+                    self.place_bucket(place_list, bucket_i)
         else:
             bucket_i = 0
             while self.buckets[0]:
                 union_list, place_list = self.grow_bucket(self.buckets.pop(0), bucket_i)
                 self.union_bucket(union_list)
-                self._place_bucket(place_list, bucket_i)
+                self.place_bucket(place_list, bucket_i)
                 bucket_i += 1
 
     def grow_bucket(self, bucket: List[Cluster], bucket_i: int, **kwargs) -> Tuple[List, List]:
@@ -326,15 +334,15 @@ class Toric(SimCode):
             print(f"{cluster}, ", end="")
 
     """
-    ================================================================================================
+    -------------------------------------------------------------------------------------------
                                     2(b). Grow clusters union
-    ================================================================================================
+    -------------------------------------------------------------------------------------------
     """
 
     def union_bucket(self, union_list: List[Tuple[AncillaQubit, Edge, AncillaQubit]], **kwargs):
         """Merges clusters in ``union_list`` if checks are passed.
 
-        Items in ``union_list`` consists of ``[ancillaA, edge, ancillaB]`` of two ancillas that, at the time added to the list, were not part of the same cluster. The cluster of an ancilla is stored at ``ancilla.cluster``, but due to cluster mergers the cluster at ``ancilla_cluster`` may not be the root element in the cluster-tree, and thus the cluster must be requested by ``ancilla.cluster.``\ `~.unionfind.elements.Cluster.find`. Since the clusters of ``ancillaA`` and ``ancillaB`` may have already merged, checks are performed in `_union_check` after which the clusters are conditionally merged on ``edge`` by `_union_edge`.
+        Items in ``union_list`` consists of ``[ancillaA, edge, ancillaB]`` of two ancillas that, at the time added to the list, were not part of the same cluster. The cluster of an ancilla is stored at ``ancilla.cluster``, but due to cluster mergers the cluster at ``ancilla_cluster`` may not be the root element in the cluster-tree, and thus the cluster must be requested by ``ancilla.cluster.``\ `~.unionfind.elements.Cluster.find`. Since the clusters of ``ancillaA`` and ``ancillaB`` may have already merged, checks are performed in `union_check` after which the clusters are conditionally merged on ``edge`` by `union_edge`.
 
         If ``weighted_union`` is enabled, the smaller cluster is always made a child of the bigger cluster in the cluster-tree. This ensures the that the depth of the tree is minimized and the future calls to `~.unionfind.elements.Cluster.find` is reduced.
 
@@ -356,7 +364,7 @@ class Toric(SimCode):
             for ancilla, edge, new_ancilla in union_list:
                 cluster = self.get_cluster(ancilla)
                 new_cluster = self.get_cluster(new_ancilla)
-                if self._union_check(edge, new_ancilla, cluster, new_cluster):
+                if self.union_check(edge, new_ancilla, cluster, new_cluster):
                     merging.append((edge, ancilla, new_ancilla))
 
             for edge, ancilla, new_ancilla in merging:
@@ -371,25 +379,25 @@ class Toric(SimCode):
 
             for merge_bucket in merge_buckets:
                 for items in merge_bucket:
-                    self._union_edge(*items)
+                    self.union_edge(*items)
         else:
             for ancilla, edge, new_ancilla in union_list:
-                self._union_edge(edge, ancilla, new_ancilla)
+                self.union_edge(edge, ancilla, new_ancilla)
 
         if union_list and self.config["print_steps"]:
             print("")
 
-    def _union_edge(
+    def union_edge(
         self, edge: Edge, ancilla: AncillaQubit, new_ancilla: AncillaQubit, *args, **kwargs
     ):
-        """Merges the clusters of ``ancilla`` and ``new_ancilla`` on ``edge.
+        """Merges the clusters of ``ancilla`` and ``new_ancilla`` on ``edge``.
 
         Weighted union is conditionally applied. See `union_bucket` for more information.
         """
         cluster = self.get_cluster(ancilla)
         new_cluster = self.get_cluster(new_ancilla)
 
-        if self._union_check(edge, ancilla, new_ancilla, cluster, new_cluster):
+        if self.union_check(edge, ancilla, new_ancilla, cluster, new_cluster):
             string = "{}∪{}=".format(cluster, new_cluster) if self.config["print_steps"] else ""
 
             if self.config["weighted_union"] and cluster.size < new_cluster.size:
@@ -398,7 +406,7 @@ class Toric(SimCode):
             if string:
                 print(string, cluster)
 
-    def _union_check(
+    def union_check(
         self, edge: Edge, ancilla: AncillaQubit, new_ancilla: AncillaQubit, cluster: Cluster, new_cluster: Cluster
     ) -> bool:
         """Checks whether ``cluster`` and ``new_cluster`` can be joined on ``edge``.
@@ -415,50 +423,46 @@ class Toric(SimCode):
         return False
 
     """
-    ================================================================================================
+    -------------------------------------------------------------------------------------------
                                     2(c). Place clusters in buckets
-    ================================================================================================
+    -------------------------------------------------------------------------------------------
     """
 
-    def _place_bucket(self, place_list: List[Cluster], bucket_i: int):
-        """Places all clusters in ``place_list`` with `cluster_place_bucket`."""
-        for cluster in place_list:
-            self.cluster_place_bucket(cluster.find(), bucket_i)
-
-    def cluster_place_bucket(self, cluster: Cluster, bucket_i: int, **kwargs):
-        """Places a ``cluster`` in a bucket if parity is odd.
+    def place_bucket(self, clusters: List[Cluster], bucket_i: int):
+        """Places all clusters in ``clusters`` in a bucket if parity is odd.
 
         If ``weighted_growth`` is enabled. the cluster is placed in a new bucket based on its size, otherwise it is placed in ``self.buckets[0]``
 
         Parameters
         ----------
-        cluster
-            Cluster object to place.
+        clusters
+            Clusters to place in buckets.
         bucket_i
             Current bucket number.
         """
+        for cluster in clusters:
 
-        if (cluster.parity % 2 == 1 and not cluster.on_bound) or (
-            cluster.parity % 2 == 0 and cluster.on_bound
-        ):
-            if self.config["weighted_growth"]:
-                cluster.bucket = 2 * (cluster.size - 1) + cluster.support
-                self.buckets[cluster.bucket].append(cluster)
-                if cluster.bucket > self.bucket_max_filled:
-                    self.bucket_max_filled = cluster.bucket
+            if (cluster.parity % 2 == 1 and not cluster.on_bound) or (
+                cluster.parity % 2 == 0 and cluster.on_bound
+            ):
+                if self.config["weighted_growth"]:
+                    cluster.bucket = 2 * (cluster.size - 1) + cluster.support
+                    self.buckets[cluster.bucket].append(cluster)
+                    if cluster.bucket > self.bucket_max_filled:
+                        self.bucket_max_filled = cluster.bucket
+                else:
+                    self.buckets[0].append(cluster)
+                    cluster.bucket = bucket_i + 1
             else:
-                self.buckets[0].append(cluster)
-                cluster.bucket = bucket_i + 1
-        else:
-            cluster.bucket = None
+                cluster.bucket = None
 
     """
-    ================================================================================================
+    -------------------------------------------------------------------------------------------
                                     3. Peel clusters
-    ================================================================================================
+    -------------------------------------------------------------------------------------------
     """
 
-    def peel_clusters(self, *args, **kwargs):
+    def peel_clusters(self, **kwargs):
         """Loops over all clusters to find pendant ancillas to peel.
 
         To make sure that all cluster-trees are fully peeled, all ancillas are considered in the loop. If the ancilla has not been peeled before and belongs to a cluster of the current simulation, the ancilla is considered for peeling by `peel_leaf`.
@@ -475,7 +479,7 @@ class Toric(SimCode):
                     cluster = self.get_cluster(ancilla)
                     self.peel_leaf(cluster, ancilla)
 
-    def peel_leaf(self, cluster: Cluster, ancilla: AncillaQubit, *args, **kwargs):
+    def peel_leaf(self, cluster: Cluster, ancilla: AncillaQubit, **kwargs):
         """Recursive function which peels a branch of the tree if the input ancilla is a pendant ancilla
 
         If there is only one neighbor of the input ancilla that is in the same cluster, this ancilla is a pendant ancilla and can be peeled. The function calls itself on the other ancilla of the edge leaf.
@@ -507,14 +511,14 @@ class Toric(SimCode):
                     self.static_forest(ancilla)
                 (new_ancilla, edge) = self.get_neighbor(ancilla, connect_key)
                 if ancilla.measured_state:
-                    self._flip_edge(ancilla, edge, new_ancilla)
+                    self.flip_edge(ancilla, edge, new_ancilla)
                     self.correct_edge(ancilla, connect_key)
                 else:
                     self._edge_peel(edge, variant="peel")
                 ancilla.peeled = self.code.instance
                 self.peel_leaf(cluster, new_ancilla)
 
-    def _flip_edge(self, ancilla: AncillaQubit, edge: Edge, new_ancilla: AncillaQubit, **kwargs):
+    def flip_edge(self, ancilla: AncillaQubit, edge: Edge, new_ancilla: AncillaQubit, **kwargs):
         """Flips the values of the ancillas connected to ``edge``."""
         ancilla.measured_state = not ancilla.measured_state
         new_ancilla.measured_state = not new_ancilla.measured_state
@@ -548,7 +552,7 @@ class Planar(Toric):
     See the description of `.unionfind.sim.Toric`. 
     """
 
-    def _union_check(
+    def union_check(
         self, edge: Edge, ancilla: AncillaQubit, new_ancilla: AncillaQubit, cluster: Cluster, new_cluster: Cluster
     ) -> bool:
         # Inherited docsting

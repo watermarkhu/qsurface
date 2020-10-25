@@ -162,8 +162,10 @@ class Toric(SimCode):
 
     def _correct_matched_qubits(self, aq0 : AncillaQubit, aq1 : AncillaQubit) -> float:
         """Flips the values of edges between two matched qubits by doing a walk in between."""
-        dq0 = self.code.ancilla_qubits[self.code.decode_layer][aq0.loc]
-        dq1 = self.code.ancilla_qubits[self.code.decode_layer][aq1.loc]
+        ancillas = self.code.ancilla_qubits[self.code.decode_layer]
+        pseudos = self.code.pseudo_qubits[self.code.decode_layer]
+        dq0 = ancillas[aq0.loc] if aq0.loc in ancillas else pseudos[aq0.loc]
+        dq1 = ancillas[aq1.loc] if aq1.loc in ancillas else pseudos[aq1.loc]
         dx, dy, xd, yd = self._walk_direction(aq0, aq1, self.code.size)
         xv = self._walk_and_correct(dq0, dy, yd)
         self._walk_and_correct(dq1, dx, xd)
@@ -201,8 +203,8 @@ class Planar(Toric):
     def decode(self, **kwargs):
         # Inherited docstring
         plaqs, stars = self.get_syndrome(find_pseudo=True)
-        self.apply_matching(plaqs, self.match_syndromes(plaqs, **kwargs))
-        self.apply_matching(stars, self.match_syndromes(stars, **kwargs))
+        self.correct_matching(plaqs, self.match_syndromes(plaqs, **kwargs))
+        self.correct_matching(stars, self.match_syndromes(stars, **kwargs))
 
     def correct_matching(self, syndromes : List[Tuple[AncillaQubit, AncillaQubit]], matching : list):
         # Inherited docstring
@@ -225,7 +227,7 @@ class Planar(Toric):
         # Add edges between all ancilla-qubits
         for i0, (a0, _) in enumerate(qubits):
             (x0, y0), z0 = a0.loc, a0.z
-            for i1, (a1, _) in enumerate(qubits[i0 + 1], start= i0 + 1):
+            for i1, (a1, _) in enumerate(qubits[i0 + 1:], start= i0 + 1):
                 (x1, y1), z1 = a1.loc, a1.z
                 wx = int(abs(x0 - x1))
                 wy = int(abs(y0 - y1))
@@ -237,7 +239,7 @@ class Planar(Toric):
         for i, (ancilla, pseudo) in enumerate(qubits):
             (xs, ys) = ancilla.loc
             (xb, yb) = pseudo.loc
-            weight = xb - xs if qubits[i].state_type == "x" else yb - ys
+            weight = xb - xs if ancilla.state_type == "x" else yb - ys
             edges.append([i, len(qubits) + i, int(abs(weight))])
 
         # Add edges of weight 0 between all pseudo-qubits

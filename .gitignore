@@ -18,6 +18,7 @@
 *.pkl
 *.csv
 *.txt
+*.ini
 !requirements.txt
 
 # folders

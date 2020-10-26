@@ -91,6 +91,22 @@ class SimCode(ABC):
         neighbor = edge.nodes[not edge.nodes.index(ancilla_qubit)]
         return neighbor, edge
 
+    def get_neighbors(self, ancilla_qubit: AncillaQubit, loop: bool = False, **kwargs):
+        """Returns all neighboring ancillas, including other time instances.
+
+        Parameters
+        ----------
+        loop
+            Include looped neighbors.
+        """
+        neighbors = {}
+        for key in ancilla_qubit.parity_qubits:
+            neighbors[key] = self.get_neighbor(ancilla_qubit, key)
+        for ancilla, edge in ancilla_qubit.vertical_edges.items():
+            if loop or abs(ancilla.z - ancilla_qubit.z) == 1:
+                neighbors[ancilla.z - ancilla_qubit.z] = (ancilla, edge)    
+        return neighbors
+
     def correct_edge(self, ancilla_qubit: AncillaQubit, key: str, **kwargs) -> AncillaQubit:
         """Applies a correction.
 
@@ -199,7 +215,7 @@ class PlotCode(SimCode):
         if hasattr(qubit, "surface_lines"):
             self.plot_matching_edge(qubit.surface_lines.get(key, None))
         if hasattr(next_qubit, "surface_lines"):
-            self.plot_matching_edge(next_qubit.surface_lines.get(self.opposite_keys[key], None))
+            self.plot_matching_edge(next_qubit.surface_lines.get(tuple([-i for i in key]), None))
         return next_qubit
 
     def plot_matching_edge(self, line: Optional[Line2D] = None):
@@ -212,8 +228,12 @@ class PlotCode(SimCode):
             state_type = line.object.state_type
             self.matching_lines[line] = not self.matching_lines[line]
             if self.matching_lines[line]:
-                self.code.figure.future_dict[iteration + 1][line] = self.line_color_match[state_type]
-                self.code.figure.future_dict[iteration + 2][line] = self.line_color_normal[state_type]
+                self.code.figure.future_dict[iteration + 1][line] = self.line_color_match[
+                    state_type
+                ]
+                self.code.figure.future_dict[iteration + 2][line] = self.line_color_normal[
+                    state_type
+                ]
             else:
                 self.code.figure.future_dict[iteration + 1].pop(line, None)
                 self.code.figure.future_dict[iteration + 2].pop(line, None)

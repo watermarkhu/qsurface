@@ -56,7 +56,7 @@ class Node(ABC):
         self.waited = 0
 
     def __repr__(self):
-        return f"{self.short}N{self.primer.loc}|{self.primer.z})"
+        return f"{self.short}N({self.primer.loc[0]},{self.primer.loc[1]}|{self.primer.z})"
 
     @property
     def _status(self):
@@ -126,6 +126,7 @@ class Syndrome(Node):
         )
         return self.parity
 
+
 class Junction(Node):
     short = "J"
 
@@ -173,3 +174,51 @@ class Filler(Node):
     def ns_parity(self, *args, **kwargs) -> int:
         # Inherited docstring
         return self.parity
+
+
+def print_tree(current_node, parent_node: Optional[Node] = None, indent:str='', last:str='updown'):
+        '''
+        pptree from https://github.com/clemtoy/pptree
+        author: clemtoy
+
+        altered to check length of de-ansi-fied string
+        which allows to print colored output (ansi formatting)
+        '''
+
+        name = lambda node: node._repr_status
+        children = lambda node, parent: [child for child, _ in node.neighbors if child is not parent]
+        nb_children = lambda node, parent: sum(nb_children(child, node) for child in children(node, parent)) + 1
+        size_branch = {child: nb_children(child, parent_node) for child in children(current_node, parent_node)}
+
+        if not parent_node:
+            print("")
+
+        """ Creation of balanced lists for "up" branch and "down" branch. """
+        up = sorted(children(current_node, parent_node), key=lambda node: nb_children(node, current_node))
+        down = []
+        while up and sum(size_branch[node] for node in down) < sum(size_branch[node] for node in up):
+            down.append(up.pop())
+
+        """ Printing of "up" branch. """
+        for child in up:
+            next_last = 'up' if up.index(child) == 0 else ''
+            next_indent = '{0}{1}{2}'.format(indent, ' ' if 'up' in last else '│', ' ' * len(name(current_node)))
+            print_tree(child, current_node, next_indent, next_last)
+
+        """ Printing of current node. """
+        if last == 'up': start_shape = '┌'
+        elif last == 'down': start_shape = '└'
+        elif last == 'updown': start_shape = ' '
+        else: start_shape = '├'
+
+        if up: end_shape = '┤'
+        elif down: end_shape = '┐'
+        else: end_shape = ''
+
+        print('{0}{1}{2}{3}'.format(indent, start_shape, name(current_node), end_shape))
+
+        """ Printing of "down" branch. """
+        for child in down:
+            next_last = 'down' if down.index(child) is len(down) - 1 else ''
+            next_indent = '{0}{1}{2}'.format(indent, ' ' if 'down' in last else '│', ' ' * len(name(current_node)))
+            print_tree(child, current_node, next_indent, next_last)

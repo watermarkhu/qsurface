@@ -739,6 +739,11 @@ class Template3D(Template2D):
         art3d.line_2d_to_3d(artist, zs=z)
         return artist
 
+    def _draw_line3D(self, X, Y, Z, *args, **kwargs):
+        artist = art3d.Line3D(X, Y, Z, *args, **kwargs)
+        self.main_ax.add_line(artist)
+        return artist
+
     def _draw_circle(self, *args, z: float = 0, **kwargs):
         artist = super()._draw_circle(*args, **kwargs)
         art3d.patch_2d_to_3d(artist, z=z)

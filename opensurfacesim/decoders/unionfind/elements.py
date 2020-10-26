@@ -58,7 +58,7 @@ class Cluster(object):
         ancilla.cluster = self
         if type(ancilla) is AncillaQubit:
             self.size += 1
-            if ancilla.measured_state:
+            if ancilla.syndrome:
                 self.parity += 1
         elif type(ancilla) is PseudoQubit:
             self.on_bound = True

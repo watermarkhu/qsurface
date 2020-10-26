@@ -53,10 +53,10 @@ class PerfectMeasurements(ToricPM):
         """
         (x, y), z = ancilla_qubit.loc, ancilla_qubit.z
         checks = {
-            "e": ((x + 0.5), y),
-            "w": ((x - 0.5), y),
-            "n": (x, (y + 0.5)),
-            "s": (x, (y - 0.5)),
+            (0.5,0): ((x + 0.5), y),
+            (-.5,0): ((x - 0.5), y),
+            (0,0.5): (x, (y + 0.5)),
+            (0,-.5): (x, (y - 0.5)),
         }
         for key, loc in checks.items():
             if loc in self.data_qubits[z]:

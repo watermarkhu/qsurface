@@ -42,7 +42,7 @@ class PerfectMeasurements(TemplateSimPM):
 
     def random_errors(self, *args, **kwargs):
         # Inherited docstrings
-        super().random_errors(*args, **kwargs)
+        super().random_errors(*args, **kwargs, measure=False)
         self.figure.interact_axes["error_buttons"].active = True
         self.plot_data("Errors applied", **kwargs)
         self.figure.interact_bodies["error_buttons"].set_active(0)

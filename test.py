@@ -2,29 +2,30 @@
 
 # %%
 import opensurfacesim
-pf = opensurfacesim.codes.toric.plot.FaultyMeasurements(3, figure3d=True)
+pf = opensurfacesim.codes.toric.sim.PerfectMeasurements(10, figure3d=False)
 pf.initialize("pauli")
 
-dc = opensurfacesim.decoders.unionfind.plot.Toric(pf, use_blossom5=True)
+dc = opensurfacesim.decoders.ufns.plot.Toric(pf, step_bucket=True, print_steps=True, print_tree=True)
 
 #%%
 
-pf.random_errors(p_bitflip=0.1, pm_bitflip=0.05)
+pf.random_errors(p_bitflip=0.1, pm_bitflip=0.03)
 pf.state_icons()
 
 
 # dc.decode()
 dc.decode()
-pf.show_corrected()
+# pf.show_corrected()
 
 
+pf.state_icons()
 print(pf.logical_state, pf.no_error)
 
 
 # %%
-pf.figure.close()
-# %%
 pf.figure.focus()
+# %%
+pf.figure.close()
 
 # %%
 dc.figure.focus()

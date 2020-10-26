@@ -13,7 +13,7 @@ class Toric(SimCode):
 
     Default values for the following parameters can be supplied via a *decoders.ini* file under the section of ``[unionfind]``.
 
-    The ``cluster`` and ``peeled`` attributes are monkey patched to the `~.codes.elements.AncillaQubit` object to assist the identification of its parent cluster and to assist peeling. The ``forest`` attribute is monkey-patched to `~codes.elements.AncillaQubit` and `~codes.elements.Edge` if a dynamic forest is not maintained to assist with the construction of the acyclic forest after cluster growth. 
+    The ``cluster`` and ``peeled`` attributes are monkey patched to the `~.codes.elements.AncillaQubit` object to assist the identification of its parent cluster and to assist peeling. The ``forest`` attribute is monkey-patched to `~codes.elements.AncillaQubit` and `~codes.elements.Edge` if a dynamic forest is not maintained to assist with the construction of the acyclic forest after cluster growth.
 
     Parameters
     ----------
@@ -29,7 +29,7 @@ class Toric(SimCode):
     print_steps : bool, optional
         Prints additional decoding information. Default is false.
     kwargs
-        Keyword arguments are forwarded to `~.decoders._template.SimCode`. 
+        Keyword arguments are forwarded to `~.decoders._template.SimCode`.
 
     Attributes
     ----------
@@ -90,9 +90,16 @@ class Toric(SimCode):
             for data_qubit in layer.values():
                 for edge in data_qubit.edges.values():
                     self.support[edge] = 0
-        if hasattr(self.code, "pseudo_edges"):
-            for edge in self.code.pseudo_edges:
-                self.support[edge] = 0
+        if self.code.layers > 1:
+            for layer in self.code.ancilla_qubits.values():
+                for ancilla_qubit in layer.values():
+                    self.support[
+                        ancilla_qubit.vertical_edges[
+                            self.code.ancilla_qubits[(ancilla_qubit.z + 1) % self.code.layers][
+                                ancilla_qubit.loc
+                            ]
+                        ]
+                    ] = 0
 
         if self.config["weighted_growth"]:
             self.buckets_num = self.code.size[0] * self.code.size[1] * self.code.layers * 2
@@ -103,10 +110,9 @@ class Toric(SimCode):
         self.clusters = []
         self.cluster_index = 0
 
-
     def decode(self, **kwargs):
         """Decodes the code using the Union-Find algorithm.
-        
+
         Decoding process can be subdivided into 3 sections:
 
         1.  Finding the initial clusters.
@@ -116,7 +122,7 @@ class Toric(SimCode):
         Parameters
         ----------
         kwargs
-            Keyword arguments are passed on to `find_clusters`, `grow_clusters` and `peel_clusters`. 
+            Keyword arguments are passed on to `find_clusters`, `grow_clusters` and `peel_clusters`.
         """
         self.bucket_max_filled = 0
         self.cluster_index = 0
@@ -146,7 +152,13 @@ class Toric(SimCode):
             ancilla.cluster = ancilla.cluster.find()
             return ancilla.cluster
 
-    def cluster_add_ancilla(self, cluster: Cluster, ancilla: AncillaQubit, parent: Optional[AncillaQubit]=None, **kwargs):
+    def cluster_add_ancilla(
+        self,
+        cluster: Cluster,
+        ancilla: AncillaQubit,
+        parent: Optional[AncillaQubit] = None,
+        **kwargs,
+    ):
         """Recursively adds erased edges to ``cluster`` and finds the new boundary.
 
         For a given ``ancilla``, this function finds the neighboring edges and ancillas that are in the the currunt cluster. If the newly found edge is erased, the edge and the corresponding ancilla will be added to the cluster, and the function applied recursively on the new ancilla. Otherwise, the neighbor is added to the new boundary ``self.new_bound``.
@@ -160,20 +172,19 @@ class Toric(SimCode):
         """
         cluster.add_ancilla(ancilla)
 
-        for key in ancilla.parity_qubits:
-            (new_ancilla, edge) = self.get_neighbor(ancilla, key)
+        for (new_ancilla, edge) in self.get_neighbors(ancilla).values():
             if (
                 "erasure" in self.code.errors
                 and edge.qubit.erasure == self.code.instance
                 and new_ancilla is not parent
                 and self.support[edge] == 0
-            ):                                          # if edge not already traversed
-                if new_ancilla.cluster == cluster:      # cycle detected, peel edge
+            ):  # if edge not already traversed
+                if new_ancilla.cluster == cluster:  # cycle detected, peel edge
                     self._edge_peel(edge, variant="cycle")
-                else:                                   # if no cycle detected
+                else:  # if no cycle detected
                     self._edge_full(ancilla, edge, new_ancilla)
                     self.cluster_add_ancilla(cluster, new_ancilla, parent=ancilla)
-            elif new_ancilla.cluster is not cluster:    # Make sure new bound does not lead to self
+            elif new_ancilla.cluster is not cluster:  # Make sure new bound does not lead to self
                 cluster.new_bound.append((ancilla, edge, new_ancilla))
 
     def _edge_peel(self, edge: Edge, variant: str = ""):
@@ -192,7 +203,7 @@ class Toric(SimCode):
     def _edge_full(self, ancilla, edge, new_ancilla, **kwargs):
         """Fully grows an edge."""
         self.support[edge] = 2
-        
+
     """
     -------------------------------------------------------------------------------------------
                                     1. Find clusters
@@ -254,9 +265,7 @@ class Toric(SimCode):
                 if bucket_i > self.bucket_max_filled:
                     break
                 if bucket_i in self.buckets and self.buckets[bucket_i] != []:
-                    union_list, place_list = self.grow_bucket(
-                        self.buckets.pop(bucket_i), bucket_i
-                    )
+                    union_list, place_list = self.grow_bucket(self.buckets.pop(bucket_i), bucket_i)
                     self.union_bucket(union_list)
                     self.place_bucket(place_list, bucket_i)
         else:
@@ -282,7 +291,7 @@ class Toric(SimCode):
         Returns
         -------
         list
-            List of potential mergers between two cluster-distinct ancillas. 
+            List of potential mergers between two cluster-distinct ancillas.
         list
             List of odd-parity clusters to be placed in new buckets.
         """
@@ -314,7 +323,7 @@ class Toric(SimCode):
         cluster
             The cluster to be grown.
         union_list
-            List of potential mergers between two cluster-distinct ancillas. 
+            List of potential mergers between two cluster-distinct ancillas.
         """
         cluster.support = 1 - cluster.support
         cluster.bound, cluster.new_bound = cluster.new_bound, []
@@ -353,7 +362,7 @@ class Toric(SimCode):
         Parameters
         ----------
         union_list
-            List of potential mergers between two cluster-distinct ancillas. 
+            List of potential mergers between two cluster-distinct ancillas.
         """
         if union_list and self.config["print_steps"]:
             print("Fusing clusters")
@@ -407,7 +416,12 @@ class Toric(SimCode):
                 print(string, cluster)
 
     def union_check(
-        self, edge: Edge, ancilla: AncillaQubit, new_ancilla: AncillaQubit, cluster: Cluster, new_cluster: Cluster
+        self,
+        edge: Edge,
+        ancilla: AncillaQubit,
+        new_ancilla: AncillaQubit,
+        cluster: Cluster,
+        new_cluster: Cluster,
     ) -> bool:
         """Checks whether ``cluster`` and ``new_cluster`` can be joined on ``edge``.
 
@@ -476,10 +490,12 @@ class Toric(SimCode):
                     and ancilla.cluster
                     and ancilla.cluster.instance == self.code.instance
                 ):
+                    if not self.config["dynamic_forest"]:
+                        self.static_forest(ancilla)
                     cluster = self.get_cluster(ancilla)
                     self.peel_leaf(cluster, ancilla)
 
-    def peel_leaf(self, cluster: Cluster, ancilla: AncillaQubit, **kwargs):
+    def peel_leaf(self, cluster, ancilla):
         """Recursive function which peels a branch of the tree if the input ancilla is a pendant ancilla
 
         If there is only one neighbor of the input ancilla that is in the same cluster, this ancilla is a pendant ancilla and can be peeled. The function calls itself on the other ancilla of the edge leaf.
@@ -493,35 +509,40 @@ class Toric(SimCode):
         ancilla
             Pendant ancilla of the edge to be peeled.
         """
-        num_connect = 0
-        connect_key = None
+        leaf = self.find_leaf(cluster, ancilla)
+        if leaf:
+            key, (new_ancilla, edge) = leaf
+            if ancilla.syndrome:
+                self.flip_edge(ancilla, edge, new_ancilla)
+                if type(key) is not int:
+                    self.correct_edge(self.code.ancilla_qubits[self.code.decode_layer][ancilla.loc], key)
+            else:
+                self._edge_peel(edge, variant="peel")
+            ancilla.peeled = self.code.instance
+            self.peel_leaf(cluster, new_ancilla)
 
-        for key in ancilla.parity_qubits:
-            (new_ancilla, edge) = self.get_neighbor(ancilla, key)
+
+    def find_leaf(self, cluster: Cluster, ancilla: AncillaQubit, **kwargs):
+        num_connect, leaf = 0, ()
+        neighbors = self.get_neighbors(ancilla)
+        for key, neighbor in neighbors.items():
+            (new_ancilla, edge) = neighbor
             if self.support[edge] == 2:
                 new_cluster = self.get_cluster(new_ancilla)
                 if new_cluster is cluster:
                     num_connect += 1
-                    connect_key = key
+                    leaf = (key, neighbor)
             if num_connect > 1:
-                break
+                return
         else:
             if num_connect == 1:
-                if not self.config["dynamic_forest"]:
-                    self.static_forest(ancilla)
-                (new_ancilla, edge) = self.get_neighbor(ancilla, connect_key)
-                if ancilla.measured_state:
-                    self.flip_edge(ancilla, edge, new_ancilla)
-                    self.correct_edge(ancilla, connect_key)
-                else:
-                    self._edge_peel(edge, variant="peel")
-                ancilla.peeled = self.code.instance
-                self.peel_leaf(cluster, new_ancilla)
+                return leaf
+  
 
     def flip_edge(self, ancilla: AncillaQubit, edge: Edge, new_ancilla: AncillaQubit, **kwargs):
         """Flips the values of the ancillas connected to ``edge``."""
-        ancilla.measured_state = not ancilla.measured_state
-        new_ancilla.measured_state = not new_ancilla.measured_state
+        ancilla.syndrome = not ancilla.syndrome
+        new_ancilla.syndrome = not new_ancilla.syndrome
         self.support[edge] = -2
         if self.config["print_steps"]:
             print(f"{edge} to matching")
@@ -548,12 +569,17 @@ class Toric(SimCode):
 
 class Planar(Toric):
     """Union-Find decoder for the planar lattice.
-    
-    See the description of `.unionfind.sim.Toric`. 
+
+    See the description of `.unionfind.sim.Toric`.
     """
 
     def union_check(
-        self, edge: Edge, ancilla: AncillaQubit, new_ancilla: AncillaQubit, cluster: Cluster, new_cluster: Cluster
+        self,
+        edge: Edge,
+        ancilla: AncillaQubit,
+        new_ancilla: AncillaQubit,
+        cluster: Cluster,
+        new_cluster: Cluster,
     ) -> bool:
         # Inherited docsting
         p_bound = (

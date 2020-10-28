@@ -1,21 +1,95 @@
-'''
+"""
 Contains methods to run a simulated lattice of the surface code.
 The graph type (2D/3D) and decoder (MWPM, unionfind...) are specified and are loaded.
 One can choose to run a simulated lattice for a single, multiple or many (multithreaded) multiple iterations.
 
-'''
-from .configuration2 import setup_decoder
-from progiter import ProgIter
-import multiprocessing as mp
-from collections import defaultdict as dd
-from . import printing as pr
-import numpy as np
+"""
+from types import ModuleType
+from typing import List, Optional, Union
+from collections import defaultdict
+from functools import wraps
+from multiprocessing import Manager, Process, Queue, cpu_count
+import timeit
 import random
-import time
+import numpy
+from . import decoders
+from . import codes
+from .errors._template import Sim as Error
 
 
-def init_random_seed(seed=None, **kwargs):
-    '''
+module_or_name = Union[ModuleType, str]
+
+
+class BenchmarkDecoder(object):
+    def __init__(self, cls_methods_to_benchmark: dict, multiprocess:bool=False, **kwargs):
+        self.operations = cls_methods_to_benchmark
+        self.cls_instances = []
+        self.data = {
+            "durations": defaultdict(list),
+            "num_calls": defaultdict(list),
+            "call_count": defaultdict(int),
+        }
+
+    def add_cls_instance(self, cls_instance):
+        for cls_instance_method, bench_method in self.operations.items():
+            wrapper = getattr(self, bench_method)
+            setattr(
+                cls_instance,
+                cls_instance_method,
+                wrapper(getattr(cls_instance, cls_instance_method)),
+            )
+        cls_instance.benchmarker = self
+        self.cls_instances.append(cls_instance)
+
+
+    def get_mean_var(self, reset: bool = True):
+        processed_data = {}
+        for wrapper, wrapper_data in self.data.items():
+            if wrapper_data.default_factory is list:
+                benchmarked_data = {}
+                for method, method_data in wrapper_data.items():
+                    benchmarked_data[method] = {
+                        "mean": numpy.mean(method_data),
+                        "std": numpy.std(method_data),
+                    }
+                if reset:
+                    self.data[wrapper] = defaultdict(list)
+                if benchmarked_data:
+                    processed_data[wrapper] = benchmarked_data
+        return processed_data
+
+    def duration(self, func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            t = timeit.default_timer()
+            result = func(*args, **kwargs)
+            self.data["durations"][func.__name__].append(timeit.default_timer() - t)
+            return result
+
+        return wrapper
+
+    def count_calls(self, func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            self.data["call_count"][func.__name__] += 1
+            return func(*args, **kwargs)
+
+        return wrapper
+
+    def save_calls(self, func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            result = func(*args, **kwargs)
+            for name, calls in self.data["call_count"].items():
+                self.data["num_calls"][name].append(calls)
+                self.data["call_count"][name] = 0
+            return result
+
+        return wrapper
+
+
+def init_random_seed(seed_prefix: int = "", **kwargs):
+    """
     Initializes random with a seed
 
     If no `seed` is provided, the current timestamp from `time.time()` is used as the seed
@@ -23,221 +97,135 @@ def init_random_seed(seed=None, **kwargs):
     Parameters
     ----------
     seed : optional
-    '''
-    if seed is None:
-        seed = time.time()
+    """
+    seed = seed_prefix + str(timeit.default_timer())
     random.seed(seed)
+    return seed
 
 
-def get_mean_var(dict_values, result={}, **kwargs):
-    '''
-    Calculates the means and variances of a number of lists of values. 
-
-    For every key and item (list of values) in `dict_values`, the mean and variance of the values are stored in the `result` dictionary at with the keys `key_m`, `key_v`, respectively. If a `result` dictionary is provided as input, the mean and variance values are updated to this dictionary and outputted. 
-
-    Parameters
-    ----------
-    dict_values : dict of lists
-        Dictionary with lists of values on which the mean and variance are calculated.
-    result : dict, optional
-        Dictionary in which the means and variances are stored
-
-    Examples
-    --------
-    >>> get_mean_var({"foo": [1,2], "bar": [1,2,3,4,5]})
-    {
-        "foo_m": 1.5,
-        "foo_v": 0.25,
-        "bar_m": 3.0,
-        "bar_v": 2.0
-    }
-    '''
-    for key, list_values in dict_values.items():
-        if list_values:
-            result.update({
-                key+"_m": np.mean(list_values),
-                key+"_v": np.var(list_values)
-            })
-        else:
-            result.update({key+"_m": 0, key+"_v": 0})
-    return result
-            
-
-def single(
+def initialize(
     size,
-    code="toric",
-    decode_module='mwpm',
-    error_rates = {},
-    perfect_measurements=True,
-    seed=None,
-    benchmark=False,
-    called=True,
-    decoder=None,
-    **kwargs
+    Code: module_or_name,
+    Decoder: module_or_name,
+    enabled_errors: List[Union[str, Error]] = [],
+    faulty_measurements: bool = False,
+    show_plots: bool = False,
+    **kwargs,
+):
+    if isinstance(Code, str):
+        Code = getattr(codes, Code)
+    Code_flow = getattr(Code, "plot") if show_plots else getattr(Code, "sim")
+    Code_flow_dim = (
+        getattr(Code_flow, "FaultyMeasurements")
+        if faulty_measurements
+        else getattr(Code_flow, "PerfectMeasurements")
+    )
+
+    if isinstance(Decoder, str):
+        Decoder = getattr(decoders, Decoder)
+    Decoder_flow = getattr(Decoder, "plot") if show_plots else getattr(Decoder, "sim")
+    Decoder_flow_code = getattr(Decoder_flow, Code.__name__.split(".")[-1].capitalize())
+
+    code = Code_flow_dim(size, **kwargs)
+    decoder = Decoder_flow_code(code, **kwargs)
+    code.initialize(*enabled_errors)
+
+    return code, decoder
+
+
+def run(
+    size,
+    Code: module_or_name = "toric",
+    Decoder: module_or_name = "mwpm",
+    enabled_errors: List[Union[str, Error]] = [],
+    error_rates: dict = {},
+    iterations: int = 1,
+    faulty_measurements: bool = False,
+    show_plots: bool = False,
+    seed_prefix: str = "",
+    benchmark: Optional[BenchmarkDecoder] = None,
+    multiprocessing_queue: Optional[Queue] = None,
+    **kwargs,
 ):
     """
     Runs the surface code simulation for one iteration
 
     Parameters
     ----------
-
     size : int
         One-dimensional length of the surface.
     code : str, optional
-        Type of surface code. Name must be equivalent to a code included in `opensurfacesim.code` as `{code}.py`. 
+        Type of surface code. Name must be equivalent to a code included in `opensurfacesim.code` as `{code}.py`.
     decode_module : str, optional
-        Type of decoder. Name must equivalent to a decoder included in `opensurfacesim.decoder` as `{decoder}.py`. 
+        Type of decoder. Name must equivalent to a decoder included in `opensurfacesim.decoder` as `{decoder}.py`.
     error_rates : dict, optional
         Dictionary of included error rates. The keys of this dictionary must be equivalent to one of the keys of the `apply_error()` methods in the error modules in `opensurfacesim.error`.
     perfect_measurments : bool, optional
         Toggle of enabling perfect measurements. ## TODO remove this, must be included in `error_rates`.
     seed : optional
-        The seed used for the `random` module. 
+        The seed used for the `random` module.
     benchmark : bool, optional
         Toggle for adding benchmarking tools to the simulation. See `opensurfacesim.info.benchmark`.
     called, decoder
-        Parameters used when `single` is called by the `multiple` method. 
+        Parameters used when `single` is called by the `multiple` method.
 
     Examples
     --------
     >>> single(8, code="toric", decode_module="mwpm", error_rates={"paulix":0.1})
-    ___________________________________________________________________________
-    OpenSurfaceSim
-    2020 Mark Shui Hu
-    https://github.com/watermarkhu/OpenSurfaceSim
-    ...........................................................................
-    Decoder type: Minimum-Weight Perfect Matching (networkx)
-    Graph type: 2D toric
-    ...........................................................................
-    Simulation using settings:
-    {'iterations': 1, 'paulix': 0.1, 'size': 8}
-    ...........................................................................
-    {'succes': True}
-    
     """
     # Initialize lattice
-    if decoder is None:
-        decoder = setup_decoder(code, decode_module, size, perfect_measurements, benchmark, **kwargs)
-        pr.print_configuration(1, size=size, **error_rates)
 
-    # Initialize errors
-    if seed is None:
-        init_random_seed()
-    else:
-        if type(seed) not in [float, int, str]:
-            raise TypeError("Seed type error. Check if single seed given.")
-        apply_random_seed(seed)
-       
-    decoder.graph.apply_and_measure_errors(**error_rates)
-    decoder.decode()
-    logical_error, correct = decoder.graph.logical_error()
-    decoder._reset()
-
-    if called:
-        output = dict(succes=correct)
-        if benchmark:
-            output.update(**decoder.benchmarker.counters)
-    else:
-        output = correct
-        if benchmark:
-            decoder.benchmarker.get_counters()
-
-    return output
-
-
-
-def multiple(
-    size,
-    iters,
-    code="toric",
-    decode_module="mwpm",
-    error_rates={},
-    perfect_measurements=True,
-    decoder=None,
-    qres=None,
-    worker=0,
-    called=True,
-    progressbar=True,
-    benchmark=False,
-    **kwargs
-):
-    """
-    Runs the peeling decoder for a number of iterations. The graph is reused for speedup.
-    """
-
-    if decoder is None:
-        info = True if worker == 0 else False
-        decoder = setup_decoder(code, decode_module, size,
-            perfect_measurements, benchmark=benchmark, info=info, **kwargs)
-        if info:
-            pr.print_configuration(iters, size=size, **error_rates)
-
-    options = dict(
-        error_rates=error_rates,
-        decoder=decoder,
-        called=0,
-        benchmark=benchmark
+    code, decoder = initialize(
+        size, Code, Decoder, enabled_errors, faulty_measurements, show_plots, **kwargs
     )
+    if benchmark:
+        benchmark.add_cls_instance(decoder)
 
-    iterator = ProgIter(range(iters)) if progressbar else range(iters)
-    result = [single(size, **options, **kwargs) for iter in iterator]
+    output = {"no_error": 0, "decoded": 0}
 
-    if called:
-        output = dict(
-            N       = iters,
-            succes  = sum(result)
-        )
-        if benchmark:
-            output = get_mean_var(decoder.benchmarker.clist, output)
-            decoder.benchmarker.reset_clist()
+    for iteration in range(iterations):
+        print(f"Running iteration {iteration}/{iterations}", end="\r")
+        init_random_seed(seed_prefix)
+        code.random_errors(**error_rates)
+        decoder.decode()
+        if show_plots:
+            code.show_corrected()
+        logical_state = code.logical_state
+        output["no_error"] += code.no_error
+        output["decoded"] += decoder.successfully_decoded
+
+    if multiprocessing_queue is None:
         return output
     else:
-        output = dict(
-            N         = iters,
-            succes    = sum(result),
-        )
-        if benchmark:
-            output.update(**decoder.benchmarker.clist)
-            decoder.benchmarker.reset_clist()
-        qres.put(output)
+        multiprocessing_queue.put(output)
 
 
-def multiprocess(
-        size,
-        iters,
-        decoder=None,
-        processes=None,
-        node=0,
-        **kwargs
-    ):
+def run_multiprocess(size, iterations: int = 1, processes: Optional[int] = None, **kwargs):
     """
     Runs the peeling decoder for a number of iterations, split over a number of processes
     """
 
     if processes is None:
-        processes = mp.cpu_count()
-
-    # Calculate iterations for ieach child process
-    process_iters = iters // processes
+        processes = cpu_count()
+    process_iters = iterations // processes
+    if process_iters == 0:
+        print("Please select more iterations")
+        return
 
     # Initiate processes
-    qres = mp.Queue()
+    mp_queue = Queue()
     workers = []
-
-    options = dict(
-        qres=qres,
-        called=0,
-    )
-
-    if decoder is None or len(decoder) != processes:
-        decoder = [None]*processes
-
-    for i, pdec in enumerate(decoder):
+    for process in range(processes):
         workers.append(
-            mp.Process(
-                target=multiple,
-                args=(size, process_iters),
-                kwargs=dict(worker=i, decoder=pdec, **options, **kwargs)
+            Process(
+                target=run,
+                args=(size,),
+                kwargs={
+                    "iterations": process_iters,
+                    "seed_prefix": f"P{process}",
+                    "multiprocessing_queue": mp_queue,
+                    **kwargs,
+                },
             )
         )
     print("Starting", processes, "workers.")
@@ -246,19 +234,11 @@ def multiprocess(
     for worker in workers:
         worker.start()
 
-    workerlists, output = dd(list), dd(int)
-    for worker in workers:
-        for key, value in qres.get().items():
-            if type(value) == list:
-                workerlists[key].extend(value)
-            else:
-                output[key] += value
-
-    output = get_mean_var(workerlists, output)
+    output = {"no_error": 0, "decoded": 0}
 
     for worker in workers:
-        worker.join()
+        partial_output = mp_queue.get()
+        output["no_error"] += partial_output["no_error"]
+        output["decoded"] += partial_output["decoded"]
 
     return output
-
-

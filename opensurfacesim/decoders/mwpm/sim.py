@@ -180,8 +180,8 @@ class Toric(SimCode):
         dx1 = int(x1 - x0) % size[0]
         dy0 = int(y0 - y1) % size[1]
         dy1 = int(y1 - y0) % size[1]
-        dx, xd = (dx0, "e") if dx0 < dx1 else (dx1, "w")
-        dy, yd = (dy0, "s") if dy0 < dy1 else (dy1, "n")
+        dx, xd = (dx0, (0.5,0)) if dx0 < dx1 else (dx1, (-.5,0))
+        dy, yd = (dy0, (0,-.5)) if dy0 < dy1 else (dy1, (0,0.5))
         return dx, dy, xd, yd
 
     def _walk_and_correct(self, qubit: AncillaQubit, length : float, key : str):
@@ -254,6 +254,6 @@ class Planar(Toric):
         # Inherited docsting
         (x0, y0), (x1, y1) = q0.loc, q1.loc
         dx, dy = int(x0 - x1), int(y0 - y1)
-        yd = "s" if dy > 0 else "n"
-        xd = "e" if dx > 0 else "w"
+        xd = (0.5,0) if dx > 0 else (-.5,0)
+        yd = (0,-.5) if dy > 0 else (0,0.5)
         return abs(dx), abs(dy), xd, yd

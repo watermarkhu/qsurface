@@ -1,100 +1,46 @@
 
 
-# %%
-import opensurfacesim
-pf = opensurfacesim.codes.toric.sim.PerfectMeasurements(10, figure3d=False)
-pf.initialize("pauli")
-
-dc = opensurfacesim.decoders.ufns.plot.Toric(pf, step_bucket=True, print_steps=True, print_tree=True)
+#%%
+import opensurfacesim 
 
 #%%
+benchmarker = opensurfacesim.main.BenchmarkDecoder({"decode":"duration"})
+# benchmarker = None
 
-pf.random_errors(p_bitflip=0.1, pm_bitflip=0.03)
-pf.state_icons()
+output = opensurfacesim.main.run_multiprocess(10,Decoder="mwpm", processes=2,iterations=100, enabled_errors=["pauli"], error_rates={"p_bitflip": 0.1}, benchmark=benchmarker)
 
-
-# dc.decode()
-dc.decode()
-# pf.show_corrected()
-
-
-pf.state_icons()
-print(pf.logical_state, pf.no_error)
+print(output)
+# print(benchmarker.data)
 
 
 # %%
-pf.figure.focus()
-# %%
-pf.figure.close()
+from multiprocessing import Process, Manager
 
-# %%
-dc.figure.focus()
-# %%
-# Using meta class
-
-from inspect import isfunction
-
-class Metaclass(type):
-    def __new__(cls, clsname, bases, attrs, show=False):
-        cls.show = show
-        for attr, value in attrs.items():
-            if isfunction(value):
-                attrs[attr] = cls.get_function(cls, attrs, attr, value)
-        return super(Metaclass, cls).__new__(
-            cls, clsname, bases, attrs)
-
-    def get_function(cls, attrs, attr, value):
-        if cls.show and "show_" + attr in attrs:
-            def function(*args, **kwargs):
-                ret = value(*args, **kwargs)
-                attrs["show_" + attr](*args, **kwargs)
-            return function
-        else:
-            return value
+def f(d, b):
+    d.dict["a"].append(b)
+    d.dict["b"] += [b]
+    d.b += b
+    print(d.dict, d.b)
 
 
+manager = Manager()
 
-def get_class(show):
-    class Test(object, metaclass=Metaclass, show=show):
-        attr = 0
-        class Nested(object):
-            pass
+class Test():
+    def __init__(self,):
+        self.dict = manager.dict(a=[], b=[])
+        self.b = 0
 
-        def test(self, txt ="hello"):
-            print(txt)
+d = Test()
 
-        def show_test(*args, **kwargs):
-            print("world")
-    return Test()
-
-Aclass = get_class(True)
-Bclass = get_class(False)
-# %%
-# Monkey patching 
-
-class DecoratorClass(object):
-    def __init__(self, cls):
-        self._cls = cls
-        
-    def __call__(self, *args, show=False, **kwargs):
-        if show:
-            self._cls._test = self._cls.test
-            self._cls.test = self.get_wrapped()
-        
-        return self._cls(*args, **kwargs)
-    
-    def get_wrapped(self):
-        def function(*args, **kwargs):
-            self._cls._test(*args, **kwargs)
-            self._cls._show_test(*args, **kwargs)
-        return function
+f(d, 3)
+p1 = Process(target=f, args=(d,1))
+p2 = Process(target=f, args=(d,2))
+p1.start()
+p2.start()
+p1.join()
+p2.join()
 
 
-@DecoratorClass
-class Test(object):
-    def test(self, txt ="hello"):
-        print(txt)
+print(d.dict)
 
-    def _show_test(self):
-        print("world")
 # %%

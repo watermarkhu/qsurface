@@ -7,6 +7,7 @@ from collections import defaultdict
 from matplotlib.lines import Line2D
 from pathlib import Path
 
+
 LA = List[AncillaQubit]
 LTAP = List[Tuple[AncillaQubit, PseudoQubit]]
 
@@ -43,7 +44,7 @@ class SimCode(ABC):
         erasure=True,
     )
 
-    def __init__(self, code: PerfectMeasurements, check_compatibility: bool = False, **kwargs):
+    def __init__(self, code: PerfectMeasurements, check_compatibility: bool = False,  **kwargs):
 
         self.code = code
         self.config_file = Path(__file__).resolve().parent / "decoders.ini"
@@ -167,12 +168,19 @@ class SimCode(ABC):
                         ]
                     stars.append((ancilla, pseudo))
         return plaqs, stars
+    
 
     @abstractmethod
     def decode(self, *args, **kwargs):
         """Decodes the surface loaded at ``self.code`` after all ancilla-qubits have been measured."""
         pass
 
+    @property
+    def successfully_decoded(self):
+        for ancilla in self.code.ancilla_qubits[self.code.decode_layer].values():
+            if ancilla.state:
+                return False
+        return True
 
 class PlotCode(SimCode):
     """Decoder plotting class template.

@@ -1,7 +1,7 @@
-from .sim import Toric as ToricTemplate, Planar as PlanarTemplate
+from .sim import Toric as SimToric, Planar as SimPlanar
 from .._template import PlotCode
 
-class Toric(PlotCode, ToricTemplate):
+class Toric(PlotCode, SimToric):
     """Plot MWPM decoder for the toric code.
     
     Attributes
@@ -11,6 +11,6 @@ class Toric(PlotCode, ToricTemplate):
     """
     opposite_keys = dict(n="s", s="n", e="w", w="e")
 
-class Planar(Toric, PlanarTemplate):
+class Planar(Toric, SimPlanar):
     """Plot MWPM decoder for the planar code."""
     pass

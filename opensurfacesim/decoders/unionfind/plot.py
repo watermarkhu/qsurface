@@ -66,7 +66,7 @@ class Toric(SimToric, PlotCode):
     def place_bucket(self, place_list, bucket_i, **kwargs):
         # Inherited docstring
         ret = super().place_bucket(place_list, bucket_i, **kwargs)
-        if self.config["step_bucket"] and not self.config["step_cycle"]:
+        if self.config["step_bucket"] and not self.config["step_cycle"] and bucket_i != -1:
             self.figure.draw_figure(f"Bucket {bucket_i} grown.")
         return ret
 
@@ -88,7 +88,7 @@ class Toric(SimToric, PlotCode):
 
     def cluster_add_ancilla(self, cluster, ancilla, **kwargs):
         # Inherited docstring
-        if ancilla.measured_state:
+        if ancilla.syndrome:
             self.figure._plot_ancilla(ancilla, init=True)
         return super().cluster_add_ancilla(cluster, ancilla, **kwargs)
 
@@ -173,7 +173,7 @@ class Toric(SimToric, PlotCode):
 
 
         def _plot_half_edge(self, edge : Edge, ancilla : AncillaQubit, instance: float, full: bool=False, ):
-            line = Line2D(
+            line = self._draw_line(
                 self.code._parse_boundary_coordinates(
                     self.code.size[0], edge.qubit.loc[0], ancilla.loc[0]
                 ),
@@ -191,7 +191,6 @@ class Toric(SimToric, PlotCode):
             else:
                 edge.uf_plot = {ancilla: (line, instance)}
 
-            self.main_ax.add_line(line)
             self.new_artist(line)
 
         def _plot_full_edge(self, edge, ancilla):
@@ -217,24 +216,24 @@ class Toric(SimToric, PlotCode):
                 "z": lambda x, y: (x, y - self.rc["patch_rectangle_2d"] * 2 ** (1 / 2) / 2),
             }
             # Plot ancilla object
-            ancilla.uf_plot = Rectangle(
+            ancilla.uf_plot = self._draw_rectangle(
                 loc_parse[ancilla.state_type](*ancilla.loc),
                 self.rc["patch_rectangle_2d"],
                 self.rc["patch_rectangle_2d"],
                 rotations[ancilla.state_type],
                 edgecolor=self.colors1[ancilla.state_type],
                 facecolor=self.colors2[ancilla.state_type],
+                linewidth=self.rc["line_width_primary"],
                 picker=self.rc["interact_pick_radius"],
                 zorder=1,
-                lw=self.rc["line_width_primary"],
+                z=ancilla.z,
             )
             ancilla.uf_plot.object = ancilla
-            self.main_ax.add_patch(ancilla.uf_plot)
             if not init:
                 self.new_artist(ancilla.uf_plot)
 
         def _flip_ancilla(self, ancilla):
-            if ancilla.measured_state:
+            if ancilla.syndrome:
                 if hasattr(ancilla, "uf_plot"):
                     self.new_properties(
                         ancilla.uf_plot,
@@ -259,7 +258,36 @@ class Toric(SimToric, PlotCode):
                 print(obj)
 
     class Figure3D(Template3D, Figure2D):
-        pass
+
+        def _plot_half_edge(self, edge : Edge, ancilla : AncillaQubit, instance: float, full: bool=False, ):
+
+            if type(edge.qubit) is DataQubit:
+                edge_z = edge.qubit.z
+            else:
+                edge_z = edge.qubit.z - .5
+                if abs(edge_z - ancilla.z) > 1:
+                    edge_z = self.code.layers - edge.z 
+
+            line = self._draw_line3D(
+                self.code._parse_boundary_coordinates(
+                    self.code.size[0], edge.qubit.loc[0], ancilla.loc[0]
+                ),
+                self.code._parse_boundary_coordinates(
+                    self.code.size[0], edge.qubit.loc[1], ancilla.loc[1]
+                ),
+                (edge_z, ancilla.z),
+                ls=self.rc["line_style_primary"] if full else self.rc["line_style_tertiary"],
+                zorder=0,
+                lw=self.rc["line_width_primary"],
+                color=self.colors2[ancilla.state_type],
+            )
+            line.object = edge
+            if hasattr(edge, "uf_plot"):
+                edge.uf_plot[ancilla] = (line, instance)
+            else:
+                edge.uf_plot = {ancilla: (line, instance)}
+
+            self.new_artist(line)
 
 
 class Planar(Toric, SimPlanar):

@@ -4,4 +4,4 @@ networkx
 matplotlib
 scipy
 progiter
-termcolor
+pptree

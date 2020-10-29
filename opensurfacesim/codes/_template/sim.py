@@ -3,6 +3,7 @@ import time
 from ..elements import DataQubit, AncillaQubit, PseudoQubit, Edge, PseudoEdge
 from ...errors._template import Sim as Error
 from typing import List, Optional, Union, Tuple
+from collections import defaultdict
 import importlib
 
 
@@ -68,7 +69,7 @@ class PerfectMeasurements(ABC):
             setattr(self, key, value)
         self.ancilla_qubits = {}
         self.data_qubits = {}
-        self.pseudo_qubits = {}
+        self.pseudo_qubits = defaultdict(dict)
         self.errors = {}
         self.logical_operators = {}
         self.instance = time.time()
@@ -232,7 +233,7 @@ class PerfectMeasurements(ABC):
     ----------------------------------------------------------------------------------------
     """
 
-    def random_errors(self, apply_order: Optional[List[Error]] = None, **kwargs):
+    def random_errors(self, apply_order: Optional[List[Error]] = None, measure:bool=True, **kwargs):
         """Applies all errors loaded in ``self.errors`` attribute to layer ``z``.
 
         The random error is applied for each loaded error module by calling ``error_module.random_error()``. If ``apply_order`` is specified, the error modules are applied in order of the error names in the list. If no order is specified, the errors are applied in a random order. Addionally, any error rate can set by supplying the rate as a keyword argument e.g. ``p_bitflip = 0.1``.
@@ -250,6 +251,10 @@ class PerfectMeasurements(ABC):
         for error_class in apply_order:
             for qubit in self.data_qubits[self.layer].values():
                 error_class.random_error(qubit, **kwargs)
+        if measure:
+            for ancilla in self.ancilla_qubits[self.layer].values():
+                ancilla.get_state()
+
 
     @staticmethod
     def _parse_boundary_coordinates(size, *args: float) -> List[float]:
@@ -297,7 +302,6 @@ class FaultyMeasurements(PerfectMeasurements):
             self.layers = max(size) if type(size) == tuple else size
         self.decode_layer = self.layers - 1
         self.default_faulty_measurements = dict(pm_bitflip=pm_bitflip, pm_phaseflip=pm_phaseflip)
-        self.pseudo_edges = []
 
     """
     ----------------------------------------------------------------------------------------
@@ -340,7 +344,10 @@ class FaultyMeasurements(PerfectMeasurements):
             self.add_vertical_edge(lower, upper)
 
     def add_vertical_edge(
-        self, lower_ancilla: AncillaQubit, upper_ancilla: AncillaQubit, **kwargs
+        self,
+        lower_ancilla: AncillaQubit,
+        upper_ancilla: AncillaQubit,
+        **kwargs,
     ):
         """Adds a `~.codes.elements.PseudoEdge` to connect two instances of an ancilla-qubit in time.
 
@@ -353,10 +360,10 @@ class FaultyMeasurements(PerfectMeasurements):
         upper_ancilla : `~.codes.elements.AncillaQubit`
             Newer instance of ancilla-qubit.
         """
+
         pseudo_edge = self.pseudoEdge(upper_ancilla, state_type=upper_ancilla.state_type)
-        self.pseudo_edges.append(pseudo_edge)
-        upper_ancilla.vertical_ancillas["d"] = lower_ancilla
-        lower_ancilla.vertical_ancillas["u"] = upper_ancilla
+        upper_ancilla.vertical_edges[lower_ancilla] = pseudo_edge
+        lower_ancilla.vertical_edges[upper_ancilla] = pseudo_edge
         pseudo_edge.nodes = [upper_ancilla, lower_ancilla]
 
     """
@@ -385,7 +392,6 @@ class FaultyMeasurements(PerfectMeasurements):
             pm_bitflip = self.default_faulty_measurements["pm_bitflip"]
         if pm_phaseflip is None:
             pm_phaseflip = self.default_faulty_measurements["pm_phaseflip"]
-        
         for ancilla in self.ancilla_qubits[self.layers - 1].values():
             ancilla.measured_state = False
         for z in range(self.layers - 1):
@@ -402,22 +408,23 @@ class FaultyMeasurements(PerfectMeasurements):
         Parameters
         ----------
         kwargs
-            Keyword arguments are passed on to `~._template.sim.PerfectMeasurements.random_errors`. 
+            Keyword arguments are passed on to `~._template.sim.PerfectMeasurements.random_errors`.
         """
         for data in self.data_qubits[self.layer].values():
-            data.state = self.data_qubits[(self.layer-1) % self.layers][data.loc].state
+            data.state = self.data_qubits[(self.layer - 1) % self.layers][data.loc].state
         super().random_errors(**kwargs)
 
     def random_measure_layer(self, **kwargs):
-        """Measures a layer of ancillas. 
+        """Measures a layer of ancillas.
 
-        If the measured state of the current ancilla is not equal to the measured state of the previous instance, the current ancilla is a syndrome. 
+        If the measured state of the current ancilla is not equal to the measured state of the previous instance, the current ancilla is a syndrome.
 
         Parameters
         ----------
         kwargs
-            Keyword arguments are passed on to `~.codes.elements.AncillaQubit.get_state`. 
+            Keyword arguments are passed on to `~.codes.elements.AncillaQubit.get_state`.
         """
         for ancilla in self.ancilla_qubits[self.layer].values():
+            previous_ancilla = self.ancilla_qubits[(ancilla.z-1)%self.layers][ancilla.loc]
             measured_state = ancilla.get_state(**kwargs)
-            ancilla.syndrome = measured_state != ancilla.vertical_ancillas["d"].measured_state
+            ancilla.syndrome = measured_state != previous_ancilla.measured_state

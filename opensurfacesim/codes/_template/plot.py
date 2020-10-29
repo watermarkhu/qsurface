@@ -42,7 +42,7 @@ class PerfectMeasurements(TemplateSimPM):
 
     def random_errors(self, *args, **kwargs):
         # Inherited docstrings
-        super().random_errors(*args, **kwargs)
+        super().random_errors(*args, **kwargs, measure=False)
         self.figure.interact_axes["error_buttons"].active = True
         self.plot_data("Errors applied", **kwargs)
         self.figure.interact_bodies["error_buttons"].set_active(0)
@@ -50,18 +50,23 @@ class PerfectMeasurements(TemplateSimPM):
         self.plot_ancilla("Ancilla-qubits measured", measure=True)
     
     def show_corrected(self, **kwargs):
+        """Redraws the qubits and ancillas to show their states after decoding."""
         self.plot_data()
         self.plot_ancilla("Decoded.", measure=True)
 
-    def plot_data(self, iter_name: Optional[str] = None, **kwargs):
+    def plot_data(self, iter_name: Optional[str] = None, layer:Optional[float]=None, **kwargs):
         """Update plots of all data-qubits. A plot iteration is added if a ``iter_name`` is supplied. See `.plot.Template2D.draw_figure`."""
-        for qubit in self.data_qubits[self.layer].values():
+        if not layer:
+            layer = self.layer
+        for qubit in self.data_qubits[layer].values():
             self.figure._update_data(qubit, **kwargs)
         if iter_name:
             self.figure.draw_figure(new_iter_name=iter_name)
 
-    def plot_ancilla(self, iter_name: Optional[str] = None, **kwargs):
+    def plot_ancilla(self, iter_name: Optional[str] = None, layer:Optional[float]=None, **kwargs):
         """Update plots of all ancilla-qubits. A plot iteration is added if a ``iter_name`` is supplied. See `.plot.Template2D.draw_figure`."""
+        if not layer:
+            layer = self.layer
         for qubit in self.ancilla_qubits[self.layer].values():
             self.figure._update_ancilla(qubit, **kwargs)
         if iter_name:
@@ -321,7 +326,6 @@ class FaultyMeasurements(PerfectMeasurements, TemplateSimFM):
         TemplateSimFM.__init__(self, *args, **kwargs)
         self.figure = self.Figure3D(self, **kwargs) if figure3d else self.Figure2D(self, **kwargs)
 
-
     def random_errors(self, **kwargs):
         # Inherited docstring
         TemplateSimFM.random_errors(self, **kwargs)
@@ -330,15 +334,14 @@ class FaultyMeasurements(PerfectMeasurements, TemplateSimFM):
         # Inherited docstring
         super().random_errors_layer(**kwargs)
         self.figure.interact_axes["error_buttons"].active = True
-        self.plot_data(f"Layer {self.layer}: errors applied", **kwargs)
+        self.plot_data(f"Layer {self.layer}: errors applied")
     
     def random_measure_layer(self, **kwargs):
         # Inherited docstring
         super().random_measure_layer(**kwargs)
         self.figure.interact_bodies["error_buttons"].set_active(0)
         self.figure.interact_axes["error_buttons"].active = False
-        self.plot_ancilla(f"Layer {self.layer}: ancilla-qubits measured", **kwargs)
-
+        self.plot_ancilla(f"Layer {self.layer}: ancilla-qubits measured")
 
     def plot_data(self, iter_name: Optional[str] = None, **kwargs):
         """Update plots of all data-qubits in layer ``z``. A plot iteration is added if a ``iter_name`` is supplied. See `.plot.Template2D.draw_figure`."""
@@ -414,5 +417,3 @@ class FaultyMeasurements(PerfectMeasurements, TemplateSimFM):
             # Inherited docstring
             for z in range(self.code.layers):
                 super()._plot_surface(z)
-
- 

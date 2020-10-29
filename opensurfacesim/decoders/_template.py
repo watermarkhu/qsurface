@@ -7,6 +7,7 @@ from collections import defaultdict
 from matplotlib.lines import Line2D
 from pathlib import Path
 
+
 LA = List[AncillaQubit]
 LTAP = List[Tuple[AncillaQubit, PseudoQubit]]
 
@@ -43,7 +44,7 @@ class SimCode(ABC):
         erasure=True,
     )
 
-    def __init__(self, code: PerfectMeasurements, check_compatibility: bool = False, **kwargs):
+    def __init__(self, code: PerfectMeasurements, check_compatibility: bool = False,  **kwargs):
 
         self.code = code
         self.config_file = Path(__file__).resolve().parent / "decoders.ini"
@@ -90,6 +91,22 @@ class SimCode(ABC):
         edge = data_qubit.edges[ancilla_qubit.state_type]
         neighbor = edge.nodes[not edge.nodes.index(ancilla_qubit)]
         return neighbor, edge
+
+    def get_neighbors(self, ancilla_qubit: AncillaQubit, loop: bool = False, **kwargs):
+        """Returns all neighboring ancillas, including other time instances.
+
+        Parameters
+        ----------
+        loop
+            Include looped neighbors.
+        """
+        neighbors = {}
+        for key in ancilla_qubit.parity_qubits:
+            neighbors[key] = self.get_neighbor(ancilla_qubit, key)
+        for ancilla, edge in ancilla_qubit.vertical_edges.items():
+            if loop or abs(ancilla.z - ancilla_qubit.z) == 1:
+                neighbors[ancilla.z - ancilla_qubit.z] = (ancilla, edge)    
+        return neighbors
 
     def correct_edge(self, ancilla_qubit: AncillaQubit, key: str, **kwargs) -> AncillaQubit:
         """Applies a correction.
@@ -151,12 +168,19 @@ class SimCode(ABC):
                         ]
                     stars.append((ancilla, pseudo))
         return plaqs, stars
+    
 
     @abstractmethod
     def decode(self, *args, **kwargs):
         """Decodes the surface loaded at ``self.code`` after all ancilla-qubits have been measured."""
         pass
 
+    @property
+    def successfully_decoded(self):
+        for ancilla in self.code.ancilla_qubits[self.code.decode_layer].values():
+            if ancilla.state:
+                return False
+        return True
 
 class PlotCode(SimCode):
     """Decoder plotting class template.
@@ -199,7 +223,7 @@ class PlotCode(SimCode):
         if hasattr(qubit, "surface_lines"):
             self.plot_matching_edge(qubit.surface_lines.get(key, None))
         if hasattr(next_qubit, "surface_lines"):
-            self.plot_matching_edge(next_qubit.surface_lines.get(self.opposite_keys[key], None))
+            self.plot_matching_edge(next_qubit.surface_lines.get(tuple([-i for i in key]), None))
         return next_qubit
 
     def plot_matching_edge(self, line: Optional[Line2D] = None):
@@ -208,11 +232,16 @@ class PlotCode(SimCode):
         Based on the colors defined in ``self.line_color_match``, if a `~matplotlib.lines.Line2D` object is supplied, the color of the edge is changed. A future change back to its original color is immediately saved in ``figure.future_dict``.
         """
         if line:
-            next_iter = self.code.figure.history_iter + 2
+            iteration = self.code.figure.history_iter
             state_type = line.object.state_type
+            self.matching_lines[line] = not self.matching_lines[line]
             if self.matching_lines[line]:
-                self.code.figure.temporary_properties(line, self.line_color_normal[state_type])
-                self.code.figure.future_dict[next_iter].pop(line, None)
+                self.code.figure.future_dict[iteration + 1][line] = self.line_color_match[
+                    state_type
+                ]
+                self.code.figure.future_dict[iteration + 2][line] = self.line_color_normal[
+                    state_type
+                ]
             else:
-                self.code.figure.temporary_properties(line, self.line_color_match[state_type])
-                self.code.figure.future_dict[next_iter][line] = self.line_color_normal[state_type]
+                self.code.figure.future_dict[iteration + 1].pop(line, None)
+                self.code.figure.future_dict[iteration + 2].pop(line, None)

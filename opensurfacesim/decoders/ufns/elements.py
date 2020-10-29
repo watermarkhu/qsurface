@@ -2,7 +2,7 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Optional, Tuple
 from ...codes.elements import AncillaQubit
-
+import pptree
 
 
 class Node(ABC):
@@ -56,7 +56,7 @@ class Node(ABC):
         self.waited = 0
 
     def __repr__(self):
-        return f"{self.short}N{self.primer.loc}|{self.primer.z})"
+        return f"{self.short}N({self.primer.loc[0]},{self.primer.loc[1]}|{self.primer.z})"
 
     @property
     def _status(self):
@@ -126,6 +126,7 @@ class Syndrome(Node):
         )
         return self.parity
 
+
 class Junction(Node):
     short = "J"
 
@@ -173,3 +174,13 @@ class Filler(Node):
     def ns_parity(self, *args, **kwargs) -> int:
         # Inherited docstring
         return self.parity
+
+
+def print_tree(current_node, parent_node: Optional[Node] = None):
+        def get_children(node, parent=None):
+            node.children = [child for child, _ in node.neighbors if child is not parent]
+            for child in node.children:
+                get_children(child, node)
+        get_children(current_node, parent_node)
+        pptree.print_tree(current_node, childattr="children", nameattr="_repr_status", horizontal=False)
+

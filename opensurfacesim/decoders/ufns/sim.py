@@ -1,8 +1,8 @@
 from typing import List, Optional, Tuple
-from ...codes.elements import AncillaQubit, Edge, PseudoQubit
+from ...codes.elements import AncillaQubit, Edge
 from ..unionfind.sim import Toric as UFToric, Planar as UFPlanar
 from ..unionfind.elements import Cluster
-from .elements import Node, Syndrome, Junction, Boundary, Filler
+from .elements import Node, Syndrome, Junction, Boundary, Filler, print_tree
 
 UL = List[Tuple[AncillaQubit, Edge, AncillaQubit]]
 
@@ -83,9 +83,7 @@ class Toric(UFToric):
         if parent:
             ancilla.node = parent.node
 
-        for key in ancilla.parity_qubits:
-            (new_ancilla, edge) = self.get_neighbor(ancilla, key)
-
+        for (new_ancilla, edge) in self.get_neighbors(ancilla).values():
             if (
                 "erasure" in self.code.errors
                 and edge.qubit.erasure == self.code.instance
@@ -169,12 +167,15 @@ class Toric(UFToric):
         if self.config["print_steps"]:
             print(f"{cluster}, ", end="")
 
-        while cluster.root_node.root_list:
-            node, edge, parent_node = cluster.root_node.root_list.pop()
+        for node, edge, parent_node in cluster.root_node.root_list:
             node.ns_parity(parent_node)
             min_delay = node.ns_delay((parent_node, edge))
             if min_delay < cluster.min_delay:
                 cluster.min_delay = min_delay
+        if cluster.root_node.root_list:
+            cluster.root_node.root_list = []
+            if self.config["print_tree"]:
+                print_tree(cluster.root_node)
 
         self.grow_node(cluster, cluster.root_node, union_list)
 
@@ -201,9 +202,7 @@ class Toric(UFToric):
         parent_node
             Parent node in the node-tree to indicate recursive direction.
         '''
-        if self.config["print_tree"]:
-            pass
-        elif self.config["print_steps"]:
+        if self.config["print_steps"]:
             print(node._repr_status)
 
         if node.delay - node.waited == cluster.min_delay:
@@ -265,14 +264,14 @@ class Toric(UFToric):
                 junction.neighbors = [(parent, parent_edge), (child, child_edge)]
                 parent.neighbors.append((junction, parent_edge))
                 child.neighbors.append((junction, child_edge))
-                calc_delay = None if even else [
-                    junction, parent_edge, parent]
+                calc_delay = [junction, parent_edge, parent]
             else:                                         # Connect directly
                 edge = (parent.radius + child.radius) // 2
                 parent.neighbors.append((child, edge))
                 child.neighbors.append((parent, edge))
-                calc_delay = None if even else [child, edge, parent]
-            root_node.root_list.append(calc_delay)
+                calc_delay = [child, edge, parent]
+            if not even:
+                root_node.root_list.append(calc_delay)
 
             string = "{}∪{}=".format(cluster, new_cluster) if self.config["print_steps"] else ""
             if cluster.size < new_cluster.size:

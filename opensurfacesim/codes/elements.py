@@ -23,7 +23,7 @@ class Qubit(ABC):
         self.z = z
 
     def __repr__(self):
-        return f"{self.qubit_type}{self.loc}|{self.z})"
+        return f"{self.qubit_type}({self.loc[0]},{self.loc[1]}|{self.z})"
 
 
 class DataQubit(Qubit):
@@ -97,7 +97,7 @@ class AncillaQubit(Qubit):
     ----------
     parity_qubits : dict of `~opensurfacesim.codes._template.DataQubit`
         All qubits in this dictionary are entangled to the current ancilla for stabilizer measurements.
-    vertical_ancillas : dict of `~opensurfacesim.codes._template.AncillaQubit`
+    vertical_edges : dict of `~opensurfacesim.codes._template.PseudoEdge`
         Vertically connected ancilla that is an instance of the same qubit at a different time, required for faulty measurements. Instances at *u* or *up* refer to instances later in time, and instances at *d* or *down* refer to an instances prior in time.
     state : bool
         Property that measures the parity of the qubits in `self.parity_qubits`.
@@ -124,7 +124,7 @@ class AncillaQubit(Qubit):
         self.measured_state = False
         self.syndrome = False
         self.parity_qubits = {}
-        self.vertical_ancillas = {}
+        self.vertical_edges = {}
         self.measurement_error = False
 
     @property
@@ -236,5 +236,4 @@ class PseudoQubit(AncillaQubit):
 
 class PseudoEdge(Edge):
     """Vertical edge connecting time instances of ancilla-qubits, imitates `.Edge`."""
-
     edge_type, rep = "pseudo", "|"

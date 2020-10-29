@@ -70,23 +70,23 @@ class PerfectMeasurements(ToricPM):
         }
         self.logical_operators = operators
     
-    def state_icons(self, z=0):
+    def state_icons(self, z=0, **kwargs):
         """Prints the state of the surface of layer ``z`` to the console using icons."""
         surface = ""
         for y in range(self.size[1]-1):
-            surface += self.data_qubits[z][(.5, y)].state_icon()
+            surface += self.data_qubits[z][(.5, y)].state_icon(**kwargs)
             for x in range(1, self.size[0]):
-                surface += self.ancilla_qubits[z][(x, y)].state_icon()
-                surface += self.data_qubits[z][(x+.5, y)].state_icon()
-            surface += "\n" + self.ancilla_qubits[z][(.5, y+.5)].state_icon()
+                surface += self.ancilla_qubits[z][(x, y)].state_icon(**kwargs)
+                surface += self.data_qubits[z][(x+.5, y)].state_icon(**kwargs)
+            surface += "\n" + self.ancilla_qubits[z][(.5, y+.5)].state_icon(**kwargs)
             for x in range(1, self.size[0]):
-                surface += self.data_qubits[z][(x, y+.5)].state_icon()
-                surface += self.ancilla_qubits[z][(x+.5, y+.5)].state_icon()
+                surface += self.data_qubits[z][(x, y+.5)].state_icon(**kwargs)
+                surface += self.ancilla_qubits[z][(x+.5, y+.5)].state_icon(**kwargs)
             surface += "\n"
-        surface += self.data_qubits[z][(.5, self.size[1]-1)].state_icon()
+        surface += self.data_qubits[z][(.5, self.size[1]-1)].state_icon(**kwargs)
         for x in range(1, self.size[0]):
-            surface += self.ancilla_qubits[z][(x, self.size[1]-1)].state_icon()
-            surface += self.data_qubits[z][(x+.5, self.size[1]-1)].state_icon()
+            surface += self.ancilla_qubits[z][(x, self.size[1]-1)].state_icon(**kwargs)
+            surface += self.data_qubits[z][(x+.5, self.size[1]-1)].state_icon(**kwargs)
         print(surface, "\n")
 
 class FaultyMeasurements(ToricFM, PerfectMeasurements):

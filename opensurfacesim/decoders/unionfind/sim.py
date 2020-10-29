@@ -59,7 +59,7 @@ class Toric(SimCode):
 
     name = "Union-Find"
     short = "unionfind"
-    cluster = Cluster
+    Cluster = Cluster
 
     compatibility_measurements = dict(
         PerfectMeasurements=True,
@@ -100,7 +100,6 @@ class Toric(SimCode):
                             ]
                         ]
                     ] = 0
-
         if self.config["weighted_growth"]:
             self.buckets_num = self.code.size[0] * self.code.size[1] * self.code.layers * 2
         else:
@@ -220,7 +219,7 @@ class Toric(SimCode):
         plaqs, stars = self.get_syndrome()
         for ancilla in plaqs + stars:
             if ancilla.cluster is None or ancilla.cluster.instance != self.code.instance:
-                cluster = self.cluster(self.cluster_index, self.code.instance)
+                cluster = self.Cluster(self.cluster_index, self.code.instance)
                 self.cluster_add_ancilla(cluster, ancilla)
                 self.cluster_index += 1
                 self.clusters.append(cluster)
@@ -367,53 +366,21 @@ class Toric(SimCode):
         if union_list and self.config["print_steps"]:
             print("Fusing clusters")
 
-        if self.config["degenerate_union"]:
-            merging, count = [], defaultdict(int)
+        for ancilla, edge, new_ancilla in union_list:
+            cluster = self.get_cluster(ancilla)
+            new_cluster = self.get_cluster(new_ancilla)
 
-            for ancilla, edge, new_ancilla in union_list:
-                cluster = self.get_cluster(ancilla)
-                new_cluster = self.get_cluster(new_ancilla)
-                if self.union_check(edge, new_ancilla, cluster, new_cluster):
-                    merging.append((edge, ancilla, new_ancilla))
+            if self.union_check(edge, ancilla, new_ancilla, cluster, new_cluster):
+                string = "{}∪{}=".format(cluster, new_cluster) if self.config["print_steps"] else ""
 
-            for edge, ancilla, new_ancilla in merging:
-                count[ancilla] += 1
-                count[new_ancilla] += 1
-
-            merge_buckets = [[] for i in range(6)]
-            for merge_ancillas in merging:
-                edge, ancilla, new_ancilla = merge_ancillas
-                index = 7 - (count[ancilla] + count[new_ancilla])
-                merge_buckets[index].append(merge_ancillas)
-
-            for merge_bucket in merge_buckets:
-                for items in merge_bucket:
-                    self.union_edge(*items)
-        else:
-            for ancilla, edge, new_ancilla in union_list:
-                self.union_edge(edge, ancilla, new_ancilla)
+                if self.config["weighted_union"] and cluster.size < new_cluster.size:
+                    cluster, new_cluster = new_cluster, cluster
+                cluster.union(new_cluster)
+                if string:
+                    print(string, cluster)
 
         if union_list and self.config["print_steps"]:
             print("")
-
-    def union_edge(
-        self, edge: Edge, ancilla: AncillaQubit, new_ancilla: AncillaQubit, *args, **kwargs
-    ):
-        """Merges the clusters of ``ancilla`` and ``new_ancilla`` on ``edge``.
-
-        Weighted union is conditionally applied. See `union_bucket` for more information.
-        """
-        cluster = self.get_cluster(ancilla)
-        new_cluster = self.get_cluster(new_ancilla)
-
-        if self.union_check(edge, ancilla, new_ancilla, cluster, new_cluster):
-            string = "{}∪{}=".format(cluster, new_cluster) if self.config["print_steps"] else ""
-
-            if self.config["weighted_union"] and cluster.size < new_cluster.size:
-                cluster, new_cluster = new_cluster, cluster
-            cluster.union(new_cluster)
-            if string:
-                print(string, cluster)
 
     def union_check(
         self,
@@ -456,6 +423,8 @@ class Toric(SimCode):
         """
         for cluster in clusters:
 
+            cluster = cluster.find()
+            
             if (cluster.parity % 2 == 1 and not cluster.on_bound) or (
                 cluster.parity % 2 == 0 and cluster.on_bound
             ):

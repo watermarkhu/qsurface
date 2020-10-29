@@ -55,7 +55,7 @@ class SimCode(ABC):
             self.check_compatibility()
 
     def __repr__(self):
-        return "{} decoder ({})".format(self.name, self.__class__.__name__)
+        return "<{} decoder ({})>".format(self.name, self.__class__.__name__)
 
     def check_compatibility(self):
         """Checks compatibility of the decoder with the code class and loaded errors."""
@@ -169,18 +169,11 @@ class SimCode(ABC):
                     stars.append((ancilla, pseudo))
         return plaqs, stars
     
-
     @abstractmethod
     def decode(self, *args, **kwargs):
         """Decodes the surface loaded at ``self.code`` after all ancilla-qubits have been measured."""
         pass
 
-    @property
-    def successfully_decoded(self):
-        for ancilla in self.code.ancilla_qubits[self.code.decode_layer].values():
-            if ancilla.state:
-                return False
-        return True
 
 class PlotCode(SimCode):
     """Decoder plotting class template.

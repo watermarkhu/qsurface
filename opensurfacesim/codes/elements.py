@@ -70,7 +70,7 @@ class DataQubit(Qubit):
         else:
             raise TypeError("new_state must be a dictionary or tuple")
 
-    def state_icon(self):
+    def state_icon(self, **kwargs):
         """Returns the qubit state in a colored icon."""
         if self.state["x"] and self.state["z"]:
             return "🟡"
@@ -157,12 +157,13 @@ class AncillaQubit(Qubit):
 
         return parity
 
-    def state_icon(self):
+    def state_icon(self, measure:bool=False, **kwargs):
         """Returns the qubit state in a colored icon."""
+        state = self.state if measure else self.measured_state
         if self.state_type == "x":
-            return "🟧" if self.measured_state else "🟦"
+            return "🟧" if state else "🟦"
         else:
-            return "🔶" if self.measured_state else "🔷"
+            return "🔶" if state else "🔷"
 
 
 class Edge(object):

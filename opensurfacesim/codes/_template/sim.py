@@ -40,7 +40,10 @@ class PerfectMeasurements(ABC):
         Dictionary with the states corresponding to the logical operators in ``self.logical_operators``.
 
     no_error : bool
-        Indicator for whether there is a logical error in the last iteration. The value for ``self.no_error`` is updated after a call to ``self.logical_state``.
+        Property for whether there is a logical error in the last iteration. The value for ``self.no_error`` is updated after a call to ``self.logical_state``.
+
+    trivial_ancillas : bool
+        Property for whether all ancillas are trivial. Usefull for checking if decoding has been successfull.
 
     instance : float
         Time stamp that is renewed every time `random_errors` is called. Helps with identifying a 'round' of simulation when using class attributes.
@@ -96,8 +99,15 @@ class PerfectMeasurements(ABC):
         self.prev_logical_state = logical_state
         return logical_state
 
+    @property
+    def trivial_ancillas(self):
+        for ancilla in self.ancilla_qubits[self.decode_layer].values():
+            if ancilla.state:
+                return False
+        return True
+
     def __repr__(self):
-        return f"{self.name} {self.size} {self.__class__.__name__}"
+        return f"<{self.name} {self.size} {self.__class__.__name__}>"
 
     """
     ----------------------------------------------------------------------------------------
@@ -254,7 +264,6 @@ class PerfectMeasurements(ABC):
         if measure:
             for ancilla in self.ancilla_qubits[self.layer].values():
                 ancilla.get_state()
-
 
     @staticmethod
     def _parse_boundary_coordinates(size, *args: float) -> List[float]:

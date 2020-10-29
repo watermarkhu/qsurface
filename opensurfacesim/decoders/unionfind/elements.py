@@ -24,7 +24,7 @@ class Cluster(object):
         Growth state of the cluster.
     parity : int
         Parity of this cluster based on the number non-trivial ancilla-qubits.
-    parent : `.Cluster`
+    parent : `~.unionfind.elements.Cluster`
         The parent cluster of the current cluster.
     bound, new_bound : list, `[[inner_ancilla, edge, outer_ancilla],...]`
         The current and next boundary of the current cluster. 

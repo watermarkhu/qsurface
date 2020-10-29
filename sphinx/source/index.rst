@@ -8,6 +8,16 @@
 
 .. mdinclude:: ../../README.md
 
+Main usage
+==========
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Main
+
+   main
+
+
 Modules
 =======
 

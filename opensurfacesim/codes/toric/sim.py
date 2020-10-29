@@ -66,17 +66,17 @@ class PerfectMeasurements(TemplatePM):
         self.logical_operators = operators
 
 
-    def state_icons(self, z=0):
+    def state_icons(self, z=0, **kwargs):
         """Prints the state of the surface of layer ``z`` to the console using icons."""
         surface = ""
         for y in range(self.size[1]):
             for x in range(self.size[0]):
-                surface += self.ancilla_qubits[z][(x,y)].state_icon()
-                surface += self.data_qubits[z][(x + .5, y)].state_icon()
+                surface += self.ancilla_qubits[z][(x,y)].state_icon(**kwargs)
+                surface += self.data_qubits[z][(x + .5, y)].state_icon(**kwargs)
             surface += "\n" 
             for x in range(self.size[0]):
-                surface += self.data_qubits[z][(x, y + .5)].state_icon()
-                surface += self.ancilla_qubits[z][(x+.5, y+.5)].state_icon()
+                surface += self.data_qubits[z][(x, y + .5)].state_icon(**kwargs)
+                surface += self.ancilla_qubits[z][(x+.5, y+.5)].state_icon(**kwargs)
             surface += "\n" 
         print(surface)
 

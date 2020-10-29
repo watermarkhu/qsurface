@@ -11,7 +11,7 @@ from simulator.threshold.plot import plot_compare
 
 parser = argparse.ArgumentParser(
     prog="threshold_compare",
-    description="can compare thresholds and other paramters of different sims",
+    description="can compare thresholds and other parameters of different sims",
 )
 
 arguments = [

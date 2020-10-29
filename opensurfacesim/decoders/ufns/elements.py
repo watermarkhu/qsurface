@@ -10,10 +10,10 @@ class Node(ABC):
 
     A subgraph :math:`\mathcal{V}\subseteq C` is a spanning-tree of a cluster :math:`C` if it is a connected acyclic subgraph that includes all vertices of :math:`C` and a minimum number of edges. We call the spanning-tree of a cluster its ancilla-tree. An acyclic connected spanning-forest is required for the Union-Find Decoder.
 
-    A node-tree :math:`\mathcal{N}` is a partition of a ancilla-tree :math:`\mathcal{V}`, such that each element of the partition -- which we call a *node* :math:`n` -- represents a set of adjacent vertices that lie at the same distance -- the *node radius} :math:`r` -- from the *primer ancilla*, which initializes the node and lies at its center. The node-tree is a directed acyclic graph, and its edges :math:`\m{E}_i` have lengths equal to the distance between the primer vertices of neighboring nodes. 
+    A node-tree :math:`\mathcal{N}` is a partition of a ancilla-tree :math:`\mathcal{V}`, such that each element of the partition -- which we call a *node* :math:`n` -- represents a set of adjacent vertices that lie at the same distance -- the *node radius} :math:`r` -- from the *primer ancilla*, which initializes the node and lies at its center. The node-tree is a directed acyclic graph, and its edges :math:`\mathcal{E}_i` have lengths equal to the distance between the primer vertices of neighboring nodes. 
 
-    Paramters
-    ---------
+    Parameters
+    ----------
     primer
         Primer ancilla-qubit.
 
@@ -77,7 +77,7 @@ class Node(ABC):
 
         Head recursive function that calculates the delays of the current node and all its descendent nodes. 
 
-        .. math:: n_d = m_d + \floor{n_r-m_r}- (-1)^{n_p}\abs{(n,m)}.
+        .. math:: n_d = m_d + \\lfloor n_r-m_r \\rfloor - (-1)^{n_p} |(n,m)|
 
         The minimal delay ``min_delay`` in the tree is maintained as the actual delay is relative to the minimal delay value within the entire node-tree. 
 
@@ -111,7 +111,7 @@ class Syndrome(Node):
 
         Tail recursive function that calculates the parities of the current node and all its descendent nodes.
 
-        .. math:: s_p &= \hspace{.6cm}\big( \sum_{\mathclap{n \in \text{ children of } s}} (1+s_p) \big ) \bmod 2
+        .. math:: s_p = \\big( \\sum_{n \\in \\text{ children of } s} (1+s_p)\ \\big ) \\bmod 2
 
         Parameters
         ----------

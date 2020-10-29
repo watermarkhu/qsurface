@@ -10,7 +10,7 @@ UL = List[Tuple[AncillaQubit, Edge, AncillaQubit]]
 class Toric(UFToric):
     """Union-Find Node-Suspension decoder for the toric lattice.
     
-    Within the combined Union-Find and Node-Suspension data structure, every `~.unionfind.elements.Cluster` is partitioned into one or more `~.ufns.elements.Node`\ s. The ``node`` attribute is monkey-patched to the ``~.codes.elements.AncillaQubit` object to assist the identification of its parent `~.ufns.elements.Node`. 
+    Within the combined Union-Find and Node-Suspension data structure, every `~.unionfind.elements.Cluster` is partitioned into one or more `~.ufns.elements.Node`\ s. The ``node`` attribute is monkey-patched to the `~.codes.elements.AncillaQubit` object to assist the identification of its parent `~.ufns.elements.Node`. 
 
     The boundary of every cluster is not stored at the cluster object, but divided under its partitioned nodes. Cluster growth is initiated from the root of the node-tree. The attributes ``root_node`` and ``min_delay`` are monkey-patched to the `~.unionfind.elements.Cluster` object to assist with cluster growth in the Node-Suspension data structure. See `grow_node` for more. 
 
@@ -34,10 +34,11 @@ class Toric(UFToric):
     name = "Union-Find Node-Suspension"
     short = "ufns"
 
-    syndromeNode = Syndrome
-    junctionNode = Junction
-    boundaryNode = Boundary
-    fillerNode = Filler
+    Node = Node
+    SyndromeNode = Syndrome
+    JunctionNode = Junction
+    BoundaryNode = Boundary
+    FillerNode = Filler
 
     compatibility_measurements = dict(
         PerfectMeasurements=True,
@@ -58,8 +59,8 @@ class Toric(UFToric):
         super().__init__(*args, **kwargs)
 
         self.code.ancillaQubit.node = None
-        self.cluster.root_node = None
-        self.cluster.min_delay = 0
+        self.Cluster.root_node = None
+        self.Cluster.min_delay = 0
         self.new_boundary = []
     """
     ================================================================================================
@@ -93,7 +94,7 @@ class Toric(UFToric):
                 if new_ancilla.cluster == cluster:  # cycle detected, peel edge
                     self._edge_peel(edge, variant="cycle")
                 else:  # if no cycle detected
-                    self.fillerNode(new_ancilla)
+                    self.FillerNode(new_ancilla)
                     self._edge_full(ancilla, edge, new_ancilla)
                     self.cluster_add_ancilla(cluster, new_ancilla, parent=ancilla)
 
@@ -129,8 +130,8 @@ class Toric(UFToric):
 
         for ancilla in plaqs + stars:
             if ancilla.cluster is None or ancilla.cluster.instance != self.code.instance:
-                node = self.syndromeNode(ancilla)
-                cluster = self.cluster(self.cluster_index, self.code.instance)
+                node = self.SyndromeNode(ancilla)
+                cluster = self.Cluster(self.cluster_index, self.code.instance)
                 cluster.root_node = node
                 self.cluster_add_ancilla(cluster, ancilla)
                 self.cluster_index += 1
@@ -232,54 +233,56 @@ class Toric(UFToric):
                                     2(b). Grow clusters union
     ================================================================================================
     """
-    def union_bucket(self, *args, **kwargs):
-        # Inherited docstring
-        super().union_bucket(*args, **kwargs)
-        self.bound_ancilla_to_node()
-
-    def union_edge(
-        self, edge: Edge, ancilla: AncillaQubit, new_ancilla: AncillaQubit, *args, **kwargs
-    ):
+    def union_bucket(self, union_list: List[Tuple[AncillaQubit, Edge, AncillaQubit]], **kwargs):
         """Potentially merges two neighboring ancillas. 
 
         If the check by `union_check` is passed, the clusters of ``ancilla`` and ``new_ancilla`` are merged. additionally, the node-trees either directly joined, or by the creation of a new *junction-node* which as ``new_ancilla`` as its primer. Weighted union is applied to ensure low operating complexity. 
         """
-        cluster = self.get_cluster(ancilla)
-        new_cluster = self.get_cluster(new_ancilla)
+        if union_list and self.config["print_steps"]:
+            print("Fusing clusters")
 
-        if self.union_check(edge, ancilla, new_ancilla, cluster, new_cluster):
+        for ancilla, edge, new_ancilla in union_list:
+            cluster = self.get_cluster(ancilla)
+            new_cluster = self.get_cluster(new_ancilla)
 
-            node, new_node = ancilla.node, new_ancilla.node
-            even = (cluster.parity + new_cluster.parity) % 2 == 0
+            if self.union_check(edge, ancilla, new_ancilla, cluster, new_cluster):
 
-            if not even and new_cluster.parity % 2 == 0:
-                root_node, parent, child = cluster.root_node, node, new_node
-            else:
-                root_node, parent, child = new_cluster.root_node, new_node, node
+                node, new_node = ancilla.node, new_ancilla.node
+                even = (cluster.parity + new_cluster.parity) % 2 == 0
 
-            if not node.radius % 2 and new_node.radius > 1: # Connect via new junction-node
-                junction = self.junctionNode(new_ancilla)
-                new_ancilla.node = junction
-                parent_edge, child_edge = parent.radius // 2, child.radius // 2
-                junction.neighbors = [(parent, parent_edge), (child, child_edge)]
-                parent.neighbors.append((junction, parent_edge))
-                child.neighbors.append((junction, child_edge))
-                calc_delay = [junction, parent_edge, parent]
-            else:                                         # Connect directly
-                edge = (parent.radius + child.radius) // 2
-                parent.neighbors.append((child, edge))
-                child.neighbors.append((parent, edge))
-                calc_delay = [child, edge, parent]
-            if not even:
-                root_node.root_list.append(calc_delay)
+                if not even and new_cluster.parity % 2 == 0:
+                    root_node, parent, child = cluster.root_node, node, new_node
+                else:
+                    root_node, parent, child = new_cluster.root_node, new_node, node
 
-            string = "{}∪{}=".format(cluster, new_cluster) if self.config["print_steps"] else ""
-            if cluster.size < new_cluster.size:
-                cluster, new_cluster = new_cluster, cluster
-            cluster.union(new_cluster)
-            cluster.root_node = root_node
-            if string:
-                print(string, cluster)
+                if not node.radius % 2 and new_node.radius > 1: # Connect via new junction-node
+                    junction = self.JunctionNode(new_ancilla)
+                    new_ancilla.node = junction
+                    parent_edge, child_edge = parent.radius // 2, child.radius // 2
+                    junction.neighbors = [(parent, parent_edge), (child, child_edge)]
+                    parent.neighbors.append((junction, parent_edge))
+                    child.neighbors.append((junction, child_edge))
+                    calc_delay = [junction, parent_edge, parent]
+                else:                                         # Connect directly
+                    edge = (parent.radius + child.radius) // 2
+                    parent.neighbors.append((child, edge))
+                    child.neighbors.append((parent, edge))
+                    calc_delay = [child, edge, parent]
+                if not even:
+                    root_node.root_list.append(calc_delay)
+
+                string = "{}∪{}=".format(cluster, new_cluster) if self.config["print_steps"] else ""
+                if cluster.size < new_cluster.size:
+                    cluster, new_cluster = new_cluster, cluster
+                cluster.union(new_cluster)
+                cluster.root_node = root_node
+                if string:
+                    print(string, cluster)
+
+        if union_list and self.config["print_steps"]:
+            print("")
+        self.bound_ancilla_to_node()
+
 
 class Planar(Toric, UFPlanar):
     """Union-Find Node-Suspension decoder for the planar lattice.

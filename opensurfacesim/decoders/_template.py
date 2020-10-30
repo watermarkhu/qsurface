@@ -1,15 +1,118 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional, Tuple, Union
-from ..configuration import flatten_dict, init_config
-from ..codes._template.sim import PerfectMeasurements
-from ..codes.elements import AncillaQubit, Edge, PseudoQubit
 from collections import defaultdict
 from matplotlib.lines import Line2D
 from pathlib import Path
+import configparser
+import ast
+import os
+from ..codes._template.sim import PerfectMeasurements
+from ..codes.elements import AncillaQubit, Edge, PseudoQubit
 
 
 LA = List[AncillaQubit]
 LTAP = List[Tuple[AncillaQubit, PseudoQubit]]
+
+
+def write_config(config_dict: dict, path: str):
+    """Writes a configuration file to the path.
+
+    Parameters
+    ----------
+    config_dict : dict
+        Dictionary of configuration parameters. Can be nested.
+    path : str
+        Path to the file. Must include the desired extension.
+    """
+    config = configparser.ConfigParser()
+
+    for key, value in config_dict.items():
+        if type(value) == dict:
+            config[key] = value
+        else:
+            config["main"][key] = value
+
+    with open(path, "w") as configfile:
+        config.write(configfile)
+
+
+def read_config(path: Path, config_dict: Optional[dict] = None) -> dict:
+    """Reads an INI formatted configuration file and parses it to a nested dict
+
+    Each category in the INI file will be parsed as a separate nested dictionary. A default `config_dict` can be provided with default values for the parameters. Parameters under the "main" section will be parsed in the main dictionary. All data types will be converted by `ast.literal_eval()`.
+
+    Parameters
+    ----------
+    path : str
+        Path to the file. Must include the desired extension.
+    config_dict : dict, optional
+        Nested dictionary of default parameters
+
+    Returns
+    -------
+    dict
+        Parsed dictionary.
+
+    Examples
+    --------
+    Let us look at the following example INI file.
+
+        [main]
+        param1 = hello
+
+        [section]
+        param2 = world
+        param3 = 0.1
+
+    This file will be parsed as follows
+
+        >>> read_config("config.ini")
+        {
+            "param1": "hello",
+            "section": {
+                "param2": "world",
+                "param3": 0.1
+            }
+        }
+    """
+    if config_dict is None:
+        config_dict = defaultdict(dict)
+
+    config = configparser.ConfigParser()
+    config.read(path)
+
+    for section_name, section in config._sections.items():
+        section_config = config_dict if section_name == "main" else config_dict[section_name]
+        for key, item in section.items():
+            try: 
+                section_config[key] = ast.literal_eval(item)
+            except:
+                section_config[key] = item
+    return config_dict
+
+
+def init_config(ini_file, write: bool = False, **kwargs):
+    """Reads the default and the user defined INI file.
+
+    First, the INI file stored in file directory is read and parsed. If there exists another INI file in the working directory, the attributes defined there are read, parsed and overwrites and default values.
+
+    Parameters
+    ----------
+    write : bool
+        Writes the default configuration to the working direction of the user.
+
+    See Also
+    --------
+    write_config
+    read_config
+    """
+    config_dict = read_config(ini_file)
+    config_path = Path.cwd() / ini_file.name
+    if write:
+        write_config(config_dict, config_path)
+    if os.path.exists(config_path):
+        read_config(config_path, config_dict)
+    return config_dict
 
 
 class SimCode(ABC):
@@ -44,7 +147,7 @@ class SimCode(ABC):
         erasure=True,
     )
 
-    def __init__(self, code: PerfectMeasurements, check_compatibility: bool = False,  **kwargs):
+    def __init__(self, code: PerfectMeasurements, check_compatibility: bool = False, **kwargs):
 
         self.code = code
         self.config_file = Path(__file__).resolve().parent / "decoders.ini"
@@ -105,7 +208,7 @@ class SimCode(ABC):
             neighbors[key] = self.get_neighbor(ancilla_qubit, key)
         for ancilla, edge in ancilla_qubit.vertical_edges.items():
             if loop or abs(ancilla.z - ancilla_qubit.z) == 1:
-                neighbors[ancilla.z - ancilla_qubit.z] = (ancilla, edge)    
+                neighbors[ancilla.z - ancilla_qubit.z] = (ancilla, edge)
         return neighbors
 
     def correct_edge(self, ancilla_qubit: AncillaQubit, key: str, **kwargs) -> AncillaQubit:
@@ -168,7 +271,7 @@ class SimCode(ABC):
                         ]
                     stars.append((ancilla, pseudo))
         return plaqs, stars
-    
+
     @abstractmethod
     def decode(self, *args, **kwargs):
         """Decodes the surface loaded at ``self.code`` after all ancilla-qubits have been measured."""
@@ -187,18 +290,15 @@ class PlotCode(SimCode):
         super().__init__(*args, **kwargs)
 
         if hasattr(self.code, "figure"):
-            self.rc = self.code.figure.rc
-        else:
-            file = Path(__file__).resolve().parent.parent / "plot.ini"
-            self.rc = flatten_dict(init_config(file))
+            self.params = self.code.figure.params
 
         self.line_color_normal = {
-            "x": dict(color=self.rc["color_edge"]),
-            "z": dict(color=self.rc["color_edge"]),
+            "x": {"color" : self.params.color_edge},
+            "z": {"color" : self.params.color_edge},
         }
         self.line_color_match = {
-            "x": dict(color=self.rc["color_x_secondary"]),
-            "z": dict(color=self.rc["color_z_secondary"]),
+            "x": {"color" : self.params.color_x_secondary},
+            "z": {"color" : self.params.color_z_secondary},
         }
         self.matching_lines = defaultdict(bool)
 

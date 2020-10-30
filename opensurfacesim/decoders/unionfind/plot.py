@@ -29,10 +29,11 @@ class Toric(SimToric, PlotCode):
 
     def decode(self, *args, **kwargs):
         # Inherited docstring
+        params = self.code.figure.params if hasattr(self.code, "figure") else None
         if self.code.__class__.__name__ == "PerfectMeasurements":
-            self.figure = self.Figure2D(self, self.name, **kwargs)
+            self.figure = self.Figure2D(self, self.name, plot_params=params, **kwargs)
         elif self.code.__class__.__name__ == "FaultyMeasurements":
-            self.figure = self.Figure3D(self, self.name, **kwargs)
+            self.figure = self.Figure3D(self, self.name, plot_params=params, **kwargs)
         super().decode(*args, **kwargs)
         self.figure.draw_figure("Press (->/enter) to close decoder figure.")
         self.figure.close()
@@ -124,10 +125,11 @@ class Toric(SimToric, PlotCode):
         def __init__(self, decoder, name, *args, **kwargs) -> None:
             self.decoder = decoder
             self.code = decoder.code
+
             self.decoder = name
             super().__init__(*args, **kwargs)
-            self.colors1 = {"x": self.rc["color_x_primary"], "z": self.rc["color_z_primary"]}
-            self.colors2 = {"x": self.rc["color_x_secondary"], "z": self.rc["color_z_secondary"]}
+            self.colors1 = {"x": self.params.color_x_primary, "z": self.params.color_z_primary}
+            self.colors2 = {"x": self.params.color_x_secondary, "z": self.params.color_z_secondary}
 
         def init_plot(self, **kwargs):
             # Inherited docstring
@@ -137,35 +139,35 @@ class Toric(SimToric, PlotCode):
             handles=[
                 self._legend_scatter(
                     "Syndrome vertex",
-                    facecolors=self.rc["color_x_secondary"],
-                    edgecolors=self.rc["color_x_primary"],
+                    facecolors=self.params.color_x_secondary,
+                    edgecolors=self.params.color_x_primary,
                     marker="s",
                 ),
                 self._legend_scatter(
                     "Syndrome star",
-                    facecolors=self.rc["color_z_secondary"],
-                    edgecolors=self.rc["color_z_primary"],
+                    facecolors=self.params.color_z_secondary,
+                    edgecolors=self.params.color_z_primary,
                     marker="D",
                 ),
                 self._legend_circle(
                     "Half edge",
-                    ls=self.rc["line_style_tertiary"],
-                    color=self.rc["color_edge"],
+                    ls=self.params.line_style_tertiary,
+                    color=self.params.color_edge,
                 ),
                 self._legend_circle(
                     "Full edge",
-                    ls=self.rc["line_style_primary"],
-                    color=self.rc["color_edge"],
+                    ls=self.params.line_style_primary,
+                    color=self.params.color_edge,
                 ),
                 self._legend_circle(
                     "X matching",
-                    ls=self.rc["line_style_primary"],
-                    color=self.rc["color_x_primary"],
+                    ls=self.params.line_style_primary,
+                    color=self.params.color_x_primary,
                 ),
                 self._legend_circle(
                     "Z matching",
-                    ls=self.rc["line_style_primary"],
-                    color=self.rc["color_z_primary"],
+                    ls=self.params.line_style_primary,
+                    color=self.params.color_z_primary,
                 ),
             ]
             labels = [artist.get_label() if hasattr(artist, "get_label") else artist[0].get_label() for artist in handles]
@@ -180,9 +182,9 @@ class Toric(SimToric, PlotCode):
                 self.code._parse_boundary_coordinates(
                     self.code.size[0], edge.qubit.loc[1], ancilla.loc[1]
                 ),
-                ls=self.rc["line_style_primary"] if full else self.rc["line_style_tertiary"],
+                ls=self.params.line_style_primary if full else self.params.line_style_tertiary,
                 zorder=0,
-                lw=self.rc["line_width_primary"],
+                lw=self.params.line_width_primary,
                 color=self.colors2[ancilla.state_type],
             )
             line.object = edge
@@ -194,7 +196,7 @@ class Toric(SimToric, PlotCode):
             self.new_artist(line)
 
         def _plot_full_edge(self, edge, ancilla):
-            self.new_properties(edge.uf_plot[ancilla][0], {"ls": self.rc["line_style_primary"]})
+            self.new_properties(edge.uf_plot[ancilla][0], {"ls": self.params.line_style_primary})
 
         def _hide_edge(self, edge):
             for artist, _ in edge.uf_plot.values():
@@ -210,21 +212,21 @@ class Toric(SimToric, PlotCode):
 
             loc_parse = {
                 "x": lambda x, y: (
-                    x - self.rc["patch_rectangle_2d"] / 2,
-                    y - self.rc["patch_rectangle_2d"] / 2,
+                    x - self.params.patch_rectangle_2d / 2,
+                    y - self.params.patch_rectangle_2d / 2,
                 ),
-                "z": lambda x, y: (x, y - self.rc["patch_rectangle_2d"] * 2 ** (1 / 2) / 2),
+                "z": lambda x, y: (x, y - self.params.patch_rectangle_2d * 2 ** (1 / 2) / 2),
             }
             # Plot ancilla object
             ancilla.uf_plot = self._draw_rectangle(
                 loc_parse[ancilla.state_type](*ancilla.loc),
-                self.rc["patch_rectangle_2d"],
-                self.rc["patch_rectangle_2d"],
+                self.params.patch_rectangle_2d,
+                self.params.patch_rectangle_2d,
                 rotations[ancilla.state_type],
                 edgecolor=self.colors1[ancilla.state_type],
                 facecolor=self.colors2[ancilla.state_type],
-                linewidth=self.rc["line_width_primary"],
-                picker=self.rc["interact_pick_radius"],
+                linewidth=self.params.line_width_primary,
+                picker=self.params.blocking_pick_radius,
                 zorder=1,
                 z=ancilla.z,
             )
@@ -276,9 +278,9 @@ class Toric(SimToric, PlotCode):
                     self.code.size[0], edge.qubit.loc[1], ancilla.loc[1]
                 ),
                 (edge_z, ancilla.z),
-                ls=self.rc["line_style_primary"] if full else self.rc["line_style_tertiary"],
+                ls=self.params.line_style_primary if full else self.params.line_style_tertiary,
                 zorder=0,
-                lw=self.rc["line_width_primary"],
+                lw=self.params.line_width_primary,
                 color=self.colors2[ancilla.state_type],
             )
             line.object = edge

@@ -1,10 +1,8 @@
-from typing import List, Optional, Tuple
-from pathlib import Path
+from typing import List, Optional
 from matplotlib.artist import Artist
 from matplotlib.lines import Line2D
 import matplotlib.pyplot as plt
 from matplotlib.widgets import RadioButtons
-from ...configuration import get_attributes, init_config
 from ...plot import Template2D as TemplatePlotPM, Template3D as TemplatePlotFM
 from .sim import PerfectMeasurements as TemplateSimPM, FaultyMeasurements as TemplateSimFM
 from ..elements import DataQubit, AncillaQubit
@@ -26,9 +24,9 @@ class PerfectMeasurements(TemplateSimPM):
     def initialize(self, *args, **kwargs):
         """Initializes the code with a figure. Also takes keyword arguments for `~.codes._template.plot.PerfectMeasurements.Figure.init_plot`. 
         
-        Since each error object delivers extra plot properties to the figure, which are dependent on the ``self.rc`` values in the figure itself, we must initialize in the following sequence. 
+        Since each error object delivers extra plot properties to the figure, which are dependent on the ``self.params`` values in the figure itself, we must initialize in the following sequence. 
 
-        - First load figure to get ``self.rc`` properties
+        - First load figure to load ``self.params`` instance of the `~.plot.PlotParams` dataclass. 
         - Initialize lattice, error initialization must have figure properties
         - Draw figure with plot elements from errors
         """
@@ -80,32 +78,59 @@ class PerfectMeasurements(TemplateSimPM):
 
         An additional `matplotlib.widgets.RadioButtons` object is added to the figure which allows for the user to choose one of the loaded errors and apply the error directly to a qubit via `_pick_handler`. 
 
-        Default values for code-plot properties such as colors and linewidths are saved in a *plot_codes.ini* file. All parameters within the ini file are parsed by `~.configuration.read_config` and saved to the ``self.rc`` dictionary. The values defined in the ini file can be the predefined values in *plot.ini*. 
-
         Parameters
         ----------
-        code : `~codes._template.plot.PerfectMeasurements`
+        code
+            Surface code instance.
+        kwargs
+            Keyword arguments are passed on to `.plot.Template2D`. 
 
         Attributes
         ----------
         error_methods : dict
-            A dictionary of the various error methods loaded in the outer class. 
+            A dictionary of the various error methods loaded in the outer class.
+        code_params : dict
+            Additional plotting parameters loaded to the `.plot.PlotParams` instance at ``self.params``. 
         """
 
         main_boundary = None
+        code_params = {
+            "data00": {
+                "facecolor" : "color_qubit_face",
+                "edgecolor" : "color_qubit_edge",
+            },
+            "data10": {
+                "facecolor" : "color_x_primary",
+            },
+            "data11": {
+                "facecolor" : "color_y_primary",
+            },
+            "data01": {
+                "facecolor" : "color_z_primary",
+            },
+            "xancilla0": {
+                "facecolor" : "color_qubit_face",
+                "edgecolor" : "color_qubit_edge",
+            },
+            "xancilla1": {
+                "facecolor" : "color_x_secondary",
+                "edgecolor" : "color_qubit_edge",
+            },
+            "zancilla0": {
+                "facecolor" : "color_qubit_face",
+                "edgecolor" : "color_qubit_edge",
+            },
+            "zancilla1": {
+                "facecolor" : "color_z_secondary",
+                "edgecolor" : "color_qubit_edge",
+            },
+        }
 
         def __init__(self, code: TemplateSimPM, *args, **kwargs) -> None:
             super().__init__(*args, init_plot=False, **kwargs)
             self.code = code
             self.error_methods = {}
-            self.rc.update(
-                get_attributes(
-                    self.rc,
-                    init_config(
-                        Path(__file__).resolve().parent.parent / "plot_codes.ini"
-                    )
-                )
-            )
+            self.params.load_params(self.code_params)
 
         def init_plot(self, **kwargs):
             """Plots all elements of the surface code onto the figure. Also takes keyword arguments for `~.codes._template.plot.PerfectMeasurements.Figure.init_legend`. 
@@ -119,7 +144,7 @@ class PerfectMeasurements(TemplateSimPM):
             for error_module in self.code.errors.values():
                 for name, method in error_module.error_methods.items():
                     self.error_methods[name] = method
-            self.interact_axes["error_buttons"] = plt.axes(self.rc["axis_radio"])
+            self.interact_axes["error_buttons"] = plt.axes(self.params.axis_radio)
             self.interact_bodies["error_buttons"] = RadioButtons(
                 self.interact_axes["error_buttons"], ["info"] + list(self.error_methods.keys())
             )
@@ -143,33 +168,33 @@ class PerfectMeasurements(TemplateSimPM):
                 self._legend_circle(
                     "Qubit",
                     marker="o",
-                    color=self.rc["color_edge"],                  
-                    mec=self.rc["color_qubit_edge"],
-                    mfc=self.rc["color_qubit_face"],
-                    ms=self.rc["legend_marker_size"],
+                    color=self.params.color_edge,                  
+                    mec=self.params.color_qubit_edge,
+                    mfc=self.params.color_qubit_face,
+                    ms=self.params.legend_marker_size
                 )
             ]
             item_names = []
             # Error legend items
             for error in self.code.errors.values():
-                for name, properties in error._get_legend_properties().items():
-                    if name not in item_names:
-                        self.lh.append(self._legend_circle(name, **properties))
+                for param_name, name in error.legend_names.items():
+                    if param_name not in item_names:
+                        self.lh.append(self._legend_circle(name, **getattr(self.params, param_name)))
                         item_names.append(name)
 
             self.lh += [
                 self._legend_scatter(
                     "Vertex",
-                    facecolors=self.rc["color_qubit_face"],
-                    edgecolors=self.rc["color_qubit_edge"],
-                    linewidth=self.rc["line_width_primary"],
+                    facecolors=self.params.color_qubit_face,
+                    edgecolors=self.params.color_qubit_edge,
+                    linewidth=self.params.line_width_primary,
                     marker="s",
                 ),
                 self._legend_scatter(
                     "Star",
-                    facecolors=self.rc["color_qubit_face"],
-                    edgecolors=self.rc["color_qubit_edge"],
-                    linewidth=self.rc["line_width_primary"],
+                    facecolors=self.params.color_qubit_face,
+                    edgecolors=self.params.color_qubit_edge,
+                    linewidth=self.params.line_width_primary,
                     marker="D",
                 ),
             ]
@@ -208,12 +233,12 @@ class PerfectMeasurements(TemplateSimPM):
                 Ancilla-qubit to plot.
             """
 
-            linestyles = {"x": self.rc["line_style_primary"], "z": self.rc["line_style_secondary"]}
+            linestyles = {"x": self.params.line_style_primary, "z": self.params.line_style_secondary}
             rotations = {"x": 0, "z": 45}
 
             loc_parse = {
-                "x": lambda x, y: (x - self.rc["patch_rectangle_2d"] / 2, y - self.rc["patch_rectangle_2d"] / 2),
-                "z": lambda x, y: (x, y - self.rc["patch_rectangle_2d"] * 2 ** (1 / 2) / 2),
+                "x": lambda x, y: (x - self.params.patch_rectangle_2d / 2, y - self.params.patch_rectangle_2d / 2),
+                "z": lambda x, y: (x, y - self.params.patch_rectangle_2d * 2 ** (1 / 2) / 2),
             }
 
             # Plot graph edges
@@ -224,8 +249,8 @@ class PerfectMeasurements(TemplateSimPM):
                     self.code._parse_boundary_coordinates(self.code.size[1], qubit.loc[1], data.loc[1]),
                     ls=linestyles[qubit.state_type],
                     zorder=0,
-                    lw=self.rc["line_width_primary"],
-                    color=self.rc["color_edge"],
+                    lw=self.params.line_width_primary,
+                    color=self.params.color_edge,
                     z=z,
                 )
                 qubit.surface_lines[key] = line
@@ -234,14 +259,14 @@ class PerfectMeasurements(TemplateSimPM):
             # Plot ancilla object
             qubit.surface_plot = self._draw_rectangle(
                 loc_parse[qubit.state_type](*qubit.loc),
-                self.rc["patch_rectangle_2d"],
-                self.rc["patch_rectangle_2d"],
+                self.params.patch_rectangle_2d,
+                self.params.patch_rectangle_2d,
                 rotations[qubit.state_type],
-                picker=self.rc["interact_pick_radius"],
+                picker=self.params.blocking_pick_radius,
                 zorder=1,
-                lw=self.rc["line_width_primary"],
+                lw=self.params.line_width_primary,
                 z=z,
-                **self.rc["{}ancilla0".format(qubit.state_type)]
+                **getattr(self.params, f"{qubit.state_type}ancilla0")
             )
             qubit.surface_plot.object = qubit                       # Save qubit to artist
 
@@ -255,23 +280,24 @@ class PerfectMeasurements(TemplateSimPM):
             """
             state = qubit.state if measure else qubit.measured_state
 
-            properties = self.rc[
-                "{}ancilla{}".format(qubit.state_type, int(state))
-            ]
+            properties = getattr(
+                self.params,
+                f"{qubit.state_type}ancilla{int(state)}"
+            )
             properties["edgecolor"] = (
-                self.rc[f"faulty_{qubit.state_type}_mec"]
+                getattr(self.params, f"color_{qubit.state_type}_primary") 
                 if qubit.measurement_error else
-                self.rc["color_qubit_edge"]
+                self.params.color_qubit_edge
             )
             if qubit.syndrome:
                 properties.update({
-                    "linestyle": self.rc["syndrome_line_style"],
-                    "linewidth": self.rc["syndrome_line_width"]
+                    "linestyle": self.params.line_style_primary,
+                    "linewidth": self.params.line_width_secondary
                 })
             else:
                 properties.update({
-                    "linestyle": self.rc["line_style_primary"],
-                    "linewidth": self.rc["line_width_primary"]
+                    "linestyle": self.params.line_style_primary,
+                    "linewidth": self.params.line_width_primary
                 })
 
             if not artist:
@@ -289,12 +315,12 @@ class PerfectMeasurements(TemplateSimPM):
             """
             qubit.surface_plot = self._draw_circle(
                 qubit.loc,
-                self.rc["patch_circle_2d"],
-                picker=self.rc["interact_pick_radius"],
+                self.params.patch_circle_2d,
+                picker=self.params.blocking_pick_radius,
                 zorder=1,
-                lw=self.rc["line_width_primary"],
+                lw=self.params.line_width_primary,
                 z=z,
-                **self.rc["data00"]
+                **self.params.data00
             )
             qubit.surface_plot.object = qubit                       # Save qubit to artist
 
@@ -310,7 +336,7 @@ class PerfectMeasurements(TemplateSimPM):
             """
             x_state = int(qubit.edges["x"].state)
             z_state = int(qubit.edges["z"].state)
-            properties = self.rc["data{}{}".format(x_state, z_state)]
+            properties = getattr(self.params, f"data{x_state}{z_state}")
             if not artist:
                 artist = qubit.surface_plot
             if temporary:
@@ -365,32 +391,32 @@ class FaultyMeasurements(PerfectMeasurements, TemplateSimFM):
             items = [
                 self._legend_scatter(
                     "Syndrome vertex",
-                    linestyle=self.rc["syndrome_line_style"],
-                    linewidth=self.rc["syndrome_line_width"],
-                    facecolors=self.rc["color_qubit_face"],
-                    edgecolors=self.rc["color_qubit_edge"],
+                    linestyle=self.params.line_style_primary,
+                    linewidth=self.params.line_width_secondary,
+                    facecolors=self.params.color_qubit_face,
+                    edgecolors=self.params.color_qubit_edge,
                     marker="s",
                 ),
                 self._legend_scatter(
                     "Syndrome star",
-                    linestyle=self.rc["syndrome_line_style"],
-                    linewidth=self.rc["syndrome_line_width"],
-                    facecolors=self.rc["color_qubit_face"],
-                    edgecolors=self.rc["color_qubit_edge"],
+                    linestyle=self.params.line_style_primary,
+                    linewidth=self.params.line_width_secondary,
+                    facecolors=self.params.color_qubit_face,
+                    edgecolors=self.params.color_qubit_edge,
                     marker="D",
                 ),
                 self._legend_scatter(
                     "Faulty vertex",
-                    facecolors=self.rc["color_qubit_face"],
-                    edgecolors=self.rc["faulty_x_mec"],
-                    linewidth=self.rc["line_width_primary"],
+                    facecolors=self.params.color_qubit_face,
+                    edgecolors=self.params.color_x_primary,
+                    linewidth=self.params.line_width_primary,
                     marker="s",
                 ),
                 self._legend_scatter(
                     "Faulty star",
-                    facecolors=self.rc["color_qubit_face"],
-                    edgecolors=self.rc["faulty_z_mec"],
-                    linewidth=self.rc["line_width_primary"],
+                    facecolors=self.params.color_qubit_face,
+                    edgecolors=self.params.color_z_primary,
+                    linewidth=self.params.line_width_primary,
                     marker="D",
                 ),
             ]

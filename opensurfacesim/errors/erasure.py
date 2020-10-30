@@ -46,7 +46,25 @@ class Sim(TemplateSim):
 class Plot(TemplatePlot, Sim):
     """Plot erasure error class."""
 
-    legend_items = ["Erasure"]
+    legend_params = {
+        "legend_erasure": {
+            "marker" : "$\u25CC$",
+            "color" : "color_edge",
+            "ms" : "legend_marker_size",
+            "mfc" : "color_background",
+            "mec" : "color_qubit_edge",
+        }
+    }
+    legend_names = {"legend_erasue": "Erasure"}
+    plot_params = {
+        "qubit_erased": {
+            "linestyle" : "line_style_tertiary",
+            "facecolor" : "color_qubit_face"
+        },
+        "qubit_restored": {
+            "linestyle" : "line_style_primary",
+        }
+    }
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, *kwargs)
@@ -55,8 +73,8 @@ class Plot(TemplatePlot, Sim):
     def erasure_error(self, qubit):
         # Inherited docstrings
         super().erasure_error(qubit)
-        self.code.figure.new_properties(qubit.surface_plot, self.plot_properties["erased"])
-        properties = self.plot_properties["non_erased"]
+        self.code.figure.new_properties(qubit.surface_plot, self.params["qubit_erased"])
+        properties = self.params["qubit_restored"]
         future_properties = self.code.figure.future_dict[self.code.figure.history_iter + 3]
         if qubit.surface_plot in future_properties:
             future_properties[qubit.surface_plot].update(properties)

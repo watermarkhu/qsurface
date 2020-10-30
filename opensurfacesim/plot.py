@@ -9,74 +9,133 @@ from matplotlib.widgets import Button
 from matplotlib.blocking_input import BlockingInput
 from matplotlib.patches import Circle, Rectangle
 from collections import defaultdict
-from .configuration import flatten_dict, init_config
 import tkinter
 import numpy as np
-from pathlib import Path
 
 
 mpl.use("TkAgg")
-color_type = Union[str, Tuple[float,float,float,float]]
+color_type = Union[str, Tuple[float, float, float, float]]
 axis_type = Tuple[float, float, float, float]
+
 
 @dataclass
 class PlotParams:
-    blocking_wait :float = -1
-    blocking_pick_radius :float = 10
+    """Parameters for the plotting template classes.
 
-    scale_figure_length :float = 10
-    scale_figure_height :float = 10
-    scale_font_primary :float = 12
-    scale_font_secondary :float = 10
-    scale_3d_layer :float = 8
+    Contains all parameters used in inherited objects of `.Template2D` and `.Template3D`. The dataclass is initialized with many default values for an optimal plotting experience. But if any parameters should be changed, the user can call the class to create its own instance of plotting paramters, where the altered paramters are supplied as keyword arguments. The instance can be supplied to the plotting class via the ``plot_params`` keyword argument. 
 
-    color_background : color_type = (1, 1, 1, 0)
-    color_edge : color_type = (0.8, 0.8, 0.8, 1)
-    color_qubit_edge : color_type = (0.7, 0.7, 0.7, 1)
-    color_qubit_face : color_type = (0.95, 0.95, 0.95, 1)
-    color_x_primary : color_type = (0.9, 0.3, 0.3, 1)
-    color_z_primary : color_type = (0.5, 0.5, 0.9, 1)
-    color_y_primary : color_type = (0.9, 0.9, 0.5, 1)
-    color_x_secondary : color_type = (0.9, 0.7, 0.3, 1)
-    color_z_secondary : color_type = (0.3, 0.9, 0.3, 1)
-    color_y_secondary : color_type = (0.9, 0.9, 0.5, 1)
-    color_x_tertiary : color_type = (0.5, 0.1, 0.1, 1)
-    color_z_tertiary : color_type = (0.1, 0.1, 0.5, 1)
-    color_y_tertiary : color_type = (0.9, 0.9, 0.5, 1)
+    Examples
+    --------
+    See the below example where the background color of the figure is changed to black. Note that we first have to inherited from the `.Template2D` class and supply a `~.Template2D.init_plot` method for it to be able to be instanced. 
 
-    alpha_primary :float = 0.35
-    alpha_secondary :float = 0.5
+        >>> class Plotting(Template2D):
+        ...     def init_plot():
+        ...         pass
+        >>> custom_params = PlotParams(color_background = (0,0,0,1))
+        >>> plot_with_custom_params = Plotting(plot_params=custom_params)
+    """
 
-    line_width_primary :float = 1.5
-    line_width_secondary :float = 3
-    line_style_primary :str = "solid"
-    line_style_secondary :str = "dashed"
-    line_style_tertiary :str = "dotted"
+    blocking_wait: float = -1
+    blocking_pick_radius: float = 10
 
-    patch_circle_2d :float = 0.1
-    patch_rectangle_2d :float = 0.1
-    patch_circle_3d :float = 30
-    patch_rectangle_3d :float = 30
+    scale_figure_length: float = 10
+    scale_figure_height: float = 10
+    scale_font_primary: float = 12
+    scale_font_secondary: float = 10
+    scale_3d_layer: float = 8
+
+    color_background: color_type = (1, 1, 1, 0)
+    color_edge: color_type = (0.8, 0.8, 0.8, 1)
+    color_qubit_edge: color_type = (0.7, 0.7, 0.7, 1)
+    color_qubit_face: color_type = (0.95, 0.95, 0.95, 1)
+    color_x_primary: color_type = (0.9, 0.3, 0.3, 1)
+    color_z_primary: color_type = (0.5, 0.5, 0.9, 1)
+    color_y_primary: color_type = (0.9, 0.9, 0.5, 1)
+    color_x_secondary: color_type = (0.9, 0.7, 0.3, 1)
+    color_z_secondary: color_type = (0.3, 0.9, 0.3, 1)
+    color_y_secondary: color_type = (0.9, 0.9, 0.5, 1)
+    color_x_tertiary: color_type = (0.5, 0.1, 0.1, 1)
+    color_z_tertiary: color_type = (0.1, 0.1, 0.5, 1)
+    color_y_tertiary: color_type = (0.9, 0.9, 0.5, 1)
+
+    alpha_primary: float = 0.35
+    alpha_secondary: float = 0.5
+
+    line_width_primary: float = 1.5
+    line_width_secondary: float = 3
+    line_style_primary: str = "solid"
+    line_style_secondary: str = "dashed"
+    line_style_tertiary: str = "dotted"
+
+    patch_circle_2d: float = 0.1
+    patch_rectangle_2d: float = 0.1
+    patch_circle_3d: float = 30
+    patch_rectangle_3d: float = 30
 
     legend_line_width = 1
     legend_marker_size = 10
 
-    axis_main :axis_type = (0.075, 0.1, 0.7, 0.85)
-    axis_block :axis_type = (0.96, 0.01, 0.03, 0.03)
-    axis_nextbutton :axis_type = (0.85, 0.05, 0.125, 0.05)
-    axis_prevbutton :axis_type = (0.85, 0.12, 0.125, 0.05)
-    axis_legend :axis_type = (0.85, 0.5, 0.125, 0.3)
-    axis_text :axis_type = (0.05, 0.025, 0.7, 0.05)
-    axis_radio :axis_type = (0.85, 0.19, 0.125, 0.125)
+    axis_main: axis_type = (0.075, 0.1, 0.7, 0.85)
+    axis_block: axis_type = (0.96, 0.01, 0.03, 0.03)
+    axis_nextbutton: axis_type = (0.85, 0.05, 0.125, 0.05)
+    axis_prevbutton: axis_type = (0.85, 0.12, 0.125, 0.05)
+    axis_legend: axis_type = (0.85, 0.5, 0.125, 0.3)
+    axis_text: axis_type = (0.05, 0.025, 0.7, 0.05)
+    axis_radio: axis_type = (0.85, 0.19, 0.125, 0.125)
 
-    font_default_size : float = 12
-    font_title_size : float = 16
-    font_button_size : float = 12
+    font_default_size: float = 12
+    font_title_size: float = 16
+    font_button_size: float = 12
 
-    axis3d_pane_color : color_type = (1, 1, 1, 0)
-    axis3d_line_color : color_type = (0, 0, 0, 0.1)
-    axis3d_grid_line_style : str = "dotted"
-    axis3d_grid_line_alpha : float = 0.2
+    axis3d_pane_color: color_type = (1, 1, 1, 0)
+    axis3d_line_color: color_type = (0, 0, 0, 0.1)
+    axis3d_grid_line_style: str = "dotted"
+    axis3d_grid_line_alpha: float = 0.2
+
+    def load_params(self, param_dict):
+        """Loads extra plotting parameters.
+        
+        Additional parameters can be loaded to the dataclass via this method. The additional parameters must be a dictionary where values are stored to the dataclass with the key as attribute name. If the value is a string that equals to any already defined dataclass attribute, the value at the existing attribute is used for the new parameter. See examples.
+
+        Parameters
+        ----------
+        params_dict
+            Dictionary or dictionary of dictionaries of additional parameters. 
+
+        Examples
+        --------
+        New parameters can be added to the dataclass. Values of dataclass attributes are used if present. 
+
+            >>> params = PlotParams()
+            >>> params.alpha_primary
+            0.35
+            >>> params.load_params({
+            ...     "new_attr" : "some_value",
+            ...     "use_existing" : "alpha_primary",   
+            ... })
+            >>> params.new_attr
+            some_value
+            >>> params.use_existing
+            0.35
+
+        Nested dictionaries will also load existing attribute values.
+
+            >>> params.load_params({
+            ...     "category": {
+            ...         "new_attr" : "some_value",
+            ...         "use_existing" : "alpha_primary",   
+            ...     }
+            ... })
+            >>> params.category
+            {"new_attr" : "some_value", "use_existing" : 0.35}
+        """
+        for attribute, value in param_dict.items():
+            if isinstance(value, dict):
+                for sub_attribute, sub_value in value.items():
+                    value[sub_attribute] = getattr(self, sub_value, sub_value)
+                setattr(self, attribute, value)
+            else:
+                setattr(self, attribute, getattr(self, value, value))
 
 
 class BlockingKeyInput(BlockingInput):
@@ -111,13 +170,15 @@ class Template2D(ABC):
 
     Keyboard navigation and picking is enabled by blocking the code via a custom `.BlockingKeyInput` class. While the code is blocked, inputs are caught by the blocking class and processed for history navigation or picking navigation. Moving the iteration past the available history allows for the code to continue. The keyboard input is parsed by :meth:`focus`.
 
-    Default values for plot properties such as colors and linewidths are saved in a 'plot.ini` file. All parameters within the ini file are parsed by :meth:`~opensurfacesim.configuration.read_config` and saved to ``self.rc`` as a dictionary.
+    Default values for plot properties such as colors and linewidths loaded from `.PlotParams`. A custom parameter dataclass can be supplied via the ``plot_params`` keyword argument. 
 
     Parameters
     ----------
-    init_plot : bool, optional
+    init_plot
         Enables drawing all base objects at class initialization.
-
+    plot_params
+        Plotting parameters dataclass containing colors, styles and others. 
+    
     Attributes
     ----------
     figure : `matplotlib.figure.Figure`
@@ -222,12 +283,15 @@ class Template2D(ABC):
     The ``history_dict`` for a plot with a Line2D object and a Circle object. In the second iteration, the color of the Line2D object is updated from black to red, and the linestyle of the Circle object is changed from ``"-"`` to ``":"``.
     """
 
-    def __init__(self, init_plot: bool = True, projection: Optional[str] = None, **kwargs):
+    def __init__(
+        self,
+        init_plot: bool = True,
+        projection: Optional[str] = None,
+        plot_params: Optional[PlotParams] = None,
+        **kwargs,
+    ):
 
-        file = Path(__file__).resolve().parent / "plot.ini"
-        self.rc = flatten_dict(init_config(file))
-        self.rc.update(kwargs)
-
+        self.params = plot_params if plot_params else PlotParams()
         self.figure = None
         self.main_ax = None
         self.history_dict = defaultdict(dict)
@@ -241,20 +305,20 @@ class Template2D(ABC):
 
         # Init figure object
         self.figure = plt.figure(
-            figsize=(self.rc["scale_figure_length"], self.rc["scale_figure_height"])
+            figsize=(self.params.scale_figure_length, self.params.scale_figure_height)
         )
         self.canvas = self.figure.canvas
         self.canvas.mpl_connect("pick_event", self._pick_handler)
         self.blocking_input = BlockingKeyInput(self.figure)
 
         # Init buttons and boxes
-        self.main_ax = plt.axes(self.rc["axis_main"], projection=projection)
-        self.legend_ax = plt.axes(self.rc["axis_legend"])
+        self.main_ax = plt.axes(self.params.axis_main, projection=projection)
+        self.legend_ax = plt.axes(self.params.axis_legend)
         self.legend_ax.axis("off")
 
         self.interact_axes = {
-            "prev_button": plt.axes(self.rc["axis_prevbutton"]),
-            "next_button": plt.axes(self.rc["axis_nextbutton"]),
+            "prev_button": plt.axes(self.params.axis_prevbutton),
+            "next_button": plt.axes(self.params.axis_nextbutton),
         }
         for body in self.interact_axes.values():
             body.active = True
@@ -264,16 +328,16 @@ class Template2D(ABC):
         }
         self.interact_bodies["prev_button"].on_clicked(self._draw_prev)
         self.interact_bodies["next_button"].on_clicked(self._draw_next)
-        self.block_box = plt.axes(self.rc["axis_block"])
+        self.block_box = plt.axes(self.params.axis_block)
         self.block_box.axis("off")
         self.block_icon = self.block_box.scatter(0, 0, color="r")
-        self.text_box = plt.axes(self.rc["axis_text"])
+        self.text_box = plt.axes(self.params.axis_text)
         self.text_box.axis("off")
         self.text = self.text_box.text(
             0.5,
             0.5,
             "",
-            fontsize=self.rc["font_default_size"],
+            fontsize=self.params.font_default_size,
             va="center",
             ha="center",
             transform=self.text_box.transAxes,
@@ -315,13 +379,13 @@ class Template2D(ABC):
 
         Parameters
         ----------
-        limits : tuple, (xmin, ymin, xlength, ylength)
+        limits
             Axis boundaries
-        title : str
+        title
             Axis title.
-        invert : bool
+        invert
             Invert axis.
-        ax : `matplotlib.axes.Axes`
+        ax
             Axis to change.
         """
         if ax is None:
@@ -331,14 +395,13 @@ class Template2D(ABC):
             ax.set_xlim(limits[0], limits[0] + limits[2])
             ax.set_ylim(limits[1], limits[1] + limits[3])
         if title:
-            ax.set_title(title, fontsize=self.rc["font_title_size"])
+            ax.set_title(title, fontsize=self.params.font_title_size)
         for bound in ["top", "right", "bottom", "left"]:
             ax.spines[bound].set_visible(False)
         if invert:
             ax.invert_yaxis()
         if aspect:
             self.main_ax.set_aspect(aspect)
-
 
     """
     -------------------------------------------------------------------------------
@@ -373,7 +436,7 @@ class Template2D(ABC):
         while wait:
             self._set_figure_state("g")
             try:
-                event = self.blocking_input(self.rc["mpl_wait"])
+                event = self.blocking_input(self.params.blocking_wait)
                 if hasattr(event, "button"):  # Catch next button if on most recent
                     if (
                         event.button == 1
@@ -421,9 +484,9 @@ class Template2D(ABC):
 
         Parameters
         ----------
-        color : {"r","g", (1,0,0), (0,1,0), ...}
+        color
             Color of `self.block_icon`.
-        override : bool, optional
+        override
             Overrides the visibility of axes in `self.interact_axes`.
         """
         for ax in self.interact_axes.values():
@@ -447,27 +510,22 @@ class Template2D(ABC):
         return Line2D(
             [],
             [],
-            lw=self.rc["legend_line_width"],
-            mew=self.rc["legend_line_width"],
+            lw=self.params.legend_line_width,
+            mew=self.params.legend_line_width,
             label=label,
             **kwargs,
         )
-    
+
     def _legend_scatter(self, label: str, **kwargs):
         line = Line2D(
             [],
             [],
             label=label,
-            lw=self.rc["legend_line_width"],
-            mew=self.rc["legend_line_width"],
-            color=self.rc["color_edge"]
+            lw=self.params.legend_line_width,
+            mew=self.params.legend_line_width,
+            color=self.params.color_edge,
         )
-        scatter = plt.scatter(
-            [],
-            [],
-            s = 8**2,
-            **kwargs
-        )
+        scatter = plt.scatter([], [], s=8 ** 2, **kwargs)
         return (line, scatter)
 
     def _draw_line(self, X: list, Y: list, *args, z: float = 0, **kwargs):
@@ -480,7 +538,9 @@ class Template2D(ABC):
         self.main_ax.add_patch(artist)
         return artist
 
-    def _draw_rectangle(self, xy: tuple, size_x: float, size_y: float, *args, z: float = 0, **kwargs):
+    def _draw_rectangle(
+        self, xy: tuple, size_x: float, size_y: float, *args, z: float = 0, **kwargs
+    ):
         artist = Rectangle(xy, size_x, size_y, *args, **kwargs)
         self.main_ax.add_patch(artist)
         return artist
@@ -506,11 +566,11 @@ class Template2D(ABC):
 
         Parameters
         ----------
-        new_iter_name : str, optional
+        new_iter_name
             Name of the new iteration. If no name is supplied, no new iteration is called.
-        output : bool, optional
+        output
             Prints information to the console.
-        carriage_return : bool, optional
+        carriage_return
             Applies carriage return to remove last line printed.
 
         See Also
@@ -554,11 +614,11 @@ class Template2D(ABC):
 
         Parameters
         ----------
-        condition : bool
+        condition
             Must be true for navigation.
-        direction : int, {1, -1}
+        direction
             Moves either a single iteration forward or backwards in time.
-        draw : bool, optional
+        draw
             Draws the figure and blocks the code immediately with :meth:`draw_figure`.
 
         Returns
@@ -598,9 +658,9 @@ class Template2D(ABC):
 
         Parameters
         ----------
-        target : int
+        target
             Target plot iteration.
-        draw : bool, optional
+        draw
             Draws the figure and blocks the code immediately with :meth:`draw_figure`.
 
         Returns
@@ -636,9 +696,9 @@ class Template2D(ABC):
 
         Parameters
         ----------
-        artist : `matplotlib.artist.Artist`
+        artist
             New plot artist to add to the ``axis``.
-        axis : `matplotlib.axes.Axes`, optional
+        axis
             Axis to add the figure to.
         """
         if axis is None:
@@ -665,11 +725,11 @@ class Template2D(ABC):
 
         Parameters
         ----------
-        artist : `matplotlib.artist.Artist`
+        artist
             Plot object whose properties are changed.
-        properties : dict
+        properties
             Plot properties to change.
-        saved_properties : dict
+        saved_properties
             Override current properties and parse previous and current history.
         """
 
@@ -717,9 +777,9 @@ class Template2D(ABC):
 
         Parameters
         ----------
-        artist : `matplotlib.artist.Artist`
+        artist
             Plot object whose properties are changed.
-        properties : dict
+        properties
             Plot properties to change.
         """
         if self.history_at_newest:
@@ -757,23 +817,23 @@ class Template3D(Template2D):
             ax = self.main_ax
         ax.axis(False)
         if title:
-            ax.set_title(title, fontsize=self.rc["font_title_size"])
+            ax.set_title(title, fontsize=self.params.font_title_size)
 
         ax.set_xlabel("z")
         ax.set_ylabel("y")
         ax.set_zlabel("t")
-        ax.w_xaxis.set_pane_color(self.rc["axis3d_pane_color"])
-        ax.w_yaxis.set_pane_color(self.rc["axis3d_pane_color"])
-        ax.w_zaxis.set_pane_color(self.rc["axis3d_pane_color"])
-        ax.w_xaxis.line.set_color(self.rc["axis3d_line_color"])
-        ax.w_yaxis.line.set_color(self.rc["axis3d_line_color"])
-        ax.w_zaxis.line.set_color(self.rc["axis3d_line_color"])
-        ax.xaxis._axinfo["grid"]["linestyle"] = self.rc["axis3d_grid_line_style"]
-        ax.yaxis._axinfo["grid"]["linestyle"] = self.rc["axis3d_grid_line_style"]
-        ax.zaxis._axinfo["grid"]["linestyle"] = self.rc["axis3d_grid_line_style"]
-        ax.xaxis._axinfo["grid"]["alpha"] = self.rc["axis3d_grid_line_alpha"]
-        ax.yaxis._axinfo["grid"]["alpha"] = self.rc["axis3d_grid_line_alpha"]
-        ax.zaxis._axinfo["grid"]["alpha"] = self.rc["axis3d_grid_line_alpha"]
+        ax.w_xaxis.set_pane_color(self.params.axis3d_pane_color)
+        ax.w_yaxis.set_pane_color(self.params.axis3d_pane_color)
+        ax.w_zaxis.set_pane_color(self.params.axis3d_pane_color)
+        ax.w_xaxis.line.set_color(self.params.axis3d_line_color)
+        ax.w_yaxis.line.set_color(self.params.axis3d_line_color)
+        ax.w_zaxis.line.set_color(self.params.axis3d_line_color)
+        ax.xaxis._axinfo["grid"]["linestyle"] = self.params.axis3d_grid_line_style
+        ax.yaxis._axinfo["grid"]["linestyle"] = self.params.axis3d_grid_line_style
+        ax.zaxis._axinfo["grid"]["linestyle"] = self.params.axis3d_grid_line_style
+        ax.xaxis._axinfo["grid"]["alpha"] = self.params.axis3d_grid_line_alpha
+        ax.yaxis._axinfo["grid"]["alpha"] = self.params.axis3d_grid_line_alpha
+        ax.zaxis._axinfo["grid"]["alpha"] = self.params.axis3d_grid_line_alpha
 
         if limits is not None:
             ax.set_xlim(limits[0], limits[0] + limits[2])
@@ -784,12 +844,12 @@ class Template3D(Template2D):
         y_limits = ax.get_ylim3d()
         z_limits = ax.get_zlim3d()
         x_range = abs(x_limits[1] - x_limits[0])
-        x_middle = sum(x_limits)/len(x_limits)
+        x_middle = sum(x_limits) / len(x_limits)
         y_range = abs(y_limits[1] - y_limits[0])
-        y_middle = sum(y_limits)/len(y_limits)
+        y_middle = sum(y_limits) / len(y_limits)
         z_range = abs(z_limits[1] - z_limits[0])
-        z_middle = sum(z_limits)/len(z_limits)
-        plot_radius = 0.5*max([x_range, y_range, z_range])
+        z_middle = sum(z_limits) / len(z_limits)
+        plot_radius = 0.5 * max([x_range, y_range, z_range])
         ax.set_xlim3d([x_middle - plot_radius, x_middle + plot_radius])
         ax.set_ylim3d([y_middle - plot_radius, y_middle + plot_radius])
         ax.set_zlim3d([z_middle - plot_radius, z_middle + plot_radius])

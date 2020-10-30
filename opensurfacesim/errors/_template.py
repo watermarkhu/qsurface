@@ -1,7 +1,4 @@
 from abc import ABC, abstractmethod
-from ..configuration import get_attributes, init_config
-from matplotlib import pyplot as plt
-from pathlib import Path
 
 
 class Sim(ABC):
@@ -48,8 +45,10 @@ class Plot(Sim):
 
     Attributes
     ----------
-    legend_items : list
-        The legend items in 'plot_legend_errors.ini' to include if this error is loaded.
+    legend_params, plot_params
+        Additional plotting parameters loaded to the `.plot.PlotParams` instance at ``self.params``. 
+    legend_names : dict
+        Titles to display for the legend items in ``legend_params``. 
     error_methods : dict
         Dictionary of error methods. Used by :meth:`opensurfacesim.code._template.plot.PerfectMeasurements.Figure._pickhandler` to apply the error directly on the figure. Each method must be of the following form.
 
@@ -62,18 +61,15 @@ class Plot(Sim):
         Dictionary of `matplotlib.lines.Line2D` properties for each legend item, defined in 'plot_errors_legend.ini'.
     """
 
-    legend_items = []
+    legend_params = {}
+    legend_names = {}
+    plot_params = {}
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, *kwargs)
         self.error_methods = {}
-        self.plot_properties = get_attributes(
-            self.code.figure.rc, init_config(Path(__file__).parent / "plot_errors.ini")
-        )
-        self.legend_properties = get_attributes(
-            self.code.figure.rc,
-            init_config(Path(__file__).parent / "plot_errors_legend.ini"),
-        )
+        self.code.figure.params.load_params(self.legend_params)
+        self.code.figure.params.load_params(self.plot_params)
 
     def _get_legend_properties(self):
         """Returns the dictionary of properties for `matplotlib.lines.Line2D` of the errors in the current class."""

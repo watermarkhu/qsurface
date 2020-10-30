@@ -87,7 +87,6 @@ def run(
     decoder: decoder_type,
     error_rates: dict = {},
     iterations: int = 1,
-    plotting: bool = False,
     seed: Optional[float] = None,
     benchmark: Optional[BenchmarkDecoder] = None,
     mp_queue: Optional[Queue] = None,
@@ -152,10 +151,10 @@ def run(
             code.logical_state
         )  # Must get logical state property to update code.no_error
         output["no_error"] += code.no_error
-        if plotting:
+        if hasattr(code, "figure"):
             code.show_corrected()
 
-    if plotting:
+    if hasattr(code, "figure"):
         code.figure.close()
 
     if benchmark:

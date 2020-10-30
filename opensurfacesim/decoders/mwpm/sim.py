@@ -89,7 +89,7 @@ class Toric(SimCode):
         nxgraph = nx.Graph()
         for i0, i1, weight in edges:
             nxgraph.add_edge(i0, i1, weight=-weight)
-        return nx.algorithms.matching.max_weight_matching(nxgraph, maxcardinality=maxcardinality, **kwargs)
+        return nx.algorithms.matching.max_weight_matching(nxgraph, maxcardinality=maxcardinality)
 
     @staticmethod
     def match_blossomv(edges: list, **kwargs) -> list:

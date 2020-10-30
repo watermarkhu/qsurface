@@ -3,5 +3,4 @@ pandas
 networkx
 matplotlib
 scipy
-progiter
 pptree

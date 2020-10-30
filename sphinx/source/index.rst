@@ -43,7 +43,6 @@ Modules
    :maxdepth: 1
    :caption: Others
 
-   others/configuration
    others/plot
 
 

@@ -212,22 +212,22 @@ class Template2D(ABC):
     history_iter : int
         The current plot iteration.
     history_iter_names : list of str
-        List of length `history_iters` containing a title for each iteration.
+        List of length ``history_iters`` containing a title for each iteration.
     history_at_newest : bool
         Whether the current plot iteration is the latest or newest.
     history_event_iter : str
         String catching the keyboard input for the wanted plot iteration.
     future_dict : `.collections.defaultdict`
-        Same as `history_dict` but for changes for future iterations.
+        Same as ``history_dict`` but for changes for future iterations.
     temporary_changes : `.collections.defaultdict`
-        Temporary changes for plot properties, requested by :meth:`temporary_properties`, which are immediately drawn to the figure. These properties can be overwritten or undone before a new iteration is requested via :meth:`new_iter`. When a new iteration is requested, we need to find the difference in properties of the queued changes with the current iteration and save all differences to `self.history_dict`.
+        Temporary changes for plot properties, requested by :meth:`temporary_properties`, which are immediately drawn to the figure. These properties can be overwritten or undone before a new iteration is requested via :meth:`new_iter`. When a new iteration is requested, we need to find the difference in properties of the queued changes with the current iteration and save all differences to ``self.history_dict``.
     temporary_saved : `.collections.defaultdict`
-        Temporary changes are saved to the current iteration ``iter``. Thus when a new iteration ``iter + 1`` is requested, we need to recalculate the differences of the properties in ``iter -1`` and the current iteration with the temporary changes. The previous property values when temporary changes are requested by :meth:`temporary_properties` are saved to ``self.temporary_saved`` and used as the property changes for ``iter -``.
-    interact_axes : dict of `matplotlib.axes.Axes'
-        All iteractive elements should have their own axis saved in ``self.interact_axes``. The ``axis.active`` attribute must be added to define when the axis is shown. If the focus on the figure is lost, all axes in ``self.interact_axes`` are hidden by setting ``axis.active`` to ``False``. See :meth:`_set_figure_state`.
+        Temporary changes are saved to the current iteration ``iter``. Thus when a new iteration ``iter + 1`` is requested, we need to recalculate the differences of the properties in ``iter-1`` and the current iteration with the temporary changes. The previous property values when temporary changes are requested by :meth:`temporary_properties` are saved to ``self.temporary_saved`` and used as the property changes for ``iter-1``.
+    interact_axes : dict of `matplotlib.axes.Axes`
+        All iteractive elements should have their own axis saved in ``self.interact_axes``. The ``axis.active`` attribute must be added to define when the axis is shown. If the focus on the figure is lost, all axes in ``self.interact_axes`` are hidden by setting ``axis.active=False``.
     interact_bodies : dict
-        All interactive elements such as buttons, radiobuttons, sliders, should be saved to this dictionary with the same key as their axes in ``s`elf.interact_axes``
-
+        All interactive elements such as buttons, radiobuttons, sliders, should be saved to this dictionary with the same key as their axes in ``self.interact_axes``.
+        
     Notes
     -----
     Note all backends support blitting. You can check if a given canvas does via the `matplotlib.backend_bases.FigureCanvasBase`\ ``.supports_blit`` property. It does not work with the OSX backend (but does work with other GUI backends on mac).
@@ -249,7 +249,7 @@ class Template2D(ABC):
             1: {"<Line2D>": {"color": "r"}},
         }
 
-    The attribute ``self.history_dict`` thus only contain changes to plot properties. If we request another iteration but change the linestyle to ``":"``, the initial linestyle will be saved to iteration 1.
+    The attribute ``self.history_dict`` thus only contain changes to plot properties. If we request another iteration but change the linestyle to ":", the initial linestyle will be saved to iteration 1.
 
         >>> fig.new_properties(fig.line, {"ls": ":"})
         >>> fig.new_iter()
@@ -280,7 +280,7 @@ class Template2D(ABC):
 
     Properties in ``self.temporary_saved`` are saved to ``self.history_dict`` in the previous iteration, properties in ``self.temporary_changes`` are saved to the current iteration, and new properties are saved to the new iteration.
 
-    The ``history_dict`` for a plot with a Line2D object and a Circle object. In the second iteration, the color of the Line2D object is updated from black to red, and the linestyle of the Circle object is changed from ``"-"`` to ``":"``.
+    The ``history_dict`` for a plot with a Line2D object and a Circle object. In the second iteration, the color of the Line2D object is updated from black to red, and the linestyle of the Circle object is changed from "-" to ":".
     """
 
     def __init__(

@@ -154,12 +154,16 @@ def run(
         if hasattr(code, "figure"):
             code.show_corrected()
 
+    print()
+
     if hasattr(code, "figure"):
         code.figure.close()
 
     if benchmark:
-        output.update(benchmark.data)
-        output.update(benchmark.lists_mean_var())
+        output["benchmark"] = {
+            **benchmark.data,
+            **benchmark.lists_mean_var(),
+        }
 
     if mp_queue is None:
         return output
@@ -222,7 +226,8 @@ def run_multiprocess(
                     "mp_process": process,
                     "mp_queue": mp_queue,
                     "error_rates": error_rates,
-                    "benchmark": benchmark ** kwargs,
+                    "benchmark": benchmark,
+                    **kwargs,
                 },
             )
         )
@@ -244,7 +249,7 @@ def run_multiprocess(
     if benchmark:
         output["benchmark"] = []
         for partial_output in outputs:
-            output[benchmark].append(partial_output["benchmark"])
+            output["benchmark"].append(partial_output["benchmark"])
 
     return output
 
@@ -252,7 +257,7 @@ def run_multiprocess(
 class BenchmarkDecoder(object):
     """Benchmarks a decoder during simulation.
 
-    A benchmark of a decoder can be performed by attaching the current class to a ``decode``r. A benchmarker will keep track of the number of simulated iterations and the number of successfull operations by the decoder in ``self.data``.
+    A benchmark of a decoder can be performed by attaching the current class to a ``decode``. A benchmarker will keep track of the number of simulated iterations and the number of successfull operations by the decoder in ``self.data``.
 
     Secondly, a benchmark of the decoder’s class methods can be performed by the decorators supplied in the current class, which have the form def ``decorator(self, func):``. The approach in the current benchmark class allows for decorating any of the decoder’s class methods after it has been instanced. The benefit here is that if no benchmark class is attached, no benchmarking will be performed. The class methods to benchmark must be supplied as a dictionary, where the keys are equivalent to the class method names, and the values are the decorator names. Benchmarked values are stored as class attributes to the benchmark object.
 

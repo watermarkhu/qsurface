@@ -1,5 +1,5 @@
-Running opensurfacesim
-======================
+Running simulations
+===================
 
 .. automodule:: opensurfacesim.main
    :members:

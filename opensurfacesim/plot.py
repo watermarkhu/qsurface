@@ -1,5 +1,6 @@
 from abc import ABC, abstractmethod
-from typing import Optional, Tuple
+from typing import Optional, Tuple, Union
+from dataclasses import dataclass
 import matplotlib as mpl
 from matplotlib import pyplot as plt
 from matplotlib.artist import Artist
@@ -15,6 +16,67 @@ from pathlib import Path
 
 
 mpl.use("TkAgg")
+color_type = Union[str, Tuple[float,float,float,float]]
+axis_type = Tuple[float, float, float, float]
+
+@dataclass
+class PlotParams:
+    blocking_wait :float = -1
+    blocking_pick_radius :float = 10
+
+    scale_figure_length :float = 10
+    scale_figure_height :float = 10
+    scale_font_primary :float = 12
+    scale_font_secondary :float = 10
+    scale_3d_layer :float = 8
+
+    color_background : color_type = (1, 1, 1, 0)
+    color_edge : color_type = (0.8, 0.8, 0.8, 1)
+    color_qubit_edge : color_type = (0.7, 0.7, 0.7, 1)
+    color_qubit_face : color_type = (0.95, 0.95, 0.95, 1)
+    color_x_primary : color_type = (0.9, 0.3, 0.3, 1)
+    color_z_primary : color_type = (0.5, 0.5, 0.9, 1)
+    color_y_primary : color_type = (0.9, 0.9, 0.5, 1)
+    color_x_secondary : color_type = (0.9, 0.7, 0.3, 1)
+    color_z_secondary : color_type = (0.3, 0.9, 0.3, 1)
+    color_y_secondary : color_type = (0.9, 0.9, 0.5, 1)
+    color_x_tertiary : color_type = (0.5, 0.1, 0.1, 1)
+    color_z_tertiary : color_type = (0.1, 0.1, 0.5, 1)
+    color_y_tertiary : color_type = (0.9, 0.9, 0.5, 1)
+
+    alpha_primary :float = 0.35
+    alpha_secondary :float = 0.5
+
+    line_width_primary :float = 1.5
+    line_width_secondary :float = 3
+    line_style_primary :str = "solid"
+    line_style_secondary :str = "dashed"
+    line_style_tertiary :str = "dotted"
+
+    patch_circle_2d :float = 0.1
+    patch_rectangle_2d :float = 0.1
+    patch_circle_3d :float = 30
+    patch_rectangle_3d :float = 30
+
+    legend_line_width = 1
+    legend_marker_size = 10
+
+    axis_main :axis_type = (0.075, 0.1, 0.7, 0.85)
+    axis_block :axis_type = (0.96, 0.01, 0.03, 0.03)
+    axis_nextbutton :axis_type = (0.85, 0.05, 0.125, 0.05)
+    axis_prevbutton :axis_type = (0.85, 0.12, 0.125, 0.05)
+    axis_legend :axis_type = (0.85, 0.5, 0.125, 0.3)
+    axis_text :axis_type = (0.05, 0.025, 0.7, 0.05)
+    axis_radio :axis_type = (0.85, 0.19, 0.125, 0.125)
+
+    font_default_size : float = 12
+    font_title_size : float = 16
+    font_button_size : float = 12
+
+    axis3d_pane_color : color_type = (1, 1, 1, 0)
+    axis3d_line_color : color_type = (0, 0, 0, 0.1)
+    axis3d_grid_line_style : str = "dotted"
+    axis3d_grid_line_alpha : float = 0.2
 
 
 class BlockingKeyInput(BlockingInput):
@@ -43,7 +105,7 @@ class Template2D(ABC):
     - Keyboard navigation for iteration selection.
     - Plot object information by picking.
 
-    To instance this class, one must inherit the current class and supply a :meth:`init_plot` method that draws the objects of the plot. The existing objects can then be altered by updating their plot properties by :meth:`new_properties`, where the changed properties must be a dictionary with keywords and values corresponding tho the respective matplotlib object. Every change in plot property is stored in `self.history_dict`. This allows to undo or redo changes by simply applying the saved changed properties in the dictionary.
+    To instance this class, one must inherit the current class and supply a :meth:`init_plot` method that draws the objects of the plot. The existing objects can then be altered by updating their plot properties by :meth:`new_properties`, where the changed properties must be a dictionary with keywords and values corresponding tho the respective matplotlib object. Every change in plot property is stored in ``self.history_dict``. This allows to undo or redo changes by simply applying the saved changed properties in the dictionary.
 
     Fast plotting is enabled by not drawing the figure after every queued change. Instead, each object is draw in the canvas individually after a property change and a series of changes is drawn to the figure when a new plot iteration is requested via :meth:`new_iter`. This is performed by *blitting* the canvas.
 
@@ -99,7 +161,7 @@ class Template2D(ABC):
     temporary_changes : `.collections.defaultdict`
         Temporary changes for plot properties, requested by :meth:`temporary_properties`, which are immediately drawn to the figure. These properties can be overwritten or undone before a new iteration is requested via :meth:`new_iter`. When a new iteration is requested, we need to find the difference in properties of the queued changes with the current iteration and save all differences to `self.history_dict`.
     temporary_saved : `.collections.defaultdict`
-        Temporary changes are saved to the current iteration ``iter``. Thus when a new iteration ``iter + 1`` is requested, we need to recalculate the differences of the properties in ``iter -1`` and the current iteration with the temporary changes. The previous property values when temporary changes are requested by :meth:`temporary_properties` are saved to `self.temporary_saved` and used as the property changes for ``iter -``.
+        Temporary changes are saved to the current iteration ``iter``. Thus when a new iteration ``iter + 1`` is requested, we need to recalculate the differences of the properties in ``iter -1`` and the current iteration with the temporary changes. The previous property values when temporary changes are requested by :meth:`temporary_properties` are saved to ``self.temporary_saved`` and used as the property changes for ``iter -``.
     interact_axes : dict of `matplotlib.axes.Axes'
         All iteractive elements should have their own axis saved in ``self.interact_axes``. The ``axis.active`` attribute must be added to define when the axis is shown. If the focus on the figure is lost, all axes in ``self.interact_axes`` are hidden by setting ``axis.active`` to ``False``. See :meth:`_set_figure_state`.
     interact_bodies : dict
@@ -107,7 +169,7 @@ class Template2D(ABC):
 
     Notes
     -----
-    Note all backends support blitting. You can check if a given canvas does via the `matplotlib.backend_bases.FigureCanvasBase.supports_blit` property. It does not work with the OSX backend (but does work with other GUI backends on mac).
+    Note all backends support blitting. You can check if a given canvas does via the `matplotlib.backend_bases.FigureCanvasBase`\ ``.supports_blit`` property. It does not work with the OSX backend (but does work with other GUI backends on mac).
 
     Examples
     --------

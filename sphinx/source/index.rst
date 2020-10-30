@@ -8,18 +8,14 @@
 
 .. mdinclude:: ../../README.md
 
-Main usage
-==========
-
-.. toctree::
-   :maxdepth: 2
-   :caption: Main
-
-   main
-
-
 Modules
 =======
+.. toctree::
+   :maxdepth: 2
+   :caption: Main Usage
+
+   main
+   threshold
 
 .. toctree::
    :maxdepth: 2

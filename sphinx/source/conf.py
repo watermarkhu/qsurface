@@ -29,7 +29,6 @@ author = 'Mark Shui Hu'
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    # "numpydoc",
     "sphinx.ext.napoleon",
     "sphinx.ext.autodoc",
     "sphinx_autodoc_typehints",
@@ -42,6 +41,7 @@ extensions = [
 
 intersphinx_mapping = {'matplotlib': ('https://matplotlib.org/', None)}
 intersphinx_mapping = {'networkx': ('https://networkx.github.io/documentation/stable/', None)}
+
 
 
 # Add any paths that contain templates here, relative to this directory.

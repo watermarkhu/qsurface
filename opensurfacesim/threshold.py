@@ -1,7 +1,9 @@
-from typing import Dict, List, Tuple, Union
+from typing import Dict, List, Tuple, Union, Optional
 from types import ModuleType
-from .main import initialize, run, run_multiprocess, BenchmarkDecoder
-from .errors._template import Sim as Error
+from dataclasses import dataclass
+import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
+from matplotlib.figure import Figure
 from pathlib import Path
 from pprint import pprint
 from datetime import datetime
@@ -9,23 +11,17 @@ from scipy import optimize
 import pandas as pd
 import numpy as np
 import sys
+from .main import initialize, run, run_multiprocess, BenchmarkDecoder
+from .errors._template import Sim as Error
 
 
 module_or_name = Union[ModuleType, str]
+formatted_dataframe = Tuple[list, list, list, list]
+plt_markers = ["o", "s", "v", "D", "p", "^", "h", "X", "<", "P", "*", ">", "H", "d"] + [i+4 for i in range(7)]
+fit_param = Tuple[float, float, float]
 
 
-def format_output(output, category=""):
-    formatted_output = {}
-    for key, value in output.items():
-        formatted_key = f"{category}/{key}" if category else key
-        if isinstance(value, dict):
-            formatted_output.update(format_output(value, formatted_key))
-        else:
-            formatted_output[formatted_key] = value
-    return formatted_output
-
-
-def sim_thresholds(
+def run(
     Code: module_or_name,
     Decoder: module_or_name,
     iterations: int = 1,
@@ -35,13 +31,36 @@ def sim_thresholds(
     faulty_measurements: bool = False,
     methods_to_benchmark: dict = {},
     output: str = "",
-    multiprocess: bool = False,
     mp_processes: int = 1,
     recursion_limit: int = 100000,
     **kwargs,
-):
-    """
-    ############################################
+) -> Optional[pd.DataFrame]:
+    """Runs a series of simulations of varying sizes and error rates. 
+
+    A series of simulations are run without plotting for all combinations of ``sizes`` and ``error_rates``. The results are returned as a Pandas DataFrame and saved to the working directory as a csv file. If an existing csv file with the same file name is found, the existing file is loaded and new results are appended to the existing data. 
+
+    Parameters
+    ----------
+    Code
+        A surface code instance (see `~.main.initialize`).
+    decoder
+        A decoder instance (see `~.main.initialize`).
+    iterations
+        Number of iterations to run per configuration.
+    sizes
+        The sizes of the surface configurations.
+    enabled_errors
+        List of error modules from `.errors`.
+    error_rates
+        List of dictionaries for error rates per configuration (see `~opensurfacesim.errors`).
+    faulty_measurements
+        Enable faulty measurements (decode in a 3D lattice).
+    methods_to_benchmark
+        Decoder class methods to benchmark.
+    output
+        File name of outputted csv data. If set to "none", no file will be saved.  
+    mp_processses
+        Number of processes to spawn. For a single process, `~.main.run` is used. For multiple processes, `~main.run_multiprocess` is utilized. 
     """
     sys.setrecursionlimit(recursion_limit)
 
@@ -56,6 +75,7 @@ def sim_thresholds(
 
     if output == "":
         output = f"{code_name}_{decoder_name}-{error_names}.csv"
+    
     output_path = Path(output)
 
     if output_path.exists():
@@ -64,7 +84,7 @@ def sim_thresholds(
     else:
         data = pd.DataFrame()
 
-    runner = run_multiprocess if multiprocess else run
+    runner = run_multiprocess if mp_processes > 1 else run
 
     # Simulate and save results to file
     for size in sizes:
@@ -87,24 +107,25 @@ def sim_thresholds(
                 mp_processes=mp_processes,
             )
 
-            output.update(format_output(output.pop("benchmark")))
             output.update(
                 {
                     "datetime": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
                     "size": size,
-                    "iterations": iterations,
                     **error_rate,
                 }
             )
             pprint(output)
 
             data = data.append(output, ignore_index=True)
-            data.to_csv(output_path)
 
-    print(data.to_string())
+            if output != "none":
+                data.to_csv(output_path)
+
+    return data
 
 
-def read_csv(file: str):
+def read_csv(file: str) -> pd.DataFrame:
+    """Reads a CSV file parses it as a Pandas DataFrame."""
     file_path = Path(file)
     if file_path.exists():
         data = pd.read_csv(file_path, index_col=0)
@@ -113,64 +134,187 @@ def read_csv(file: str):
     return data
 
 
-def format_data(data: pd.DataFrame, column: str):
+@dataclass
+class ThresholdFit:
+    """Fitter for code threshold with data obtained by ``~.threshold.run``. 
 
-    sizes = sorted(list(set(data["size"])))
-    rates = sorted(list(set(data[column])))
+    """
 
-    simple_data = []
-    for size in sizes:
-        for rate in rates:
-            iterations, no_error = 0, 0
-            for _, row in data.loc[(data["size"] == size) & (data[column] == rate)].iterrows():
-                iterations += row["iterations"]
-                no_error += row["no_error"]
-            simple_data.append([size, rate, iterations, no_error])
+    modified_ansatz: bool = False
+    p : fit_param = (0.09, 0.1, 0.11)
+    A : fit_param = (-np.inf, 0, np.inf)
+    B : fit_param = (-np.inf, 0, np.inf)
+    C : fit_param = (-np.inf, 0, np.inf)
+    D : fit_param = (-2, 1.6, 2)
+    nu : fit_param = (0.8, 0.95, 1.2)
+    mu : fit_param = (0, 0.7, 3)
 
-    simple_data = list(map(list, zip(*simple_data)))
+    def _get_param(self, i: int) -> tuple:
+        return (self.p[i], self.A[i], self.B[i], self.C[i], self.D[i], self.nu[i], self.mu[i])
+    
 
-    return simple_data
+    def _get_fitting_function(self):
+        """Returns the fitting function of curve fitting."""
+        def fit(PL, pth, A, B, C, D, nu, mu):
+            p, L = PL
+            x = (p - pth) * L ** (1 / nu)
+            return A + B * x + C * x ** 2
+        def fit_modified(PL, pth, A, B, C, D, nu, mu):
+            p, L = PL
+            x = (p - pth) * L ** (1 / nu)
+            return A + B * x + C * x ** 2 + D * L ** (-1 / mu)
+        return fit_modified if self.modified_ansatz else fit
+
+    def _get_modified_data(self):
+        """Returns the function to obtain data in the rescaled axis."""
+        def func(L, x, y, pth, A, B, C, D, nu, mu):
+            modified_x = (x - pth) * L ** (1 / nu)
+            return modified_x, y
+        def func_modified(L, x, y, pth, A, B, C, D, nu, mu):
+            modified_x = (x - pth) * L ** (1 / nu)
+            modified_y = y - D * L ** (-1 / mu)
+            return modified_x, modified_y
+
+        return func_modified if self.modified_ansatz else func
+
+    
+    def fit_data(self, data: pd.DataFrame, column: str, **kwargs):
+        """Fits for the code threshold.
+
+        Parameters
+        ----------
+        data
+            Data obtained via `~.threshold.run`. 
+        column
+            The column of the DataFrame to fit for.
+        kwargs
+            Keyword arguments are passed on the ``scipy.curve_fit``. 
+        """
+        sizes = sorted(list(set(data["size"])))
+        rates = sorted(list(set(data[column])))
+
+        simple_data = []
+        for size in sizes:
+            for rate in rates:
+                iters, no_error = 0, 0
+                for _, row in data.loc[(data["size"] == size) & (data[column] == rate)].iterrows():
+                    iters += row["iterations"]
+                    no_error += row["no_error"]
+                simple_data.append([size, rate, iters, no_error/iters])
+
+        sizes, rates, iterations, error_rate = tuple(map(list, zip(*simple_data)))
+
+        parameters, covariance = optimize.curve_fit(
+            self._get_fitting_function(),
+            (rates, sizes),
+            error_rate,
+            self._get_param(1),
+            bounds=[self._get_param(0), self._get_param(2)],
+            sigma=[max(iterations) / iters for iters in iterations],
+            **kwargs
+        )
+        error = np.sqrt(np.diag(covariance))
+        print(f"Fitted threshold at {parameters[0]}+-{error[0]}")
+
+        return list(parameters)
 
 
-def fit_thresholds(file: str, column: str, modified_ansatz: bool = False):
+    def plot_data(
+        self,
+        data: pd.DataFrame,
+        column: str,
+        figure: Figure = None,
+        rescaled:bool = False,
+        scatter_kwargs: dict = {"s": 10},
+        line_kwargs: dict = {"lw": 1.5, "ls": "dashed", "alpha": 0.5},
+        axis_attributes: dict = {"title": "Threshold", "xlabel": "Physical error rate", "ylabel": "Logical error rate"},
+        num_x_fit: int =1000,
+        **kwargs
+    ):  
+        """Plots the inputted data and the fit for the code threshold. 
 
-    data = read_csv(file)
-    sizes, rates, iterations, no_error = format_data(data, column)
+        Parameters
+        ----------
+        data
+            Data obtained via `~.threshold.run`. 
+        column
+            The column of the DataFrame to fit for.
+        figure
+            If a figure is attached, `~matplotlib.pyplot.show` is not called. Instead, the figure is returned for futher manipulation. 
+        rescaled
+            Plots the data on a rescaled x axis where the fit is a single line. 
+        scatter_kwargs
+            Keyword arguments to pass on to the `~matplotlib.pyplot.scatter` for the markers. 
+        line_kwargs
+            Keyword arguments to pass on to the ~matplotlib.pyplot.plot for the line plot. 
+        axis_attributes
+            Attributes to set of the axis via ``axis.set_{attribute}(value)``. 
+        num_x_fit
+            Numpy of points to plot for the fit. 
+        """
+        max_iterations = max(data["iterations"])
+        data["scatter_size"] = scatter_kwargs.pop("s", 10) * data["iterations"]/max_iterations
 
-    def fit_func(PL, pth, A, B, C, D, nu, mu):
-        p, L = PL
-        x = (p - pth) * L ** (1 / nu)
-        return A + B * x + C * x ** 2
+        parameters = self.fit_data(data, column)
+        fit_func = self._get_fitting_function()
 
-    def fit_func_m(PL, pth, A, B, C, D, nu, mu):
-        p, L = PL
-        x = (p - pth) * L ** (1 / nu)
-        return A + B * x + C * x ** 2 + D * L ** (-1 / mu)
+        if not figure:
+            figure, axis = plt.subplots()
+            show = True
+        else:
+            axis = plt.gca()
+            show = False
 
-    min_rate, max_rate = min(rates), max(rates)
-    g_T, T_m, T_M = (min_rate + max_rate) / 2, min_rate, max_rate
-    g_A, A_m, A_M = 0, -np.inf, np.inf
-    g_B, B_m, B_M = 0, -np.inf, np.inf
-    g_C, C_m, C_M = 0, -np.inf, np.inf
-    gnu, num, nuM = 0.974, 0.8, 1.2
-    D_m, D_M = -2, 2
-    mum, muM = 0, 3
-    g_D, gmu = 1.65, 0.71
+        sizes = sorted(list(set(data["size"])))
 
-    par_guess = [g_T, g_A, g_B, g_C, g_D, gnu, gmu]
-    bound = [(T_m, A_m, B_m, C_m, D_m, num, mum), (T_M, A_M, B_M, C_M, D_M, nuM, muM)]
+        colors = [f"C{i%10}" for i, size in enumerate(sizes)]
+        markers = [plt_markers[i%len(plt_markers)] for i, size in enumerate(sizes)]
+        legend_items = []
 
-    fit = fit_func_m if modified_ansatz else fit_func
+        for size, color, marker in zip(sizes, colors, markers):
 
-    parameters, covariance = optimize.curve_fit(
-        fit,
-        (rates, sizes),
-        [num / iters for num, iters in zip(no_error, iterations)],
-        par_guess,
-        bounds=bound,
-        sigma=[max(iterations) / iters for iters in iterations],
-    )
-    error = np.sqrt(np.diag(covariance))
-    print(f"Fitted threshold at {column}={parameters[0]}+-{error[0]}")
+            size_data = data.loc[data["size"] == size]
 
-    return parameters
+            x_data = size_data[column]
+            y_data = size_data["no_error"] / size_data["iterations"]
+            s_data = size_data["scatter_size"]
+            fit_x_data = np.linspace(min(x_data), max(x_data), num_x_fit)
+            fit_y_data = [fit_func((x, size), *parameters) for x in fit_x_data]
+
+            if rescaled:
+                modifier = self._get_modified_data()
+                x_data, y_data = modifier(size, x_data, y_data, *parameters)
+                fit_x_data, fit_y_data = modifier(size, fit_x_data, fit_y_data, *parameters)
+
+            axis.scatter(
+                x_data, y_data,
+                s = s_data,
+                color=color,
+                marker=marker,
+                **scatter_kwargs
+            )
+            axis.plot(
+                fit_x_data,
+                fit_y_data,
+                color=color,
+                **line_kwargs
+            )
+
+            legend_items.append(Line2D(
+                [],
+                [],
+                label=f"L = {size}",
+                color=color,
+                marker=marker,
+                **line_kwargs
+            ))
+
+        for attribute, value in axis_attributes.items():
+            getattr(axis, f"set_{attribute}")(value)
+
+        axis.legend(handles=legend_items, loc="lower left", ncol=2)
+
+        if show:
+            plt.show()
+        else:
+            return figure

@@ -6,7 +6,7 @@ One can choose to run a simulated lattice for a single, multiple or many (multit
 """
 from __future__ import annotations
 from types import ModuleType
-from typing import List, Optional, Union
+from typing import List, Optional, Tuple, Union
 from collections import defaultdict
 from functools import wraps
 from multiprocessing import Process, Queue, cpu_count
@@ -19,17 +19,21 @@ from .errors._template import Sim as Error
 
 
 module_or_name = Union[ModuleType, str]
+size_type = Union[Tuple[int, int], int]
+errors_type = List[Union[str, Error]]
+code_type = codes._template.sim.PerfectMeasurements
+decoder_type = decoders._template.SimCode
 
 
 def initialize(
-    size,
+    size: size_type,
     Code: module_or_name,
     Decoder: module_or_name,
-    enabled_errors: List[Union[str, Error]] = [],
+    enabled_errors: errors_type = [],
     faulty_measurements: bool = False,
-    show_plots: bool = False,
+    plotting: bool = False,
     **kwargs,
-):  
+):
     """Initializes a code and a decoder.
 
     Parameters
@@ -41,7 +45,7 @@ def initialize(
     Decoder
         Any decoder module or module name from decoders
     enabled_errors
-        List of error modules from errors.
+        List of error modules from `.errors`.
     faulty_measurements
         Enable faulty measurements (decode in a 3D lattice).
     plotting
@@ -57,11 +61,9 @@ def initialize(
         (<toric (6, 6) PerfectMeasurements>,  <Minimum-Weight Perfect Matching decoder (Toric)>)
         ✅ This decoder is compatible with the code.
     """
-
-
     if isinstance(Code, str):
         Code = getattr(codes, Code)
-    Code_flow = getattr(Code, "plot") if show_plots else getattr(Code, "sim")
+    Code_flow = getattr(Code, "plot") if plotting else getattr(Code, "sim")
     Code_flow_dim = (
         getattr(Code_flow, "FaultyMeasurements")
         if faulty_measurements
@@ -70,28 +72,26 @@ def initialize(
 
     if isinstance(Decoder, str):
         Decoder = getattr(decoders, Decoder)
-    Decoder_flow = getattr(Decoder, "plot") if show_plots else getattr(Decoder, "sim")
+    Decoder_flow = getattr(Decoder, "plot") if plotting else getattr(Decoder, "sim")
     Decoder_flow_code = getattr(Decoder_flow, Code.__name__.split(".")[-1].capitalize())
 
     code = Code_flow_dim(size, **kwargs)
-    decoder = Decoder_flow_code(code, **kwargs)
     code.initialize(*enabled_errors)
+    decoder = Decoder_flow_code(code, **kwargs)
 
     return code, decoder
 
 
 def run(
-    size,
-    Code: module_or_name = "toric",
-    Decoder: module_or_name = "mwpm",
-    enabled_errors: List[Union[str, Error]] = [],
+    code: code_type,
+    decoder: decoder_type,
     error_rates: dict = {},
     iterations: int = 1,
-    faulty_measurements: bool = False,
-    show_plots: bool = False,
-    seed_prefix: str = "",
+    plotting: bool = False,
+    seed: Optional[float] = None,
     benchmark: Optional[BenchmarkDecoder] = None,
-    multiprocessing_queue: Optional[Queue] = None,
+    mp_queue: Optional[Queue] = None,
+    mp_process: int = 0,
     **kwargs,
 ):
     """Runs surface code simulation.
@@ -101,19 +101,19 @@ def run(
     Parameters
     ----------
     code
-        A surface code instance (see initialize).
+        A surface code instance (see `initialize`).
     decoder
-        A decoder instance (see initialize).
+        A decoder instance (see `initialize`).
     iterations
         Number of iterations to run.
     error_rates
-        Dictionary for error rates (see errors).
+        Dictionary for error rates (see `~opensurfacesim.errors`).
     seed
         Float to use as the seed for the random number generator.
     benchmark
         Benchmarks decoder performance and analytics if attached.
     kwargs
-        Keyword arguments are passed on to initialize.
+        Keyword arguments are passed on to ``decoder.decode()``.
 
     Examples
     --------
@@ -134,34 +134,49 @@ def run(
         'std': 0.002170364089572033}}}}
     """
     # Initialize lattice
+    if not seed:
+        seed = timeit.default_timer()
+    seed = float(f"{seed}{mp_process}")
+    random.seed(seed)
 
-    code, decoder = initialize(
-        size, Code, Decoder, enabled_errors, faulty_measurements, show_plots, **kwargs
-    )
     if benchmark:
-        benchmark.add_cls_instance(decoder)
+        benchmark._set_decoder(decoder, seed=seed)
 
-    seed = seed_prefix + str(timeit.default_timer())
-
-    output = {"no_error": 0, "decoded": 0}
+    output = {"no_error": 0}
 
     for iteration in range(iterations):
-        print(f"Running iteration {iteration}/{iterations}", end="\r")
+        print(f"Running iteration {iteration+1}/{iterations}", end="\r")
         code.random_errors(**error_rates)
-        decoder.decode()
-        if show_plots:
-            code.show_corrected()
-        logical_state = code.logical_state
+        decoder.decode(**kwargs)
+        logical_state = (
+            code.logical_state
+        )  # Must get logical state property to update code.no_error
         output["no_error"] += code.no_error
-        output["decoded"] += decoder.successfully_decoded
+        if plotting:
+            code.show_corrected()
 
-    if multiprocessing_queue is None:
+    if plotting:
+        code.figure.close()
+
+    if benchmark:
+        output.update(benchmark.data)
+        output.update(benchmark.lists_mean_var())
+
+    if mp_queue is None:
         return output
     else:
-        multiprocessing_queue.put(output)
+        mp_queue.put(output)
 
 
-def run_multiprocess(size, iterations: int = 1, processes: Optional[int] = None, **kwargs):
+def run_multiprocess(
+    code: code_type,
+    decoder: decoder_type,
+    error_rates: dict = {},
+    iterations: int = 1,
+    processes: int = 1,
+    benchmark: Optional[BenchmarkDecoder] = None,
+    **kwargs,
+):
     """Runs surface code simulation using multiple processes.
 
     Using the standard module `multiprocessing` and its `~multiprocessing.Process` class, several processes are created that each runs its on contained simulation using `run`. The ``code`` and ``decoder`` objects are copied such that each process has its own instance. The total number of ``iterations`` are divided for the number of ``processes`` indicated. If no ``processes`` parameter is supplied, the number of available threads is determined via `~multiprocessing.cpu_count` and all threads are utilized.
@@ -176,6 +191,8 @@ def run_multiprocess(size, iterations: int = 1, processes: Optional[int] = None,
         A surface code instance (see initialize).
     decoder
         A decoder instance (see initialize).
+    error_rates
+        Dictionary for error rates (see `~opensurfacesim.errors`).
     iterations
         Total number of iterations to run.
     processes
@@ -200,12 +217,13 @@ def run_multiprocess(size, iterations: int = 1, processes: Optional[int] = None,
         workers.append(
             Process(
                 target=run,
-                args=(size,),
+                args=(code, decoder),
                 kwargs={
                     "iterations": process_iters,
-                    "seed_prefix": f"P{process}",
-                    "multiprocessing_queue": mp_queue,
-                    **kwargs,
+                    "mp_process": process,
+                    "mp_queue": mp_queue,
+                    "error_rates": error_rates,
+                    "benchmark": benchmark ** kwargs,
                 },
             )
         )
@@ -215,12 +233,19 @@ def run_multiprocess(size, iterations: int = 1, processes: Optional[int] = None,
     for worker in workers:
         worker.start()
 
-    output = {"no_error": 0, "decoded": 0}
-
+    outputs = []
     for worker in workers:
-        partial_output = mp_queue.get()
+        outputs.append(mp_queue.get())
+        worker.join()
+
+    output = {"no_error": 0}
+
+    for partial_output in outputs:
         output["no_error"] += partial_output["no_error"]
-        output["decoded"] += partial_output["decoded"]
+    if benchmark:
+        output["benchmark"] = []
+        for partial_output in outputs:
+            output[benchmark].append(partial_output["benchmark"])
 
     return output
 
@@ -263,7 +288,7 @@ class BenchmarkDecoder(object):
         >>> benchmarker.lists
         {'duration': {'decode': [0.0009881999976641964]}}
 
-    The benchmark class can also be attached to run. The mean and standard deviations of the benchmarked values are in that case updated to the output of run after running list_mean_var.
+    The benchmark class can also be attached to run. The mean and standard deviations of the benchmarked values are in that case updated to the output of run after running ``lists_mean_var``.
 
         >>> benchmarker = BenchmarkDecoder({"decode":"duration"})
         >>> run(code, decoder, iterations=10, error_rates = {"p_bitflip": 0.1}, benchmark=benchmarker)
@@ -308,68 +333,99 @@ class BenchmarkDecoder(object):
         >>> benchmarker.values
         {'count_calls': {'find': 30}}
     """
-    def __init__(self, cls_methods_to_benchmark: dict, multiprocess:bool=False, **kwargs):
-        self.operations = cls_methods_to_benchmark
-        self.cls_instances = []
-        self.data = {
-            "durations": defaultdict(list),
-            "num_calls": defaultdict(list),
-            "call_count": defaultdict(int),
-        }
 
-    def add_cls_instance(self, cls_instance):
-        for cls_instance_method, bench_method in self.operations.items():
-            wrapper = getattr(self, bench_method)
-            setattr(
-                cls_instance,
-                cls_instance_method,
-                wrapper(getattr(cls_instance, cls_instance_method)),
-            )
-        cls_instance.benchmarker = self
-        self.cls_instances.append(cls_instance)
+    list_decorators = ["duration"]
+    value_decorators = ["count_calls"]
 
+    def __init__(
+        self, methods_to_benchmark: dict, decoder: Optional[decoder_type] = None, **kwargs
+    ):
+        self.decoder = decoder
+        self.methods_to_benchmark = methods_to_benchmark
+        self.data = {"decoded": 0, "iterations": 0, "seed": None}
+        self.lists = defaultdict(list)
+        self.values = defaultdict(float)
+        if decoder:
+            self._set_decoder(self, decoder, **kwargs)
 
-    def get_mean_var(self, reset: bool = True):
+    def _set_decoder(self, decoder: decoder_type, seed: Optional[float] = None, **kwargs):
+        """Sets the benchmarked decoder and wraps its class methods."""
+        self.decoder = decoder
+        self.data["seed"] = seed
+
+        # Wrap decoder.decode for check for ancillas after decoding
+        decode = getattr(decoder, "decode")
+
+        @wraps(decode)
+        def wrapper(*args, **kwargs):
+            result = decode(*args, **kwargs)
+            self.data["decoded"] += decoder.code.trivial_ancillas
+            self.data["iterations"] += 1
+            return result
+
+        setattr(decoder, "decode", wrapper)
+
+        # Decorate decoder methods
+        decorator_names = ["value_to_list"] + self.list_decorators + self.value_decorators
+        for method_name, decorators in self.methods_to_benchmark.items():
+            if isinstance(decorators, str):
+                decorators = [decorators]
+
+            class_method = getattr(decoder, method_name)
+            for decorator in decorators:
+                if decorator not in decorator_names:
+                    raise NameError(f"Decorator {decorator} not defined.")
+                wrapper = getattr(self, decorator)
+                class_method = wrapper(class_method)
+            setattr(decoder, method_name, class_method)
+
+    def lists_mean_var(self, reset: bool = True):
+        """Get mean and stand deviation of values in ``self.lists``.
+
+        Parameters
+        ----------
+        reset
+            Resets all in ``self.lists`` to empty lists.
+        """
         processed_data = {}
-        for wrapper, wrapper_data in self.data.items():
-            if wrapper_data.default_factory is list:
-                benchmarked_data = {}
-                for method, method_data in wrapper_data.items():
-                    benchmarked_data[method] = {
-                        "mean": numpy.mean(method_data),
-                        "std": numpy.std(method_data),
-                    }
-                if reset:
-                    self.data[wrapper] = defaultdict(list)
-                if benchmarked_data:
-                    processed_data[wrapper] = benchmarked_data
+        for decorated_method, data in self.lists.items():
+            processed_data[f"{decorated_method}/mean"] = numpy.mean(data)
+            processed_data[f"{decorated_method}/std"] = numpy.std(data)
+        if reset:
+            self.lists = defaultdict(list)
         return processed_data
 
+    def value_to_list(self, func):
+        """Appends all values in ``self.values`` to lists in ``self.lists``."""
+
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            result = func(*args, **kwargs)
+            for decorated_method, value in self.values.items():
+                self.lists[decorated_method].append(value)
+            self.values = defaultdict(float)
+            return result
+
+        return wrapper
+
     def duration(self, func):
+        """Logs the duration of ``func`` in ``self.lists``."""
+
         @wraps(func)
         def wrapper(*args, **kwargs):
             t = timeit.default_timer()
             result = func(*args, **kwargs)
-            self.data["durations"][func.__name__].append(timeit.default_timer() - t)
+            self.lists[f"duration/{func.__name__}"].append(timeit.default_timer() - t)
             return result
 
         return wrapper
 
     def count_calls(self, func):
+        """Logs the number of calls to ``func`` in ``self.values``."""
+
         @wraps(func)
         def wrapper(*args, **kwargs):
-            self.data["call_count"][func.__name__] += 1
+            self.values[f"count_calls/{func.__name__}"] += 1
             return func(*args, **kwargs)
-
-        return wrapper
-
-    def save_calls(self, func):
-        @wraps(func)
-        def wrapper(*args, **kwargs):
-            result = func(*args, **kwargs)
-            for name, calls in self.data["call_count"].items():
-                self.data["num_calls"][name].append(calls)
-                self.data["call_count"][name] = 0
-            return result
 
         return wrapper

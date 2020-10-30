@@ -64,8 +64,8 @@ class Plot(Sim):
 
     legend_items = []
 
-    def __init__(self, code, *args, **kwargs) -> None:
-        super().__init__(code, *args, *kwargs)
+    def __init__(self, *args, **kwargs) -> None:
+        super().__init__(*args, *kwargs)
         self.error_methods = {}
         self.plot_properties = get_attributes(
             self.code.figure.rc, init_config(Path(__file__).parent / "plot_errors.ini")

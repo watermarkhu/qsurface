@@ -21,7 +21,7 @@ plt_markers = ["o", "s", "v", "D", "p", "^", "h", "X", "<", "P", "*", ">", "H", 
 fit_param = Tuple[float, float, float]
 
 
-def run(
+def run_many(
     Code: module_or_name,
     Decoder: module_or_name,
     iterations: int = 1,
@@ -98,7 +98,7 @@ def run(
 
             benchmarker = BenchmarkDecoder(methods_to_benchmark)
 
-            output = runner(
+            result = runner(
                 code,
                 decoder,
                 iterations=iterations,
@@ -107,16 +107,17 @@ def run(
                 mp_processes=mp_processes,
             )
 
-            output.update(
+            result.update(
                 {
                     "datetime": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
                     "size": size,
                     **error_rate,
+                    **result.pop("benchmark")
                 }
             )
-            pprint(output)
+            pprint(result)
 
-            data = data.append(output, ignore_index=True)
+            data = data.append(result, ignore_index=True)
 
             if output != "none":
                 data.to_csv(output_path)

@@ -1,19 +1,37 @@
+# Compiled python modules.
 *.pyc
-*.xml
-*.xml
-*.ini
+
+# Setuptools distribution folder.
+/dist/
+
+# Python egg metadata, regenerated from source files by setuptools.
+/*.egg-info
+
+
+# compiled C code
 *.o
 *.so
+
+
+# data files
+*.xml
 *.pkl
 *.csv
 *.txt
+*.ini
+!requirements.txt
 
+# folders
 simulations
 Simulations
 cartesiusdata
+docs/
+sphinx/build/
+opensurfacesim/decoders/mwpm/blossom5-v2.05.src/
 
 __pycache__/
 .idea/
 .python-version
 .vscode/
-!requirements.txt
+.pytest_cache/
+.ipynb_checkpoints/

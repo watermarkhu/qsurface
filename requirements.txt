@@ -1,7 +1,6 @@
-matplotlib
-scipy
 numpy
 pandas
-progiter
-pyparsing
-termcolor
+networkx
+matplotlib
+scipy
+pptree

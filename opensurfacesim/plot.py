@@ -132,7 +132,10 @@ class PlotParams:
         for attribute, value in param_dict.items():
             if isinstance(value, dict):
                 for sub_attribute, sub_value in value.items():
-                    value[sub_attribute] = getattr(self, sub_value, sub_value)
+                    if isinstance(sub_value, str):
+                        value[sub_attribute] = getattr(self, sub_value, sub_value)
+                    else:
+                        value[sub_attribute] = sub_value
                 setattr(self, attribute, value)
             else:
                 setattr(self, attribute, getattr(self, value, value))
@@ -151,7 +154,7 @@ class BlockingKeyInput(BlockingInput):
 
     def __call__(self, timeout=30):
         """Blocking call to retrieve a single key press."""
-        return super().__call__(n=1, timeout=timeout)[-1]
+        return super().__call__(n=1, timeout=timeout)
 
 
 class Template2D(ABC):
@@ -436,7 +439,17 @@ class Template2D(ABC):
         while wait:
             self._set_figure_state("g")
             try:
-                event = self.blocking_input(self.params.blocking_wait)
+                output = self.blocking_input(self.params.blocking_wait)
+
+                if output == []:
+                    if self.history_at_newest:
+                        wait = False
+                    else:
+                        wait = self._draw_next()
+                    continue
+                else:
+                    event = output[-1]
+
                 if hasattr(event, "button"):  # Catch next button if on most recent
                     if (
                         event.button == 1
@@ -444,7 +457,7 @@ class Template2D(ABC):
                         and self.history_iter == self.history_iters
                     ):
                         wait = False
-                if event.key in ["enter", "right"]:
+                elif event.key in ["return", "right"]:
                     if self.history_event_iter == "":
                         if self.history_at_newest:
                             wait = False
@@ -461,7 +474,7 @@ class Template2D(ABC):
                     wait = self._draw_prev()
                 elif event.key in [str(i) for i in range(10)]:
                     self.history_event_iter += event.key
-                    print("Go to iteration {} (press enter).".format(self.history_event_iter))
+                    print("Go to iteration {} (press return).".format(self.history_event_iter))
                 elif event.key == "n":
                     wait = self._draw_iteration(self.history_iters)
                 elif event.key == "i":
@@ -822,12 +835,12 @@ class Template3D(Template2D):
         ax.set_xlabel("z")
         ax.set_ylabel("y")
         ax.set_zlabel("t")
-        ax.w_xaxis.set_pane_color(self.params.axis3d_pane_color)
-        ax.w_yaxis.set_pane_color(self.params.axis3d_pane_color)
-        ax.w_zaxis.set_pane_color(self.params.axis3d_pane_color)
-        ax.w_xaxis.line.set_color(self.params.axis3d_line_color)
-        ax.w_yaxis.line.set_color(self.params.axis3d_line_color)
-        ax.w_zaxis.line.set_color(self.params.axis3d_line_color)
+        ax.xaxis.set_pane_color(self.params.axis3d_pane_color)
+        ax.yaxis.set_pane_color(self.params.axis3d_pane_color)
+        ax.zaxis.set_pane_color(self.params.axis3d_pane_color)
+        ax.xaxis.line.set_color(self.params.axis3d_line_color)
+        ax.yaxis.line.set_color(self.params.axis3d_line_color)
+        ax.zaxis.line.set_color(self.params.axis3d_line_color)
         ax.xaxis._axinfo["grid"]["linestyle"] = self.params.axis3d_grid_line_style
         ax.yaxis._axinfo["grid"]["linestyle"] = self.params.axis3d_grid_line_style
         ax.zaxis._axinfo["grid"]["linestyle"] = self.params.axis3d_grid_line_style

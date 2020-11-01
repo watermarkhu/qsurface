@@ -127,7 +127,8 @@ def run(
         >>> benchmarker = BenchmarkDecoder({"decode":"duration"})
         >>> run(code, decoder, iterations=10, error_rates = {"p_bitflip": 0.1}, benchmark=benchmarker)
         {'no_error': 8,
-        'benchmark': {'success_rate': [10, 10],
+        'benchmark': {'decoded': 10,
+        'iterations': 10,
         'seed': 12447.413636559,
         'durations': {'decode': {'mean': 0.00244155000000319,
         'std': 0.002170364089572033}}}}
@@ -170,6 +171,28 @@ def run(
     else:
         mp_queue.put(output)
 
+
+def _combine_mean_std(means: List[float], stds: List[float], iterations: List[int]) -> Tuple[float, float]:
+    """Combines multiple groups of means and standard deviations. 
+
+    The algorithm utilizes the algorithm as described by `Cochrane <https://training.cochrane.org/handbook/current/chapter-06#section-6-5-2>`_. The method is valid since the each subgroup is the result returned by a multiprocessing process that simulations the same group. 
+
+    Parameters
+    ----------
+    means
+        List of means.
+    stds
+        List of standard deviations.
+    iterations
+        Number of samples in each subgroup. 
+    """
+    N = sum(iterations)
+    M = sum([m * n for m, n in zip(means, iterations)])
+    K = sum([std ** 2 * (n - 1) + (m * n) ** 2 / n for std, m, n in zip(stds, means, iterations)])
+    mean = M / N
+    std = (K - M ** 2 / N / (N - 1)) ** (1 / 2)
+    return mean, std
+    
 
 def run_multiprocess(
     code: code_type,
@@ -247,9 +270,31 @@ def run_multiprocess(
     for partial_output in outputs:
         output["no_error"] += partial_output["no_error"]
     if benchmark:
-        output["benchmark"] = []
-        for partial_output in outputs:
-            output["benchmark"].append(partial_output["benchmark"])
+        benchmarks = [partial_output["benchmark"] for partial_output in outputs]
+
+        if len(benchmarks) == 1:
+            output["benchmark"] = benchmarks[0]
+        else:
+            combined_benchmark = {}
+            stats = defaultdict(lambda: {"mean": [], "std": []})
+            iterations = []
+            for benchmark in benchmarks:
+                iterations.append(benchmark["iterations"])
+                for name, value in benchmark.items():
+                    if name[-4:] == "mean":
+                        stats[name[:-4]]["mean"].append(value)
+                    elif name[-3:] == "std":
+                        stats[name[:-3]]["std"].append(value)
+                    else:
+                        if isinstance(value, float) and name in combined_benchmark:
+                            combined_benchmark[name] += value
+                        else:
+                            combined_benchmark[name] = value
+            for name, meanstd in stats.items():
+                mean, std = _combine_mean_std(meanstd["mean"], meanstd["std"], iterations)
+                combined_benchmark[f"{name}mean"] = mean
+                combined_benchmark[f"{name}std"] = std
+            output["benchmark"] = combined_benchmark
 
     return output
 

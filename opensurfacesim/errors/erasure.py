@@ -55,7 +55,7 @@ class Plot(TemplatePlot, Sim):
             "mec" : "color_qubit_edge",
         }
     }
-    legend_names = {"legend_erasue": "Erasure"}
+    legend_names = {"legend_erasure": "Erasure"}
     plot_params = {
         "qubit_erased": {
             "linestyle" : "line_style_tertiary",

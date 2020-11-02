@@ -41,7 +41,7 @@ class Toric(SimToric, PlotCode):
     def find_clusters(self, **kwargs):
         # Inherited docstring
         ret = super().find_clusters(**kwargs)
-        self.figure.draw_figure()
+        self.figure.draw_figure("Clusters found.")
         return ret
 
     def grow_clusters(self, *args, **kwargs):
@@ -96,12 +96,16 @@ class Toric(SimToric, PlotCode):
     def _edge_full(self, ancilla, edge, new_ancilla, **kwargs):
         # Inherited docstring
         self.support[edge] = 2
-        if ancilla in edge.uf_plot and edge.uf_plot[ancilla][1] == self.code.instance:
-            self.figure._plot_half_edge(edge, new_ancilla, self.code.instance, full=True)
-            self.figure._plot_full_edge(edge, ancilla)
+        if hasattr(edge, "uf_plot_instance") and edge.uf_plot_instance == self.code.instance:
+            if ancilla in edge.uf_plot and edge.uf_plot[ancilla].instance == self.code.instance:
+                self.figure._plot_half_edge(edge, new_ancilla, self.code.instance, full=True)
+                self.figure._plot_full_edge(edge, ancilla)
+            else:
+                self.figure._plot_half_edge(edge, ancilla, self.code.instance, full=True)
+                self.figure._plot_full_edge(edge, new_ancilla)
         else:
             self.figure._plot_half_edge(edge, ancilla, self.code.instance, full=True)
-            self.figure._plot_full_edge(edge, new_ancilla)
+            self.figure._plot_half_edge(edge, new_ancilla, self.code.instance, full=True)
 
     def _edge_grow(self, ancilla, edge, new_ancilla, **kwargs):
         # Inherited docsting
@@ -188,22 +192,25 @@ class Toric(SimToric, PlotCode):
                 color=self.colors2[ancilla.state_type],
             )
             line.object = edge
+            line.instance = instance
             if hasattr(edge, "uf_plot"):
-                edge.uf_plot[ancilla] = (line, instance)
+                edge.uf_plot[ancilla] = line
             else:
-                edge.uf_plot = {ancilla: (line, instance)}
+                edge.uf_plot = {ancilla: line}
+                edge.uf_plot_instance = instance
 
             self.new_artist(line)
 
         def _plot_full_edge(self, edge, ancilla):
-            self.new_properties(edge.uf_plot[ancilla][0], {"ls": self.params.line_style_primary})
+            self.new_properties(edge.uf_plot[ancilla], {"ls": self.params.line_style_primary})
 
         def _hide_edge(self, edge):
-            for artist, _ in edge.uf_plot.values():
-                self.new_properties(artist, {"visible": False})
+            if hasattr(edge, "uf_plot"):
+                for artist in edge.uf_plot.values():
+                    self.new_properties(artist, {"visible": False})
 
         def _match_edge(self, edge):
-            for artist, _ in edge.uf_plot.values():
+            for artist in edge.uf_plot.values():
                 self.new_properties(artist, {"color": self.colors1[edge.state_type]})
 
         def _plot_ancilla(self, ancilla, init=False):
@@ -285,10 +292,12 @@ class Toric(SimToric, PlotCode):
                 color=self.colors2[ancilla.state_type],
             )
             line.object = edge
+            line.instance = instance
             if hasattr(edge, "uf_plot"):
-                edge.uf_plot[ancilla] = (line, instance)
+                edge.uf_plot[ancilla] = line
             else:
-                edge.uf_plot = {ancilla: (line, instance)}
+                edge.uf_plot = {ancilla: line}
+                edge.uf_plot_instance = instance
 
             self.new_artist(line)
 

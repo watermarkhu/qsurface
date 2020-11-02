@@ -138,6 +138,7 @@ def run(
         seed = timeit.default_timer()
     seed = float(f"{seed}{mp_process}")
     random.seed(seed)
+    print(seed)
 
     if benchmark:
         benchmark._set_decoder(decoder, seed=seed)
@@ -369,7 +370,7 @@ class BenchmarkDecoder(object):
     value_decorators = ["count_calls"]
 
     def __init__(
-        self, methods_to_benchmark: dict, decoder: Optional[decoder_type] = None, **kwargs
+        self, methods_to_benchmark: dict={}, decoder: Optional[decoder_type] = None, **kwargs
     ):
         self.decoder = decoder
         self.methods_to_benchmark = methods_to_benchmark

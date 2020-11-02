@@ -11,6 +11,7 @@ DECODERS = oss.decoders.DECODERS
 
 @pytest.fixture
 def example_pm_data():
+    """Example data returnd by `threshold.run_many`."""
     data = pd.DataFrame.from_dict(
         {
             "p_bitflip": {
@@ -105,6 +106,7 @@ def example_pm_data():
 
 @pytest.mark.parametrize("mp_processes", [1, 2])
 def test_run_many(mp_processes):
+    """Test threshold runner with varying number of processes."""
     iters = 10
     sizes = [8, 10]
     data = run_many(
@@ -126,12 +128,14 @@ def test_run_many(mp_processes):
 
 @pytest.mark.parametrize("modified_ansatz", [True, False])
 def test_fit_data(example_pm_data, modified_ansatz):
+    """Load example data and test fitting."""
     fitter = ThresholdFit(modified_ansatz=modified_ansatz)
     fitter.fit_data(example_pm_data, "p_bitflip")
 
 
 @pytest.mark.parametrize("modified_ansatz", [True, False])
 def test_plot_data(example_pm_data, modified_ansatz):
+    """Load example data and test plotting."""
     fitter = ThresholdFit(modified_ansatz=modified_ansatz)
     figure = plt.figure()
     fitter.plot_data(example_pm_data, "p_bitflip", figure=figure)

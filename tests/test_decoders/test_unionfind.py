@@ -1,35 +1,20 @@
 from opensurfacesim.main import *
-from opensurfacesim.codes.toric.sim import PerfectMeasurements as toric_code
 import opensurfacesim as oss
 import pytest
-import itertools
 import random
+from .errors import get_error_combinations, get_error_keys
 
 
 CODES = oss.codes.CODES
-DECODERS = oss.decoders.DECODERS
 ERRORS = oss.errors.ERRORS
 SIZE_PM = 12
-SIZE_FM = 6
+SIZE_FM = 4
 ITERS = 100
 no_wait_param = oss.plot.PlotParams(blocking_wait=0.001)
-error_combinations = []
-for r in range(1, len(ERRORS) + 1):
-    error_combinations += itertools.combinations(ERRORS, r)
-
-
-def get_error_keys(error_names):
-    keys = []
-    code = toric_code(2)
-    for name in error_names:
-        error_module = getattr(oss.errors, name).Sim(code)
-        keys += list(error_module.default_error_rates.keys())
-    return keys
 
 
 @pytest.mark.parametrize("Code", CODES)
-@pytest.mark.parametrize("Decoder", DECODERS)
-@pytest.mark.parametrize("errors", error_combinations)
+@pytest.mark.parametrize("errors", get_error_combinations())
 @pytest.mark.parametrize(
     "faulty, size, max_rate, extra_keys",
     [
@@ -37,10 +22,9 @@ def get_error_keys(error_names):
         (True, SIZE_FM, 0.05, ["pm_bitflip", "pm_phaseflip"]),
     ],
 )
-def test_decoder_pm(size, Code, Decoder, errors, faulty, max_rate, extra_keys):
+def test_unionfind_sim(size, Code, errors, faulty, max_rate, extra_keys):
     """Test initialize function for all configurations."""
-
-    Decoder_module = getattr(oss.decoders, Decoder).sim
+    Decoder_module = getattr(oss.decoders, "unionfind").sim
     if hasattr(Decoder_module, Code.capitalize()):
         decoder_module = getattr(Decoder_module, Code.capitalize())
         Code_module = getattr(oss.codes, Code).sim
@@ -67,24 +51,23 @@ def test_decoder_pm(size, Code, Decoder, errors, faulty, max_rate, extra_keys):
         assert True
 
 
-def test_get_blossomv():
-    oss.decoders.mwpm.get_blossomv()
-
-
 @pytest.mark.parametrize("weighted_growth", [False, True])
 @pytest.mark.parametrize("weighted_union", [False, True])
 @pytest.mark.parametrize("dynamic_forest", [False, True])
-def test_decoder_unionfind(weighted_growth, weighted_union, dynamic_forest):
+def test_unionfind_options(weighted_growth, weighted_union, dynamic_forest):
+    """Test options of unionfind decoder."""
     code, decoder = initialize(SIZE_PM, "toric", "unionfind", enabled_errors=["pauli"])
-    output = run(
-        code,
-        decoder,
-        error_rates={"p_bitflip": 0.1},
-        iterations=ITERS,
-        weighted_growth=weighted_growth,
-        weighted_union=weighted_union,
-        dynamic_forest=dynamic_forest,
-    )
+    trivial = 0
+    for _ in range(ITERS):
+        code.random_errors(p_bitflip=random.random()*0.2)
+        decoder.decode(
+            weighted_growth=weighted_growth,
+            weighted_union=weighted_union,
+            dynamic_forest=dynamic_forest,
+        )
+        trivial += code.trivial_ancillas
+
+    assert trivial == ITERS
 
 
 @pytest.mark.parametrize(
@@ -94,7 +77,7 @@ def test_decoder_unionfind(weighted_growth, weighted_union, dynamic_forest):
         (True, SIZE_FM),
     ],
 )
-def test_plot_unionfind(faulty, size):
+def test_unionfind_plot(faulty, size):
     code, decoder = initialize(
         size,
         "toric",
@@ -104,7 +87,7 @@ def test_plot_unionfind(faulty, size):
         plot_params=no_wait_param,
         faulty_measurements=faulty,
     )
-    output = run(
+    run(
         code,
         decoder,
         error_rates={"p_bitflip": 0.1},
@@ -116,32 +99,3 @@ def test_plot_unionfind(faulty, size):
     )
 
 
-@pytest.mark.parametrize(
-    "faulty, size",
-    [
-        (False, SIZE_PM),
-        (True, SIZE_FM),
-    ],
-)
-def test_plot_ufns(faulty, size):
-    code, decoder = initialize(
-        size,
-        "toric",
-        "ufns",
-        enabled_errors=["pauli"],
-        plotting=True,
-        plot_params=no_wait_param,
-        faulty_measurements=faulty,
-    )
-    output = run(
-        code,
-        decoder,
-        error_rates={"p_bitflip": 0.1},
-        print_steps=True,
-        print_tree=True,
-        step_bucket=True,
-        step_cluster=True,
-        step_node=True,
-        step_cycle=True,
-        step_peel=True,
-    )

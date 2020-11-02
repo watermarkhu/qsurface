@@ -139,7 +139,7 @@ class AncillaQubit(Qubit):
         Parameters
         ----------
         p_bitflip : float
-            Bitflip probability. 
+            Bitflip probability.
         """
         parity = False
         for data_qubit in self.parity_qubits.values():
@@ -157,7 +157,7 @@ class AncillaQubit(Qubit):
 
         return parity
 
-    def state_icon(self, measure:bool=False, **kwargs):
+    def state_icon(self, measure: bool = False, **kwargs):
         """Returns the qubit state in a colored icon."""
         state = self.state if measure else self.measured_state
         if self.state_type == "x":
@@ -231,10 +231,11 @@ class PseudoQubit(AncillaQubit):
 
     Edges needs to be spanned by two nodes. For data qubits on the boundary, one of its edges additionally requires an ancilla qubit like node, which is the pseudo-qubit.
     """
-    
+
     qubit_type = "pA"
 
 
 class PseudoEdge(Edge):
     """Vertical edge connecting time instances of ancilla-qubits, imitates `.Edge`."""
+
     edge_type, rep = "pseudo", "|"

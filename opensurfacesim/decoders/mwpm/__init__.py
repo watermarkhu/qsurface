@@ -26,7 +26,7 @@ def get_blossomv(accept: bool = False):
             print(licensefile.read())
     except FileNotFoundError:
         raise FileNotFoundError("License file missing. Automatic download is disabled.")
-    
+
     if not accept:
         accept = input(
             "This function will download the software from https://pub.ist.ac.at/~vnk/software.html, do you wish to continue? [y/n]"

@@ -28,11 +28,7 @@ def test_unionfind_sim(size, Code, errors, faulty, max_rate, extra_keys):
     if hasattr(Decoder_module, Code.capitalize()):
         decoder_module = getattr(Decoder_module, Code.capitalize())
         Code_module = getattr(oss.codes, Code).sim
-        code_module = (
-            getattr(Code_module, "FaultyMeasurements")
-            if faulty
-            else getattr(Code_module, "PerfectMeasurements")
-        )
+        code_module = getattr(Code_module, "FaultyMeasurements") if faulty else getattr(Code_module, "PerfectMeasurements")
         code = code_module(size)
         code.initialize(*errors)
         decoder = decoder_module(code)
@@ -59,7 +55,7 @@ def test_unionfind_options(weighted_growth, weighted_union, dynamic_forest):
     code, decoder = initialize(SIZE_PM, "toric", "unionfind", enabled_errors=["pauli"])
     trivial = 0
     for _ in range(ITERS):
-        code.random_errors(p_bitflip=random.random()*0.2)
+        code.random_errors(p_bitflip=random.random() * 0.2)
         decoder.decode(
             weighted_growth=weighted_growth,
             weighted_union=weighted_union,
@@ -97,5 +93,3 @@ def test_unionfind_plot(faulty, size):
         step_cycle=True,
         step_peel=True,
     )
-
-

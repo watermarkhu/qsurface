@@ -28,11 +28,7 @@ def test_ufns_sim(size, Code, errors, faulty, max_rate, extra_keys):
     if hasattr(Decoder_module, Code.capitalize()):
         decoder_module = getattr(Decoder_module, Code.capitalize())
         Code_module = getattr(oss.codes, Code).sim
-        code_module = (
-            getattr(Code_module, "FaultyMeasurements")
-            if faulty
-            else getattr(Code_module, "PerfectMeasurements")
-        )
+        code_module = getattr(Code_module, "FaultyMeasurements") if faulty else getattr(Code_module, "PerfectMeasurements")
         code = code_module(size)
         code.initialize(*errors)
         decoder = decoder_module(code)

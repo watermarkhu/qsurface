@@ -12,15 +12,16 @@
 
 import os
 import sys
-sys.path.insert(0, os.path.abspath('../../'))
+
+sys.path.insert(0, os.path.abspath("../../"))
 import sphinx
 from m2r2 import MdInclude
 
 # -- Project information -----------------------------------------------------
 
-project = 'Open Surface code Simulations'
-copyright = '2020, Mark Shui Hu'
-author = 'Mark Shui Hu'
+project = "Open Surface code Simulations"
+copyright = "2020, Mark Shui Hu"
+author = "Mark Shui Hu"
 
 
 # -- General configuration ---------------------------------------------------
@@ -32,20 +33,19 @@ extensions = [
     "sphinx.ext.napoleon",
     "sphinx.ext.autodoc",
     "sphinx_autodoc_typehints",
-    'sphinx.ext.todo',
+    "sphinx.ext.todo",
     "sphinx.ext.githubpages",
     "sphinx.ext.intersphinx",
     "m2r2",
     "sphinx_rtd_theme",
 ]
 
-intersphinx_mapping = {'matplotlib': ('https://matplotlib.org/', None)}
-intersphinx_mapping = {'networkx': ('https://networkx.github.io/documentation/stable/', None)}
-
+intersphinx_mapping = {"matplotlib": ("https://matplotlib.org/", None)}
+intersphinx_mapping = {"networkx": ("https://networkx.github.io/documentation/stable/", None)}
 
 
 # Add any paths that contain templates here, relative to this directory.
-templates_path = ['_templates']
+templates_path = ["_templates"]
 
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
@@ -76,8 +76,8 @@ exclude_patterns = []
 
 html_theme = "sphinx_rtd_theme"
 html_theme_options = {
-    'analytics_id': 'UA-180556212-1',
-    'includehidden': True,
+    "analytics_id": "UA-180556212-1",
+    "includehidden": True,
 }
 
 # Add any paths that contain custom static files (such as style sheets) here,
@@ -86,7 +86,7 @@ html_theme_options = {
 html_static_path = []
 # html_sidebars = {
 #     '**': [
-#         'globaltoc.html', 
+#         'globaltoc.html',
 #         'localtoc.html',
 #         'relations.html',
 #         'sourcelink.html',
@@ -108,4 +108,4 @@ html_static_path = []
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = True
 
-default_role = 'obj' 
+default_role = "obj"

@@ -13,6 +13,7 @@ SEED = 12345
 ITERS = [1, 10]
 MP_ITERS = 24
 
+
 @pytest.mark.parametrize("Code", CODES)
 @pytest.mark.parametrize("Decoder", DECODERS)
 @pytest.mark.parametrize("error", ERRORS)
@@ -92,9 +93,7 @@ def test_run_multiprocess_benchmark():
     """Test multiprocess benchmark that combines multiple benchmarks."""
     code, decoder = initialize(SIZE_PM, CODES[0], DECODERS[0])
     benchmark = BenchmarkDecoder({"decode": ["count_calls", "value_to_list"]})
-    output = run_multiprocess(
-        code, decoder, iterations=MP_ITERS, processes=2, benchmark=benchmark, seed=SEED
-    )
+    output = run_multiprocess(code, decoder, iterations=MP_ITERS, processes=2, benchmark=benchmark, seed=SEED)
     asserted_output = {
         "no_error": MP_ITERS,
         "benchmark": {

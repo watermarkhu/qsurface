@@ -4,11 +4,11 @@ from ..unionfind.plot import Toric as PlotToric, Planar as PlotPlanar
 
 
 class Toric(PlotToric, SimToric):
-    """Union-Find Node-Suspension decoder for the toric lattice with union-find plot. 
+    """Union-Find Node-Suspension decoder for the toric lattice with union-find plot.
 
     Has all class attributes and methods from `.ufns.sim.Toric`, with additional parameters below. Default values for these parameters can be supplied via a *decoders.ini* file under the section of ``[ufns]``.
 
-    The plotting class initiates a `opensurfacesim.plot` object. For its usage, see :ref:`plot-usage`. 
+    The plotting class initiates a `opensurfacesim.plot` object. For its usage, see :ref:`plot-usage`.
 
     Parameters
     ----------
@@ -23,6 +23,7 @@ class Toric(PlotToric, SimToric):
     step_peel : bool, optional
         Waits for user after every edge removed during peeling. Default is false.
     """
+
     def _grow_node_boundary(self, node, *args, **kwargs):
         super()._grow_node_boundary(node, *args, **kwargs)
         if self.config["step_node"]:
@@ -38,14 +39,14 @@ class Toric(PlotToric, SimToric):
                 print(f"{obj}-{obj.node._status}-{obj.cluster.find()}")
             elif type(obj) == DataQubit:
                 print(obj)
-        
+
 
 class Planar(Toric, PlotPlanar, SimPlanar):
-    """Union-Find Node-Suspension decoder for the planar lattice with union-find plot. 
+    """Union-Find Node-Suspension decoder for the planar lattice with union-find plot.
 
     Has all class attributes and methods from `.ufns.sim.Planar`, with additional parameters below. Default values for these parameters can be supplied via a *decoders.ini* file under the section of ``[ufns]``.
 
-    The plotting class initiates a `opensurfacesim.plot` object. For its usage, see :ref:`plot-usage`. 
+    The plotting class initiates a `opensurfacesim.plot` object. For its usage, see :ref:`plot-usage`.
 
     Parameters
     ----------
@@ -60,4 +61,5 @@ class Planar(Toric, PlotPlanar, SimPlanar):
     step_peel : bool, optional
         Waits for user after every edge removed during peeling. Default is false.
     """
+
     pass

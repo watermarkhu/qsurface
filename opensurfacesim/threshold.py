@@ -18,9 +18,7 @@ from .errors._template import Sim as Error
 
 module_or_name = Union[ModuleType, str]
 formatted_dataframe = Tuple[list, list, list, list]
-plt_markers = ["o", "s", "v", "D", "p", "^", "h", "X", "<", "P", "*", ">", "H", "d"] + [
-    i + 4 for i in range(7)
-]
+plt_markers = ["o", "s", "v", "D", "p", "^", "h", "X", "<", "P", "*", ">", "H", "d"] + [i + 4 for i in range(7)]
 fit_param = Tuple[float, float, float]
 
 
@@ -69,12 +67,7 @@ def run_many(
 
     code_name = Code.__name__.split(".")[-1] if isinstance(Code, ModuleType) else Code
     decoder_name = Decoder.__name__.split(".")[-1] if isinstance(Decoder, ModuleType) else Code
-    error_names = "/".join(
-        [
-            error.__name__.split(".")[-1] if isinstance(error, Error) else error
-            for error in enabled_errors
-        ]
-    )
+    error_names = "/".join([error.__name__.split(".")[-1] if isinstance(error, Error) else error for error in enabled_errors])
 
     if output == "":
         output = f"{code_name}_{decoder_name}-{error_names}.csv"
@@ -92,9 +85,7 @@ def run_many(
     # Simulate and save results to file
     for size in sizes:
 
-        code, decoder = initialize(
-            size, Code, Decoder, enabled_errors, faulty_measurements, **kwargs
-        )
+        code, decoder = initialize(size, Code, Decoder, enabled_errors, faulty_measurements, **kwargs)
 
         for error_rate in error_rates:
             print(f"Running ({size}) lattice with error rates {error_rate}.")
@@ -115,7 +106,7 @@ def run_many(
                     "datetime": datetime.now().strftime("%d/%m/%Y %H:%M:%S"),
                     "size": size,
                     **error_rate,
-                    **result.pop("benchmark")
+                    **result.pop("benchmark"),
                 }
             )
 
@@ -298,9 +289,7 @@ class ThresholdFit:
             axis.scatter(x_data, y_data, s=s_data, color=color, marker=marker, **scatter_kwargs)
             axis.plot(fit_x_data, fit_y_data, color=color, **line_kwargs)
 
-            legend_items.append(
-                Line2D([], [], label=f"L = {size}", color=color, marker=marker, **line_kwargs)
-            )
+            legend_items.append(Line2D([], [], label=f"L = {size}", color=color, marker=marker, **line_kwargs))
 
         for attribute, value in axis_attributes.items():
             getattr(axis, f"set_{attribute}")(value)

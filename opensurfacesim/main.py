@@ -65,9 +65,7 @@ def initialize(
         Code = getattr(codes, Code)
     Code_flow = getattr(Code, "plot") if plotting else getattr(Code, "sim")
     Code_flow_dim = (
-        getattr(Code_flow, "FaultyMeasurements")
-        if faulty_measurements
-        else getattr(Code_flow, "PerfectMeasurements")
+        getattr(Code_flow, "FaultyMeasurements") if faulty_measurements else getattr(Code_flow, "PerfectMeasurements")
     )
 
     if isinstance(Decoder, str):
@@ -149,9 +147,7 @@ def run(
         print(f"Running iteration {iteration+1}/{iterations}", end="\r")
         code.random_errors(**error_rates)
         decoder.decode(**kwargs)
-        logical_state = (
-            code.logical_state
-        )  # Must get logical state property to update code.no_error
+        logical_state = code.logical_state  # Must get logical state property to update code.no_error
         output["no_error"] += code.no_error
         if hasattr(code, "figure"):
             code.show_corrected()
@@ -369,9 +365,7 @@ class BenchmarkDecoder(object):
     list_decorators = ["duration"]
     value_decorators = ["count_calls"]
 
-    def __init__(
-        self, methods_to_benchmark: dict={}, decoder: Optional[decoder_type] = None, **kwargs
-    ):
+    def __init__(self, methods_to_benchmark: dict = {}, decoder: Optional[decoder_type] = None, **kwargs):
         self.decoder = decoder
         self.methods_to_benchmark = methods_to_benchmark
         self.data = {"decoded": 0, "iterations": 0, "seed": None}
@@ -463,9 +457,7 @@ class BenchmarkDecoder(object):
         return wrapper
 
 
-def _combine_mean_std(
-    means: List[float], stds: List[float], iterations: List[int]
-) -> Tuple[float, float]:
+def _combine_mean_std(means: List[float], stds: List[float], iterations: List[int]) -> Tuple[float, float]:
     """Combines multiple groups of means and standard deviations.
 
     The algorithm utilizes the algorithm as described by `Cochrane <https://training.cochrane.org/handbook/current/chapter-06#section-6-5-2>`_. The method is valid since the each subgroup is the result returned by a multiprocessing process that simulations the same group.
@@ -485,11 +477,7 @@ def _combine_mean_std(
 
         n3 = n1 + n2
         m3 = (n1 * m1 + n2 * m2) / n3
-        s3 = (
-            (n1 - 1) * s1 ** 2
-            + (n2 - 1) * s2 ** 2
-            + n1 * n2 / n3 * (m1 ** 2 + m2 ** 2 - 2 * m1 * m2)
-        ) / (n3 - 1)
+        s3 = ((n1 - 1) * s1 ** 2 + (n2 - 1) * s2 ** 2 + n1 * n2 / n3 * (m1 ** 2 + m2 ** 2 - 2 * m1 * m2)) / (n3 - 1)
         m1, s1, n1 = m3, s3, n3
 
     return m1, s1

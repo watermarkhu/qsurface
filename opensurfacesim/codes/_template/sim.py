@@ -163,9 +163,7 @@ class PerfectMeasurements(ABC):
         """
         for error_module in error_modules:
             if type(error_module) == str:
-                error_module = importlib.import_module(
-                    ".errors.{}".format(error_module), package="opensurfacesim"
-                )
+                error_module = importlib.import_module(".errors.{}".format(error_module), package="opensurfacesim")
             self._init_error(error_module, error_rates)
 
     def _init_error(self, error_module, error_rates):
@@ -243,7 +241,7 @@ class PerfectMeasurements(ABC):
     ----------------------------------------------------------------------------------------
     """
 
-    def random_errors(self, apply_order: Optional[List[Error]] = None, measure:bool=True, **kwargs):
+    def random_errors(self, apply_order: Optional[List[Error]] = None, measure: bool = True, **kwargs):
         """Applies all errors loaded in ``self.errors`` attribute to layer ``z``.
 
         The random error is applied for each loaded error module by calling ``error_module.random_error()``. If ``apply_order`` is specified, the error modules are applied in order of the error names in the list. If no order is specified, the errors are applied in a random order. Addionally, any error rate can set by supplying the rate as a keyword argument e.g. ``p_bitflip = 0.1``.
@@ -434,6 +432,6 @@ class FaultyMeasurements(PerfectMeasurements):
             Keyword arguments are passed on to `~.codes.elements.AncillaQubit.get_state`.
         """
         for ancilla in self.ancilla_qubits[self.layer].values():
-            previous_ancilla = self.ancilla_qubits[(ancilla.z-1)%self.layers][ancilla.loc]
+            previous_ancilla = self.ancilla_qubits[(ancilla.z - 1) % self.layers][ancilla.loc]
             measured_state = ancilla.get_state(**kwargs)
             ancilla.syndrome = measured_state != previous_ancilla.measured_state

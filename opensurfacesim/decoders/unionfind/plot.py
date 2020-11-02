@@ -7,11 +7,11 @@ from matplotlib.lines import Line2D
 
 
 class Toric(SimToric, PlotCode):
-    """Union-Find decoder for the toric lattice with union-find plot. 
+    """Union-Find decoder for the toric lattice with union-find plot.
 
     Has all class attributes and methods from `.unionfind.sim.Toric`, with additional parameters below. Default values for these parameters can be supplied via a *decoders.ini* file under the section of ``[unionfind]``.
 
-    The plotting class initiates a `opensurfacesim.plot` object. For its usage, see :ref:`plot-usage`. 
+    The plotting class initiates a `opensurfacesim.plot` object. For its usage, see :ref:`plot-usage`.
 
     Parameters
     ----------
@@ -139,8 +139,8 @@ class Toric(SimToric, PlotCode):
             # Inherited docstring
             size = [xy + 0.25 for xy in self.code.size]
             self._init_axis([-0.25, -0.25] + size, title=self.decoder, aspect="equal")
-            
-            handles=[
+
+            handles = [
                 self._legend_scatter(
                     "Syndrome vertex",
                     facecolors=self.params.color_x_secondary,
@@ -177,15 +177,16 @@ class Toric(SimToric, PlotCode):
             labels = [artist.get_label() if hasattr(artist, "get_label") else artist[0].get_label() for artist in handles]
             self.legend_ax.legend(handles, labels, **kwargs)
 
-
-        def _plot_half_edge(self, edge : Edge, ancilla : AncillaQubit, instance: float, full: bool=False, ):
+        def _plot_half_edge(
+            self,
+            edge: Edge,
+            ancilla: AncillaQubit,
+            instance: float,
+            full: bool = False,
+        ):
             line = self._draw_line(
-                self.code._parse_boundary_coordinates(
-                    self.code.size[0], edge.qubit.loc[0], ancilla.loc[0]
-                ),
-                self.code._parse_boundary_coordinates(
-                    self.code.size[0], edge.qubit.loc[1], ancilla.loc[1]
-                ),
+                self.code._parse_boundary_coordinates(self.code.size[0], edge.qubit.loc[0], ancilla.loc[0]),
+                self.code._parse_boundary_coordinates(self.code.size[0], edge.qubit.loc[1], ancilla.loc[1]),
                 ls=self.params.line_style_primary if full else self.params.line_style_tertiary,
                 zorder=0,
                 lw=self.params.line_width_primary,
@@ -268,23 +269,24 @@ class Toric(SimToric, PlotCode):
                 print(obj)
 
     class Figure3D(Template3D, Figure2D):
-
-        def _plot_half_edge(self, edge : Edge, ancilla : AncillaQubit, instance: float, full: bool=False, ):
+        def _plot_half_edge(
+            self,
+            edge: Edge,
+            ancilla: AncillaQubit,
+            instance: float,
+            full: bool = False,
+        ):
 
             if type(edge.qubit) is DataQubit:
                 edge_z = edge.qubit.z
             else:
-                edge_z = edge.qubit.z - .5
+                edge_z = edge.qubit.z - 0.5
                 if abs(edge_z - ancilla.z) > 1:
-                    edge_z = self.code.layers - edge.z 
+                    edge_z = self.code.layers - edge.z
 
             line = self._draw_line3D(
-                self.code._parse_boundary_coordinates(
-                    self.code.size[0], edge.qubit.loc[0], ancilla.loc[0]
-                ),
-                self.code._parse_boundary_coordinates(
-                    self.code.size[0], edge.qubit.loc[1], ancilla.loc[1]
-                ),
+                self.code._parse_boundary_coordinates(self.code.size[0], edge.qubit.loc[0], ancilla.loc[0]),
+                self.code._parse_boundary_coordinates(self.code.size[0], edge.qubit.loc[1], ancilla.loc[1]),
                 (edge_z, ancilla.z),
                 ls=self.params.line_style_primary if full else self.params.line_style_tertiary,
                 zorder=0,
@@ -303,11 +305,11 @@ class Toric(SimToric, PlotCode):
 
 
 class Planar(Toric, SimPlanar):
-    """Union-Find decoder for the planar lattice with union-find plot. 
+    """Union-Find decoder for the planar lattice with union-find plot.
 
     Has all class attributes and methods from `.unionfind.sim.Planar`, with additional parameters below. Default values for these parameters can be supplied via a *decoders.ini* file under the section of ``[unionfind]``.
 
-    The plotting class initiates a `opensurfacesim.plot` object. For its usage, see :ref:`plot-usage`. 
+    The plotting class initiates a `opensurfacesim.plot` object. For its usage, see :ref:`plot-usage`.
 
     Parameters
     ----------
@@ -322,6 +324,7 @@ class Planar(Toric, SimPlanar):
     kwargs
         Keyword arguments are passed on to `.unionfind.sim.Planar`.
     """
+
     def init_plot(self, **kwargs):
         size = [xy - 0.5 for xy in self.code.size]
         self._init_axis([-0.25, -0.25] + size, title=self.decoder, aspect="equal")

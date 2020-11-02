@@ -16,5 +16,6 @@ class PerfectMeasurements(SimPM, PlotPM):
 class FaultyMeasurements(SimFM, PlotFM):
     class Figure2D(PerfectMeasurements.Figure, PlotFM.Figure2D):
         pass
+
     class Figure3D(PerfectMeasurements.Figure, PlotFM.Figure3D):
         pass

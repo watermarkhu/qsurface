@@ -35,4 +35,3 @@ __pycache__/
 .vscode/
 .pytest_cache/
 .ipynb_checkpoints/
-.coverage

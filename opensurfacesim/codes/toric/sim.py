@@ -46,10 +46,10 @@ class PerfectMeasurements(TemplatePM):
         """
         (x, y), z = ancilla_qubit.loc, ancilla_qubit.z
         checks = {
-            (0.5,0): ((x + 0.5) % self.size[0], y),
-            (-.5,0): ((x - 0.5) % self.size[0], y),
-            (0,0.5): (x, (y + 0.5) % self.size[1]),
-            (0,-.5): (x, (y - 0.5) % self.size[1]),
+            (0.5, 0): ((x + 0.5) % self.size[0], y),
+            (-0.5, 0): ((x - 0.5) % self.size[0], y),
+            (0, 0.5): (x, (y + 0.5) % self.size[1]),
+            (0, -0.5): (x, (y - 0.5) % self.size[1]),
         }
         for key, loc in checks.items():
             if loc in self.data_qubits[z]:
@@ -65,19 +65,18 @@ class PerfectMeasurements(TemplatePM):
         }
         self.logical_operators = operators
 
-
     def state_icons(self, z=0, **kwargs):
         """Prints the state of the surface of layer ``z`` to the console using icons."""
         surface = ""
         for y in range(self.size[1]):
             for x in range(self.size[0]):
-                surface += self.ancilla_qubits[z][(x,y)].state_icon(**kwargs)
-                surface += self.data_qubits[z][(x + .5, y)].state_icon(**kwargs)
-            surface += "\n" 
+                surface += self.ancilla_qubits[z][(x, y)].state_icon(**kwargs)
+                surface += self.data_qubits[z][(x + 0.5, y)].state_icon(**kwargs)
+            surface += "\n"
             for x in range(self.size[0]):
-                surface += self.data_qubits[z][(x, y + .5)].state_icon(**kwargs)
-                surface += self.ancilla_qubits[z][(x+.5, y+.5)].state_icon(**kwargs)
-            surface += "\n" 
+                surface += self.data_qubits[z][(x, y + 0.5)].state_icon(**kwargs)
+                surface += self.ancilla_qubits[z][(x + 0.5, y + 0.5)].state_icon(**kwargs)
+            surface += "\n"
         print(surface)
 
     @staticmethod
@@ -94,6 +93,8 @@ class PerfectMeasurements(TemplatePM):
         }
         return options[min(diff, key=diff.get)]
 
+
 class FaultyMeasurements(TemplateFM, PerfectMeasurements):
     """Simulation toric code for faulty measurements."""
+
     pass

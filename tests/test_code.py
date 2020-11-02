@@ -1,5 +1,5 @@
 from opensurfacesim import codes
-import opensurfacesim as oss 
+import opensurfacesim as oss
 import pytest
 
 
@@ -15,4 +15,3 @@ def test_3d_plots(Code):
     code = code_module(4, figure3d=True, plot_params=no_wait_param)
     code.initialize()
     code.figure.close()
-

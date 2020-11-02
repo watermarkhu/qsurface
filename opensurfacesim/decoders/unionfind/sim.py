@@ -71,9 +71,7 @@ class Toric(SimCode):
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
 
-        self.config["step_growth"] = not (
-            self.config["step_bucket"] or self.config["step_cluster"]
-        )
+        self.config["step_growth"] = not (self.config["step_bucket"] or self.config["step_cluster"])
 
         # Apply Monkey Patching
         self.code.ancillaQubit.cluster = None
@@ -93,9 +91,7 @@ class Toric(SimCode):
                 for ancilla_qubit in layer.values():
                     self.support[
                         ancilla_qubit.vertical_edges[
-                            self.code.ancilla_qubits[(ancilla_qubit.z + 1) % self.code.layers][
-                                ancilla_qubit.loc
-                            ]
+                            self.code.ancilla_qubits[(ancilla_qubit.z + 1) % self.code.layers][ancilla_qubit.loc]
                         ]
                     ] = 0
         if self.config["weighted_growth"]:
@@ -176,10 +172,10 @@ class Toric(SimCode):
                 and edge.qubit.erasure == self.code.instance
                 and new_ancilla is not parent
                 and self.support[edge] == 0
-            ):                                          # if edge not already traversed
-                if new_ancilla.cluster == cluster:      # cycle detected, peel edge
+            ):  # if edge not already traversed
+                if new_ancilla.cluster == cluster:  # cycle detected, peel edge
                     self._edge_peel(edge, variant="cycle")
-                else:                                   # if no cycle detected
+                else:  # if no cycle detected
                     self._edge_full(ancilla, edge, new_ancilla)
                     self.cluster_add_ancilla(cluster, new_ancilla, parent=ancilla)
             elif new_ancilla.cluster is not cluster:  # Make sure new bound does not lead to self
@@ -310,9 +306,7 @@ class Toric(SimCode):
 
         return union_list, place_list
 
-    def grow_boundary(
-        self, cluster: Cluster, union_list: List[Tuple[AncillaQubit, Edge, AncillaQubit]], **kwargs
-    ):
+    def grow_boundary(self, cluster: Cluster, union_list: List[Tuple[AncillaQubit, Edge, AncillaQubit]], **kwargs):
         """Grows the boundary of the ``cluster``.
 
         See `grow_clusters` for more information.
@@ -422,7 +416,7 @@ class Toric(SimCode):
         for cluster in clusters:
 
             cluster = cluster.find()
-            
+
             if cluster.parity % 2 == 1:
                 if self.config["weighted_growth"]:
                     cluster.bucket = 2 * (cluster.size - 1) + cluster.support
@@ -450,11 +444,7 @@ class Toric(SimCode):
             print("================\nPeeling clusters")
         for layer in self.code.ancilla_qubits.values():
             for ancilla in layer.values():
-                if (
-                    ancilla.peeled != self.code.instance
-                    and ancilla.cluster
-                    and ancilla.cluster.instance == self.code.instance
-                ):
+                if ancilla.peeled != self.code.instance and ancilla.cluster and ancilla.cluster.instance == self.code.instance:
                     if not self.config["dynamic_forest"]:
                         self.static_forest(ancilla)
                     cluster = self.get_cluster(ancilla)
@@ -486,7 +476,6 @@ class Toric(SimCode):
             ancilla.peeled = self.code.instance
             self.peel_leaf(cluster, new_ancilla)
 
-
     def find_leaf(self, cluster: Cluster, ancilla: AncillaQubit, **kwargs):
         num_connect, leaf = 0, ()
         neighbors = self.get_neighbors(ancilla)
@@ -502,7 +491,6 @@ class Toric(SimCode):
         else:
             if num_connect == 1:
                 return leaf
-  
 
     def flip_edge(self, ancilla: AncillaQubit, edge: Edge, new_ancilla: AncillaQubit, **kwargs):
         """Flips the values of the ancillas connected to ``edge``."""
@@ -537,6 +525,7 @@ class Planar(Toric):
 
     See the description of `.unionfind.sim.Toric`.
     """
+
     def cluster_add_ancilla(
         self,
         cluster: Cluster,
@@ -563,7 +552,7 @@ class Planar(Toric):
                 and edge.qubit.erasure == self.code.instance
                 and new_ancilla is not parent
                 and self.support[edge] == 0
-            ):   
+            ):
                 if isinstance(new_ancilla, PseudoQubit):
                     if cluster.on_bound:
                         self._edge_peel(edge, variant="cycle")
@@ -571,17 +560,15 @@ class Planar(Toric):
                         self._edge_full(ancilla, edge, new_ancilla)
                         cluster.add_ancilla(new_ancilla)
                 else:
-                    if new_ancilla.cluster == cluster:      
+                    if new_ancilla.cluster == cluster:
                         self._edge_peel(edge, variant="cycle")
                     else:
                         self._edge_full(ancilla, edge, new_ancilla)
                         self.cluster_add_ancilla(cluster, new_ancilla, parent=ancilla)
-            elif (
-                new_ancilla.cluster is not cluster
-                and not (isinstance(new_ancilla, PseudoQubit) and cluster.on_bound)
+            elif new_ancilla.cluster is not cluster and not (
+                isinstance(new_ancilla, PseudoQubit) and cluster.on_bound
             ):  # Make sure new bound does not lead to self
                 cluster.new_bound.append((ancilla, edge, new_ancilla))
-
 
     def union_check(
         self,
@@ -595,10 +582,7 @@ class Planar(Toric):
 
         See `union_bucket` for more information.
         """
-        if (
-            new_cluster is cluster
-            or (isinstance(new_ancilla, PseudoQubit) and cluster.on_bound)
-        ):
+        if new_cluster is cluster or (isinstance(new_ancilla, PseudoQubit) and cluster.on_bound):
             if self.config["dynamic_forest"]:
                 self._edge_peel(edge, variant="cycle")
         elif new_cluster is None or new_cluster.instance != self.code.instance:
@@ -606,7 +590,6 @@ class Planar(Toric):
         else:
             return True
         return False
-
 
     def place_bucket(self, clusters: List[Cluster], bucket_i: int):
         """Places all clusters in ``clusters`` in a bucket if parity is odd.
@@ -623,8 +606,8 @@ class Planar(Toric):
         for cluster in clusters:
 
             cluster = cluster.find()
-            
-            if (cluster.parity % 2 == 1 and not cluster.on_bound):
+
+            if cluster.parity % 2 == 1 and not cluster.on_bound:
                 if self.config["weighted_growth"]:
                     cluster.bucket = 2 * (cluster.size - 1) + cluster.support
                     self.buckets[cluster.bucket].append(cluster)
@@ -635,7 +618,6 @@ class Planar(Toric):
                     cluster.bucket = bucket_i + 1
             else:
                 cluster.bucket = None
-
 
     def static_forest(self, ancilla: AncillaQubit, found_bound: str = False, **kwargs) -> bool:
         # Inherited docsting
@@ -664,17 +646,12 @@ class Planar(Toric):
                     found_bound = self.static_forest(new_ancilla, found_bound=found_bound)
         return found_bound
 
-
     def peel_clusters(self, **kwargs):
         # Inherited docstring
         super().peel_clusters(**kwargs)
         for layer in self.code.pseudo_qubits.values():
             for ancilla in layer.values():
-                if (
-                    ancilla.peeled != self.code.instance
-                    and ancilla.cluster
-                    and ancilla.cluster.instance == self.code.instance
-                ):
+                if ancilla.peeled != self.code.instance and ancilla.cluster and ancilla.cluster.instance == self.code.instance:
                     if not self.config["dynamic_forest"]:
                         self.static_forest(ancilla)
                     cluster = self.get_cluster(ancilla)

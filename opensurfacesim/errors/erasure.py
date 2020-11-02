@@ -49,22 +49,19 @@ class Plot(TemplatePlot, Sim):
 
     legend_params = {
         "legend_erasure": {
-            "marker" : "$\u25CC$",
-            "color" : "color_edge",
-            "ms" : "legend_marker_size",
-            "mfc" : "color_background",
-            "mec" : "color_qubit_edge",
+            "marker": "$\u25CC$",
+            "color": "color_edge",
+            "ms": "legend_marker_size",
+            "mfc": "color_background",
+            "mec": "color_qubit_edge",
         }
     }
     legend_names = {"legend_erasure": "Erasure"}
     plot_params = {
-        "qubit_erased": {
-            "linestyle" : "line_style_tertiary",
-            "facecolor" : "color_qubit_face"
-        },
+        "qubit_erased": {"linestyle": "line_style_tertiary", "facecolor": "color_qubit_face"},
         "qubit_restored": {
-            "linestyle" : "line_style_primary",
-        }
+            "linestyle": "line_style_primary",
+        },
     }
 
     def __init__(self, *args, **kwargs) -> None:

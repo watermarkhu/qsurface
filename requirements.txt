@@ -1,6 +1,5 @@
-numpy
-pandas
-networkx
 matplotlib
+networkx
+pandas
 scipy
 pptree

@@ -22,7 +22,6 @@ class Toric(UFToric):
     weighted_growth     True
     weighted_union      True
     dynamic_forest      True
-    degenerate_union    False
     =================   =======
 
     Attributes
@@ -54,7 +53,6 @@ class Toric(UFToric):
             "weighted_growth" : True,
             "weighted_union" : True,
             "dynamic_forest" : True,
-            "degenerate_union" : False,
         })
         super().__init__(*args, **kwargs)
 

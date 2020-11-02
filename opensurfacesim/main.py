@@ -155,7 +155,7 @@ def run(
         if hasattr(code, "figure"):
             code.show_corrected()
 
-    print()
+    print()  # for newline after /r
 
     if hasattr(code, "figure"):
         code.figure.close()
@@ -172,33 +172,12 @@ def run(
         mp_queue.put(output)
 
 
-def _combine_mean_std(means: List[float], stds: List[float], iterations: List[int]) -> Tuple[float, float]:
-    """Combines multiple groups of means and standard deviations. 
-
-    The algorithm utilizes the algorithm as described by `Cochrane <https://training.cochrane.org/handbook/current/chapter-06#section-6-5-2>`_. The method is valid since the each subgroup is the result returned by a multiprocessing process that simulations the same group. 
-
-    Parameters
-    ----------
-    means
-        List of means.
-    stds
-        List of standard deviations.
-    iterations
-        Number of samples in each subgroup. 
-    """
-    N = sum(iterations)
-    M = sum([m * n for m, n in zip(means, iterations)])
-    K = sum([std ** 2 * (n - 1) + (m * n) ** 2 / n for std, m, n in zip(stds, means, iterations)])
-    mean = M / N
-    std = (K - M ** 2 / N / (N - 1)) ** (1 / 2)
-    return mean, std
-    
-
 def run_multiprocess(
     code: code_type,
     decoder: decoder_type,
     error_rates: dict = {},
     iterations: int = 1,
+    seed: Optional[float] = None,
     processes: int = 1,
     benchmark: Optional[BenchmarkDecoder] = None,
     **kwargs,
@@ -246,6 +225,7 @@ def run_multiprocess(
                 args=(code, decoder),
                 kwargs={
                     "iterations": process_iters,
+                    "seed": seed,
                     "mp_process": process,
                     "mp_queue": mp_queue,
                     "error_rates": error_rates,
@@ -279,6 +259,7 @@ def run_multiprocess(
             stats = defaultdict(lambda: {"mean": [], "std": []})
             iterations = []
             for benchmark in benchmarks:
+                print(benchmark)
                 iterations.append(benchmark["iterations"])
                 for name, value in benchmark.items():
                     if name[-4:] == "mean":
@@ -286,7 +267,7 @@ def run_multiprocess(
                     elif name[-3:] == "std":
                         stats[name[:-3]]["std"].append(value)
                     else:
-                        if isinstance(value, float) and name in combined_benchmark:
+                        if type(value) in [int, float] and name in combined_benchmark:
                             combined_benchmark[name] += value
                         else:
                             combined_benchmark[name] = value
@@ -295,6 +276,7 @@ def run_multiprocess(
                 combined_benchmark[f"{name}mean"] = mean
                 combined_benchmark[f"{name}std"] = std
             output["benchmark"] = combined_benchmark
+        output["benchmark"]["seed"] = seed
 
     return output
 
@@ -478,3 +460,35 @@ class BenchmarkDecoder(object):
             return func(*args, **kwargs)
 
         return wrapper
+
+
+def _combine_mean_std(
+    means: List[float], stds: List[float], iterations: List[int]
+) -> Tuple[float, float]:
+    """Combines multiple groups of means and standard deviations.
+
+    The algorithm utilizes the algorithm as described by `Cochrane <https://training.cochrane.org/handbook/current/chapter-06#section-6-5-2>`_. The method is valid since the each subgroup is the result returned by a multiprocessing process that simulations the same group.
+
+    Parameters
+    ----------
+    means
+        List of means.
+    stds
+        List of standard deviations.
+    iterations
+        Number of samples in each subgroup.
+    """
+    m1, s1, n1 = means[0], stds[0], iterations[0]
+
+    for m2, s2, n2 in zip(means[1:], stds[1:], iterations[1:]):
+
+        n3 = n1 + n2
+        m3 = (n1 * m1 + n2 * m2) / n3
+        s3 = (
+            (n1 - 1) * s1 ** 2
+            + (n2 - 1) * s2 ** 2
+            + n1 * n2 / n3 * (m1 ** 2 + m2 ** 2 - 2 * m1 * m2)
+        ) / (n3 - 1)
+        m1, s1, n1 = m3, s3, n3
+
+    return m1, s1

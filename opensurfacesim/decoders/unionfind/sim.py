@@ -24,8 +24,6 @@ class Toric(SimCode):
         Enables weighted union, Default is true. See `union_bucket`.
     dynamic_forest : bool, optional
         Enables dynamically mainted forests. Default is true.
-    degenerate_union : bool, optional
-        Enables preference for union on ancillas with multiple connections to other clusters. Default is false.
     print_steps : bool, optional
         Prints additional decoding information. Default is false.
     kwargs
@@ -123,6 +121,7 @@ class Toric(SimCode):
         kwargs
             Keyword arguments are passed on to `find_clusters`, `grow_clusters` and `peel_clusters`.
         """
+        self.buckets = defaultdict(list)
         self.bucket_max_filled = 0
         self.cluster_index = 0
         self.clusters = []
@@ -261,6 +260,7 @@ class Toric(SimCode):
         """
         if self.config["weighted_growth"]:
             for bucket_i in range(self.buckets_num):
+                self.bucket_i = bucket_i
                 if bucket_i > self.bucket_max_filled:
                     break
                 if bucket_i in self.buckets and self.buckets[bucket_i] != []:
@@ -353,8 +353,6 @@ class Toric(SimCode):
         Items in ``union_list`` consists of ``[ancillaA, edge, ancillaB]`` of two ancillas that, at the time added to the list, were not part of the same cluster. The cluster of an ancilla is stored at ``ancilla.cluster``, but due to cluster mergers the cluster at ``ancilla_cluster`` may not be the root element in the cluster-tree, and thus the cluster must be requested by ``ancilla.cluster.``\ `~.unionfind.elements.Cluster.find`. Since the clusters of ``ancillaA`` and ``ancillaB`` may have already merged, checks are performed in `union_check` after which the clusters are conditionally merged on ``edge`` by `union_edge`.
 
         If ``weighted_union`` is enabled, the smaller cluster is always made a child of the bigger cluster in the cluster-tree. This ensures the that the depth of the tree is minimized and the future calls to `~.unionfind.elements.Cluster.find` is reduced.
-
-        If ``degenerate_union`` is enabled, cluster mergers are prioritized on ancillas with a high connectivity to other clusters. A higher connectivity of two ancillas points to an increased chance of the union occuring on the edge spanned by these ancillas.
 
         If ``dynamic_forest`` is disabled, cycles within clusters are not immediately removed. The acyclic forest is then later constructed before peeling in `peel_leaf`.
 

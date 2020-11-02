@@ -1,8 +1,8 @@
-from os import read
 from opensurfacesim.main import BenchmarkDecoder, run, run_multiprocess, initialize
 from opensurfacesim.threshold import run_many, ThresholdFit, read_csv
 from collections import defaultdict
 import argparse
+import sys
 
 def _add_kwargs(parser, args, group_name=None, description=None):
     '''
@@ -23,7 +23,7 @@ def _get_kwargs(parsed_args, arg_group):
     return {arg[1][2:]: parsed_args.get(arg[1][2:]) for arg in arg_group}
 
 
-def cli():
+def cli(args):
 
     parser = argparse.ArgumentParser(
         prog="opensurfacesim",
@@ -102,7 +102,7 @@ def cli():
 
     ###
 
-    parsed_args = vars(parser.parse_args())
+    parsed_args = vars(parser.parse_args(args))
     init_kwargs = _get_kwargs(parsed_args, init_arguments)
 
     if parsed_args["sub"] == "simulation":
@@ -171,4 +171,6 @@ def cli():
                 fitter.plot_data(data, plot_column)
 
 if __name__ == "__main__":
-    cli()
+
+    args = sys.argv
+    cli(args[1:])

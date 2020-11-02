@@ -247,7 +247,8 @@ class Toric(SimToric, PlotCode):
                 else:
                     self._plot_ancilla(ancilla)
             else:
-                self.new_properties(ancilla.uf_plot, {"visible": False})
+                if hasattr(ancilla, "uf_plot"):
+                    self.new_properties(ancilla.uf_plot, {"visible": False})
 
         def _pick_handler(self, event):
             """Function on when an object in the figure is picked"""

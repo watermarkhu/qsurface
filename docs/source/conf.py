@@ -12,10 +12,7 @@
 
 import os
 import sys
-
 sys.path.insert(0, os.path.abspath("../../"))
-import sphinx
-from m2r2 import MdInclude
 
 # -- Project information -----------------------------------------------------
 
@@ -58,21 +55,6 @@ exclude_patterns = []
 # The theme to use for HTML and HTML Help pages.  See the documentation f~or
 # a list of builtin themes.
 #
-# html_theme = 'alabaster'
-# html_theme_options = {
-#     'description': 'Open source library for simulating and visualizing the surface code and its decoders.',
-#     'github_user': 'watermarkhu',
-#     'github_repo': 'OpenSurfaceSim',
-#     'github_button': True,
-#     'codecov_button': True,
-#     "extra_nav_links": {"Contact author": "https://watermarkhu.nl"},
-#     "sidebar_collapse": False,
-#     "show_powered_by": False,
-#     # 'font_family': '"Charis SIL", "Noto Serif", serif',
-#     # 'head_font_family': 'Lato, sans-serif',
-#     # 'code_font_family': '"Code new roman", "Ubuntu Mono", monospace',
-#     # 'code_font_size': '1rem',
-# }
 
 html_theme = "sphinx_rtd_theme"
 html_theme_options = {
@@ -99,13 +81,8 @@ html_static_path = []
 
 # -- Extension configuration -------------------------------------------------
 
-# m2r_parse_relative_links = True
-# m2r_anonymous_references = False
-# m2r_disable_inline_math = False
-
 # -- Options for todo extension ----------------------------------------------
 
 # If true, `todo` and `todoList` produce output, else they produce nothing.
 todo_include_todos = True
-
 default_role = "obj"

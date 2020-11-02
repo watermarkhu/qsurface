@@ -1,6 +1,7 @@
 
 # Introduction
 
+[![Documentation Status](https://readthedocs.org/projects/opensurfacesim/badge/?version=latest)](https://opensurfacesim.readthedocs.io/en/latest/?badge=latest)
 [![Unitary Fund](https://img.shields.io/badge/Supported%20By-UNITARY%20FUND-brightgreen.svg?style=flat-the-badge)](http://unitary.fund)
 
 Opensurfacesim is a simulation package for the surface code, and is designed to modularize 3 aspects of a surface code simulation.
@@ -70,9 +71,11 @@ Benchmarking of decoders can be enabled by attaching a *benchmarker* object to t
 'std': 0.002170364089572033}}}}
 ```
 
-Plotting of the surface codes can be enabled through the `plotting` flag. The figures in opensurfacesim allows for step-by-step visualization of the surface code simulation (and if supported the decoding process). Each figure logs its history such that the user can move backwards in time to view past states of the surface (and decoder). Press `h` when the figure is open for more information.
+To enable interactive plotting, the user must enabled the Tk backend (see below). The figures in opensurfacesim allows for step-by-step visualization of the surface code simulation (and if supported the decoding process). Each figure logs its history such that the user can move backwards in time to view past states of the surface (and decoder). Press `h` when the figure is open for more information.
 
 ```python
+>>> import matplotlib
+>>> matplotlib.use("TkAgg")
 >>> from opensurfacesim.main import initialize, run
 >>> code, decoder = initialize((6,6), "toric", "mwpm", enabled_errors=["pauli"], plotting=True)
 >>> run(code, decoder, error_rates = {"p_bitflip": 0.1, "p_phaseflip": 0.1})
@@ -84,7 +87,7 @@ Drawing 4/4: Decoded.
 {'no_error': 8}
 ```
 
-![Interactive plotting on a 6x6 toric code.](images/toric.gif "Iteractive plotting")
+![Interactive plotting on a 6x6 toric code.](https://raw.githubusercontent.com/watermarkhu/OpenSurfaceSim/master/images/toric.gif "Iteractive plotting")
 
 Simulations can also be initiated from the command line
 

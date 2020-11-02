@@ -4,3 +4,5 @@ from . import errors
 from . import plot
 from . import main
 from . import threshold
+
+__version__= "0.1.0"

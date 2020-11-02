@@ -1,5 +1,0 @@
-sphinx
-sphinx_autodoc_typehints
-numpydoc
-recommonmark
-m2r2

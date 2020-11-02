@@ -7,11 +7,11 @@ from matplotlib.lines import Line2D
 
 
 class Toric(SimToric, PlotCode):
-    """Union-Find decoder for the toric lattice with union-find plot. 
+    """Union-Find decoder for the toric lattice with union-find plot.
 
     Has all class attributes and methods from `.unionfind.sim.Toric`, with additional parameters below. Default values for these parameters can be supplied via a *decoders.ini* file under the section of ``[unionfind]``.
 
-    The plotting class initiates a `opensurfacesim.plot` object. For its usage, see :ref:`plot-usage`. 
+    The plotting class initiates a `opensurfacesim.plot` object. For its usage, see :ref:`plot-usage`.
 
     Parameters
     ----------
@@ -41,7 +41,7 @@ class Toric(SimToric, PlotCode):
     def find_clusters(self, **kwargs):
         # Inherited docstring
         ret = super().find_clusters(**kwargs)
-        self.figure.draw_figure()
+        self.figure.draw_figure("Clusters found.")
         return ret
 
     def grow_clusters(self, *args, **kwargs):
@@ -96,12 +96,16 @@ class Toric(SimToric, PlotCode):
     def _edge_full(self, ancilla, edge, new_ancilla, **kwargs):
         # Inherited docstring
         self.support[edge] = 2
-        if ancilla in edge.uf_plot and edge.uf_plot[ancilla][1] == self.code.instance:
-            self.figure._plot_half_edge(edge, new_ancilla, self.code.instance, full=True)
-            self.figure._plot_full_edge(edge, ancilla)
+        if hasattr(edge, "uf_plot_instance") and edge.uf_plot_instance == self.code.instance:
+            if ancilla in edge.uf_plot and edge.uf_plot[ancilla].instance == self.code.instance:
+                self.figure._plot_half_edge(edge, new_ancilla, self.code.instance, full=True)
+                self.figure._plot_full_edge(edge, ancilla)
+            else:
+                self.figure._plot_half_edge(edge, ancilla, self.code.instance, full=True)
+                self.figure._plot_full_edge(edge, new_ancilla)
         else:
             self.figure._plot_half_edge(edge, ancilla, self.code.instance, full=True)
-            self.figure._plot_full_edge(edge, new_ancilla)
+            self.figure._plot_half_edge(edge, new_ancilla, self.code.instance, full=True)
 
     def _edge_grow(self, ancilla, edge, new_ancilla, **kwargs):
         # Inherited docsting
@@ -135,8 +139,8 @@ class Toric(SimToric, PlotCode):
             # Inherited docstring
             size = [xy + 0.25 for xy in self.code.size]
             self._init_axis([-0.25, -0.25] + size, title=self.decoder, aspect="equal")
-            
-            handles=[
+
+            handles = [
                 self._legend_scatter(
                     "Syndrome vertex",
                     facecolors=self.params.color_x_secondary,
@@ -173,37 +177,41 @@ class Toric(SimToric, PlotCode):
             labels = [artist.get_label() if hasattr(artist, "get_label") else artist[0].get_label() for artist in handles]
             self.legend_ax.legend(handles, labels, **kwargs)
 
-
-        def _plot_half_edge(self, edge : Edge, ancilla : AncillaQubit, instance: float, full: bool=False, ):
+        def _plot_half_edge(
+            self,
+            edge: Edge,
+            ancilla: AncillaQubit,
+            instance: float,
+            full: bool = False,
+        ):
             line = self._draw_line(
-                self.code._parse_boundary_coordinates(
-                    self.code.size[0], edge.qubit.loc[0], ancilla.loc[0]
-                ),
-                self.code._parse_boundary_coordinates(
-                    self.code.size[0], edge.qubit.loc[1], ancilla.loc[1]
-                ),
+                self.code._parse_boundary_coordinates(self.code.size[0], edge.qubit.loc[0], ancilla.loc[0]),
+                self.code._parse_boundary_coordinates(self.code.size[0], edge.qubit.loc[1], ancilla.loc[1]),
                 ls=self.params.line_style_primary if full else self.params.line_style_tertiary,
                 zorder=0,
                 lw=self.params.line_width_primary,
                 color=self.colors2[ancilla.state_type],
             )
             line.object = edge
+            line.instance = instance
             if hasattr(edge, "uf_plot"):
-                edge.uf_plot[ancilla] = (line, instance)
+                edge.uf_plot[ancilla] = line
             else:
-                edge.uf_plot = {ancilla: (line, instance)}
+                edge.uf_plot = {ancilla: line}
+                edge.uf_plot_instance = instance
 
             self.new_artist(line)
 
         def _plot_full_edge(self, edge, ancilla):
-            self.new_properties(edge.uf_plot[ancilla][0], {"ls": self.params.line_style_primary})
+            self.new_properties(edge.uf_plot[ancilla], {"ls": self.params.line_style_primary})
 
         def _hide_edge(self, edge):
-            for artist, _ in edge.uf_plot.values():
-                self.new_properties(artist, {"visible": False})
+            if hasattr(edge, "uf_plot"):
+                for artist in edge.uf_plot.values():
+                    self.new_properties(artist, {"visible": False})
 
         def _match_edge(self, edge):
-            for artist, _ in edge.uf_plot.values():
+            for artist in edge.uf_plot.values():
                 self.new_properties(artist, {"color": self.colors1[edge.state_type]})
 
         def _plot_ancilla(self, ancilla, init=False):
@@ -247,7 +255,8 @@ class Toric(SimToric, PlotCode):
                 else:
                     self._plot_ancilla(ancilla)
             else:
-                self.new_properties(ancilla.uf_plot, {"visible": False})
+                if hasattr(ancilla, "uf_plot"):
+                    self.new_properties(ancilla.uf_plot, {"visible": False})
 
         def _pick_handler(self, event):
             """Function on when an object in the figure is picked"""
@@ -260,23 +269,24 @@ class Toric(SimToric, PlotCode):
                 print(obj)
 
     class Figure3D(Template3D, Figure2D):
-
-        def _plot_half_edge(self, edge : Edge, ancilla : AncillaQubit, instance: float, full: bool=False, ):
+        def _plot_half_edge(
+            self,
+            edge: Edge,
+            ancilla: AncillaQubit,
+            instance: float,
+            full: bool = False,
+        ):
 
             if type(edge.qubit) is DataQubit:
                 edge_z = edge.qubit.z
             else:
-                edge_z = edge.qubit.z - .5
+                edge_z = edge.qubit.z - 0.5
                 if abs(edge_z - ancilla.z) > 1:
-                    edge_z = self.code.layers - edge.z 
+                    edge_z = self.code.layers - edge.z
 
             line = self._draw_line3D(
-                self.code._parse_boundary_coordinates(
-                    self.code.size[0], edge.qubit.loc[0], ancilla.loc[0]
-                ),
-                self.code._parse_boundary_coordinates(
-                    self.code.size[0], edge.qubit.loc[1], ancilla.loc[1]
-                ),
+                self.code._parse_boundary_coordinates(self.code.size[0], edge.qubit.loc[0], ancilla.loc[0]),
+                self.code._parse_boundary_coordinates(self.code.size[0], edge.qubit.loc[1], ancilla.loc[1]),
                 (edge_z, ancilla.z),
                 ls=self.params.line_style_primary if full else self.params.line_style_tertiary,
                 zorder=0,
@@ -284,20 +294,22 @@ class Toric(SimToric, PlotCode):
                 color=self.colors2[ancilla.state_type],
             )
             line.object = edge
+            line.instance = instance
             if hasattr(edge, "uf_plot"):
-                edge.uf_plot[ancilla] = (line, instance)
+                edge.uf_plot[ancilla] = line
             else:
-                edge.uf_plot = {ancilla: (line, instance)}
+                edge.uf_plot = {ancilla: line}
+                edge.uf_plot_instance = instance
 
             self.new_artist(line)
 
 
 class Planar(Toric, SimPlanar):
-    """Union-Find decoder for the planar lattice with union-find plot. 
+    """Union-Find decoder for the planar lattice with union-find plot.
 
     Has all class attributes and methods from `.unionfind.sim.Planar`, with additional parameters below. Default values for these parameters can be supplied via a *decoders.ini* file under the section of ``[unionfind]``.
 
-    The plotting class initiates a `opensurfacesim.plot` object. For its usage, see :ref:`plot-usage`. 
+    The plotting class initiates a `opensurfacesim.plot` object. For its usage, see :ref:`plot-usage`.
 
     Parameters
     ----------
@@ -312,6 +324,7 @@ class Planar(Toric, SimPlanar):
     kwargs
         Keyword arguments are passed on to `.unionfind.sim.Planar`.
     """
+
     def init_plot(self, **kwargs):
         size = [xy - 0.5 for xy in self.code.size]
         self._init_axis([-0.25, -0.25] + size, title=self.decoder, aspect="equal")

@@ -16,7 +16,7 @@ import os
 blossom5_dir = "blossom5-v2.05.src"
 
 
-def get_blossomv():
+def get_blossomv(accept: bool = False):
     """Downloads and compiles the BlossomV algorithm for OpenSurfaceSim."""
 
     folder = os.path.dirname(os.path.abspath(__file__))
@@ -27,11 +27,12 @@ def get_blossomv():
     except FileNotFoundError:
         raise FileNotFoundError("License file missing. Automatic download is disabled.")
 
-    accept = input(
-        "This function will download the software from https://pub.ist.ac.at/~vnk/software.html, do you wish to continue? [y/n]"
-    )
-    if accept not in ["y", "yes", "Y", "Yes", "YES"]:
-        return
+    if not accept:
+        accept = input(
+            "This function will download the software from https://pub.ist.ac.at/~vnk/software.html, do you wish to continue? [y/n]"
+        )
+        if accept not in ["y", "yes", "Y", "Yes", "YES"]:
+            return
 
     url = "https://pub.ist.ac.at/~vnk/software/{}.tar.gz".format(blossom5_dir)
     file = urllib.request.urlopen(url)

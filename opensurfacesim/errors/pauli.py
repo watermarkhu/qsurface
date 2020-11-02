@@ -19,13 +19,7 @@ class Sim(TemplateSim):
         super().__init__(*args, **kwargs)
         self.default_error_rates = {"p_bitflip": p_bitflip, "p_phaseflip": p_phaseflip}
 
-    def random_error(
-        self,
-        qubit: Qubit,
-        p_bitflip: Optional[float] = None,
-        p_phaseflip: Optional[float] = None,
-        **kwargs
-    ):
+    def random_error(self, qubit: Qubit, p_bitflip: Optional[float] = None, p_phaseflip: Optional[float] = None, **kwargs):
         """Applies a Pauli error, bit-flip and/or phase-flip.
 
         Parameters
@@ -63,31 +57,31 @@ class Plot(TemplatePlot, Sim):
 
     legend_params = {
         "legend_bitflip": {
-            "marker" : "o", 
-            "color" : "color_edge",
-            "ms" : "legend_marker_size",
-            "mfc" : "color_x_primary",
-            "mec" : "color_x_primary",
+            "marker": "o",
+            "color": "color_edge",
+            "ms": "legend_marker_size",
+            "mfc": "color_x_primary",
+            "mec": "color_x_primary",
         },
         "legend_phaseflip": {
-            "marker" : "o", 
-            "color" : "color_edge",
-            "ms" : "legend_marker_size",
-            "mfc" : "color_y_primary",
-            "mec" : "color_y_primary",
+            "marker": "o",
+            "color": "color_edge",
+            "ms": "legend_marker_size",
+            "mfc": "color_y_primary",
+            "mec": "color_y_primary",
         },
         "legend_bitphaseflip": {
-            "marker" : "o", 
-            "color" : "color_edge",
-            "ms" : "legend_marker_size",
-            "mfc" : "color_z_primary",
-            "mec" : "color_z_primary",
-        }
+            "marker": "o",
+            "color": "color_edge",
+            "ms": "legend_marker_size",
+            "mfc": "color_z_primary",
+            "mec": "color_z_primary",
+        },
     }
-    legend_names =  {
+    legend_names = {
         "legend_bitflip": "X flip",
         "legend_phaseflip": "Z flip",
-        "legend_bitphaseflip": "Y flip"
+        "legend_bitphaseflip": "Y flip",
     }
 
     def __init__(self, *args, **kwargs) -> None:

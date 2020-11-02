@@ -9,12 +9,12 @@ UL = List[Tuple[AncillaQubit, Edge, AncillaQubit]]
 
 class Toric(UFToric):
     """Union-Find Node-Suspension decoder for the toric lattice.
-    
-    Within the combined Union-Find and Node-Suspension data structure, every `~.unionfind.elements.Cluster` is partitioned into one or more `~.ufns.elements.Node`\ s. The ``node`` attribute is monkey-patched to the `~.codes.elements.AncillaQubit` object to assist the identification of its parent `~.ufns.elements.Node`. 
 
-    The boundary of every cluster is not stored at the cluster object, but divided under its partitioned nodes. Cluster growth is initiated from the root of the node-tree. The attributes ``root_node`` and ``min_delay`` are monkey-patched to the `~.unionfind.elements.Cluster` object to assist with cluster growth in the Node-Suspension data structure. See `grow_node` for more. 
+    Within the combined Union-Find and Node-Suspension data structure, every `~.unionfind.elements.Cluster` is partitioned into one or more `~.ufns.elements.Node`\ s. The ``node`` attribute is monkey-patched to the `~.codes.elements.AncillaQubit` object to assist the identification of its parent `~.ufns.elements.Node`.
 
-    The current class inherits from `.unionfind.sim.Toric` for its application the Union-Find data structure for cluster growth and mergers. To maintain low operating complexity in UFNS, the following parameters are set of the Union-Find super. 
+    The boundary of every cluster is not stored at the cluster object, but divided under its partitioned nodes. Cluster growth is initiated from the root of the node-tree. The attributes ``root_node`` and ``min_delay`` are monkey-patched to the `~.unionfind.elements.Cluster` object to assist with cluster growth in the Node-Suspension data structure. See `grow_node` for more.
+
+    The current class inherits from `.unionfind.sim.Toric` for its application the Union-Find data structure for cluster growth and mergers. To maintain low operating complexity in UFNS, the following parameters are set of the Union-Find super.
 
     =================   =======
     parameter           value
@@ -22,7 +22,6 @@ class Toric(UFToric):
     weighted_growth     True
     weighted_union      True
     dynamic_forest      True
-    degenerate_union    False
     =================   =======
 
     Attributes
@@ -50,25 +49,33 @@ class Toric(UFToric):
     )
 
     def __init__(self, *args, **kwargs) -> None:
-        kwargs.update({
-            "weighted_growth" : True,
-            "weighted_union" : True,
-            "dynamic_forest" : True,
-            "degenerate_union" : False,
-        })
+        kwargs.update(
+            {
+                "weighted_growth": True,
+                "weighted_union": True,
+                "dynamic_forest": True,
+            }
+        )
         super().__init__(*args, **kwargs)
 
         self.code.ancillaQubit.node = None
         self.Cluster.root_node = None
         self.Cluster.min_delay = 0
         self.new_boundary = []
+
     """
     ================================================================================================
                                     General helper functions
     ================================================================================================
     """
 
-    def cluster_add_ancilla(self, cluster: Cluster, ancilla: AncillaQubit, parent: Optional[AncillaQubit]=None, **kwargs):
+    def cluster_add_ancilla(
+        self,
+        cluster: Cluster,
+        ancilla: AncillaQubit,
+        parent: Optional[AncillaQubit] = None,
+        **kwargs,
+    ):
         """Recursively adds erased edges to ``cluster`` and finds the new boundary.
 
         For a given ``ancilla``, this function finds the neighboring edges and ancillas that are in the the currunt cluster. If the newly found edge is erased, the edge and the corresponding ancilla will be added to the cluster, and the function applied recursively on the new ancilla. Otherwise, the neighbor is added to the new boundary ``self.new_boundary``.
@@ -104,13 +111,14 @@ class Toric(UFToric):
 
     def bound_ancilla_to_node(self):
         """Saves the new boundary to their respective nodes.
-        
-        Saves all the new boundaries found by `cluster_add_ancilla`, which are of the form ``[inner_ancilla, edge, outer_ancilla]``, to the node at ``inner_ancilla.node``. This method is called after cluster union in `union_bucket`, which also joins the node-trees, such that the new boundary is saved to the updated nodes. 
+
+        Saves all the new boundaries found by `cluster_add_ancilla`, which are of the form ``[inner_ancilla, edge, outer_ancilla]``, to the node at ``inner_ancilla.node``. This method is called after cluster union in `union_bucket`, which also joins the node-trees, such that the new boundary is saved to the updated nodes.
         """
         while self.new_boundary:
             boundary = self.new_boundary.pop()
             ancilla = boundary[0]
             ancilla.node.new_bound.append(boundary)
+
     """
     ================================================================================================
                                     1. Find clusters
@@ -122,7 +130,7 @@ class Toric(UFToric):
 
         For every non-trivial ancilla on the lattice, a `~.unionfind.elements.Cluster` is initiated. If any set of ancillas are connected by some set of erased qubits, all connected ancillas are found by `cluster_add_ancilla` and a single cluster is initiated for the set.
 
-        Additionally, a syndrome-node is initiated on the non-trivial ancilla -- a syndrome -- with the ancilla as primer. New boundaries are saved to the nodes by ``bound_ancilla_to_node``. 
+        Additionally, a syndrome-node is initiated on the non-trivial ancilla -- a syndrome -- with the ancilla as primer. New boundaries are saved to the nodes by ``bound_ancilla_to_node``.
 
         The cluster is then placed into a bucket based on its size and parity by `place_bucket`. See `grow_clusters` for more information on buckets.
         """
@@ -149,12 +157,10 @@ class Toric(UFToric):
     ================================================================================================
     """
 
-    def grow_boundary(
-        self, cluster: Cluster, union_list: UL, **kwargs
-    ):
+    def grow_boundary(self, cluster: Cluster, union_list: UL, **kwargs):
         """Grows the boundary of the ``cluster``.
 
-        See `grow_clusters` for more information. Each element in the ``root_list`` of the root node of the ``cluster`` is a subroot of an even subtree in the node-tree. From each of these subroots, the node parity and delays are calculated by `~.ufns.elements.ns_parity` and `~ufns.elements.ns_delay`. The node-tree is then recursively grown by `grow_node`.  
+        See `grow_clusters` for more information. Each element in the ``root_list`` of the root node of the ``cluster`` is a subroot of an even subtree in the node-tree. From each of these subroots, the node parity and delays are calculated by `~.ufns.elements.ns_parity` and `~ufns.elements.ns_delay`. The node-tree is then recursively grown by `grow_node`.
 
         Parameters
         ----------
@@ -184,25 +190,25 @@ class Toric(UFToric):
             print("")
 
     def grow_node(self, cluster: Cluster, node: Node, union_list: UL, parent_node: Optional[Node] = None):
-        '''Recursive function that grows a ``node`` and its descendents. 
+        """Recursive function that grows a ``node`` and its descendents.
 
         Grows the boundary list that is stored at the current node if there the current node is not suspended. The condition required is the following:
 
         .. math: n_{\text{delay}} - n_{\text{waited}} - \min_{x \in \mathcal{N}}{n_{\text{delay}}} = 0
 
-        where :math:`\mathcal{N}` is the node-tree. The minimal delay value in the node-tree here stored as ``cluster.min_delay``. Fully grown edges are added to ``union_list`` to be later considered by `union_bucket`. 
+        where :math:`\mathcal{N}` is the node-tree. The minimal delay value in the node-tree here stored as ``cluster.min_delay``. Fully grown edges are added to ``union_list`` to be later considered by `union_bucket`.
 
         Parameters
         ----------
         cluster
-            Parent cluster object of ``node``. 
+            Parent cluster object of ``node``.
         node
             Node to consider for growth.
         union_list
-            List of potential mergers between two cluster-distinct ancillas. 
+            List of potential mergers between two cluster-distinct ancillas.
         parent_node
             Parent node in the node-tree to indicate recursive direction.
-        '''
+        """
         if self.config["print_steps"]:
             print(node._repr_status)
 
@@ -228,15 +234,17 @@ class Toric(UFToric):
                     union_list.append(boundary)
                 else:
                     node.new_bound.append(boundary)
+
     """
     ================================================================================================
                                     2(b). Grow clusters union
     ================================================================================================
     """
-    def union_bucket(self, union_list: List[Tuple[AncillaQubit, Edge, AncillaQubit]], **kwargs):
-        """Potentially merges two neighboring ancillas. 
 
-        If the check by `union_check` is passed, the clusters of ``ancilla`` and ``new_ancilla`` are merged. additionally, the node-trees either directly joined, or by the creation of a new *junction-node* which as ``new_ancilla`` as its primer. Weighted union is applied to ensure low operating complexity. 
+    def union_bucket(self, union_list: List[Tuple[AncillaQubit, Edge, AncillaQubit]], **kwargs):
+        """Potentially merges two neighboring ancillas.
+
+        If the check by `union_check` is passed, the clusters of ``ancilla`` and ``new_ancilla`` are merged. additionally, the node-trees either directly joined, or by the creation of a new *junction-node* which as ``new_ancilla`` as its primer. Weighted union is applied to ensure low operating complexity.
         """
         if union_list and self.config["print_steps"]:
             print("Fusing clusters")
@@ -255,7 +263,7 @@ class Toric(UFToric):
                 else:
                     root_node, parent, child = new_cluster.root_node, new_node, node
 
-                if not node.radius % 2 and new_node.radius > 1: # Connect via new junction-node
+                if not node.radius % 2 and new_node.radius > 1:  # Connect via new junction-node
                     junction = self.JunctionNode(new_ancilla)
                     new_ancilla.node = junction
                     parent_edge, child_edge = parent.radius // 2, child.radius // 2
@@ -263,7 +271,7 @@ class Toric(UFToric):
                     parent.neighbors.append((junction, parent_edge))
                     child.neighbors.append((junction, child_edge))
                     calc_delay = [junction, parent_edge, parent]
-                else:                                         # Connect directly
+                else:  # Connect directly
                     edge = (parent.radius + child.radius) // 2
                     parent.neighbors.append((child, edge))
                     child.neighbors.append((parent, edge))
@@ -286,7 +294,8 @@ class Toric(UFToric):
 
 class Planar(Toric, UFPlanar):
     """Union-Find Node-Suspension decoder for the planar lattice.
-    
-    See the description of `.ufns.sim.Toric`. 
+
+    See the description of `.ufns.sim.Toric`.
     """
+
     pass

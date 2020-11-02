@@ -3,10 +3,11 @@
 
 # Setuptools distribution folder.
 /dist/
+/build/
 
 # Python egg metadata, regenerated from source files by setuptools.
 /*.egg-info
-
+/*.egg
 
 # compiled C code
 *.o
@@ -20,13 +21,10 @@
 *.txt
 *.ini
 !requirements.txt
+!pytest.ini
 
 # folders
-simulations
-Simulations
-cartesiusdata
-docs/
-sphinx/build/
+docs/build/
 opensurfacesim/decoders/mwpm/blossom5-v2.05.src/
 
 __pycache__/
@@ -35,3 +33,4 @@ __pycache__/
 .vscode/
 .pytest_cache/
 .ipynb_checkpoints/
+test.py

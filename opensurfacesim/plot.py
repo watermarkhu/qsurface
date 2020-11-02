@@ -13,7 +13,6 @@ import tkinter
 import numpy as np
 
 
-mpl.use("TkAgg")
 color_type = Union[str, Tuple[float, float, float, float]]
 axis_type = Tuple[float, float, float, float]
 
@@ -22,11 +21,11 @@ axis_type = Tuple[float, float, float, float]
 class PlotParams:
     """Parameters for the plotting template classes.
 
-    Contains all parameters used in inherited objects of `.Template2D` and `.Template3D`. The dataclass is initialized with many default values for an optimal plotting experience. But if any parameters should be changed, the user can call the class to create its own instance of plotting paramters, where the altered paramters are supplied as keyword arguments. The instance can be supplied to the plotting class via the ``plot_params`` keyword argument. 
+    Contains all parameters used in inherited objects of `.Template2D` and `.Template3D`. The dataclass is initialized with many default values for an optimal plotting experience. But if any parameters should be changed, the user can call the class to create its own instance of plotting paramters, where the altered paramters are supplied as keyword arguments. The instance can be supplied to the plotting class via the ``plot_params`` keyword argument.
 
     Examples
     --------
-    See the below example where the background color of the figure is changed to black. Note that we first have to inherited from the `.Template2D` class and supply a `~.Template2D.init_plot` method for it to be able to be instanced. 
+    See the below example where the background color of the figure is changed to black. Note that we first have to inherited from the `.Template2D` class and supply a `~.Template2D.init_plot` method for it to be able to be instanced.
 
         >>> class Plotting(Template2D):
         ...     def init_plot():
@@ -94,24 +93,24 @@ class PlotParams:
 
     def load_params(self, param_dict):
         """Loads extra plotting parameters.
-        
+
         Additional parameters can be loaded to the dataclass via this method. The additional parameters must be a dictionary where values are stored to the dataclass with the key as attribute name. If the value is a string that equals to any already defined dataclass attribute, the value at the existing attribute is used for the new parameter. See examples.
 
         Parameters
         ----------
         params_dict
-            Dictionary or dictionary of dictionaries of additional parameters. 
+            Dictionary or dictionary of dictionaries of additional parameters.
 
         Examples
         --------
-        New parameters can be added to the dataclass. Values of dataclass attributes are used if present. 
+        New parameters can be added to the dataclass. Values of dataclass attributes are used if present.
 
             >>> params = PlotParams()
             >>> params.alpha_primary
             0.35
             >>> params.load_params({
             ...     "new_attr" : "some_value",
-            ...     "use_existing" : "alpha_primary",   
+            ...     "use_existing" : "alpha_primary",
             ... })
             >>> params.new_attr
             some_value
@@ -123,7 +122,7 @@ class PlotParams:
             >>> params.load_params({
             ...     "category": {
             ...         "new_attr" : "some_value",
-            ...         "use_existing" : "alpha_primary",   
+            ...         "use_existing" : "alpha_primary",
             ...     }
             ... })
             >>> params.category
@@ -132,7 +131,10 @@ class PlotParams:
         for attribute, value in param_dict.items():
             if isinstance(value, dict):
                 for sub_attribute, sub_value in value.items():
-                    value[sub_attribute] = getattr(self, sub_value, sub_value)
+                    if isinstance(sub_value, str):
+                        value[sub_attribute] = getattr(self, sub_value, sub_value)
+                    else:
+                        value[sub_attribute] = sub_value
                 setattr(self, attribute, value)
             else:
                 setattr(self, attribute, getattr(self, value, value))
@@ -151,7 +153,7 @@ class BlockingKeyInput(BlockingInput):
 
     def __call__(self, timeout=30):
         """Blocking call to retrieve a single key press."""
-        return super().__call__(n=1, timeout=timeout)[-1]
+        return super().__call__(n=1, timeout=timeout)
 
 
 class Template2D(ABC):
@@ -170,15 +172,15 @@ class Template2D(ABC):
 
     Keyboard navigation and picking is enabled by blocking the code via a custom `.BlockingKeyInput` class. While the code is blocked, inputs are caught by the blocking class and processed for history navigation or picking navigation. Moving the iteration past the available history allows for the code to continue. The keyboard input is parsed by :meth:`focus`.
 
-    Default values for plot properties such as colors and linewidths loaded from `.PlotParams`. A custom parameter dataclass can be supplied via the ``plot_params`` keyword argument. 
+    Default values for plot properties such as colors and linewidths loaded from `.PlotParams`. A custom parameter dataclass can be supplied via the ``plot_params`` keyword argument.
 
     Parameters
     ----------
     init_plot
         Enables drawing all base objects at class initialization.
     plot_params
-        Plotting parameters dataclass containing colors, styles and others. 
-    
+        Plotting parameters dataclass containing colors, styles and others.
+
     Attributes
     ----------
     figure : `matplotlib.figure.Figure`
@@ -227,7 +229,7 @@ class Template2D(ABC):
         All iteractive elements should have their own axis saved in ``self.interact_axes``. The ``axis.active`` attribute must be added to define when the axis is shown. If the focus on the figure is lost, all axes in ``self.interact_axes`` are hidden by setting ``axis.active=False``.
     interact_bodies : dict
         All interactive elements such as buttons, radiobuttons, sliders, should be saved to this dictionary with the same key as their axes in ``self.interact_axes``.
-        
+
     Notes
     -----
     Note all backends support blitting. You can check if a given canvas does via the `matplotlib.backend_bases.FigureCanvasBase`\ ``.supports_blit`` property. It does not work with the OSX backend (but does work with other GUI backends on mac).
@@ -304,9 +306,7 @@ class Template2D(ABC):
         self.temporary_saved = defaultdict(dict)
 
         # Init figure object
-        self.figure = plt.figure(
-            figsize=(self.params.scale_figure_length, self.params.scale_figure_height)
-        )
+        self.figure = plt.figure(figsize=(self.params.scale_figure_length, self.params.scale_figure_height))
         self.canvas = self.figure.canvas
         self.canvas.mpl_connect("pick_event", self._pick_handler)
         self.blocking_input = BlockingKeyInput(self.figure)
@@ -436,7 +436,17 @@ class Template2D(ABC):
         while wait:
             self._set_figure_state("g")
             try:
-                event = self.blocking_input(self.params.blocking_wait)
+                output = self.blocking_input(self.params.blocking_wait)
+
+                if output == []:
+                    if self.history_at_newest:
+                        wait = False
+                    else:
+                        wait = self._draw_next()
+                    continue
+                else:
+                    event = output[-1]
+
                 if hasattr(event, "button"):  # Catch next button if on most recent
                     if (
                         event.button == 1
@@ -444,7 +454,7 @@ class Template2D(ABC):
                         and self.history_iter == self.history_iters
                     ):
                         wait = False
-                if event.key in ["enter", "right"]:
+                elif event.key in ["return", "right"]:
                     if self.history_event_iter == "":
                         if self.history_at_newest:
                             wait = False
@@ -461,7 +471,7 @@ class Template2D(ABC):
                     wait = self._draw_prev()
                 elif event.key in [str(i) for i in range(10)]:
                     self.history_event_iter += event.key
-                    print("Go to iteration {} (press enter).".format(self.history_event_iter))
+                    print("Go to iteration {} (press return).".format(self.history_event_iter))
                 elif event.key == "n":
                     wait = self._draw_iteration(self.history_iters)
                 elif event.key == "i":
@@ -538,9 +548,7 @@ class Template2D(ABC):
         self.main_ax.add_patch(artist)
         return artist
 
-    def _draw_rectangle(
-        self, xy: tuple, size_x: float, size_y: float, *args, z: float = 0, **kwargs
-    ):
+    def _draw_rectangle(self, xy: tuple, size_x: float, size_y: float, *args, z: float = 0, **kwargs):
         artist = Rectangle(xy, size_x, size_y, *args, **kwargs)
         self.main_ax.add_patch(artist)
         return artist
@@ -590,9 +598,7 @@ class Template2D(ABC):
                 self.history_iters += 1
                 self.history_iter += 1
             else:
-                print(
-                    f"Cannot add iteration {new_iter_name} to history, currently not on most recent iteration."
-                )
+                print(f"Cannot add iteration {new_iter_name} to history, currently not on most recent iteration.")
         if not (new_iter_name and self.history_at_newest):
             new_iter_name = self.history_iter_names[self.history_iter]
         text = "{}/{}: {}".format(self.history_iter, self.history_iters, new_iter_name)
@@ -605,9 +611,7 @@ class Template2D(ABC):
         self.canvas.blit(self.main_ax.bbox)
         self.focus()
 
-    def _draw_from_history(
-        self, condition: bool, direction: int, draw: bool = True, **kwargs
-    ) -> bool:
+    def _draw_from_history(self, condition: bool, direction: int, draw: bool = True, **kwargs) -> bool:
         """Move a single plot iteration forward or backwards.
 
         Draws all stored object properties of in either +1 or -1 `direction` in the history if the `condition` is met. If there are any properties stored in `self.temporary_changes`, these settings are first parsed and saved to the current and previous iterations.
@@ -712,9 +716,7 @@ class Template2D(ABC):
         if prop_dict:
             plt.setp(artist, **prop_dict)
 
-    def new_properties(
-        self, artist: Artist, properties: dict, saved_properties: dict = {}, **kwargs
-    ):
+    def new_properties(self, artist: Artist, properties: dict, saved_properties: dict = {}, **kwargs):
         """Parses a dictionary of property changes of a *matplotlib* artist.
 
         New properties are supplied via ``properties``. If any of the new properties is different from its current value, this is seen as a property change. The old property value is stored in ``self.history_dict[self.history_iteration]``, and the new property value is stored at ``self.history_dict[self.history_iteration+1]``. These new properties are *queued* for the next interation. The queue is emptied by applying all changes when `draw_figure` is called. If the same property changes 2+ times within the same iteration, the previous property change is removed with ``next_prop.pop(key, None)``.
@@ -822,12 +824,12 @@ class Template3D(Template2D):
         ax.set_xlabel("z")
         ax.set_ylabel("y")
         ax.set_zlabel("t")
-        ax.w_xaxis.set_pane_color(self.params.axis3d_pane_color)
-        ax.w_yaxis.set_pane_color(self.params.axis3d_pane_color)
-        ax.w_zaxis.set_pane_color(self.params.axis3d_pane_color)
-        ax.w_xaxis.line.set_color(self.params.axis3d_line_color)
-        ax.w_yaxis.line.set_color(self.params.axis3d_line_color)
-        ax.w_zaxis.line.set_color(self.params.axis3d_line_color)
+        ax.xaxis.set_pane_color(self.params.axis3d_pane_color)
+        ax.yaxis.set_pane_color(self.params.axis3d_pane_color)
+        ax.zaxis.set_pane_color(self.params.axis3d_pane_color)
+        ax.xaxis.line.set_color(self.params.axis3d_line_color)
+        ax.yaxis.line.set_color(self.params.axis3d_line_color)
+        ax.zaxis.line.set_color(self.params.axis3d_line_color)
         ax.xaxis._axinfo["grid"]["linestyle"] = self.params.axis3d_grid_line_style
         ax.yaxis._axinfo["grid"]["linestyle"] = self.params.axis3d_grid_line_style
         ax.zaxis._axinfo["grid"]["linestyle"] = self.params.axis3d_grid_line_style

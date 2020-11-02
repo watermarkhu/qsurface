@@ -7,7 +7,7 @@ class Sim(ABC):
     Parameters
     ----------
     code : `~.decoders._template.SimCode`
-        Simulation surface code class. 
+        Simulation surface code class.
 
     Attributes
     ----------
@@ -41,14 +41,14 @@ class Plot(Sim):
     Parameters
     ----------
     code : `~.decoders._template.PlotCode`
-        Plotting surface code class. 
+        Plotting surface code class.
 
     Attributes
     ----------
     legend_params, plot_params
-        Additional plotting parameters loaded to the `.plot.PlotParams` instance at ``self.params``. 
+        Additional plotting parameters loaded to the `.plot.PlotParams` instance at ``self.params``.
     legend_names : dict
-        Titles to display for the legend items in ``legend_params``. 
+        Titles to display for the legend items in ``legend_params``.
     error_methods : dict
         Dictionary of error methods. Used by :meth:`opensurfacesim.code._template.plot.PerfectMeasurements.Figure._pickhandler` to apply the error directly on the figure. Each method must be of the following form.
 

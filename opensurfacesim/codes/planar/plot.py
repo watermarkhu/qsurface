@@ -9,12 +9,13 @@ class PerfectMeasurements(SimPM, TemplatePM):
         """Planar code plot for perfect measurements."""
 
         def __init__(self, code, *args, **kwargs) -> None:
-            self.main_boundary = [0.25, -0.25, code.size[0]-.5, code.size[1] - .5]
+            self.main_boundary = [0.25, -0.25, code.size[0] - 0.5, code.size[1] - 0.5]
             super().__init__(code, *args, **kwargs)
 
 
 class FaultyMeasurements(SimFM, TemplateFM):
     class Figure2D(PerfectMeasurements.Figure, TemplateFM.Figure2D):
         pass
+
     class Figure3D(PerfectMeasurements.Figure, TemplateFM.Figure3D):
         pass

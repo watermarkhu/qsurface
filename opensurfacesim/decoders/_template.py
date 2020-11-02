@@ -84,7 +84,7 @@ def read_config(path: Path, config_dict: Optional[dict] = None) -> dict:
     for section_name, section in config._sections.items():
         section_config = config_dict if section_name == "main" else config_dict[section_name]
         for key, item in section.items():
-            try: 
+            try:
                 section_config[key] = ast.literal_eval(item)
             except:
                 section_config[key] = item
@@ -238,10 +238,7 @@ class SimCode(ABC):
         plaqs, stars = [], []
         if find_pseudo is False:
             for ancilla in [
-                ancilla
-                for layer in self.code.ancilla_qubits.values()
-                for ancilla in layer.values()
-                if ancilla.syndrome
+                ancilla for layer in self.code.ancilla_qubits.values() for ancilla in layer.values() if ancilla.syndrome
             ]:
                 if ancilla.state_type == "x":
                     plaqs.append(ancilla)
@@ -249,26 +246,19 @@ class SimCode(ABC):
                     stars.append(ancilla)
         else:
             for ancilla in [
-                ancilla
-                for layer in self.code.ancilla_qubits.values()
-                for ancilla in layer.values()
-                if ancilla.syndrome
+                ancilla for layer in self.code.ancilla_qubits.values() for ancilla in layer.values() if ancilla.syndrome
             ]:
                 if ancilla.state_type == "x":
                     if ancilla.loc[0] < self.code.size[0] / 2:
                         pseudo = self.code.pseudo_qubits[ancilla.z][(0, ancilla.loc[1])]
                     else:
-                        pseudo = self.code.pseudo_qubits[ancilla.z][
-                            (self.code.size[0], ancilla.loc[1])
-                        ]
+                        pseudo = self.code.pseudo_qubits[ancilla.z][(self.code.size[0], ancilla.loc[1])]
                     plaqs.append((ancilla, pseudo))
                 else:
                     if ancilla.loc[1] < self.code.size[1] / 2:
                         pseudo = self.code.pseudo_qubits[ancilla.z][(ancilla.loc[0], -0.5)]
                     else:
-                        pseudo = self.code.pseudo_qubits[ancilla.z][
-                            (ancilla.loc[0], self.code.size[1] - 0.5)
-                        ]
+                        pseudo = self.code.pseudo_qubits[ancilla.z][(ancilla.loc[0], self.code.size[1] - 0.5)]
                     stars.append((ancilla, pseudo))
         return plaqs, stars
 
@@ -293,12 +283,12 @@ class PlotCode(SimCode):
             self.params = self.code.figure.params
 
         self.line_color_normal = {
-            "x": {"color" : self.params.color_edge},
-            "z": {"color" : self.params.color_edge},
+            "x": {"color": self.params.color_edge},
+            "z": {"color": self.params.color_edge},
         }
         self.line_color_match = {
-            "x": {"color" : self.params.color_x_secondary},
-            "z": {"color" : self.params.color_z_secondary},
+            "x": {"color": self.params.color_x_secondary},
+            "z": {"color": self.params.color_z_secondary},
         }
         self.matching_lines = defaultdict(bool)
 
@@ -329,12 +319,8 @@ class PlotCode(SimCode):
             state_type = line.object.state_type
             self.matching_lines[line] = not self.matching_lines[line]
             if self.matching_lines[line]:
-                self.code.figure.future_dict[iteration + 1][line] = self.line_color_match[
-                    state_type
-                ]
-                self.code.figure.future_dict[iteration + 2][line] = self.line_color_normal[
-                    state_type
-                ]
+                self.code.figure.future_dict[iteration + 1][line] = self.line_color_match[state_type]
+                self.code.figure.future_dict[iteration + 2][line] = self.line_color_normal[state_type]
             else:
                 self.code.figure.future_dict[iteration + 1].pop(line, None)
                 self.code.figure.future_dict[iteration + 2].pop(line, None)

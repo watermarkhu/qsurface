@@ -1,6 +1,5 @@
-numpy
-pandas
-networkx
-matplotlib
-scipy
-pptree
+matplotlib>=3.3.2
+networkx>=2.0
+pandas>=1.1.0
+scipy>=1.4.0
+pptree>=3.1

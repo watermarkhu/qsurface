@@ -108,7 +108,7 @@ class Toric(SimCode):
             folder = os.path.dirname(os.path.abspath(__file__))
             PMlib = ctypes.CDLL(folder + "/blossom5-v2.05.src/PMlib.so")
         except:
-            raise FileExistsError("Blossom5 library not found. See docs.")
+            raise FileNotFoundError("Blossom5 library not found. See docs.")
 
         PMlib.pyMatching.argtypes = [
             ctypes.c_int,
@@ -211,7 +211,7 @@ class Planar(Toric):
     def get_qubit_distances(qubits, *args):
         """Computes the distance between a list of qubits.
 
-        On a planar lattice, any qubit can be paired with the boundary, which is inhabited by `~.codes.elements.PseudoQubit`\ s. The graph of syndromes that supports minimum-weight matching algorithms must be fully connected, with each syndrome connecting additionally to its boundary pseudo-qubit, and a fully connected graph between all pseudo-qubits with weight 0.
+        On a planar lattice, any qubit can be paired with the boundary, which is inhabited by `~.codes.elements.PseudoQubit` objects. The graph of syndromes that supports minimum-weight matching algorithms must be fully connected, with each syndrome connecting additionally to its boundary pseudo-qubit, and a fully connected graph between all pseudo-qubits with weight 0.
         """
         edges = []
 

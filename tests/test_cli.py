@@ -39,5 +39,6 @@ def test_cli_threshold():
     args += ["threshold", "-l"] + [str(l) for l in [8, 10, 12]]
     args += ["-n", "100"]
     args += ["-o", "none"]
-    args += ["-px"] + [str(p) for p in [0.09, 0.1, 0.11]]
+    args += ["--p_bitflip"] + [str(p) for p in [0.09, 0.1, 0.11]]
+    args += ["-fc", "p_bitflip"]
     cli(args)

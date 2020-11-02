@@ -31,8 +31,8 @@ def get_blossomv(accept: bool = False):
         accept = input(
             "This function will download the software from https://pub.ist.ac.at/~vnk/software.html, do you wish to continue? [y/n]"
         )
-    if accept not in ["y", "yes", "Y", "Yes", "YES"]:
-        return
+        if accept not in ["y", "yes", "Y", "Yes", "YES"]:
+            return
 
     url = "https://pub.ist.ac.at/~vnk/software/{}.tar.gz".format(blossom5_dir)
     file = urllib.request.urlopen(url)

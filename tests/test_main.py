@@ -28,7 +28,7 @@ def test_initialize(size, Code, Decoder, error, faulty):
     """Test initialize function for all configurations."""
     initialize(size, Code, Decoder, enabled_errors=[error], faulty_measurements=faulty)
 
-
+@pytest.mark.plotting
 @pytest.mark.parametrize("Code", CODES)
 @pytest.mark.parametrize(
     "faulty, figure3d, size",

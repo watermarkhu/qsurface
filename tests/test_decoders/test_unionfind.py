@@ -66,6 +66,7 @@ def test_unionfind_options(weighted_growth, weighted_union, dynamic_forest):
     assert trivial == ITERS
 
 
+@pytest.mark.plotting
 @pytest.mark.parametrize(
     "faulty, size",
     [

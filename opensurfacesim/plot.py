@@ -13,7 +13,6 @@ import tkinter
 import numpy as np
 
 
-mpl.use("TkAgg")
 color_type = Union[str, Tuple[float, float, float, float]]
 axis_type = Tuple[float, float, float, float]
 

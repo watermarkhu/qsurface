@@ -8,6 +8,7 @@ code_types = ["PerfectMeasurements", "FaultyMeasurements"]
 no_wait_param = oss.plot.PlotParams(blocking_wait=0.001)
 
 
+@pytest.mark.plotting
 @pytest.mark.parametrize("Code", CODES)
 def test_3d_plots(Code):
     """Test for 3d plotting for faulty measurement class codes."""

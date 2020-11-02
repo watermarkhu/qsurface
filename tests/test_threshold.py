@@ -133,6 +133,7 @@ def test_fit_data(example_pm_data, modified_ansatz):
     fitter.fit_data(example_pm_data, "p_bitflip")
 
 
+@pytest.mark.plotting
 @pytest.mark.parametrize("modified_ansatz", [True, False])
 def test_plot_data(example_pm_data, modified_ansatz):
     """Load example data and test plotting."""

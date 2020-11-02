@@ -47,6 +47,7 @@ def test_ufns_sim(size, Code, errors, faulty, max_rate, extra_keys):
         assert True
 
 
+@pytest.mark.plotting
 @pytest.mark.parametrize(
     "faulty, size",
     [

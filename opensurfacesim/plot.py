@@ -14,11 +14,14 @@ import numpy as np
 import os
 
 
-if os.environ.get('DISPLAY'):
-    mpl.use("TkAgg")
-else:
-    print("Warning: Display not available, figures may not load properly.")
-
+try:
+    DISPLAY = os.environ.get('DISPLAY', None)
+    if DISPLAY:
+        mpl.use("TkAgg")
+    else:
+        raise ImportError(f"Display at {DISPLAY} not available.")
+except ImportError:
+    print("Display could not be loaded. Matplotlib is using Agg backend. Interactive plotting is not available.")
 
 color_type = Union[str, Tuple[float, float, float, float]]
 axis_type = Tuple[float, float, float, float]
@@ -311,6 +314,7 @@ class Template2D(ABC):
         self.future_dict = defaultdict(dict)
         self.temporary_changes = defaultdict(dict)
         self.temporary_saved = defaultdict(dict)
+        self.shown_confirm_close = False
 
         # Init figure object
         self.figure = plt.figure(figsize=(self.params.scale_figure_length, self.params.scale_figure_height))
@@ -356,7 +360,9 @@ class Template2D(ABC):
 
     def close(self):
         """Closes the figure."""
+        self.draw_figure("Press (->/enter) to close figure.")
         plt.close(self.figure)
+        
 
     @property
     def history_at_newest(self):
@@ -649,10 +655,10 @@ class Template2D(ABC):
                 self.change_properties(artist, changes)
             if draw:
                 self.draw_figure(**kwargs)
+            return False
         else:
-            print("No history exists for this operation.")
+            print("Nothing to plot.")
             return True
-        return False
 
     def _draw_next(self, *args, **kwargs) -> bool:
         """Redraws all changes from next plot iteration onto the plot."""
@@ -660,6 +666,7 @@ class Template2D(ABC):
 
     def _draw_prev(self, *args, **kwargs) -> bool:
         """Redraws all changes from previous plot iteration onto the plot."""
+        self.shown_confirm_close = False
         return self._draw_from_history(self.history_iter > 0, -1, **kwargs)
 
     def _draw_iteration(self, target: int, draw: bool = True, **kwargs) -> bool:

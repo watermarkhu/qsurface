@@ -74,7 +74,7 @@ def initialize(
     Decoder_flow_code = getattr(Decoder_flow, Code.__name__.split(".")[-1].capitalize())
 
     code = Code_flow_dim(size, **kwargs)
-    code.initialize(*enabled_errors)
+    code.initialize(*enabled_errors, **kwargs)
     decoder = Decoder_flow_code(code, **kwargs)
 
     return code, decoder
@@ -136,7 +136,7 @@ def run(
         seed = timeit.default_timer()
     seed = float(f"{seed}{mp_process}")
     random.seed(seed)
-    print(seed)
+    print(seed) # TODO remove this
 
     if benchmark:
         benchmark._set_decoder(decoder, seed=seed)

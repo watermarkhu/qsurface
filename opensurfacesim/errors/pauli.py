@@ -1,6 +1,6 @@
 from ..codes.elements import Qubit
-from typing import Optional
 from ._template import Sim as TemplateSim, Plot as TemplatePlot
+from typing import Optional
 import random
 
 
@@ -19,7 +19,7 @@ class Sim(TemplateSim):
         super().__init__(*args, **kwargs)
         self.default_error_rates = {"p_bitflip": p_bitflip, "p_phaseflip": p_phaseflip}
 
-    def random_error(self, qubit: Qubit, p_bitflip: Optional[float] = None, p_phaseflip: Optional[float] = None, **kwargs):
+    def random_error(self, qubit: Qubit, p_bitflip: float = 0, p_phaseflip: float = 0, **kwargs):
         """Applies a Pauli error, bit-flip and/or phase-flip.
 
         Parameters
@@ -38,43 +38,57 @@ class Sim(TemplateSim):
         if p_phaseflip is None:
             p_phaseflip = self.default_error_rates["p_phaseflip"]
 
-        if p_bitflip != 0 and random.random() < p_bitflip:
-            self.bitflip_error(qubit)
-        if p_phaseflip != 0 and random.random() < p_phaseflip:
-            self.phaseflip_error(qubit)
+        do_bitflip = p_bitflip != 0 and random.random() < p_bitflip
+        do_phaseflip = p_phaseflip != 0 and random.random() < p_phaseflip
 
-    def bitflip_error(self, qubit):
+        if do_bitflip and do_phaseflip:
+            self.bitphaseflip(qubit)
+        elif do_bitflip:
+            self.bitflip(qubit)
+        elif do_phaseflip:
+            self.phaseflip(qubit)
+
+    @staticmethod
+    def bitflip(qubit: Qubit, **kwargs):
         """Applies a bitflip or Pauli X on ``qubit``."""
         qubit.edges["x"].state = not qubit.edges["x"].state
 
-    def phaseflip_error(self, qubit):
+    @staticmethod
+    def phaseflip(qubit: Qubit, **kwargs):
         """Applies a phaseflip or Pauli Z on ``qubit``."""
+        qubit.edges["z"].state = not qubit.edges["z"].state
+
+    @staticmethod
+    def bitphaseflip(qubit: Qubit, **kwargs):
+        qubit.edges["x"].state = not qubit.edges["x"].state
         qubit.edges["z"].state = not qubit.edges["z"].state
 
 
 class Plot(TemplatePlot, Sim):
     """Plot Pauli error class."""
 
+    error_methods = ["bitflip", "phaseflip", "bitphaseflip"]
+
     legend_params = {
         "legend_bitflip": {
             "marker": "o",
             "color": "color_edge",
             "ms": "legend_marker_size",
-            "mfc": "color_x_primary",
+            "mfc": "color_qubit_face",
             "mec": "color_x_primary",
         },
         "legend_phaseflip": {
             "marker": "o",
             "color": "color_edge",
             "ms": "legend_marker_size",
-            "mfc": "color_y_primary",
+            "mfc": "color_qubit_face",
             "mec": "color_y_primary",
         },
         "legend_bitphaseflip": {
             "marker": "o",
             "color": "color_edge",
             "ms": "legend_marker_size",
-            "mfc": "color_z_primary",
+            "mfc": "color_qubit_face",
             "mec": "color_z_primary",
         },
     }
@@ -84,6 +98,8 @@ class Plot(TemplatePlot, Sim):
         "legend_bitphaseflip": "Y flip",
     }
 
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, *kwargs)
-        self.error_methods = {"bitflip": self.bitflip_error, "phaseflip": self.phaseflip_error}
+    plot_params = {
+        "bitflip": {"edgecolor": "color_x_primary"},
+        "phaseflip": {"edgecolor": "color_z_primary"},
+        "bitphaseflip": {"edgecolor": "color_y_primary"},
+    }

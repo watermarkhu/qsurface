@@ -1,4 +1,8 @@
+from __future__ import annotations
 from abc import ABC, abstractmethod
+from ..codes.elements import Qubit
+from matplotlib import pyplot as plt
+from functools import wraps
 
 
 class Sim(ABC):
@@ -15,7 +19,7 @@ class Sim(ABC):
         The error rates that are applied at default.
     """
 
-    def __init__(self, code, **kwargs) -> None:
+    def __init__(self, code = None, **kwargs) -> None:
         self.code = code
         self.default_error_rates = {}
         self.type = str(self.__module__).split(".")[-1]
@@ -24,7 +28,7 @@ class Sim(ABC):
         return "{} error object with defaults: {}".format(self.type, self.default_error_rates)
 
     @abstractmethod
-    def random_error(self, qubit, **kwargs) -> None:
+    def random_error(self, qubit : Qubit, **kwargs) -> None:
         """Applies the current error type to the `qubit`.
 
         Parameters
@@ -61,16 +65,57 @@ class Plot(Sim):
         Dictionary of `matplotlib.lines.Line2D` properties for each legend item, defined in 'plot_errors_legend.ini'.
     """
 
+    error_methods = []
     legend_params = {}
     legend_names = {}
     plot_params = {}
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, *kwargs)
-        self.error_methods = {}
-        self.code.figure.params.load_params(self.legend_params)
-        self.code.figure.params.load_params(self.plot_params)
 
-    def _get_legend_properties(self):
-        """Returns the dictionary of properties for `matplotlib.lines.Line2D` of the errors in the current class."""
-        return {key: self.legend_properties[key] for key in self.legend_items}
+        figure = self.code.figure
+        figure.params.load_params(self.legend_params)
+        figure.params.load_params(self.plot_params)
+
+        for error_name in self.error_methods:
+            setattr(self, error_name, self.plot_error(error_name))
+
+    def plot_error(self, error_name):
+        sim_method = getattr(self, error_name)
+        figure = self.code.figure
+
+        @wraps(sim_method)
+        def wrapped_method(qubit:Qubit, temporary:bool=False, **kwargs):
+            output = sim_method(qubit, **kwargs)
+            artist = qubit.surface_plot
+            if artist in figure.temporary_saved:
+                restored_properties = {
+                    prop: figure.temporary_saved[artist].get(prop, plt.getp(artist, prop))
+                    for prop in self.plot_params[error_name]
+                }
+            else:
+                restored_properties = {
+                    prop: plt.getp(artist, prop) for prop in self.plot_params[error_name]
+                }
+            apply_properties = (
+                figure.temporary_properties if temporary else figure.new_properties
+            )
+            apply_properties(artist, getattr(figure.params, error_name))
+            future_properties = figure.future_dict[figure.history_iter + 3]
+            if artist in future_properties:
+                future_properties[artist].update(restored_properties)
+            else:
+                future_properties[artist] = restored_properties
+            return output
+        return wrapped_method
+
+
+            
+
+
+
+
+
+
+
+

@@ -58,7 +58,7 @@ class Toric(UFToric):
         )
         super().__init__(*args, **kwargs)
 
-        self.code.ancillaQubit.node = None
+        self.code.AncillaQubit.node = None
         self.Cluster.root_node = None
         self.Cluster.min_delay = 0
         self.new_boundary = []

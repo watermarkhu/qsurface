@@ -49,10 +49,10 @@ class PerfectMeasurements(ABC):
         Time stamp that is renewed every time `random_errors` is called. Helps with identifying a 'round' of simulation when using class attributes.
     """
 
-    dataQubit = DataQubit
-    ancillaQubit = AncillaQubit
-    pseudoQubit = PseudoQubit
-    edge = Edge
+    DataQubit = DataQubit
+    AncillaQubit = AncillaQubit
+    PseudoQubit = PseudoQubit
+    Edge = Edge
     name = "template"
     x_names = ["x", "X", 0, "bit-flip"]
     z_names = ["z", "Z", 1, "phase-flip"]
@@ -163,7 +163,9 @@ class PerfectMeasurements(ABC):
         """
         for error_module in error_modules:
             if type(error_module) == str:
-                error_module = importlib.import_module(".errors.{}".format(error_module), package="opensurfacesim")
+                error_module = importlib.import_module(
+                    ".errors.{}".format(error_module), package="opensurfacesim"
+                )
             self._init_error(error_module, error_rates)
 
     def _init_error(self, error_module, error_rates):
@@ -177,11 +179,11 @@ class PerfectMeasurements(ABC):
     ----------------------------------------------------------------------------------------
     """
 
-    def add_data_qubit(self, loc: Tuple[float, float], z: float = 0, **kwargs) -> DataQubit:
+    def add_data_qubit(self, loc: Tuple[float, float], z: float = 0, initial_states: Tuple[float, float] = (None, None), **kwargs) -> DataQubit:
         """Initializes a `~.code.elements.DataQubit` with `dataQubit` and `edge`, and saved to ``self.data_qubits[z][loc]``."""
-        data_qubit = self.dataQubit(loc, z)
-        data_qubit.edges["x"] = self.edge(data_qubit, "x")
-        data_qubit.edges["z"] = self.edge(data_qubit, "z")
+        data_qubit = self.DataQubit(loc, z, **kwargs)
+        data_qubit.edges["x"] = self.Edge(data_qubit, "x", initial_state=initial_states[0], **kwargs)
+        data_qubit.edges["z"] = self.Edge(data_qubit, "z", initial_state=initial_states[1], **kwargs)
         self.data_qubits[z][loc] = data_qubit
         return data_qubit
 
@@ -193,7 +195,7 @@ class PerfectMeasurements(ABC):
         **kwargs,
     ) -> AncillaQubit:
         """Initializes a `~.code.elements.AncillaQubit` with `ancillaQubit`, and saved to ``self.ancilla_qubits[z][loc]``."""
-        ancilla_qubit = self.ancillaQubit(loc, z, state_type=state_type)
+        ancilla_qubit = self.AncillaQubit(loc, z, state_type=state_type, **kwargs)
         self.ancilla_qubits[z][loc] = ancilla_qubit
         return ancilla_qubit
 
@@ -205,7 +207,7 @@ class PerfectMeasurements(ABC):
         **kwargs,
     ) -> PseudoQubit:
         """Initializes a `~.code.elements.PseudoQubit` with `pseudoQubit`, and saved to ``self.pseudo_qubits[z][loc]``."""
-        pseudo_qubit = self.pseudoQubit(loc, z, state_type=state_type)
+        pseudo_qubit = self.PseudoQubit(loc, z, state_type=state_type, **kwargs)
         self.pseudo_qubits[z][loc] = pseudo_qubit
         return pseudo_qubit
 
@@ -241,7 +243,9 @@ class PerfectMeasurements(ABC):
     ----------------------------------------------------------------------------------------
     """
 
-    def random_errors(self, apply_order: Optional[List[Error]] = None, measure: bool = True, **kwargs):
+    def random_errors(
+        self, apply_order: Optional[List[str]] = None, measure: bool = True, **kwargs
+    ):
         """Applies all errors loaded in ``self.errors`` attribute to layer ``z``.
 
         The random error is applied for each loaded error module by calling ``error_module.random_error()``. If ``apply_order`` is specified, the error modules are applied in order of the error names in the list. If no order is specified, the errors are applied in a random order. Addionally, any error rate can set by supplying the rate as a keyword argument e.g. ``p_bitflip = 0.1``.
@@ -254,9 +258,10 @@ class PerfectMeasurements(ABC):
             The order in which the error modules are applied. Items in the list must equal keys in `self.errors` or the names of the loaded error modules.
         """
         self.instance = time.time()
-        if not apply_order:
-            apply_order = self.errors.values()
-        for error_class in apply_order:
+        ordered_errors = (
+            [self.errors[name] for name in apply_order] if apply_order else self.errors.values()
+        )
+        for error_class in ordered_errors:
             for qubit in self.data_qubits[self.layer].values():
                 error_class.random_error(qubit, **kwargs)
         if measure:

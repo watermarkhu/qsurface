@@ -48,4 +48,5 @@ jobs:
         env_vars: OS,PYTHON
         name: codecov-opensurfacesim
         fail_ci_if_error: false
+        path_to_write_report: ./codecov_report.gz
         verbose: true

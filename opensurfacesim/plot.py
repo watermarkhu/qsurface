@@ -11,6 +11,13 @@ from matplotlib.patches import Circle, Rectangle
 from collections import defaultdict
 import tkinter
 import numpy as np
+import os
+
+
+if os.environ.get('DISPLAY'):
+    mpl.use("TkAgg")
+else:
+    print("Warning: Display not available, figures may not load properly.")
 
 
 color_type = Union[str, Tuple[float, float, float, float]]

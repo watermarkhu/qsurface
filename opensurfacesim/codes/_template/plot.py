@@ -96,7 +96,6 @@ class PerfectMeasurements(TemplateSimPM):
         code_params = {
             "data00": {
                 "facecolor": "color_qubit_face",
-                "edgecolor": "color_qubit_edge",
             },
             "data10": {
                 "facecolor": "color_x_primary",
@@ -141,8 +140,9 @@ class PerfectMeasurements(TemplateSimPM):
             self.init_legend(ncol=1, **kwargs)
 
             for error_module in self.code.errors.values():
-                for name, method in error_module.error_methods.items():
-                    self.error_methods[name] = method
+                for error_name in error_module.error_methods:
+                    method = getattr(error_module, error_name)
+                    self.error_methods[error_name] = method
             self.interact_axes["error_buttons"] = plt.axes(self.params.axis_radio)
             self.interact_bodies["error_buttons"] = RadioButtons(
                 self.interact_axes["error_buttons"], ["info"] + list(self.error_methods.keys())
@@ -165,14 +165,39 @@ class PerfectMeasurements(TemplateSimPM):
             # Main legend items
             self.lh = [
                 self._legend_circle(
-                    "Qubit",
+                    "Qubit [0,0]",
                     marker="o",
                     color=self.params.color_edge,
                     mec=self.params.color_qubit_edge,
                     mfc=self.params.color_qubit_face,
                     ms=self.params.legend_marker_size,
-                )
+                ),
+                self._legend_circle(
+                    "Qubit [1,0]",
+                    marker="o",
+                    color=self.params.color_edge,
+                    mec=self.params.color_qubit_edge,
+                    mfc=self.params.color_x_primary,
+                    ms=self.params.legend_marker_size,
+                ),
+                self._legend_circle(
+                    "Qubit [0,1]",
+                    marker="o",
+                    color=self.params.color_edge,
+                    mec=self.params.color_qubit_edge,
+                    mfc=self.params.color_z_primary,
+                    ms=self.params.legend_marker_size,
+                ),
+                self._legend_circle(
+                    "Qubit [1,1]",
+                    marker="o",
+                    color=self.params.color_edge,
+                    mec=self.params.color_qubit_edge,
+                    mfc=self.params.color_y_primary,
+                    ms=self.params.legend_marker_size,
+                ),
             ]
+
             item_names = []
             # Error legend items
             for error in self.code.errors.values():
@@ -199,7 +224,7 @@ class PerfectMeasurements(TemplateSimPM):
             ]
             self.lh += legend_items
             labels = [artist.get_label() if hasattr(artist, "get_label") else artist[0].get_label() for artist in self.lh]
-            self.legend_ax.legend(handles=self.lh, labels=labels, **kwargs)
+            self.legend_ax.legend(handles=self.lh, labels=labels, **kwargs.get("legend_kwargs", {}))
 
         def _pick_handler(self, event):
             """Function on when an object in the figure is picked
@@ -212,8 +237,7 @@ class PerfectMeasurements(TemplateSimPM):
             else:
                 qubit = event.artist.object
                 print(selected, qubit)
-                self.error_methods[selected](qubit)
-                self._update_data(qubit, temporary=True)
+                self.error_methods[selected](qubit, instance=self.code.instance, temporary=True)
 
         def _plot_surface(self, z: float = 0, **kwargs):
             for qubit in self.code.data_qubits[z].values():
@@ -324,6 +348,9 @@ class PerfectMeasurements(TemplateSimPM):
             qubit : `~.codes.elements.DataQubit`
                 Data-qubit to plot.
             """
+            x_state = int(qubit.edges["x"].state)
+            z_state = int(qubit.edges["z"].state)
+            properties = getattr(self.params, f"data{x_state}{z_state}")
             qubit.surface_plot = self._draw_circle(
                 qubit.loc,
                 self.params.patch_circle_2d,
@@ -331,7 +358,8 @@ class PerfectMeasurements(TemplateSimPM):
                 zorder=1,
                 lw=self.params.line_width_primary,
                 z=z,
-                **self.params.data00,
+                edgecolor=self.params.color_qubit_edge,
+                **properties,
             )
             qubit.surface_plot.object = qubit  # Save qubit to artist
 

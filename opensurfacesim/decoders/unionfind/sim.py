@@ -74,10 +74,10 @@ class Toric(SimCode):
         self.config["step_growth"] = not (self.config["step_bucket"] or self.config["step_cluster"])
 
         # Apply Monkey Patching
-        self.code.ancillaQubit.cluster = None
-        self.code.ancillaQubit.peeled = None
+        self.code.AncillaQubit.cluster = None
+        self.code.AncillaQubit.peeled = None
         if not self.config["dynamic_forest"]:
-            self.code.ancillaQubit.forest = None
+            self.code.AncillaQubit.forest = None
             self.code.edge.forest = None
 
         # Initiated support table

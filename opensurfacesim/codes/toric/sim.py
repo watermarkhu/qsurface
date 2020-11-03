@@ -20,18 +20,18 @@ class PerfectMeasurements(TemplatePM):
         # Add data qubits to surface
         for y in range(self.size[1]):
             for x in range(self.size[0]):
-                self.add_data_qubit((x + 0.5, y), z=z)
-                self.add_data_qubit((x, y + 0.5), z=z)
+                self.add_data_qubit((x + 0.5, y), z=z, **kwargs)
+                self.add_data_qubit((x, y + 0.5), z=z, **kwargs)
 
         # Add ancilla qubits to surface
         for y in range(self.size[1]):
             for x in range(self.size[0]):
-                star = self.add_ancilla_qubit((x, y), z=z, state_type="x")
+                star = self.add_ancilla_qubit((x, y), z=z, state_type="x", **kwargs)
                 self.init_parity_check(star)
 
         for y in range(self.size[1]):
             for x in range(self.size[0]):
-                plaq = self.add_ancilla_qubit((x + 0.5, y + 0.5), z=z, state_type="z")
+                plaq = self.add_ancilla_qubit((x + 0.5, y + 0.5), z=z, state_type="z", **kwargs)
                 self.init_parity_check(plaq)
 
     def init_parity_check(self, ancilla_qubit: AncillaQubit, **kwargs):
@@ -64,20 +64,6 @@ class PerfectMeasurements(TemplatePM):
             "z2": [self.data_qubits[self.decode_layer][(0, i + 0.5)].edges["z"] for i in range(self.size[1])],
         }
         self.logical_operators = operators
-
-    def state_icons(self, z=0, **kwargs):
-        """Prints the state of the surface of layer ``z`` to the console using icons."""
-        surface = ""
-        for y in range(self.size[1]):
-            for x in range(self.size[0]):
-                surface += self.ancilla_qubits[z][(x, y)].state_icon(**kwargs)
-                surface += self.data_qubits[z][(x + 0.5, y)].state_icon(**kwargs)
-            surface += "\n"
-            for x in range(self.size[0]):
-                surface += self.data_qubits[z][(x, y + 0.5)].state_icon(**kwargs)
-                surface += self.ancilla_qubits[z][(x + 0.5, y + 0.5)].state_icon(**kwargs)
-            surface += "\n"
-        print(surface)
 
     @staticmethod
     def _parse_boundary_coordinates(size, *args):

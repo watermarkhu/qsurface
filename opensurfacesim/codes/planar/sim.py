@@ -18,33 +18,35 @@ class PerfectMeasurements(ToricPM):
         self.ancilla_qubits[z], self.data_qubits[z], self.pseudo_qubits[z] = {}, {}, {}
         parity = self.init_parity_check
 
+        print(kwargs)
+
         # Add data qubits to surface
         for y in range(self.size[1]):
             for x in range(self.size[0]):
-                self.add_data_qubit((x + 0.5, y), z=z)
+                self.add_data_qubit((x + 0.5, y), z=z, **kwargs)
         for y in range(self.size[1] - 1):
             for x in range(1, self.size[0]):
-                self.add_data_qubit((x, y + 0.5), z=z)
+                self.add_data_qubit((x, y + 0.5), z=z, **kwargs)
 
         # Add ancilla qubits to surface
         for y in range(self.size[1]):
-            parity(self.add_pseudo_qubit((0, y), z=z, state_type="x"))
-            parity(self.add_pseudo_qubit((self.size[0], y), z=z, state_type="x"))
+            parity(self.add_pseudo_qubit((0, y), z=z, state_type="x", **kwargs))
+            parity(self.add_pseudo_qubit((self.size[0], y), z=z, state_type="x", **kwargs))
         for y in range(self.size[1]):
             for x in range(self.size[0] - 1):
-                parity(self.add_ancilla_qubit((x + 1, y), z=z, state_type="x"))
+                parity(self.add_ancilla_qubit((x + 1, y), z=z, state_type="x", **kwargs))
 
         for x in range(self.size[0]):
-            parity(self.add_pseudo_qubit((x + 0.5, -0.5), z=z, state_type="z"))
-            parity(self.add_pseudo_qubit((x + 0.5, self.size[1] - 0.5), z=z, state_type="z"))
+            parity(self.add_pseudo_qubit((x + 0.5, -0.5), z=z, state_type="z", **kwargs))
+            parity(self.add_pseudo_qubit((x + 0.5, self.size[1] - 0.5), z=z, state_type="z", **kwargs))
         for x in range(self.size[0]):
             for y in range(self.size[1] - 1):
-                parity(self.add_ancilla_qubit((x + 0.5, y + 0.5), z=z, state_type="z"))
+                parity(self.add_ancilla_qubit((x + 0.5, y + 0.5), z=z, state_type="z", **kwargs))
 
     def init_parity_check(self, ancilla_qubit: AncillaQubit, **kwargs):
         """Initiates a parity check measurement.
 
-        For every ancilla qubit on ``(x,y)``, four neighboring data qubits are entangled for parity check measurements. They are stored via the wind-directional keys.
+        For every ancilla qubit on ``(x,y)``, four neighboring data qubits are entangled for parity check measurements.
 
         Parameters
         ----------
@@ -69,25 +71,6 @@ class PerfectMeasurements(ToricPM):
             "z": [self.data_qubits[self.decode_layer][(i + 0.5, 0)].edges["z"] for i in range(self.size[1])],
         }
         self.logical_operators = operators
-
-    def state_icons(self, z=0, **kwargs):
-        """Prints the state of the surface of layer ``z`` to the console using icons."""
-        surface = ""
-        for y in range(self.size[1] - 1):
-            surface += self.data_qubits[z][(0.5, y)].state_icon(**kwargs)
-            for x in range(1, self.size[0]):
-                surface += self.ancilla_qubits[z][(x, y)].state_icon(**kwargs)
-                surface += self.data_qubits[z][(x + 0.5, y)].state_icon(**kwargs)
-            surface += "\n" + self.ancilla_qubits[z][(0.5, y + 0.5)].state_icon(**kwargs)
-            for x in range(1, self.size[0]):
-                surface += self.data_qubits[z][(x, y + 0.5)].state_icon(**kwargs)
-                surface += self.ancilla_qubits[z][(x + 0.5, y + 0.5)].state_icon(**kwargs)
-            surface += "\n"
-        surface += self.data_qubits[z][(0.5, self.size[1] - 1)].state_icon(**kwargs)
-        for x in range(1, self.size[0]):
-            surface += self.ancilla_qubits[z][(x, self.size[1] - 1)].state_icon(**kwargs)
-            surface += self.data_qubits[z][(x + 0.5, self.size[1] - 1)].state_icon(**kwargs)
-        print(surface, "\n")
 
 
 class FaultyMeasurements(ToricFM, PerfectMeasurements):

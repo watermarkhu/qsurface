@@ -1,6 +1,7 @@
 from abc import ABC
 import random
-from typing import Tuple, Union
+from typing import Optional, Tuple, Union
+from collections import defaultdict
 
 
 class Qubit(ABC):
@@ -10,9 +11,9 @@ class Qubit(ABC):
 
     Parameters
     ----------
-    loc : tuple, (x,y)
+    loc
         Location of the qubit in coordinates.
-    z : int or float, optional
+    z
         Layer position of qubit. Different layers correspond to time instances of a surface for faulty measurement simulations.
     """
 
@@ -21,6 +22,7 @@ class Qubit(ABC):
     def __init__(self, loc: Tuple[float, float], z: float = 0, *args, **kwargs):
         self.loc = loc
         self.z = z
+        self.errors = defaultdict(float)
 
     def __repr__(self):
         return f"{self.qubit_type}({self.loc[0]},{self.loc[1]}|{self.z})"
@@ -41,6 +43,9 @@ class DataQubit(Qubit):
 
     state : dict of bool
         A class property that calls to each of the edges stored at the `self.edges` attribute and returns all edge states as a dictionary.
+
+    reinitialized : bool
+        Indicator for a reinitialized (replaced) data qubit.
     """
 
     qubit_type = "D"
@@ -48,14 +53,17 @@ class DataQubit(Qubit):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.edges = {}
+        self.reinitialized = True
 
-    def _reset(self):
+    def _reinitialize(self, initial_states: Tuple[float, float] = (None, None), **kwargs):
         """Resets this qubit's attributes."""
-        for edge in self.edges.values():
-            edge._reset()
+        self.reinitialized = True
+        for edge, state in zip(self.edges.values(), initial_states):
+            edge._reinitialize(initial_state=state, **kwargs)
 
     @property
     def state(self):
+        self.reinitialized = False
         return {key: self.edges[key].state for key in self.edges.keys()}
 
     @state.setter
@@ -69,17 +77,6 @@ class DataQubit(Qubit):
                 edge.state = state
         else:
             raise TypeError("new_state must be a dictionary or tuple")
-
-    def state_icon(self, **kwargs):
-        """Returns the qubit state in a colored icon."""
-        if self.state["x"] and self.state["z"]:
-            return "🟡"
-        elif self.state["x"]:
-            return "🔴"
-        elif self.state["z"]:
-            return "🟢"
-        else:
-            return "⚪"
 
 
 class AncillaQubit(Qubit):
@@ -143,8 +140,7 @@ class AncillaQubit(Qubit):
         """
         parity = False
         for data_qubit in self.parity_qubits.values():
-            edge = data_qubit.edges[self.state_type]
-            if edge.state:
+            if data_qubit.state[self.state_type]:
                 parity = not parity
 
         p_measure = pm_bitflip if self.state_type == "x" else pm_phaseflip
@@ -157,14 +153,6 @@ class AncillaQubit(Qubit):
 
         return parity
 
-    def state_icon(self, measure: bool = False, **kwargs):
-        """Returns the qubit state in a colored icon."""
-        state = self.state if measure else self.measured_state
-        if self.state_type == "x":
-            return "🟧" if state else "🟦"
-        else:
-            return "🔶" if state else "🔷"
-
 
 class Edge(object):
     """A state object belonging to a `~opensurfacesim.codes._template.DataQubit` object.
@@ -173,10 +161,12 @@ class Edge(object):
 
     Parameters
     ----------
-    qubit : `~opensurfacesim.codes._template.DataQubit`
+    qubit
         Parent qubit object.
-    state_type : str,  {"x", "z"}
+    state_type
         Error type associated with the current edge.
+    initial_state
+        State of the object after initialization.
 
     Attributes
     ----------
@@ -190,17 +180,19 @@ class Edge(object):
 
     def __init__(
         self,
-        qubit,
+        qubit: DataQubit,
         state_type: str = "",
+        initial_state: Optional[bool] = None,
+        **kwargs,
     ):
         # fixed parameters
         self.qubit = qubit
         self.state_type = state_type
         self._nodes = []
-        self.state = False
+        self.state = random.random() > 0.5 if initial_state is None else initial_state
 
-    def _reset(self):
-        self.state = False
+    def _reinitialize(self, initial_state: Optional[bool] = None, **kwargs):
+        self.state = random.random() > 0.5 if initial_state is None else initial_state
 
     def __call__(self):
         return self.state

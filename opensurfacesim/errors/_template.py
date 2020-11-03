@@ -19,7 +19,7 @@ class Sim(ABC):
         The error rates that are applied at default.
     """
 
-    def __init__(self, code = None, **kwargs) -> None:
+    def __init__(self, code=None, **kwargs) -> None:
         self.code = code
         self.default_error_rates = {}
         self.type = str(self.__module__).split(".")[-1]
@@ -28,7 +28,7 @@ class Sim(ABC):
         return "{} error object with defaults: {}".format(self.type, self.default_error_rates)
 
     @abstractmethod
-    def random_error(self, qubit : Qubit, **kwargs) -> None:
+    def random_error(self, qubit: Qubit, **kwargs) -> None:
         """Applies the current error type to the `qubit`.
 
         Parameters
@@ -41,6 +41,8 @@ class Sim(ABC):
 
 class Plot(Sim):
     """Template plot class for errors.
+
+    .. todo:: This documentation is out of date
 
     Parameters
     ----------
@@ -65,6 +67,7 @@ class Plot(Sim):
         Dictionary of `matplotlib.lines.Line2D` properties for each legend item, defined in 'plot_errors_legend.ini'.
     """
 
+    permanent_on_click = False
     error_methods = []
     legend_params = {}
     legend_names = {}
@@ -85,37 +88,43 @@ class Plot(Sim):
         figure = self.code.figure
 
         @wraps(sim_method)
-        def wrapped_method(qubit:Qubit, temporary:bool=False, **kwargs):
+        def wrapped_method(qubit: Qubit, temporary: bool = False, **kwargs):
             output = sim_method(qubit, **kwargs)
+
+            qubit.errors[error_name] = 0 if qubit.errors[error_name] else self.code.instance
             artist = qubit.surface_plot
+            properties = getattr(figure.params, error_name)
+
             if artist in figure.temporary_saved:
                 restored_properties = {
-                    prop: figure.temporary_saved[artist].get(prop, plt.getp(artist, prop))
-                    for prop in self.plot_params[error_name]
+                    prop: figure.temporary_saved[artist].get(prop, plt.getp(artist, prop)) for prop in properties
                 }
             else:
-                restored_properties = {
-                    prop: plt.getp(artist, prop) for prop in self.plot_params[error_name]
-                }
-            apply_properties = (
-                figure.temporary_properties if temporary else figure.new_properties
-            )
-            apply_properties(artist, getattr(figure.params, error_name))
+                restored_properties = {prop: plt.getp(artist, prop) for prop in properties}
+
             future_properties = figure.future_dict[figure.history_iter + 3]
-            if artist in future_properties:
-                future_properties[artist].update(restored_properties)
+
+            if temporary:
+                if self.permanent_on_click or qubit.errors[error_name] == self.code.instance:
+                    figure.temporary_properties(artist, properties)
+                    if artist in future_properties:
+                        future_properties[artist].update(restored_properties)
+                    else:
+                        future_properties[artist] = restored_properties
+                else:
+                    restored_properties = {
+                        prop: figure.temporary_saved[artist].get(prop)
+                        for prop in properties
+                        if prop in figure.temporary_saved[artist]
+                    }
+                    figure.temporary_properties(artist, restored_properties)
             else:
-                future_properties[artist] = restored_properties
+                figure.new_properties(artist, properties)
+                if artist in future_properties:
+                    future_properties[artist].update(restored_properties)
+                else:
+                    future_properties[artist] = restored_properties
+
             return output
+
         return wrapped_method
-
-
-            
-
-
-
-
-
-
-
-

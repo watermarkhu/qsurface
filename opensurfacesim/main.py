@@ -85,6 +85,7 @@ def run(
     decoder: decoder_type,
     error_rates: dict = {},
     iterations: int = 1,
+    decode_initial: bool = True,
     seed: Optional[float] = None,
     benchmark: Optional[BenchmarkDecoder] = None,
     mp_queue: Optional[Queue] = None,
@@ -105,6 +106,8 @@ def run(
         Number of iterations to run.
     error_rates
         Dictionary for error rates (see `~opensurfacesim.errors`).
+    decode_initial
+        Decode initial code configuration before applying loaded errors. 
     seed
         Float to use as the seed for the random number generator.
     benchmark
@@ -132,11 +135,15 @@ def run(
         'std': 0.002170364089572033}}}}
     """
     # Initialize lattice
-    if not seed:
+    if seed is None:
         seed = timeit.default_timer()
     seed = float(f"{seed}{mp_process}")
     random.seed(seed)
-    print(seed) # TODO remove this
+
+    if decode_initial:
+        code.random_errors()
+        decoder.decode(**kwargs)    
+        code.logical_state
 
     if benchmark:
         benchmark._set_decoder(decoder, seed=seed)
@@ -147,7 +154,7 @@ def run(
         print(f"Running iteration {iteration+1}/{iterations}", end="\r")
         code.random_errors(**error_rates)
         decoder.decode(**kwargs)
-        logical_state = code.logical_state  # Must get logical state property to update code.no_error
+        code.logical_state          # Must get logical state property to update code.no_error
         output["no_error"] += code.no_error
         if hasattr(code, "figure"):
             code.show_corrected()
@@ -174,6 +181,7 @@ def run_multiprocess(
     decoder: decoder_type,
     error_rates: dict = {},
     iterations: int = 1,
+    decode_initial: bool = True,
     seed: Optional[float] = None,
     processes: int = 1,
     benchmark: Optional[BenchmarkDecoder] = None,
@@ -197,6 +205,10 @@ def run_multiprocess(
         Dictionary for error rates (see `~opensurfacesim.errors`).
     iterations
         Total number of iterations to run.
+    decode_initial
+        Decode initial code configuration before applying loaded errors. 
+    seed
+        Float to use as the seed for the random number generator.
     processes
         Number of processes to spawn.
     benchmark
@@ -204,6 +216,8 @@ def run_multiprocess(
     kwargs
         Keyword arguments are passed on to every process of run.
     """
+    if hasattr(code, "figure"):
+        raise TypeError("Cannot use surface code with plotting enabled for multiprocess.")
 
     if processes is None:
         processes = cpu_count()
@@ -211,6 +225,11 @@ def run_multiprocess(
     if process_iters == 0:
         print("Please select more iterations")
         return
+
+    if decode_initial:
+        code.random_errors()
+        decoder.decode(**kwargs)    
+        code.logical_state
 
     # Initiate processes
     mp_queue = Queue()
@@ -222,6 +241,7 @@ def run_multiprocess(
                 args=(code, decoder),
                 kwargs={
                     "iterations": process_iters,
+                    "decode_initial": False,
                     "seed": seed,
                     "mp_process": process,
                     "mp_queue": mp_queue,

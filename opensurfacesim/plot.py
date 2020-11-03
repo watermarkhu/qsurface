@@ -15,7 +15,7 @@ import os
 
 
 try:
-    DISPLAY = os.environ.get('DISPLAY', None)
+    DISPLAY = os.environ.get("DISPLAY", None)
     if DISPLAY:
         mpl.use("TkAgg")
     else:
@@ -362,7 +362,6 @@ class Template2D(ABC):
         """Closes the figure."""
         self.draw_figure("Press (->/enter) to close figure.")
         plt.close(self.figure)
-        
 
     @property
     def history_at_newest(self):

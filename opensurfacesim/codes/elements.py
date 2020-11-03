@@ -1,6 +1,7 @@
 from abc import ABC
 import random
 from typing import Optional, Tuple, Union
+from collections import defaultdict
 
 
 class Qubit(ABC):
@@ -21,6 +22,7 @@ class Qubit(ABC):
     def __init__(self, loc: Tuple[float, float], z: float = 0, *args, **kwargs):
         self.loc = loc
         self.z = z
+        self.errors = defaultdict(float)
 
     def __repr__(self):
         return f"{self.qubit_type}({self.loc[0]},{self.loc[1]}|{self.z})"
@@ -43,7 +45,7 @@ class DataQubit(Qubit):
         A class property that calls to each of the edges stored at the `self.edges` attribute and returns all edge states as a dictionary.
 
     reinitialized : bool
-        Indicator for a reinitialized (replaced) data qubit.  
+        Indicator for a reinitialized (replaced) data qubit.
     """
 
     qubit_type = "D"
@@ -53,7 +55,7 @@ class DataQubit(Qubit):
         self.edges = {}
         self.reinitialized = True
 
-    def _reinitialize(self, initial_states:Tuple[float, float]=(None, None), **kwargs):
+    def _reinitialize(self, initial_states: Tuple[float, float] = (None, None), **kwargs):
         """Resets this qubit's attributes."""
         self.reinitialized = True
         for edge, state in zip(self.edges.values(), initial_states):

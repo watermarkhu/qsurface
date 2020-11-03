@@ -67,6 +67,8 @@ class Sim(TemplateSim):
 class Plot(TemplatePlot, Sim):
     """Plot Pauli error class."""
 
+    permanent_on_click = False
+
     error_methods = ["bitflip", "phaseflip", "bitphaseflip"]
 
     legend_params = {

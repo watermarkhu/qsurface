@@ -188,7 +188,7 @@ class PerfectMeasurements(TemplateSimPM):
                     mfc=self.params.color_z_primary,
                     ms=self.params.legend_marker_size,
                 ),
-                 self._legend_circle(
+                self._legend_circle(
                     "Qubit [1,1]",
                     marker="o",
                     color=self.params.color_edge,

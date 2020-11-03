@@ -65,7 +65,6 @@ class PerfectMeasurements(TemplatePM):
         }
         self.logical_operators = operators
 
-
     @staticmethod
     def _parse_boundary_coordinates(size, *args):
         # Inherited docstrings

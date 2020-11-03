@@ -157,6 +157,47 @@ class Toric(UFToric):
     ================================================================================================
     """
 
+    def grow_clusters(self, **kwargs):
+        """Grows odd-parity clusters outward for union with others until all clusters are even.
+
+        Lists of odd-parity clusters are maintained at ``self.buckets``. Starting from bucket 0, odd-parity clusters are popped from the bucket by 'grow_bucket and grown at the boundary by `grow_boundary` by adding 1 for every boundary edge in ``cluster.bound`` in ``self.support``. Grown clusters are then placed in a new bucket by `place_bucket` based on its size if it has odd parity.
+
+        Edges are fully added to the cluster per two growth iterations. Since a cluster with half-grown edges at the boundary has the same size (number of ancillas) as before growth, but is non-arguably *bigger*, the degeneracy in cluster size is differentiated by ``cluster.support``. When an union occurs between two clusters during growth, if the merged cluster is odd, it is placed in a new bucket. Thus the real bucket number is saved at the cluster locally as ``cluster.bucket``. These two checks are performed before a cluster is grown in `grow_bucket`.
+
+        The chronology of events per bucket must be the following:
+
+        1.  Grow all clusters in the bucket if checks passed.
+
+            *   Add all odd-parity clusters after growth to ``place_list``.
+            *   Add all merging clusters to ``union_list``.
+
+        2.  Merge all clusters in ``union_list``
+
+            *   Add odd-parity clusters after union to ``place_list``.
+
+        3.  Place all clusters in ``place_list`` in new bucket if parity is odd.
+
+        For clusters with ``cluster.support==1`` or with half-grown edges at the boundary, the new boundary at ``clusters.new_bound`` consists of the same half-grown edges. For clusters with ``cluster.support==0``, the new boundary is found by ``cluster_add_ancilla``.
+
+        The current implementation of `grow_clusters` for the ``ufns`` decoder currently includes a work-around for a non-frequently occuring bug. Since the grown of a cluster is separated into nodes, and nodes may be *buried* by surrounding cluster trees such that it is an interior element and has no boundaries, it may be possible that when an odd cluster is grown no edges are actually added to the cluster. In this case, due to cluster parity duality the odd cluster will be placed in the same bucket after two rounds of growth. The work-around is to always check if the previous bucket is empty before moving on to the next one.
+        """
+        self.bucket_i = 0
+
+        while self.bucket_i < self.buckets_num:
+
+            if self.bucket_i > self.bucket_max_filled:
+                break
+
+            if self.bucket_i in self.buckets and self.buckets[self.bucket_i] != []:
+                union_list, place_list = self.grow_bucket(self.buckets.pop(self.bucket_i), self.bucket_i)
+                self.union_bucket(union_list)
+                self.place_bucket(place_list, self.bucket_i)
+
+            if self.buckets[self.bucket_i - 1] != []:
+                self.bucket_i -= 1
+            else:
+                self.bucket_i += 1
+
     def grow_boundary(self, cluster: Cluster, union_list: UL, **kwargs):
         """Grows the boundary of the ``cluster``.
 
@@ -209,11 +250,10 @@ class Toric(UFToric):
         parent_node
             Parent node in the node-tree to indicate recursive direction.
         """
-        if self.config["print_steps"]:
-            print(node._repr_status)
-
         if node.delay - node.waited == cluster.min_delay:
             self.grow_node_boundary(node, union_list)
+            if self.config["print_steps"]:
+                print(node._repr_status, end="; ")
         else:
             node.waited += 1
 

@@ -163,9 +163,7 @@ class PerfectMeasurements(ABC):
         """
         for error_module in error_modules:
             if type(error_module) == str:
-                error_module = importlib.import_module(
-                    ".errors.{}".format(error_module), package="opensurfacesim"
-                )
+                error_module = importlib.import_module(".errors.{}".format(error_module), package="opensurfacesim")
             self._init_error(error_module, error_rates)
 
     def _init_error(self, error_module, error_rates):
@@ -179,7 +177,9 @@ class PerfectMeasurements(ABC):
     ----------------------------------------------------------------------------------------
     """
 
-    def add_data_qubit(self, loc: Tuple[float, float], z: float = 0, initial_states: Tuple[float, float] = (None, None), **kwargs) -> DataQubit:
+    def add_data_qubit(
+        self, loc: Tuple[float, float], z: float = 0, initial_states: Tuple[float, float] = (None, None), **kwargs
+    ) -> DataQubit:
         """Initializes a `~.code.elements.DataQubit` with `dataQubit` and `edge`, and saved to ``self.data_qubits[z][loc]``."""
         data_qubit = self.DataQubit(loc, z, **kwargs)
         data_qubit.edges["x"] = self.Edge(data_qubit, "x", initial_state=initial_states[0], **kwargs)
@@ -243,9 +243,7 @@ class PerfectMeasurements(ABC):
     ----------------------------------------------------------------------------------------
     """
 
-    def random_errors(
-        self, apply_order: Optional[List[str]] = None, measure: bool = True, **kwargs
-    ):
+    def random_errors(self, apply_order: Optional[List[str]] = None, measure: bool = True, **kwargs):
         """Applies all errors loaded in ``self.errors`` attribute to layer ``z``.
 
         The random error is applied for each loaded error module by calling ``error_module.random_error()``. If ``apply_order`` is specified, the error modules are applied in order of the error names in the list. If no order is specified, the errors are applied in a random order. Addionally, any error rate can set by supplying the rate as a keyword argument e.g. ``p_bitflip = 0.1``.
@@ -258,9 +256,7 @@ class PerfectMeasurements(ABC):
             The order in which the error modules are applied. Items in the list must equal keys in `self.errors` or the names of the loaded error modules.
         """
         self.instance = time.time()
-        ordered_errors = (
-            [self.errors[name] for name in apply_order] if apply_order else self.errors.values()
-        )
+        ordered_errors = [self.errors[name] for name in apply_order] if apply_order else self.errors.values()
         for error_class in ordered_errors:
             for qubit in self.data_qubits[self.layer].values():
                 error_class.random_error(qubit, **kwargs)

@@ -2,7 +2,7 @@ from typing import List, Optional, Tuple
 from ...codes.elements import AncillaQubit, Edge
 from ..unionfind.sim import Toric as UFToric, Planar as UFPlanar
 from ..unionfind.elements import Cluster
-from .elements import Node, Syndrome, Junction, Boundary, Filler, print_tree
+from .elements import Node, Syndrome, Junction, OddNode, print_tree
 
 UL = List[Tuple[AncillaQubit, Edge, AncillaQubit]]
 
@@ -14,7 +14,7 @@ class Toric(UFToric):
 
     The boundary of every cluster is not stored at the cluster object, but divided under its partitioned nodes. Cluster growth is initiated from the root of the node-tree. The attributes ``root_node`` and ``min_delay`` are monkey-patched to the `~.unionfind.elements.Cluster` object to assist with cluster growth in the Node-Suspension data structure. See `grow_node` for more.
 
-    The current class inherits from `.unionfind.sim.Toric` for its application the Union-Find data structure for cluster growth and mergers. To maintain low operating complexity in UFNS, the following parameters are set of the Union-Find super.
+    The current class inherits from `.unionfind.sim.Toric` for its application the Union-Find data structure for cluster growth and mergers. To maintain low operating complexity in UFNS, the following parameters are set of the Union-Find parent class.
 
     =================   =======
     parameter           value
@@ -33,11 +33,9 @@ class Toric(UFToric):
     name = "Union-Find Node-Suspension"
     short = "ufns"
 
-    Node = Node
-    SyndromeNode = Syndrome
-    JunctionNode = Junction
-    BoundaryNode = Boundary
-    FillerNode = Filler
+    _Syndrome = Syndrome
+    _Junction = Junction
+    _OddNode = OddNode
 
     compatibility_measurements = dict(
         PerfectMeasurements=True,
@@ -58,9 +56,9 @@ class Toric(UFToric):
         )
         super().__init__(*args, **kwargs)
 
-        self.code.AncillaQubit.node = None
-        self.Cluster.root_node = None
-        self.Cluster.min_delay = 0
+        self.code._AncillaQubit.node = None
+        self._Cluster.root_node = None
+        self._Cluster.min_delay = 0
         self.new_boundary = []
 
     """
@@ -101,7 +99,7 @@ class Toric(UFToric):
                 if new_ancilla.cluster == cluster:  # cycle detected, peel edge
                     self._edge_peel(edge, variant="cycle")
                 else:  # if no cycle detected
-                    self.FillerNode(new_ancilla)
+                    self._OddNode(new_ancilla)
                     self._edge_full(ancilla, edge, new_ancilla)
                     self.cluster_add_ancilla(cluster, new_ancilla, parent=ancilla)
 
@@ -138,8 +136,8 @@ class Toric(UFToric):
 
         for ancilla in plaqs + stars:
             if ancilla.cluster is None or ancilla.cluster.instance != self.code.instance:
-                node = self.SyndromeNode(ancilla)
-                cluster = self.Cluster(self.cluster_index, self.code.instance)
+                node = self._Syndrome(ancilla)
+                cluster = self._Cluster(self.cluster_index, self.code.instance)
                 cluster.root_node = node
                 self.cluster_add_ancilla(cluster, ancilla)
                 self.cluster_index += 1
@@ -304,7 +302,7 @@ class Toric(UFToric):
                     root_node, parent, child = new_cluster.root_node, new_node, node
 
                 if not node.radius % 2 and new_node.radius > 1:  # Connect via new junction-node
-                    junction = self.JunctionNode(new_ancilla)
+                    junction = self._Junction(new_ancilla)
                     new_ancilla.node = junction
                     parent_edge, child_edge = parent.radius // 2, child.radius // 2
                     junction.neighbors = [(parent, parent_edge), (child, child_edge)]

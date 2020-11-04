@@ -31,15 +31,16 @@ extensions = [
     "sphinx.ext.autodoc",
     "sphinx_autodoc_typehints",
     "sphinx.ext.todo",
-    "sphinx.ext.githubpages",
     "sphinx.ext.intersphinx",
     "m2r2",
     "sphinx_rtd_theme",
 ]
 
-intersphinx_mapping = {"matplotlib": ("https://matplotlib.org/", None)}
-intersphinx_mapping = {"networkx": ("https://networkx.github.io/documentation/stable/", None)}
-
+intersphinx_mapping = {
+    'python': ('https://docs.python.org/3', None),
+    "matplotlib": ("https://matplotlib.org/", None),
+    "networkx": ("https://networkx.github.io/documentation/stable/", None), 
+}
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]

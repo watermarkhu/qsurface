@@ -139,6 +139,8 @@ class PlotParams:
             {"new_attr" : "some_value", "use_existing" : 0.35}
         """
         for attribute, value in param_dict.items():
+            if hasattr(self, attribute):
+                print(f"Warning, attribute {attribute} already defined.")
             if isinstance(value, dict):
                 for sub_attribute, sub_value in value.items():
                     if isinstance(sub_value, str):

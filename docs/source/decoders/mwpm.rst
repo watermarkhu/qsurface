@@ -22,6 +22,7 @@ Plotting
 --------
 
 .. automodule:: opensurfacesim.decoders.mwpm.plot
+    :member-order: bysource
     :members:
 
 

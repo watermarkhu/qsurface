@@ -3,7 +3,7 @@ from ..toric.sim import PerfectMeasurements as ToricPM, FaultyMeasurements as To
 
 
 class PerfectMeasurements(ToricPM):
-    """Simulation planar code for perfect measurements."""
+    # Inherited docstring
 
     name = "planar"
 
@@ -74,6 +74,6 @@ class PerfectMeasurements(ToricPM):
 
 
 class FaultyMeasurements(ToricFM, PerfectMeasurements):
-    """Simulation planar code for faulty measurements."""
+    # Inherited docstring
 
     pass

@@ -2,11 +2,11 @@ from __future__ import annotations
 from typing import List, Optional, Tuple
 from ...codes.elements import AncillaQubit, Edge, PseudoQubit
 from .elements import Cluster
-from .._template import SimCode
+from .._template import Sim
 from collections import defaultdict
 
 
-class Toric(SimCode):
+class Toric(Sim):
     """Union-Find decoder for the toric lattice.
 
     In this implementation, cluster properties are not stored at the root of the tree. Instead, ancillas are collected within `~.unionfind.elements.Cluster` objects, which contain the `~.unionfind.elements.Cluster.union` and `~.unionfind.elements.Cluster.find` methods.
@@ -27,7 +27,7 @@ class Toric(SimCode):
     print_steps : bool, optional
         Prints additional decoding information. Default is false.
     kwargs
-        Keyword arguments are forwarded to `~.decoders._template.SimCode`.
+        Keyword arguments are forwarded to `~.decoders._template.Sim`.
 
     Attributes
     ----------
@@ -57,7 +57,7 @@ class Toric(SimCode):
 
     name = "Union-Find"
     short = "unionfind"
-    Cluster = Cluster
+    _Cluster = Cluster
 
     compatibility_measurements = dict(
         PerfectMeasurements=True,
@@ -74,11 +74,11 @@ class Toric(SimCode):
         self.config["step_growth"] = not (self.config["step_bucket"] or self.config["step_cluster"])
 
         # Apply Monkey Patching
-        self.code.AncillaQubit.cluster = None
-        self.code.AncillaQubit.peeled = None
+        self.code._AncillaQubit.cluster = None
+        self.code._AncillaQubit.peeled = None
         if not self.config["dynamic_forest"]:
-            self.code.AncillaQubit.forest = None
-            self.code.edge.forest = None
+            self.code._AncillaQubit.forest = None
+            self.code._Edge.forest = None
 
         # Initiated support table
         self.support = {}
@@ -90,7 +90,7 @@ class Toric(SimCode):
             for layer in self.code.ancilla_qubits.values():
                 for ancilla_qubit in layer.values():
                     self.support[
-                        ancilla_qubit.vertical_edges[
+                        ancilla_qubit.z_neighbors[
                             self.code.ancilla_qubits[(ancilla_qubit.z + 1) % self.code.layers][ancilla_qubit.loc]
                         ]
                     ] = 0
@@ -214,7 +214,7 @@ class Toric(SimCode):
         plaqs, stars = self.get_syndrome()
         for ancilla in plaqs + stars:
             if ancilla.cluster is None or ancilla.cluster.instance != self.code.instance:
-                cluster = self.Cluster(self.cluster_index, self.code.instance)
+                cluster = self._Cluster(self.cluster_index, self.code.instance)
                 self.cluster_add_ancilla(cluster, ancilla)
                 self.cluster_index += 1
                 self.clusters.append(cluster)

@@ -9,11 +9,14 @@ README = (directory / "README.md").read_text()
 
 setup(
     name="opensurfacesim",
-    version="0.1.0",
+    version="0.1.1",
     description="Open library from surface code simulations and visualizations",
     long_description=README,
     long_description_content_type="text/markdown",
     url="https://github.com/watermarkhu/opensurfacesim",
+    project_urls={
+        "Documentation": "https://opensurfacesim.readthedocs.io/en/latest/"
+    },
     author="Mark Shui Hu",
     author_email="watermarkhu@gmail.com",
     license="BSD-3",
@@ -25,12 +28,13 @@ setup(
     ],
     packages=find_packages(exclude=['tests', '*.tests', '*.tests.*']),
     include_package_data = True,
+    python_requires='>3.7.0',
     install_requires=[
-        "matplotlib",
-        "networkx",
-        "pandas",
-        "scipy",
-        "pptree",
+        "matplotlib>=3.3.2",
+        "networkx>=2.0",
+        "pandas>=1.1.0",
+        "scipy>=1.4.0",
+        "pptree>=3.1",
     ],
     entry_points={
         "console_scrips":[

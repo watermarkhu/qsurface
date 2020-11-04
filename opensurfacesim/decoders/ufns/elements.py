@@ -10,7 +10,7 @@ class Node(ABC):
 
     A subgraph :math:`\mathcal{V}\subseteq C` is a spanning-tree of a cluster :math:`C` if it is a connected acyclic subgraph that includes all vertices of :math:`C` and a minimum number of edges. We call the spanning-tree of a cluster its ancilla-tree. An acyclic connected spanning-forest is required for the Union-Find Decoder.
 
-    A node-tree :math:`\mathcal{N}` is a partition of a ancilla-tree :math:`\mathcal{V}`, such that each element of the partition -- which we call a *node* :math:`n` -- represents a set of adjacent vertices that lie at the same distance -- the *node radius} :math:`r` -- from the *primer ancilla*, which initializes the node and lies at its center. The node-tree is a directed acyclic graph, and its edges :math:`\mathcal{E}_i` have lengths equal to the distance between the primer vertices of neighboring nodes.
+    A node-tree :math:`\mathcal{N}` is a partition of a ancilla-tree :math:`\mathcal{V}`, such that each element of the partition -- which we call a *node* :math:`n` -- represents a set of adjacent vertices that lie at the same distance -- the *node radius :math:`r` -- from the *primer ancilla*, which initializes the node and lies at its center. The node-tree is a directed acyclic graph, and its edges :math:`\mathcal{E}_i` have lengths equal to the distance between the primer vertices of neighboring nodes.
 
     Parameters
     ----------
@@ -131,7 +131,7 @@ class Junction(Node):
 
         Tail recursive function that calculates the parities of the current node and all its children.
 
-        .. math:: j_p &= 1 - \big(\sum_{\mathclap{n \in \text{ children of } j}} (1+n_p) \big) \bmod 2.
+        .. math:: j_p = 1 - \\big(\\sum_{n \\in \\text{ children of } j} (1+n_p) \\big) \\bmod 2.
 
         Parameters
         ----------
@@ -142,8 +142,8 @@ class Junction(Node):
         return self.parity
 
 
-class Boundary(Node):
-    short = "B"
+class OddNode(Node):
+    short = "O"
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, **kwargs)
@@ -154,19 +154,18 @@ class Boundary(Node):
         return self.parity
 
 
-class Filler(Node):
-    short = "F"
+def print_tree(current_node: Node, parent_node: Optional[Node] = None):
+    """Prints the node-tree of ``current_node`` and its descendents.
 
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        self.parity = 1
+    Utilizes `pptree <https://pypi.org/project/pptree/>`_ to print a tree of nodes, which requires a list of children elements per node. Since the node-tree is semi-directional (the root can be any element in the tree), we need to traverse the node-tree from ``current_node`` in all directions except for the ``parent_node`` to find the children attributes for the current direction.  
 
-    def ns_parity(self, *args, **kwargs) -> int:
-        # Inherited docstring
-        return self.parity
-
-
-def print_tree(current_node, parent_node: Optional[Node] = None):
+    Parameters
+    ----------
+    current_node
+        Current root of the node-tree to print. 
+    parent_node
+        Parent node which will not be printed. s
+    """
     def get_children(node, parent=None):
         node.children = [child for child, _ in node.neighbors if child is not parent]
         for child in node.children:

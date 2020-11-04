@@ -9,7 +9,7 @@ README = (directory / "README.md").read_text()
 
 setup(
     name="opensurfacesim",
-    version="0.1.0",
+    version="0.1.1",
     description="Open library from surface code simulations and visualizations",
     long_description=README,
     long_description_content_type="text/markdown",

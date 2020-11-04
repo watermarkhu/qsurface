@@ -14,6 +14,9 @@ setup(
     long_description=README,
     long_description_content_type="text/markdown",
     url="https://github.com/watermarkhu/opensurfacesim",
+    project_urls={
+        "Documentation": "https://opensurfacesim.readthedocs.io/en/latest/"
+    },
     author="Mark Shui Hu",
     author_email="watermarkhu@gmail.com",
     license="BSD-3",

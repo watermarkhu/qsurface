@@ -17,13 +17,22 @@ blossom5_dir = "blossom5-v2.05.src"
 
 
 def get_blossomv(accept: bool = False):
-    """Downloads and compiles the BlossomV algorithm for OpenSurfaceSim."""
+    """Downloads and compiles the BlossomV algorithm, which is distributed under the following license:
+    
+    License
+    -------
+
+    .. include:: ../../../opensurfacesim/decoders/mwpm/blossom5/LICENSE
+        :literal:
+    """
 
     folder = os.path.dirname(os.path.abspath(__file__))
 
     try:
         with open(folder + "/blossom5/LICENSE", "r") as licensefile:
-            print(licensefile.read())
+            lines = "_"*49
+            print(f"The Blossom V algorithm is distributed under a different license:\n{lines}\n")
+            print(licensefile.read(), end=f"{lines}\n")
     except FileNotFoundError:
         raise FileNotFoundError("License file missing. Automatic download is disabled.")
 

@@ -106,14 +106,14 @@ def cli(args):
         ["-pe", "--p_erasure", "store", "Erasure rate - float {0,1}", dict(type=float, default=0)],
         [
             "-pmx",
-            "--pm_bitflip",
+            "--p_bitflip_plaq",
             "store",
             "Measurement bitflip rate - float {0,1}",
             dict(type=float, default=0),
         ],
         [
             "-pmz",
-            "--pm_phaseflip",
+            "--p_bitflip_star",
             "store",
             "Measurement phaseflip rate - float {0,1}",
             dict(type=float, default=0),
@@ -197,14 +197,14 @@ def cli(args):
         ["-pe", "--p_erasure", "store", "Erasure rate - float {0,1}", dict(type=float, nargs="*")],
         [
             "-pmx",
-            "--pm_bitflip",
+            "--p_bitflip_plaq",
             "store",
             "Measurement bitflip rate - float {0,1}",
             dict(type=float, nargs="*"),
         ],
         [
             "-pmz",
-            "--pm_phaseflip",
+            "--p_bitflip_star",
             "store",
             "Measurement phaseflip rate - float {0,1}",
             dict(type=float, nargs="*"),

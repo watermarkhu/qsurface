@@ -5,7 +5,9 @@ Information
     :members:
 
 .. automodule:: opensurfacesim.decoders.ufns.elements
+    :member-order: bysource
     :members:
+
 
 Simulation
 ----------

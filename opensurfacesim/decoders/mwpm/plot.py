@@ -1,20 +1,24 @@
 from .sim import Toric as SimToric, Planar as SimPlanar
-from .._template import PlotCode
+from .._template import Plot
 
 
-class Toric(PlotCode, SimToric):
+class Toric(Plot, SimToric):
     """Plot MWPM decoder for the toric code.
-
-    Attributes
+    
+    Parameters
     ----------
-    opposite_keys : dict
-        Dictionary of opposite keys in `~.codes.elements.AncillaQubit`\ ``parity.qubits`` that aids plotting of matching edges.
+    args, kwargs
+        Positional and keyword arguments are passed on to `.decoders._template.Plot` and `.decoders.mwpm.sim.Toric`. 
     """
-
-    opposite_keys = dict(n="s", s="n", e="w", w="e")
+    pass
 
 
 class Planar(Toric, SimPlanar):
-    """Plot MWPM decoder for the planar code."""
-
+    """Plot MWPM decoder for the planar code.
+    
+    Parameters
+    ----------
+    args, kwargs
+        Positional and keyword arguments are passed on to `~.decoders.mwpm.plot.Toric` and `.decoders.mwpm.sim.Planar`. 
+    """
     pass

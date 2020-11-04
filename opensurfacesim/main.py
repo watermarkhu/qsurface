@@ -1,8 +1,5 @@
 """
-Contains methods to run a simulated lattice of the surface code.
-The graph type (2D/3D) and decoder (MWPM, unionfind...) are specified and are loaded.
-One can choose to run a simulated lattice for a single, multiple or many (multithreaded) multiple iterations.
-
+Contains functions and classes to run and benchmark surface code simulations and visualizations. Use `initialize` to prepare a surface code and a decoder instance, which can be passed on to `run` and `run_multiprocess` to simulate errors and to decode them with the decoder. 
 """
 from __future__ import annotations
 from types import ModuleType
@@ -22,7 +19,7 @@ module_or_name = Union[ModuleType, str]
 size_type = Union[Tuple[int, int], int]
 errors_type = List[Union[str, Error]]
 code_type = codes._template.sim.PerfectMeasurements
-decoder_type = decoders._template.SimCode
+decoder_type = decoders._template.Sim
 
 
 def initialize(
@@ -35,6 +32,8 @@ def initialize(
     **kwargs,
 ):
     """Initializes a code and a decoder.
+
+    The function makes sure that the correct class is used to instance the surface code and decoder based on the arguments provided. A code instance must be initalized with ``enabled_errors`` by `~codes._template.sim.initialize` after class instance to make sure that plot parameters are properly loaded before loading the plotting items included in each included error module, if ``plotting`` is enabled. See `.plot.Template2D` and `.errors._template.Plot` for more information. 
 
     Parameters
     ----------
@@ -51,7 +50,7 @@ def initialize(
     plotting
         Enable plotting for the surface code and/or decoder.
     kwargs
-        Keyword arguments are passed on to the chosen code and decoder.
+        Keyword arguments are passed on to the chosen code, `~.codes._template.sim.PerfectMeasurements.initialize`, and the chosen decoder.
 
     Examples
     --------
@@ -59,6 +58,21 @@ def initialize(
 
         >>> initialize((6,6), "toric", "mwpm", enabled_errors=["pauli"], check_compatibility=True)
         (<toric (6, 6) PerfectMeasurements>,  <Minimum-Weight Perfect Matching decoder (Toric)>)
+        ✅ This decoder is compatible with the code.
+
+    Keyword arguments for the code and decoder classes can be included for further customization of class initialization. Note that default errors rates for error class initialization (see `~.codes._template.sim.PerfectMeasurements.init_errors` and `.errors._template.Sim`) can also be provided as keyword arguments here. 
+
+        >>> enabled_errors = ["pauli"]
+        >>> code_kwargs = {
+        ...     "initial_states": (0,0),
+        ...     "p_bitflip": 0.1,
+        ... }
+        >>> decoder_kwargs = {
+        ...     "check_compatibility": True,
+        ...     "weighted_union": False,
+        ...     "weighted_growth": False,
+        ... }
+        >>> initialize((6,6), "toric", "unionfind", enabled_errors=enabled_errors, **code_kwargs, **decoder_kwargs)
         ✅ This decoder is compatible with the code.
     """
     if isinstance(Code, str):
@@ -105,15 +119,15 @@ def run(
     iterations
         Number of iterations to run.
     error_rates
-        Dictionary for error rates (see `~opensurfacesim.errors`).
+        Dictionary of error rates (see `~opensurfacesim.errors`). Errors must have been loaded during code class initialization by `~.codes._template.sim.PerfectMeasurements.initialize` or `~.codes._template.sim.PerfectMeasurements.init_errors`.
     decode_initial
-        Decode initial code configuration before applying loaded errors. 
+        Decode initial code configuration before applying loaded errors. If random states are used for the data-qubits of the ``code`` at class initialization (default behavior), an initial round of decoding is required and is enabled through the ``decode_initial`` flag (default is enabled).  
     seed
         Float to use as the seed for the random number generator.
     benchmark
         Benchmarks decoder performance and analytics if attached.
     kwargs
-        Keyword arguments are passed on to ``decoder.decode()``.
+        Keyword arguments are passed on to `~.decoders._template.Sim.decode`.
 
     Examples
     --------
@@ -123,8 +137,9 @@ def run(
         >>> run(code, decoder, iterations=10, error_rates = {"p_bitflip": 0.1})
         {'no_error': 8}
 
-    Benchmarked results are updated to the returned dictionary. See BenchmarkDecoder for the syntax and information to setup benchmarking.
+    Benchmarked results are updated to the returned dictionary. See `.BenchmarkDecoder` for the syntax and information to setup benchmarking.
 
+        >>> code, decoder = initialize((6,6), "toric", "mwpm", enabled_errors=["pauli"])
         >>> benchmarker = BenchmarkDecoder({"decode":"duration"})
         >>> run(code, decoder, iterations=10, error_rates = {"p_bitflip": 0.1}, benchmark=benchmarker)
         {'no_error': 8,
@@ -189,9 +204,9 @@ def run_multiprocess(
 ):
     """Runs surface code simulation using multiple processes.
 
-    Using the standard module `multiprocessing` and its `~multiprocessing.Process` class, several processes are created that each runs its on contained simulation using `run`. The ``code`` and ``decoder`` objects are copied such that each process has its own instance. The total number of ``iterations`` are divided for the number of ``processes`` indicated. If no ``processes`` parameter is supplied, the number of available threads is determined via `~multiprocessing.cpu_count` and all threads are utilized.
+    Using the standard module `.multiprocessing` and its `~multiprocessing.Process` class, several processes are created that each runs its on contained simulation using `run`. The ``code`` and ``decoder`` objects are copied such that each process has its own instance. The total number of ``iterations`` are divided for the number of ``processes`` indicated. If no ``processes`` parameter is supplied, the number of available threads is determined via `~multiprocessing.cpu_count` and all threads are utilized.
 
-    If a `~BenchmarkDecoder` object is attached, `~multiprocessing.Process` copies the object for each separate thread. Each instance of the the decoder thus have its own benchmark object. The results of the benchmark are appended to a list and addded to the output.
+    If a `.BenchmarkDecoder` object is attached to ``benchmark``, `~multiprocessing.Process` copies the object for each separate thread. Each instance of the the decoder thus have its own benchmark object. The results of the benchmark are appended to a list and addded to the output.
 
     See `run` for examples on running a simulation.
 
@@ -336,7 +351,7 @@ class BenchmarkDecoder(object):
         >>> benchmarker.lists
         {'duration': {'decode': [0.0009881999976641964]}}
 
-    The benchmark class can also be attached to run. The mean and standard deviations of the benchmarked values are in that case updated to the output of run after running ``lists_mean_var``.
+    The benchmark class can also be attached to run. The mean and standard deviations of the benchmarked values are in that case updated to the output of run after running `lists_mean_var`.
 
         >>> benchmarker = BenchmarkDecoder({"decode":"duration"})
         >>> run(code, decoder, iterations=10, error_rates = {"p_bitflip": 0.1}, benchmark=benchmarker)

@@ -53,7 +53,7 @@ class PerfectMeasurements(TemplateSimPM):
         self.plot_ancilla("Decoded.", measure=True)
 
     def plot_data(self, iter_name: Optional[str] = None, layer: Optional[float] = None, **kwargs):
-        """Update plots of all data-qubits. A plot iteration is added if a ``iter_name`` is supplied. See `.plot.Template2D.draw_figure`."""
+        """Update plots of all data-qubits. A plot iteration is added if a ``iter_name`` is supplied. See `~.plot.Template2D.draw_figure`."""
         if not layer:
             layer = self.layer
         for qubit in self.data_qubits[layer].values():
@@ -62,7 +62,7 @@ class PerfectMeasurements(TemplateSimPM):
             self.figure.draw_figure(new_iter_name=iter_name)
 
     def plot_ancilla(self, iter_name: Optional[str] = None, layer: Optional[float] = None, **kwargs):
-        """Update plots of all ancilla-qubits. A plot iteration is added if a ``iter_name`` is supplied. See `.plot.Template2D.draw_figure`."""
+        """Update plots of all ancilla-qubits. A plot iteration is added if a ``iter_name`` is supplied. See `~.plot.Template2D.draw_figure`."""
         if not layer:
             layer = self.layer
         for qubit in self.ancilla_qubits[self.layer].values():
@@ -71,7 +71,7 @@ class PerfectMeasurements(TemplateSimPM):
             self.figure.draw_figure(new_iter_name=iter_name)
 
     class Figure(TemplatePlotPM):
-        """Template surface code plot for perfect measurements.
+        """Surface code plot for perfect measurements.
 
         The inner figure class that plots the surface code based on the ``Qubit.loc`` and ``Qubit.z`` values on the set of ``code.data_qubits``, ``code.ancilla_qubits`` and ``code.pseudo_qubits``. This allows for a high amount of code inheritance.
 
@@ -88,12 +88,11 @@ class PerfectMeasurements(TemplateSimPM):
         ----------
         error_methods : dict
             A dictionary of the various error methods loaded in the outer class.
-        code_params : dict
+        code_params
             Additional plotting parameters loaded to the `.plot.PlotParams` instance at ``self.params``.
         """
 
-        main_boundary = None
-        code_params = {
+        code_params: dict = {
             "data00": {
                 "facecolor": "color_qubit_face",
             },
@@ -133,9 +132,9 @@ class PerfectMeasurements(TemplateSimPM):
         def init_plot(self, **kwargs):
             """Plots all elements of the surface code onto the figure. Also takes keyword arguments for `~.codes._template.plot.PerfectMeasurements.Figure.init_legend`.
 
-            An additional `matplotlib.widgets.RadioButtons` object is added to the figure which allows for the user to choose one of the loaded errors and apply the error directly to a qubit via `_pick_handler`. This object is added via the `init_plot` method to make sure that the errors are already loaded in `self.code.errors`. The method for each loaded error is saved to `self.error_methods`.
+            An additional `matplotlib.widgets.RadioButtons` object is added to the figure which allows for the user to choose one of the loaded errors and apply the error directly to a qubit via `_pick_handler`. This object is added via the `init_plot` method to make sure that the errors are already loaded in ``self.code.errors``. The method for each loaded error is saved to ``self.error_methods``.
             """
-            title = "{} lattice".format(str(self.code.__class__.__module__).split(".")[-2])
+            title = "{} code".format(str(self.code.__class__.__module__).split(".")[-2])
             self._init_axis(self.main_boundary, title=title, aspect="equal", **kwargs)
             self.init_legend(ncol=1, **kwargs)
 
@@ -155,7 +154,7 @@ class PerfectMeasurements(TemplateSimPM):
         def init_legend(self, legend_items: List[Line2D] = [], **kwargs):
             """Initializes the legend of the main axis of the figure. Also takes keyword arguments for `~matplotlib.axes.Axes.legend`.
 
-            The legend of the main axis ``self.main_ax`` consists of a series of `~matplotlib.line.Line2D` objects. The qubit, vertex and stars are always in the legend for a surface code plot. Any error from :doc:`../errors/index/` loaded in the code at ``code.errors`` in de outer class will add an extra element to the legend for differentiation if an error occurs. The 'Line2D' attributes are stored at ``error.Plot.legend_properties`` of the error module.
+            The legend of the main axis ``self.main_ax`` consists of a series of `~matplotlib.line.Line2D` objects. The qubit, vertex and stars are always in the legend for a surface code plot. Any error from :doc:`../errors/index/` loaded in the code at ``code.errors`` in de outer class will add an extra element to the legend for differentiation if an error occurs. The `~matplotlib.line.Line2D` attributes are stored at ``error.Plot.legend_params`` of the error module (see `.errors._template.Plot`).
 
             Parameters
             ----------
@@ -385,6 +384,22 @@ class PerfectMeasurements(TemplateSimPM):
 
 
 class FaultyMeasurements(PerfectMeasurements, TemplateSimFM):
+    """Plotting template code class for faulty measurements.
+
+    Inherits from `.codes._template.sim.FaultyMeasurements` and `.codes._template.plot.PerfectMeasurements`. See documentation for these classes for more. 
+
+    Dependent on the ``figure3d`` argument, either a 3D figure object is created that inherits from `~.plot.Template3D` and `.codes._template.plot.PerfectMeasurements.Figure`, or the 2D `.codes._template.plot.PerfectMeasurements.Figure` is used. 
+
+    Parameters
+    ----------
+    args
+        Positional arguments are passed on to `.codes._template.sim.FaultyMeasurements`. 
+    figure3d
+        Enables plotting on a 3D lattice. Disable to plot layer-by-layer on a 2D lattice, which increases responsiveness.
+    kwargs
+        Keyword arguments are passed on to `.codes._template.sim.FaultyMeasurements` and the figure object. 
+    
+    """
     def __init__(self, *args, figure3d: bool = True, **kwargs) -> None:
         self.figure3d = figure3d
         TemplateSimFM.__init__(self, *args, **kwargs)
@@ -408,7 +423,7 @@ class FaultyMeasurements(PerfectMeasurements, TemplateSimFM):
         self.plot_ancilla(f"Layer {self.layer}: ancilla-qubits measured")
 
     def plot_data(self, iter_name: Optional[str] = None, **kwargs):
-        """Update plots of all data-qubits in layer ``z``. A plot iteration is added if a ``iter_name`` is supplied. See `.plot.Template2D.draw_figure`."""
+        """Update plots of all data-qubits in ``self.layer``. A plot iteration is added if a ``iter_name`` is supplied. See `.plot.Template2D.draw_figure`."""
         for qubit in self.data_qubits[self.layer].values():
             artist = qubit.surface_plot if self.figure3d else self.data_qubits[0][qubit.loc].surface_plot
             self.figure._update_data(qubit, artist, **kwargs)
@@ -416,7 +431,7 @@ class FaultyMeasurements(PerfectMeasurements, TemplateSimFM):
             self.figure.draw_figure(new_iter_name=iter_name)
 
     def plot_ancilla(self, iter_name: Optional[str] = None, **kwargs):
-        """Update plots of all ancilla-qubits in layer ``z``. A plot iteration is added if a ``iter_name`` is supplied. See `.plot.Template2D.draw_figure`."""
+        """Update plots of all ancilla-qubits in ``self.layer``. A plot iteration is added if a ``iter_name`` is supplied. See `.plot.Template2D.draw_figure`."""
         for qubit in self.ancilla_qubits[self.layer].values():
             artist = qubit.surface_plot if self.figure3d else self.ancilla_qubits[0][qubit.loc].surface_plot
             self.figure._update_ancilla(qubit, artist)

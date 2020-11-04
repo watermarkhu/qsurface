@@ -57,6 +57,8 @@ def read_config(path: Path, config_dict: Optional[dict] = None) -> dict:
     --------
     Let us look at the following example INI file.
 
+    .. code-block:: text
+
         [main]
         param1 = hello
 
@@ -115,7 +117,7 @@ def init_config(ini_file, write: bool = False, **kwargs):
     return config_dict
 
 
-class SimCode(ABC):
+class Sim(ABC):
     """
     Decoder simulation class template.
 
@@ -128,7 +130,7 @@ class SimCode(ABC):
 
     Attributes
     ----------
-    compatibililty_measurements : dict
+    compatibility_measurements : dict
         Compatibility with perfect or faulty measurements.
     compatibility_errors : dict
         Compatibility with the various error modules in :doc:`../errors/index`.
@@ -201,12 +203,12 @@ class SimCode(ABC):
         Parameters
         ----------
         loop
-            Include looped neighbors.
+            Include neighbors in time that are not chronologically next to each other during decoding within the same instance.
         """
         neighbors = {}
         for key in ancilla_qubit.parity_qubits:
             neighbors[key] = self.get_neighbor(ancilla_qubit, key)
-        for ancilla, edge in ancilla_qubit.vertical_edges.items():
+        for ancilla, edge in ancilla_qubit.z_neighbors.items():
             if loop or abs(ancilla.z - ancilla_qubit.z) == 1:
                 neighbors[ancilla.z - ancilla_qubit.z] = (ancilla, edge)
         return neighbors
@@ -217,7 +219,7 @@ class SimCode(ABC):
         The correction is applied to the data-qubit located at ``ancilla_qubit.parity_qubits[key]``. More specifically, the correction is applied to the `~.codes.elements.Edge` object corresponding to the ``state_type`` of ``ancilla_qubit``.
         """
         (next_qubit, edge) = self.get_neighbor(ancilla_qubit, key)
-        edge.state = 1 - edge.state
+        edge.state = not edge.state
         return next_qubit
 
     def get_syndrome(self, find_pseudo: bool = False) -> Union[Tuple[LA, LA], Tuple[LTAP, LTAP]]:
@@ -268,10 +270,24 @@ class SimCode(ABC):
         pass
 
 
-class PlotCode(SimCode):
+class Plot(Sim):
     """Decoder plotting class template.
 
-    The plotting class initiates a `opensurfacesim.plot` object. For its usage, see :ref:`plot-usage`.
+    The plotting decoder class requires a surface code object that inherits from `.codes._template.plot.PerfectMeasurements`. The template decoder provides the `plot_matching_edge` method that is called by `correct_edge` to visualize the matched edges on the lattice. 
+
+    parameters
+    ----------
+    args, kwargs
+        Positional and keyword arguments are passed on to `~.decoders._template.Sim`. 
+
+    attributes
+    ----------
+    line_color_match : dict
+        Plot properties for matched edges. 
+    line_color_normal : dict
+        Plot properties for normal edges. 
+    matching_lines : defaultdict(bool)
+        Dictionary of edges that have been added to the matching. 
     """
 
     name = ("Template plot decoder",)
@@ -282,13 +298,13 @@ class PlotCode(SimCode):
         if hasattr(self.code, "figure"):
             self.params = self.code.figure.params
 
-        self.line_color_normal = {
-            "x": {"color": self.params.color_edge},
-            "z": {"color": self.params.color_edge},
-        }
         self.line_color_match = {
             "x": {"color": self.params.color_x_secondary},
             "z": {"color": self.params.color_z_secondary},
+        }
+        self.line_color_normal = {
+            "x": {"color": self.params.color_edge},
+            "z": {"color": self.params.color_edge},
         }
         self.matching_lines = defaultdict(bool)
 
@@ -301,8 +317,7 @@ class PlotCode(SimCode):
 
     def correct_edge(self, qubit, key, **kwargs):
         # Inherited docstring
-        (next_qubit, edge) = self.get_neighbor(qubit, key)
-        edge.state = not edge.state
+        next_qubit = super().correct_edge(qubit, key, **kwargs)
         if hasattr(qubit, "surface_lines"):
             self.plot_matching_edge(qubit.surface_lines.get(key, None))
         if hasattr(next_qubit, "surface_lines"):

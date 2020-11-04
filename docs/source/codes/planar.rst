@@ -21,3 +21,5 @@ Plotting
     :member-order: bysource
     :inherited-members:
     :members:
+
+.. autoclass:: opensurfacesim.codes.planar.plot.FaultyMeasurements

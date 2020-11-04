@@ -26,12 +26,16 @@ Plotting
 
 .. autoclass:: opensurfacesim.decoders.unionfind.plot.Toric
 
+    .. autoclass:: opensurfacesim.decoders.unionfind.plot::Toric.Figure2D
+
+    .. autoclass:: opensurfacesim.decoders.unionfind.plot::Toric.Figure3D
+
 .. autoclass:: opensurfacesim.decoders.unionfind.plot.Planar
 
+    .. autoclass:: opensurfacesim.decoders.unionfind.plot::Planar.Figure2D
 
-.. .. autoclass:: opensurfacesim.decoders.unionfind.plot.Toric.Figure2D
-..     :members:
-..     :inherited-members:
+    .. autoclass:: opensurfacesim.decoders.unionfind.plot::Planar.Figure3D
+
 
 .. [delfosse2017almost] Delfosse, Nicolas and Nickerson, Naomi H., *Almost-linear time decoding algorithm for topological codes*, arXiv preprint arXiv:1709.06218, 2017. 
 

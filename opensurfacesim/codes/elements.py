@@ -7,7 +7,7 @@ from collections import defaultdict
 class Qubit(ABC):
     """General type qubit object.
 
-    This class mainly serves as a superclass or template to other more useful qubit types, which have the apprioate subclass attributes and subclass methods. For other types to to the 'See Also' section.
+    # This class mainly serves as a superclass or template to other more useful qubit types, which have the apprioate subclass attributes and subclass methods. For other types to to the 'See Also' section.
 
     Parameters
     ----------
@@ -31,12 +31,12 @@ class Qubit(ABC):
 class DataQubit(Qubit):
     """Data type qubit object.
 
-    The state of a data-qubit is determined by two `~opensurfacesim.codes._template.Edge` objects stored in the `self.edges` dictionary. Each of the edges are part of a separate graph on the surface lattice.
+    The state of a data-qubit is determined by two `~.codes.elements.Edge` objects stored in the ``self.edges`` dictionary. Each of the edges are part of a separate graph on the surface lattice.
 
 
     Attributes
     ----------
-    edges : dict of `.Edge`
+    edges : dict of `~.codes.elements.Edge`
         Dictionary of edges with the error type as key (e.g. ``"x"`` or ``"z"``).
 
             self.edges = {"x": Edge_x, "z", Edge_z}
@@ -83,21 +83,21 @@ class AncillaQubit(Qubit):
     """
     General type qubit object.
 
-    An ancilla-qubit is entangled to one or more `~opensurfacesim.codes._template.DataQubit` objects. The `self.state_type` attribute determines the state on which the measurement is applied. A single measurement is applied when the class property `self.state` is called. The state of the last measurement is stored in `self.measured_state` for state access without prompting a new measurement.
+    An ancilla-qubit is entangled to one or more `~codes.elements.DataQubit` objects. The ``self.state_type`` attribute determines the state on which the measurement is applied. A single measurement is applied when the class property ``self.state`` is called. The state of the last measurement is stored in ``self.measured_state`` for state access without prompting a new measurement.
 
     Parameters
     ----------
     state_type : str, {"x", "z"}
-        Type of '.Edge' objects belonging to the '~opensurfacesim.codes._template.DataQubit` objects entangled to the current ancilla-qubit for stabilizer measurements.
+        Type of 'codes.elements.Edge' objects belonging to the `~.codes.elements.DataQubit` objects entangled to the current ancilla-qubit for stabilizer measurements.
 
     Attributes
     ----------
-    parity_qubits : dict of `~opensurfacesim.codes._template.DataQubit`
+    parity_qubits : dict of `~.codes.elements.DataQubit`
         All qubits in this dictionary are entangled to the current ancilla for stabilizer measurements.
-    vertical_edges : dict of `~opensurfacesim.codes._template.PseudoEdge`
-        Vertically connected ancilla that is an instance of the same qubit at a different time, required for faulty measurements. Instances at *u* or *up* refer to instances later in time, and instances at *d* or *down* refer to an instances prior in time.
+    z_neighbors : {`.codes.elements.AncillaQubit`: `~.codes.elements.PseudoEdge`}
+        Neighbor ancilla in the z direction that is an instance of the same qubit at a different time, required for faulty measurements.
     state : bool
-        Property that measures the parity of the qubits in `self.parity_qubits`.
+        Property that measures the parity of the qubits in ``self.parity_qubits``.
     measured_state : bool
         The result of the last parity measurement.
     syndrome : bool
@@ -107,7 +107,7 @@ class AncillaQubit(Qubit):
 
     Examples
     --------
-    The state of the entangled `~opensurfacesim.codes._template.DataQubit` is located at:
+    The state of the entangled `~.codes.elements.DataQubit` is located at:
 
         >>> AncillaQubit.parity_qubits[key].edges[AncillaQubit.state_type]
         True
@@ -121,29 +121,31 @@ class AncillaQubit(Qubit):
         self.measured_state = False
         self.syndrome = False
         self.parity_qubits = {}
-        self.vertical_edges = {}
+        self.z_neighbors = {}
         self.measurement_error = False
 
     @property
     def state(self):
-        return self.get_state()
+        return self.measure()
 
-    def get_state(self, pm_bitflip: float = 0, pm_phaseflip: float = 0, **kwargs) -> bool:
-        """Applies a parity measurement on the ancilla with probability ``p_bitflip``.
+    def measure(self, p_bitflip_plaq: float = 0, p_bitflip_star: float = 0, **kwargs) -> bool:
+        """Applies a parity measurement on the ancilla.
 
         The functions loops over all the data qubits in ``self.parity_qubits``. For every edge associated with the entangled state on the data qubit, the value of a ``parity`` boolean is flipped.
 
         Parameters
         ----------
-        p_bitflip : float
-            Bitflip probability.
+        p_bitflip_plaq : float
+            Bitflip rate for plaquette (XXXX) operators.
+        p_bitflip_star : float
+            Bitflip rate for star (ZZZZ) operators.
         """
         parity = False
         for data_qubit in self.parity_qubits.values():
             if data_qubit.state[self.state_type]:
                 parity = not parity
 
-        p_measure = pm_bitflip if self.state_type == "x" else pm_phaseflip
+        p_measure = p_bitflip_plaq if self.state_type == "x" else p_bitflip_star
         self.measurement_error = p_measure != 0 and random.random() < p_measure
         if self.measurement_error:
             parity = not parity
@@ -155,9 +157,9 @@ class AncillaQubit(Qubit):
 
 
 class Edge(object):
-    """A state object belonging to a `~opensurfacesim.codes._template.DataQubit` object.
+    """A state object belonging to a `~.codes.elements.DataQubit` object.
 
-    An edge cannot have open vertices and must be spanned by two nodes. In this case, the two nodes must be `~opensurfacesim.codes._template.AncillaQubit` objects, and are stored in ``self.nodes``.
+    An edge cannot have open vertices and must be spanned by two nodes. In this case, the two nodes must be `~.codes.elements.AncillaQubit` objects, and are stored in ``self.nodes``.
 
     Parameters
     ----------
@@ -170,7 +172,7 @@ class Edge(object):
 
     Attributes
     ----------
-    nodes : list of two ~opensurfacesim.codes._template.AncillaQubit` objects
+    nodes : list of two ~.codes.elements.AncillaQubit` objects
         The vertices that spans the edge.
     state : bool
         The current quantum state on the edge object.
@@ -219,7 +221,7 @@ class Edge(object):
 
 
 class PseudoQubit(AncillaQubit):
-    """Boundary element, imitates `.AncillaQubit`.
+    """Boundary element, imitates `.codes.elements.AncillaQubit`.
 
     Edges needs to be spanned by two nodes. For data qubits on the boundary, one of its edges additionally requires an ancilla qubit like node, which is the pseudo-qubit.
     """
@@ -228,6 +230,6 @@ class PseudoQubit(AncillaQubit):
 
 
 class PseudoEdge(Edge):
-    """Vertical edge connecting time instances of ancilla-qubits, imitates `.Edge`."""
+    """Vertical edge connecting time instances of ancilla-qubits, imitates `.codes.elements.Edge`."""
 
     edge_type, rep = "pseudo", "|"

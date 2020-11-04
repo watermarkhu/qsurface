@@ -25,12 +25,13 @@ setup(
     ],
     packages=find_packages(exclude=['tests', '*.tests', '*.tests.*']),
     include_package_data = True,
+    python_requires='>3.7.0',
     install_requires=[
-        "matplotlib",
-        "networkx",
-        "pandas",
-        "scipy",
-        "pptree",
+        "matplotlib>=3.3.2",
+        "networkx>=2.0",
+        "pandas>=1.1.0",
+        "scipy>=1.4.0",
+        "pptree>=3.1",
     ],
     entry_points={
         "console_scrips":[

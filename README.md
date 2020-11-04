@@ -1,9 +1,11 @@
 
-# Introduction
 ![Build](https://github.com/watermarkhu/opensurfacesim/workflows/Build/badge.svg)
 [![codecov](https://codecov.io/gh/watermarkhu/OpenSurfaceSim/branch/master/graph/badge.svg?token=CWLVPDFF2L)](https://codecov.io/gh/watermarkhu/OpenSurfaceSim)
 [![Documentation Status](https://readthedocs.org/projects/opensurfacesim/badge/?version=latest)](https://opensurfacesim.readthedocs.io/en/latest/?badge=latest)
+[![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/watermarkhu/opensurfacesim/master?filepath=examples.ipynb)
 [![Unitary Fund](https://img.shields.io/badge/Supported%20By-UNITARY%20FUND-brightgreen.svg?style=flat-the-badge)](http://unitary.fund)
+
+# Introduction
 
 Opensurfacesim is a simulation package for the surface code, and is designed to modularize 3 aspects of a surface code simulation.
 
@@ -11,13 +13,15 @@ Opensurfacesim is a simulation package for the surface code, and is designed to 
 2. The error model
 3. The used decoder
 
-New types of surface codes, error modules and decoders can be added to opensurfacesim by using the included templates for each of the three core modules.
+New types of surface codes, error modules and decoders can be added to opensurfacesim by using the included templates for each of the three core module categories.
 
 The current included decoders are:
 
 * The *Mininum-Weight Perfect Matching* (`mwpm`) decoder.
-* Delfosse's and Nickerson's [Union-Find](https://arxiv.org/pdf/1709.06218.pdf) (`unionfind`) decoder, which has *almost-linear* complexity.
-* Our modification to the Union-Find decoder; the **Union-Find Node-Suspension** (`ufns`) decoder, which improves the threshold of the Union-Find decoder to near MWPM performance, while retaining low complexity.
+* [Delfosse's and Nickerson's](https://arxiv.org/pdf/1709.06218.pdf) *Union-Find* (`unionfind`) decoder, which has *almost-linear* worst-case time complexity.
+* Our modification to the Union-Find decoder; the *Union-Find Node-Suspension* (`ufns`) decoder, which improves the threshold of the Union-Find decoder to near MWPM performance, while retaining quasi-linear worst-case time complexity.
+
+The compatibility of these decoders with the included surface codes are listed below.
 
 | Decoders  | `toric` code | `planar` code |
 |-----------|--------------|---------------|
@@ -27,7 +31,7 @@ The current included decoders are:
 
 # Installation
 
-~~All required packages can be installed through:~~
+All required packages can be installed through:
 
 ```bash
 pip install opensurfacesim
@@ -36,7 +40,7 @@ pip install opensurfacesim
 ## Requirements
 
 * Python 3.7+
-* Tkinter for interactive plotting. Your Python distribution may or may not bundled Tkinter already. Check out [this guide from Realpython.com](https://realpython.com/python-gui-tkinter/) to install Tkinter if you encounter any problems.
+* Tkinter for interactive plotting. Your Python distribution may or may not bundled Tkinter already. Check out this [guide](https://realpython.com/python-gui-tkinter/)  from realpython.com to install Tkinter if you encounter any problems.
 * Matplotlib 3.4+ for plotting on a 3D lattice (Refers to a future release of matplotlib, see [pull request](https://github.com/matplotlib/matplotlib/pull/18816))
 
 ### MWPM decoder
@@ -50,7 +54,7 @@ The MWPM decoder utilizes `networkx` for finding the minimal weights in a fully 
 
 # Usage
 
-To simulate the toric code and simulate with bit-flip error for 10 iterations and decode with the MWPM decoder:
+To simulate the toric code and simulate with bitflip error for 10 iterations and decode with the MWPM decoder:
 
 ```python
 >>> from opensurfacesim.main import initialize, run
@@ -72,23 +76,24 @@ Benchmarking of decoders can be enabled by attaching a *benchmarker* object to t
 'std': 0.002170364089572033}}}}
 ```
 
-To enable interactive plotting, the user must enabled the Tk backend (see below). The figures in opensurfacesim allows for step-by-step visualization of the surface code simulation (and if supported the decoding process). Each figure logs its history such that the user can move backwards in time to view past states of the surface (and decoder). Press `h` when the figure is open for more information.
+The figures in opensurfacesim allows for step-by-step visualization of the surface code simulation (and if supported the decoding process). Each figure logs its history such that the user can move backwards in time to view past states of the surface (and decoder). Press `h` when the figure is open for more information.
 
 ```python
->>> import matplotlib
->>> matplotlib.use("TkAgg")
 >>> from opensurfacesim.main import initialize, run
->>> code, decoder = initialize((6,6), "toric", "mwpm", enabled_errors=["pauli"], plotting=True)
->>> run(code, decoder, error_rates = {"p_bitflip": 0.1, "p_phaseflip": 0.1})
-Drawing 0/4: Initial
-Drawing 1/4: Errors applied
-Drawing 2/4: Ancilla-qubits measured
-Drawing 3/4: Matchings found
-Drawing 4/4: Decoded.
-{'no_error': 8}
+>>> code, decoder = initialize((6,6), "toric", "mwpm", enabled_errors=["pauli"], plotting=True, initial_states=(0,0))
+>>> run(code, decoder, error_rates = {"p_bitflip": 0.1, "p_phaseflip": 0.1}, decode_initial=False)
 ```
 
-![Interactive plotting on a 6x6 toric code.](https://raw.githubusercontent.com/watermarkhu/OpenSurfaceSim/master/images/toric.gif "Iteractive plotting")
+![Interactive plotting on a 6x6 toric code.](https://raw.githubusercontent.com/watermarkhu/OpenSurfaceSim/master/images/toric-2d.gif "Iteractive plotting on a 2d axis")
+
+Plotting will be performed on a 3D axis if faulty measurements are enabled.
+
+```python
+>>> code, decoder = initialize((3,3), "toric", "mwpm", enabled_errors=["pauli"], faulty_measurements=True, plotting=True, initial_states=(0,0))
+>>> run(code, decoder, error_rates = {"p_bitflip": 0.05, "p_bitflip_plaq": 0.05}, decode_initial=False)
+```
+
+![Interactive plotting on a toric code with faulty measurements.](https://raw.githubusercontent.com/watermarkhu/OpenSurfaceSim/master/images/toric-2d.gif "Iteractive plotting on a 3d axis")
 
 Simulations can also be initiated from the command line
 

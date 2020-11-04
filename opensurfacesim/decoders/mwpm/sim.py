@@ -1,6 +1,6 @@
 from typing import List, Tuple
 from opensurfacesim.codes.elements import AncillaQubit
-from .._template import SimCode
+from .._template import Sim
 import networkx as nx
 from numpy.ctypeslib import ndpointer
 import ctypes
@@ -10,8 +10,14 @@ import os
 LA = List[AncillaQubit]
 
 
-class Toric(SimCode):
-    """Minimum-Weight Perfect Matching decoder for the toric lattice."""
+class Toric(Sim):
+    """Minimum-Weight Perfect Matching decoder for the toric lattice.
+    
+    Parameters
+    ----------
+    args, kwargs
+        Positional and keyword arguments are passed on to `.decoders._template.Sim`. 
+    """
 
     name = "Minimum-Weight Perfect Matching"
     short = "mwpm"

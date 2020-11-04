@@ -1,12 +1,7 @@
 Template decoder
 ================
 
-.. autoclass:: opensurfacesim.decoders._template.SimCode
-    :member-order: bysource
-    :inherited-members:
-    :members:
-
-.. autoclass:: opensurfacesim.decoders._template.PlotCode
+.. automodule:: opensurfacesim.decoders._template
     :member-order: bysource
     :inherited-members:
     :members:

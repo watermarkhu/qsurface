@@ -1,15 +1,15 @@
 from ...codes.elements import AncillaQubit, DataQubit, Edge
 from ...plot import Template2D, Template3D
-from .._template import PlotCode
+from .._template import Plot
 from .sim import Toric as SimToric, Planar as SimPlanar
 from matplotlib.patches import Rectangle
 from matplotlib.lines import Line2D
 
 
-class Toric(SimToric, PlotCode):
+class Toric(SimToric, Plot):
     """Union-Find decoder for the toric lattice with union-find plot.
 
-    Has all class attributes and methods from `.unionfind.sim.Toric`, with additional parameters below. Default values for these parameters can be supplied via a *decoders.ini* file under the section of ``[unionfind]``.
+    Has all class attributes and methods from `.unionfind.sim.Toric`, with additional parameters below. Default values for these parameters can be supplied via a *decoders.ini* file under the section of ``[unionfind]`` (see `.decoders._template.read_config`).
 
     The plotting class initiates a `opensurfacesim.plot` object. For its usage, see :ref:`plot-usage`.
 
@@ -126,10 +126,16 @@ class Toric(SimToric, PlotCode):
         return ret
 
     class Figure2D(Template2D):
+        """Visualizer for the Union-Find decoder and Union-Find based decoders with perfect measurements.
+
+        Parameters
+        ----------
+        args, kwargs
+            Positional and keyword arguments are forwarded to `.plot.Template2D`. 
+        """
         def __init__(self, decoder, name, *args, **kwargs) -> None:
             self.decoder = decoder
             self.code = decoder.code
-
             self.decoder = name
             super().__init__(*args, **kwargs)
             self.colors1 = {"x": self.params.color_x_primary, "z": self.params.color_z_primary}
@@ -184,6 +190,7 @@ class Toric(SimToric, PlotCode):
             instance: float,
             full: bool = False,
         ):
+            """Adds a line corresponding to a half-edge to the figure."""
             line = self._draw_line(
                 self.code._parse_boundary_coordinates(self.code.size[0], edge.qubit.loc[0], ancilla.loc[0]),
                 self.code._parse_boundary_coordinates(self.code.size[0], edge.qubit.loc[1], ancilla.loc[1]),
@@ -202,19 +209,23 @@ class Toric(SimToric, PlotCode):
 
             self.new_artist(line)
 
-        def _plot_full_edge(self, edge, ancilla):
+        def _plot_full_edge(self, edge: Edge, ancilla: AncillaQubit):
+            """Updates the line styles of the plot of an edge with support 2."""
             self.new_properties(edge.uf_plot[ancilla], {"ls": self.params.line_style_primary})
 
-        def _hide_edge(self, edge):
+        def _hide_edge(self, edge: Edge):
+            """Hides the plot of an edge after a peel or detected cycle."""
             if hasattr(edge, "uf_plot"):
                 for artist in edge.uf_plot.values():
                     self.new_properties(artist, {"visible": False})
 
-        def _match_edge(self, edge):
+        def _match_edge(self, edge:Edge):
+            """Updates the color of an matched edge."""
             for artist in edge.uf_plot.values():
                 self.new_properties(artist, {"color": self.colors1[edge.state_type]})
 
-        def _plot_ancilla(self, ancilla, init=False):
+        def _plot_ancilla(self, ancilla:AncillaQubit, init:bool=False):
+            """Adds a syndrome to the plot."""
 
             rotations = {"x": 0, "z": 45}
 
@@ -242,7 +253,8 @@ class Toric(SimToric, PlotCode):
             if not init:
                 self.new_artist(ancilla.uf_plot)
 
-        def _flip_ancilla(self, ancilla):
+        def _flip_ancilla(self, ancilla: AncillaQubit):
+            """Flips the state of the ancilla on the figure."""
             if ancilla.syndrome:
                 if hasattr(ancilla, "uf_plot"):
                     self.new_properties(
@@ -269,6 +281,13 @@ class Toric(SimToric, PlotCode):
                 print(obj)
 
     class Figure3D(Template3D, Figure2D):
+        """Visualizer for the Union-Find decoder and Union-Find based decoders with faulty measurements.
+
+        Parameters
+        ----------
+        args, kwargs
+            Positional and keyword arguments are forwarded to `~.decoders.unionfind.plot.Toric.Figure2D` and `.plot.Template3D`. 
+        """
         def _plot_half_edge(
             self,
             edge: Edge,
@@ -276,6 +295,7 @@ class Toric(SimToric, PlotCode):
             instance: float,
             full: bool = False,
         ):
+            """Adds a line corresponding to a half-edge to the figure."""
 
             if type(edge.qubit) is DataQubit:
                 edge_z = edge.qubit.z
@@ -307,7 +327,7 @@ class Toric(SimToric, PlotCode):
 class Planar(Toric, SimPlanar):
     """Union-Find decoder for the planar lattice with union-find plot.
 
-    Has all class attributes and methods from `.unionfind.sim.Planar`, with additional parameters below. Default values for these parameters can be supplied via a *decoders.ini* file under the section of ``[unionfind]``.
+    Has all class attributes and methods from `.unionfind.sim.Planar`, with additional parameters below. Default values for these parameters can be supplied via a *decoders.ini* file under the section of ``[unionfind]`` (see `.decoders._template.read_config`).
 
     The plotting class initiates a `opensurfacesim.plot` object. For its usage, see :ref:`plot-usage`.
 
@@ -326,10 +346,18 @@ class Planar(Toric, SimPlanar):
     """
 
     def init_plot(self, **kwargs):
+        # Inherited docstring
         size = [xy - 0.5 for xy in self.code.size]
         self._init_axis([-0.25, -0.25] + size, title=self.decoder, aspect="equal")
 
     class Figure2D(Toric.Figure2D):
+        """Visualizer for the Union-Find decoder and Union-Find based decoders with perfect measurements.
+
+        Parameters
+        ----------
+        args, kwargs
+            Positional and keyword arguments are forwarded to `.unionfind.plot.Toric.Figure2D`. 
+        """
         def _plot_ancilla(self, ancilla, **kwargs):
             if type(ancilla) == AncillaQubit:
                 super()._plot_ancilla(ancilla, **kwargs)

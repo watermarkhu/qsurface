@@ -10,9 +10,9 @@ class Sim(TemplateSim):
     Parameters
     ----------
     p_bitflip : float or int, optional
-        Default probability of X-errors or bit-flip errors.
+        Default probability of X-errors or bitflip errors.
     p_phaseflip : float or int, optional
-        Default probability of Z-errors or phase-flip errors.
+        Default probability of Z-errors or phaseflip errors.
     """
 
     def __init__(self, *args, p_bitflip: float = 0, p_phaseflip: float = 0, **kwargs) -> None:
@@ -20,14 +20,14 @@ class Sim(TemplateSim):
         self.default_error_rates = {"p_bitflip": p_bitflip, "p_phaseflip": p_phaseflip}
 
     def random_error(self, qubit: Qubit, p_bitflip: float = 0, p_phaseflip: float = 0, **kwargs):
-        """Applies a Pauli error, bit-flip and/or phase-flip.
+        """Applies a Pauli error, bitflip and/or phaseflip.
 
         Parameters
         ----------
         p_bitflip : float or int, optional
-            Overriding probability of X-errors or bit-flip errors.
+            Overriding probability of X-errors or bitflip errors.
         p_phaseflip : float or int, optional
-            Overriding probability of Z-errors or phase-flip errors.
+            Overriding probability of Z-errors or phaseflip errors.
 
         See Also
         --------

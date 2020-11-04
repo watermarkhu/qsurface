@@ -3,7 +3,7 @@ from .._template.sim import PerfectMeasurements as TemplatePM, FaultyMeasurement
 
 
 class PerfectMeasurements(TemplatePM):
-    """Simulation toric code for perfect measurements."""
+    # Inherited docstring
 
     name = "toric"
 
@@ -81,6 +81,5 @@ class PerfectMeasurements(TemplatePM):
 
 
 class FaultyMeasurements(TemplateFM, PerfectMeasurements):
-    """Simulation toric code for faulty measurements."""
-
+    # Inherited docstring
     pass

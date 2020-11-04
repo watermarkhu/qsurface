@@ -24,14 +24,13 @@ class Sim(TemplateSim):
 
         Parameters
         ----------
-        p_bitflip : float or int, optional
+        qubit
+            Qubit on which the error is (conditionally) applied.
+        p_bitflip
             Overriding probability of X-errors or bitflip errors.
-        p_phaseflip : float or int, optional
+        p_phaseflip
             Overriding probability of Z-errors or phaseflip errors.
 
-        See Also
-        --------
-        DataQubit
         """
         if p_bitflip is None:
             p_bitflip = self.default_error_rates["p_bitflip"]
@@ -60,6 +59,7 @@ class Sim(TemplateSim):
 
     @staticmethod
     def bitphaseflip(qubit: Qubit, **kwargs):
+        """Applies a bitflip and phaseflip or ZX on ``qubit``."""
         qubit.edges["x"].state = not qubit.edges["x"].state
         qubit.edges["z"].state = not qubit.edges["z"].state
 

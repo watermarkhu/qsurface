@@ -19,8 +19,7 @@ blossom5_dir = "blossom5-v2.05.src"
 def get_blossomv(accept: bool = False):
     """Downloads and compiles the BlossomV algorithm, which is distributed under the following license:
     
-    License
-    -------
+    License:
 
     .. include:: ../../../opensurfacesim/decoders/mwpm/blossom5/LICENSE
         :literal:

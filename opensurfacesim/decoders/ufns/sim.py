@@ -136,7 +136,7 @@ class Toric(UFToric):
 
         for ancilla in plaqs + stars:
             if ancilla.cluster is None or ancilla.cluster.instance != self.code.instance:
-                node = self._SyndromeNode(ancilla)
+                node = self._Syndrome(ancilla)
                 cluster = self._Cluster(self.cluster_index, self.code.instance)
                 cluster.root_node = node
                 self.cluster_add_ancilla(cluster, ancilla)
@@ -302,7 +302,7 @@ class Toric(UFToric):
                     root_node, parent, child = new_cluster.root_node, new_node, node
 
                 if not node.radius % 2 and new_node.radius > 1:  # Connect via new junction-node
-                    junction = self._JunctionNode(new_ancilla)
+                    junction = self._Junction(new_ancilla)
                     new_ancilla.node = junction
                     parent_edge, child_edge = parent.radius // 2, child.radius // 2
                     junction.neighbors = [(parent, parent_edge), (child, child_edge)]

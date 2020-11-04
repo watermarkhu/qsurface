@@ -132,14 +132,14 @@ class PerfectMeasurements(TemplateSimPM):
         def init_plot(self, **kwargs):
             """Plots all elements of the surface code onto the figure. Also takes keyword arguments for `~.codes._template.plot.PerfectMeasurements.Figure.init_legend`.
 
-            An additional `matplotlib.widgets.RadioButtons` object is added to the figure which allows for the user to choose one of the loaded errors and apply the error directly to a qubit via `_pick_handler`. This object is added via the `init_plot` method to make sure that the errors are already loaded in ``self.code.errors``. The method for each loaded error is saved to ``self.error_methods``.
+            An additional `matplotlib.widgets.RadioButtons` object is added to the figure which allows for the user to choose one of the loaded errors and apply the error directly to a qubit via `_pick_handler`. This object is added via the `init_plot` method to make sure that the errors are already loaded in ``self.code.errors``. The method for each loaded error is saved to ``self.error_methods``. See `.errors._template.Plot` for more information.
             """
             title = "{} code".format(str(self.code.__class__.__module__).split(".")[-2])
             self._init_axis(self.main_boundary, title=title, aspect="equal", **kwargs)
             self.init_legend(ncol=1, **kwargs)
 
             for error_module in self.code.errors.values():
-                for error_name in error_module.error_methods:
+                for error_name in error_module.gui_methods:
                     method = getattr(error_module, error_name)
                     self.error_methods[error_name] = method
             self.interact_axes["error_buttons"] = plt.axes(self.params.axis_radio)
@@ -200,7 +200,7 @@ class PerfectMeasurements(TemplateSimPM):
             item_names = []
             # Error legend items
             for error in self.code.errors.values():
-                for param_name, name in error.legend_names.items():
+                for param_name, name in error.legend_titles.items():
                     if param_name not in item_names:
                         self.lh.append(self._legend_circle(name, **getattr(self.params, param_name)))
                         item_names.append(name)

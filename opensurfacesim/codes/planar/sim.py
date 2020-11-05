@@ -18,8 +18,6 @@ class PerfectMeasurements(ToricPM):
         self.ancilla_qubits[z], self.data_qubits[z], self.pseudo_qubits[z] = {}, {}, {}
         parity = self.init_parity_check
 
-        print(kwargs)
-
         # Add data qubits to surface
         for y in range(self.size[1]):
             for x in range(self.size[0]):

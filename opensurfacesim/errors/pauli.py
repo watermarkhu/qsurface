@@ -70,6 +70,7 @@ class Plot(TemplatePlot, Sim):
     permanent_on_click = False
 
     error_methods = ["bitflip", "phaseflip", "bitphaseflip"]
+    gui_methods = ["bitflip", "phaseflip"]
 
     legend_params = {
         "legend_bitflip": {
@@ -94,7 +95,7 @@ class Plot(TemplatePlot, Sim):
             "mec": "color_z_primary",
         },
     }
-    legend_names = {
+    legend_titles = {
         "legend_bitflip": "X flip",
         "legend_phaseflip": "Z flip",
         "legend_bitphaseflip": "Y flip",

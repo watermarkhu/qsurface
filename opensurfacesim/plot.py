@@ -8,7 +8,6 @@ from matplotlib.lines import Line2D
 from matplotlib.widgets import Button
 from matplotlib.blocking_input import BlockingInput
 from matplotlib.patches import Circle, Rectangle
-from IPython.display import display
 from collections import defaultdict
 import tkinter
 import numpy as np
@@ -28,6 +27,7 @@ def load_interactive_backend() -> bool:
     if backend == "TkAgg":
         return True
     elif "inline" in backend:
+        from IPython.display import display
         return False
     elif backend == "agg":
         try:

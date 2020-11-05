@@ -18,32 +18,6 @@ color_type = Union[str, Tuple[float, float, float, float]]
 axis_type = Tuple[float, float, float, float]
 
 
-def load_interactive_backend() -> bool:
-    """Configures the plotting backend.
-    
-    If the Tkinter backend is enabled or can be enabled, the function returns True. For other backends False is returned. 
-    """
-    backend = mpl.get_backend()
-    if backend == "TkAgg":
-        return True
-    elif "inline" in backend:
-        from IPython.display import display
-        return False
-    elif backend == "agg":
-        try:
-            DISPLAY = os.environ.get("DISPLAY", None)
-            if DISPLAY:
-                mpl.use("TkAgg")
-                return True
-            else:
-                raise ImportError(f"Display at {DISPLAY} not available.")
-        except ImportError:
-            print(f"Plotting is not available for Agg backend. TkAgg backend could not be loaded.")
-    else:
-        print(f"Matplotlib is using {backend} backend. Interactive plotting is disabled.")
-    return False
-
-
 @dataclass
 class PlotParams:
     """Parameters for the plotting template classes.
@@ -312,15 +286,13 @@ class Template2D(ABC):
 
     The ``history_dict`` for a plot with a Line2D object and a Circle object. In the second iteration, the color of the Line2D object is updated from black to red, and the linestyle of the Circle object is changed from "-" to ":".
     """
-
-    interactive = load_interactive_backend()
-
     def __init__(
         self,
         plot_params: Optional[PlotParams] = None,
         projection: Optional[str] = None,
         **kwargs,
     ):  
+        self.interactive = self.load_interactive_backend()
         self.projection = projection
         self.params = plot_params if plot_params else PlotParams()
         self.figure = None
@@ -376,6 +348,32 @@ class Template2D(ABC):
         )
         if self.interactive:
             self.canvas.draw()
+
+
+    def load_interactive_backend(self) -> bool:
+        """Configures the plotting backend.
+        
+        If the Tkinter backend is enabled or can be enabled, the function returns True. For other backends False is returned. 
+        """
+        backend = mpl.get_backend()
+        if backend == "TkAgg":
+            return True
+        elif "inline" in backend:
+            from IPython.display import display
+            self.display = display
+        elif backend == "agg":
+            try:
+                DISPLAY = os.environ.get("DISPLAY", None)
+                if DISPLAY:
+                    mpl.use("TkAgg")
+                    return True
+                else:
+                    raise ImportError(f"Display at {DISPLAY} not available.")
+            except ImportError:
+                print(f"Plotting is not available for Agg backend. TkAgg backend could not be loaded.")
+        else:
+            print(f"Matplotlib is using {backend} backend. Interactive plotting is disabled.")
+        return False
 
 
     def close(self):
@@ -648,7 +646,7 @@ class Template2D(ABC):
             self.canvas.blit(self.main_ax.bbox)
             self.focus()
         else:
-            display(self.figure)
+            self.display(self.figure)
 
 
     def _draw_from_history(self, condition: bool, direction: int, draw: bool = True, **kwargs) -> bool:

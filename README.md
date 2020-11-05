@@ -5,6 +5,7 @@
 [![codecov](https://codecov.io/gh/watermarkhu/OpenSurfaceSim/branch/master/graph/badge.svg?token=CWLVPDFF2L)](https://codecov.io/gh/watermarkhu/OpenSurfaceSim)
 [![Documentation Status](https://readthedocs.org/projects/opensurfacesim/badge/?version=latest)](https://opensurfacesim.readthedocs.io/en/latest/?badge=latest)
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/watermarkhu/opensurfacesim/master?filepath=examples.ipynb)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4247617.svg)](https://doi.org/10.5281/zenodo.4247617)
 [![Unitary Fund](https://img.shields.io/badge/Supported%20By-UNITARY%20FUND-brightgreen.svg?style=flat-the-badge)](http://unitary.fund)
 
 Opensurfacesim is a simulation package for the surface code, and is designed to modularize 3 aspects of a surface code simulation.
@@ -93,7 +94,7 @@ Plotting will be performed on a 3D axis if faulty measurements are enabled.
 >>> run(code, decoder, error_rates = {"p_bitflip": 0.05, "p_bitflip_plaq": 0.05}, decode_initial=False)
 ```
 
-![Interactive plotting on a toric code with faulty measurements.](https://raw.githubusercontent.com/watermarkhu/OpenSurfaceSim/master/images/toric-2d.gif "Iteractive plotting on a 3d axis")
+![Interactive plotting on a toric code with faulty measurements.](https://raw.githubusercontent.com/watermarkhu/OpenSurfaceSim/master/images/toric-3d.gif "Iteractive plotting on a 3d axis")
 
 Simulations can also be initiated from the command line
 

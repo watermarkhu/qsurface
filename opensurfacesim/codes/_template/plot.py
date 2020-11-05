@@ -32,6 +32,7 @@ class PerfectMeasurements(TemplateSimPM):
         """
         super().initialize(*args, **kwargs)
         self.figure.init_plot(**kwargs)
+        self.figure.draw_figure("Initial")
 
     def _init_error(self, error_module, error_rates):
         """Initializes the ``error_module.Plot`` class of a error module."""
@@ -41,30 +42,29 @@ class PerfectMeasurements(TemplateSimPM):
     def random_errors(self, *args, **kwargs):
         # Inherited docstrings
         super().random_errors(*args, **kwargs, measure=False)
-        self.figure.interact_axes["error_buttons"].active = True
+        if self.figure.interactive:
+            self.figure.interact_axes["error_buttons"].active = True
         self.plot_data("Errors applied", **kwargs)
-        self.figure.interact_bodies["error_buttons"].set_active(0)
-        self.figure.interact_axes["error_buttons"].active = False
+        if self.figure.interactive:
+            self.figure.interact_bodies["error_buttons"].set_active(0)
+            self.figure.interact_axes["error_buttons"].active = False
         self.plot_ancilla("Ancilla-qubits measured", measure=True)
 
     def show_corrected(self, **kwargs):
         """Redraws the qubits and ancillas to show their states after decoding."""
         self.plot_data()
-        self.plot_ancilla("Decoded.", measure=True)
+        self.plot_ancilla("Decoded", measure=True)
 
-    def plot_data(self, iter_name: Optional[str] = None, layer: Optional[float] = None, **kwargs):
+    def plot_data(self, iter_name: Optional[str] = None, **kwargs):
         """Update plots of all data-qubits. A plot iteration is added if a ``iter_name`` is supplied. See `~.plot.Template2D.draw_figure`."""
-        if not layer:
-            layer = self.layer
-        for qubit in self.data_qubits[layer].values():
+
+        for qubit in self.data_qubits[self.layer].values():
             self.figure._update_data(qubit, **kwargs)
         if iter_name:
             self.figure.draw_figure(new_iter_name=iter_name)
 
-    def plot_ancilla(self, iter_name: Optional[str] = None, layer: Optional[float] = None, **kwargs):
+    def plot_ancilla(self, iter_name: Optional[str] = None, **kwargs):
         """Update plots of all ancilla-qubits. A plot iteration is added if a ``iter_name`` is supplied. See `~.plot.Template2D.draw_figure`."""
-        if not layer:
-            layer = self.layer
         for qubit in self.ancilla_qubits[self.layer].values():
             self.figure._update_ancilla(qubit, **kwargs)
         if iter_name:
@@ -124,7 +124,7 @@ class PerfectMeasurements(TemplateSimPM):
         }
 
         def __init__(self, code: TemplateSimPM, *args, **kwargs) -> None:
-            super().__init__(*args, init_plot=False, **kwargs)
+            super().__init__(*args, **kwargs)
             self.code = code
             self.error_methods = {}
             self.params.load_params(self.code_params)
@@ -142,14 +142,16 @@ class PerfectMeasurements(TemplateSimPM):
                 for error_name in error_module.gui_methods:
                     method = getattr(error_module, error_name)
                     self.error_methods[error_name] = method
-            self.interact_axes["error_buttons"] = plt.axes(self.params.axis_radio)
-            self.interact_bodies["error_buttons"] = RadioButtons(
-                self.interact_axes["error_buttons"], ["info"] + list(self.error_methods.keys())
-            )
-            self.interact_axes["error_buttons"].active = False
+
+            if self.interactive:
+                self.interact_axes["error_buttons"] = plt.axes(self.params.axis_radio)
+                self.interact_bodies["error_buttons"] = RadioButtons(
+                    self.interact_axes["error_buttons"], ["info"] + list(self.error_methods.keys())
+                )
+                self.interact_axes["error_buttons"].active = False
 
             self._plot_surface()
-            self.draw_figure()
+
 
         def init_legend(self, legend_items: List[Line2D] = [], **kwargs):
             """Initializes the legend of the main axis of the figure. Also takes keyword arguments for `~matplotlib.axes.Axes.legend`.
@@ -285,7 +287,7 @@ class PerfectMeasurements(TemplateSimPM):
                 line.object = qubit  # Save qubit to artist
 
             # Plot ancilla object
-            qubit.surface_plot = self._draw_rectangle(
+            rectangle = self._draw_rectangle(
                 loc_parse[qubit.state_type](*qubit.loc),
                 self.params.patch_rectangle_2d,
                 self.params.patch_rectangle_2d,
@@ -296,7 +298,8 @@ class PerfectMeasurements(TemplateSimPM):
                 z=z,
                 **getattr(self.params, f"{qubit.state_type}ancilla0"),
             )
-            qubit.surface_plot.object = qubit  # Save qubit to artist
+            qubit.surface_plot = rectangle
+            rectangle.object = qubit  # Save qubit to artist
 
         def _update_ancilla(
             self,
@@ -350,7 +353,7 @@ class PerfectMeasurements(TemplateSimPM):
             x_state = int(qubit.edges["x"].state)
             z_state = int(qubit.edges["z"].state)
             properties = getattr(self.params, f"data{x_state}{z_state}")
-            qubit.surface_plot = self._draw_circle(
+            circle = self._draw_circle(
                 qubit.loc,
                 self.params.patch_circle_2d,
                 picker=self.params.blocking_pick_radius,
@@ -360,7 +363,8 @@ class PerfectMeasurements(TemplateSimPM):
                 edgecolor=self.params.color_qubit_edge,
                 **properties,
             )
-            qubit.surface_plot.object = qubit  # Save qubit to artist
+            qubit.surface_plot = circle
+            circle.object = qubit  # Save qubit to artist
 
         def _update_data(self, qubit: DataQubit, artist: Optional[Artist] = None, temporary=False, **kwargs):
             """Update properties of data qubit plot.
@@ -412,14 +416,16 @@ class FaultyMeasurements(PerfectMeasurements, TemplateSimFM):
     def random_errors_layer(self, **kwargs):
         # Inherited docstring
         super().random_errors_layer(**kwargs)
-        self.figure.interact_axes["error_buttons"].active = True
+        if self.figure.interactive:
+            self.figure.interact_axes["error_buttons"].active = True
         self.plot_data(f"Layer {self.layer}: errors applied")
 
     def random_measure_layer(self, **kwargs):
         # Inherited docstring
         super().random_measure_layer(**kwargs)
-        self.figure.interact_bodies["error_buttons"].set_active(0)
-        self.figure.interact_axes["error_buttons"].active = False
+        if self.figure.interactive:
+            self.figure.interact_bodies["error_buttons"].set_active(0)
+            self.figure.interact_axes["error_buttons"].active = False
         self.plot_ancilla(f"Layer {self.layer}: ancilla-qubits measured")
 
     def plot_data(self, iter_name: Optional[str] = None, **kwargs):

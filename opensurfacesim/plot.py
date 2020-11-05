@@ -14,15 +14,6 @@ import numpy as np
 import os
 
 
-try:
-    DISPLAY = os.environ.get("DISPLAY", None)
-    if DISPLAY:
-        mpl.use("TkAgg")
-    else:
-        raise ImportError(f"Display at {DISPLAY} not available.")
-except ImportError:
-    print("Display could not be loaded. Matplotlib is using Agg backend. Interactive plotting is not available.")
-
 color_type = Union[str, Tuple[float, float, float, float]]
 axis_type = Tuple[float, float, float, float]
 
@@ -85,6 +76,7 @@ class PlotParams:
     legend_marker_size = 10
 
     axis_main: axis_type = (0.075, 0.1, 0.7, 0.85)
+    axis_main_non_interact: axis_type = (0.0, 0.05, 0.8, 0.9)
     axis_block: axis_type = (0.96, 0.01, 0.03, 0.03)
     axis_nextbutton: axis_type = (0.85, 0.05, 0.125, 0.05)
     axis_prevbutton: axis_type = (0.85, 0.12, 0.125, 0.05)
@@ -171,16 +163,14 @@ class BlockingKeyInput(BlockingInput):
 class Template2D(ABC):
     """Template 2D plot object with history navigation.
 
-    This template plot object has the following features:
+    This template plot object which can either be an interactive figure using the Tkinter backend, or shows each plotting iteration as a separate figure for the IPython ``inline`` backend. The interactive figure has the following features.
 
     - Fast plotting by use of "blitting".
     - Redrawing past iterations of the figure by storing all changes in history.
     - Keyboard navigation for iteration selection.
     - Plot object information by picking.
 
-    To instance this class, one must inherit the current class and supply a :meth:`init_plot` method that draws the objects of the plot. The existing objects can then be altered by updating their plot properties by :meth:`new_properties`, where the changed properties must be a dictionary with keywords and values corresponding tho the respective matplotlib object. Every change in plot property is stored in ``self.history_dict``. This allows to undo or redo changes by simply applying the saved changed properties in the dictionary.
-
-    Fast plotting is enabled by not drawing the figure after every queued change. Instead, each object is draw in the canvas individually after a property change and a series of changes is drawn to the figure when a new plot iteration is requested via :meth:`new_iter`. This is performed by *blitting* the canvas.
+    To instance this class, one must inherit the current class and supply a :meth:`init_plot` method that draws the objects of the plot. The existing objects can then be altered by updating their plot properties by :meth:`new_properties`, where the changed properties must be a dictionary with keywords and values corresponding tho the respective matplotlib object. Every change in plot property is stored in ``self.history_dict``. This allows to undo or redo changes by simply applying the saved changed properties in the dictionary. Fast plotting is enabled by not drawing the figure after every queued change. Instead, each object is draw in the canvas individually after a property change and a series of changes is drawn to the figure when a new plot iteration is requested via :meth:`new_iter`. This is performed by *blitting* the canvas.
 
     Keyboard navigation and picking is enabled by blocking the code via a custom `.BlockingKeyInput` class. While the code is blocked, inputs are caught by the blocking class and processed for history navigation or picking navigation. Moving the iteration past the available history allows for the code to continue. The keyboard input is parsed by :meth:`focus`.
 
@@ -188,8 +178,6 @@ class Template2D(ABC):
 
     Parameters
     ----------
-    init_plot
-        Enables drawing all base objects at class initialization.
     plot_params
         Plotting parameters dataclass containing colors, styles and others.
 
@@ -197,6 +185,8 @@ class Template2D(ABC):
     ----------
     figure : `matplotlib.figure.Figure`
         Main figure.
+    interactive : bool
+       Enables GUI elements and interactive plotting. 
     main_ax : `matplotlib.axes.Axes`
         Main axis of the figure.
     history_dict : `.collections.defaultdict`
@@ -244,7 +234,7 @@ class Template2D(ABC):
 
     Notes
     -----
-    Note all backends support blitting. You can check if a given canvas does via the `matplotlib.backend_bases.FigureCanvasBase`\ ``.supports_blit`` property. It does not work with the OSX backend (but does work with other GUI backends on mac).
+    Note all backends support blitting. It does not work with the OSX backend (but does work with other GUI backends on mac).
 
     Examples
     --------
@@ -296,54 +286,55 @@ class Template2D(ABC):
 
     The ``history_dict`` for a plot with a Line2D object and a Circle object. In the second iteration, the color of the Line2D object is updated from black to red, and the linestyle of the Circle object is changed from "-" to ":".
     """
-
     def __init__(
         self,
-        init_plot: bool = True,
-        projection: Optional[str] = None,
         plot_params: Optional[PlotParams] = None,
+        projection: Optional[str] = None,
         **kwargs,
-    ):
-
+    ):  
+        self.interactive = self.load_interactive_backend()
+        self.projection = projection
         self.params = plot_params if plot_params else PlotParams()
         self.figure = None
         self.main_ax = None
         self.history_dict = defaultdict(dict)
         self.history_iters = 0
         self.history_iter = 0
-        self.history_iter_names = ["Initial"]
+        self.history_iter_names = []
         self.history_event_iter = ""
         self.future_dict = defaultdict(dict)
         self.temporary_changes = defaultdict(dict)
         self.temporary_saved = defaultdict(dict)
         self.shown_confirm_close = False
 
-        # Init figure object
         self.figure = plt.figure(figsize=(self.params.scale_figure_length, self.params.scale_figure_height))
         self.canvas = self.figure.canvas
-        self.canvas.mpl_connect("pick_event", self._pick_handler)
-        self.blocking_input = BlockingKeyInput(self.figure)
-
         # Init buttons and boxes
-        self.main_ax = plt.axes(self.params.axis_main, projection=projection)
         self.legend_ax = plt.axes(self.params.axis_legend)
         self.legend_ax.axis("off")
 
-        self.interact_axes = {
-            "prev_button": plt.axes(self.params.axis_prevbutton),
-            "next_button": plt.axes(self.params.axis_nextbutton),
-        }
-        for body in self.interact_axes.values():
-            body.active = True
-        self.interact_bodies = {
-            "prev_button": Button(self.interact_axes["prev_button"], "Previous"),
-            "next_button": Button(self.interact_axes["next_button"], "Next"),
-        }
-        self.interact_bodies["prev_button"].on_clicked(self._draw_prev)
-        self.interact_bodies["next_button"].on_clicked(self._draw_next)
-        self.block_box = plt.axes(self.params.axis_block)
-        self.block_box.axis("off")
-        self.block_icon = self.block_box.scatter(0, 0, color="r")
+        if self.interactive:
+            self.main_ax = plt.axes(self.params.axis_main, projection=self.projection)
+            self.canvas.mpl_connect("pick_event", self._pick_handler)
+            self.blocking_input = BlockingKeyInput(self.figure)
+            self.interact_axes = {
+                "prev_button": plt.axes(self.params.axis_prevbutton),
+                "next_button": plt.axes(self.params.axis_nextbutton),
+            }
+            for body in self.interact_axes.values():
+                body.active = True
+            self.interact_bodies = {
+                "prev_button": Button(self.interact_axes["prev_button"], "Previous"),
+                "next_button": Button(self.interact_axes["next_button"], "Next"),
+            }
+            self.interact_bodies["prev_button"].on_clicked(self._draw_prev)
+            self.interact_bodies["next_button"].on_clicked(self._draw_next)
+            self.block_box = plt.axes(self.params.axis_block)
+            self.block_box.axis("off")
+            self.block_icon = self.block_box.scatter(0, 0, color="r")
+        else:
+            self.main_ax = plt.axes(self.params.axis_main_non_interact, projection=self.projection)
+
         self.text_box = plt.axes(self.params.axis_text)
         self.text_box.axis("off")
         self.text = self.text_box.text(
@@ -355,15 +346,41 @@ class Template2D(ABC):
             ha="center",
             transform=self.text_box.transAxes,
         )
-        self.canvas.draw()
+        if self.interactive:
+            self.canvas.draw()
 
-        if init_plot:
-            self.init_plot()
+
+    def load_interactive_backend(self) -> bool:
+        """Configures the plotting backend.
+        
+        If the Tkinter backend is enabled or can be enabled, the function returns True. For other backends False is returned. 
+        """
+        backend = mpl.get_backend()
+        if backend == "TkAgg":
+            return True
+        elif "inline" in backend:
+            from IPython.display import display
+            self.display = display
+        elif backend == "agg":
+            try:
+                DISPLAY = os.environ.get("DISPLAY", None)
+                if DISPLAY:
+                    mpl.use("TkAgg")
+                    return True
+                else:
+                    raise ImportError(f"Display at {DISPLAY} not available.")
+            except ImportError:
+                print(f"Plotting is not available for Agg backend. TkAgg backend could not be loaded.")
+        else:
+            print(f"Matplotlib is using {backend} backend. Interactive plotting is disabled.")
+        return False
+
 
     def close(self):
         """Closes the figure."""
-        self.draw_figure("Press (->/enter) to close figure.")
-        plt.close(self.figure)
+        if self.interactive:
+            self.draw_figure("Press (->/enter) to close figure.")
+            plt.close(self.figure)
 
     @property
     def history_at_newest(self):
@@ -600,6 +617,7 @@ class Template2D(ABC):
         focus
         change_properties
         """
+        # if self.interactive:
         if new_iter_name:
             if self.history_at_newest:
                 for artist, changes in self.future_dict.pop(new_iter_name, {}).items():
@@ -614,16 +632,22 @@ class Template2D(ABC):
             else:
                 print(f"Cannot add iteration {new_iter_name} to history, currently not on most recent iteration.")
         if not (new_iter_name and self.history_at_newest):
-            new_iter_name = self.history_iter_names[self.history_iter]
+            new_iter_name = self.history_iter_names[self.history_iter-1]
         text = "{}/{}: {}".format(self.history_iter, self.history_iters, new_iter_name)
         self.text.set_text(text)
+
         if output:
             if carriage_return:
                 print("\rDrawing", text)
             else:
                 print("Drawing", text)
-        self.canvas.blit(self.main_ax.bbox)
-        self.focus()
+
+        if self.interactive:
+            self.canvas.blit(self.main_ax.bbox)
+            self.focus()
+        else:
+            self.display(self.figure)
+
 
     def _draw_from_history(self, condition: bool, direction: int, draw: bool = True, **kwargs) -> bool:
         """Move a single plot iteration forward or backwards.

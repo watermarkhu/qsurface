@@ -65,6 +65,7 @@ class Plot(TemplatePlot, Sim):
     permanent_on_click = True
 
     error_methods = ["erasure"]
+    gui_methods = ["erasure"]
 
     legend_params = {
         "legend_erasure": {

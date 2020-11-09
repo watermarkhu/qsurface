@@ -209,7 +209,7 @@ class PerfectMeasurements(TemplateSimPM):
 
             self.lh += [
                 self._legend_scatter(
-                    "Vertex",
+                    "Plaquette",
                     facecolors=self.params.color_qubit_face,
                     edgecolors=self.params.color_qubit_edge,
                     linewidth=self.params.line_width_primary,
@@ -449,7 +449,7 @@ class FaultyMeasurements(PerfectMeasurements, TemplateSimFM):
             # Inherited docstring
             items = [
                 self._legend_scatter(
-                    "Syndrome vertex",
+                    "Syndrome plaquette",
                     linestyle=self.params.line_style_primary,
                     linewidth=self.params.line_width_secondary,
                     facecolors=self.params.color_qubit_face,
@@ -465,7 +465,7 @@ class FaultyMeasurements(PerfectMeasurements, TemplateSimFM):
                     marker="D",
                 ),
                 self._legend_scatter(
-                    "Faulty vertex",
+                    "Faulty plaquette",
                     facecolors=self.params.color_qubit_face,
                     edgecolors=self.params.color_x_primary,
                     linewidth=self.params.line_width_primary,

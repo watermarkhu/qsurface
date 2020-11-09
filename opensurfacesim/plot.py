@@ -692,7 +692,7 @@ class Template2D(ABC):
     def _draw_prev(self, *args, **kwargs) -> bool:
         """Redraws all changes from previous plot iteration onto the plot."""
         self.shown_confirm_close = False
-        return self._draw_from_history(self.history_iter > 0, -1, **kwargs)
+        return self._draw_from_history(self.history_iter > 1, -1, **kwargs)
 
     def _draw_iteration(self, target: int, draw: bool = True, **kwargs) -> bool:
         """Redraws all changes until the `target` iteration.

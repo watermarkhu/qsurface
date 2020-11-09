@@ -1,10 +1,12 @@
 
 # opensurfacesim
 
+[![PyPI version](https://img.shields.io/pypi/v/opensurfacesim?color=blue)](https://pypi.org/project/opensurfacesim/)
 ![Build](https://github.com/watermarkhu/opensurfacesim/workflows/Build/badge.svg)
-[![codecov](https://codecov.io/gh/watermarkhu/OpenSurfaceSim/branch/master/graph/badge.svg?token=CWLVPDFF2L)](https://codecov.io/gh/watermarkhu/OpenSurfaceSim)
 [![Documentation Status](https://readthedocs.org/projects/opensurfacesim/badge/?version=latest)](https://opensurfacesim.readthedocs.io/en/latest/?badge=latest)
+[![codecov](https://codecov.io/gh/watermarkhu/OpenSurfaceSim/branch/master/graph/badge.svg?token=CWLVPDFF2L)](https://codecov.io/gh/watermarkhu/OpenSurfaceSim)
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/watermarkhu/opensurfacesim/master?filepath=examples.ipynb)
+![License](https://img.shields.io/pypi/l/opensurfacesim)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.4247617.svg)](https://doi.org/10.5281/zenodo.4247617)
 [![Unitary Fund](https://img.shields.io/badge/Supported%20By-UNITARY%20FUND-brightgreen.svg?style=flat-the-badge)](http://unitary.fund)
 

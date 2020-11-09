@@ -156,10 +156,13 @@ def run(
     random.seed(seed)
 
     if decode_initial:
+        print(f"Running initial iteration", end="\r")
         code.random_errors()
-        decoder.decode(**kwargs)
+        decoder.decode(**kwargs)    
         code.logical_state
-
+        if hasattr(code, "figure"):
+            code.show_corrected()
+            
     if benchmark:
         benchmark._set_decoder(decoder, seed=seed)
 

@@ -355,13 +355,13 @@ class Template2D(ABC):
         
         If the Tkinter backend is enabled or can be enabled, the function returns True. For other backends False is returned. 
         """
-        backend = mpl.get_backend()
-        if backend == "TkAgg":
+        backend = mpl.get_backend().lower()
+        if backend in ["tkagg", "qt5agg"]:
             return True
         elif "inline" in backend:
             from IPython.display import display
             self.display = display
-        elif backend == "agg":
+        else:
             try:
                 DISPLAY = os.environ.get("DISPLAY", None)
                 if DISPLAY:
@@ -370,9 +370,7 @@ class Template2D(ABC):
                 else:
                     raise ImportError(f"Display at {DISPLAY} not available.")
             except ImportError:
-                print(f"Plotting is not available for Agg backend. TkAgg backend could not be loaded.")
-        else:
-            print(f"Matplotlib is using {backend} backend. Interactive plotting is disabled.")
+                print(f"Matplotlib is using {backend} backend, which is not supported. ")
         return False
 
 

@@ -362,15 +362,22 @@ class Template2D(ABC):
             from IPython.display import display
             self.display = display
         else:
-            try:
-                DISPLAY = os.environ.get("DISPLAY", None)
-                if DISPLAY:
+            DISPLAY = os.environ.get("DISPLAY", None)
+            if DISPLAY:
+                try:
                     mpl.use("TkAgg")
                     return True
-                else:
-                    raise ImportError(f"Display at {DISPLAY} not available.")
-            except ImportError:
-                print(f"Matplotlib is using {backend} backend, which is not supported. ")
+                except ImportError:
+                    pass
+                try: 
+                    mpl.use("Qt5Agg")
+                    return True
+                except ImportError:
+                    pass
+
+                print(f"Matplotlib is using {backend} backend, which is not supported.")
+            else:
+                print(f"Display {DISPLAY} not available. Interactive plotting is disabled.")
         return False
 
 
@@ -461,6 +468,7 @@ class Template2D(ABC):
 
         When the method is active, the focus is on the figure. This will be indicated by a green circle in the bottom right of the figure. When the focus is lost, the code execution is continued and the icon is red. The change is icon color is performed by :meth:`_set_figure_state`, which also hides the interactive elements when the focus is lost.
         """
+        self.canvas.draw() 
         wait = True
         while wait:
             self._set_figure_state("g")
@@ -516,7 +524,6 @@ class Template2D(ABC):
                 print("Figure has been destroyed. Future plots will be ignored.")
                 wait = False
         self._set_figure_state("r", False)  # Hide all interactive axes
-        self.canvas.draw()  # Draw before focus is lost
 
     def _set_figure_state(self, color, override: Optional[bool] = None):
         """Set color of blocking icon and updates interactive axes visibility.
@@ -536,6 +543,7 @@ class Template2D(ABC):
         self.block_icon.set_color(color)
         self.block_box.draw_artist(self.block_icon)
         self.canvas.blit(self.block_box.bbox)
+        self.canvas.draw() 
 
     """
     -------------------------------------------------------------------------------
@@ -799,7 +807,7 @@ class Template2D(ABC):
 
         # If record exists, find difference in object properties
         for key, new_value in properties.items():
-            current_value = get_nested_property(plt.getp(artist, key))
+            current_value = prev_prop.get(key, get_nested_property(plt.getp(artist, key)))
             next_prop.pop(key, None)
             if current_value != new_value:
                 prev_prop[key], next_prop[key] = current_value, new_value

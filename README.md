@@ -41,7 +41,7 @@ pip install opensurfacesim
 ## Requirements
 
 * Python 3.7+
-* Tkinter for interactive plotting. Your Python distribution may or may not bundled Tkinter already. Check out this [guide](https://realpython.com/python-gui-tkinter/)  from realpython.com to install Tkinter if you encounter any problems.
+* [Tkinter](https://docs.python.org/3/library/tkinter.html) or [PyQt5](https://riverbankcomputing.com/software/pyqt/intro) for interactive plotting.
 * Matplotlib 3.4+ for plotting on a 3D lattice (Refers to a future release of matplotlib, see [pull request](https://github.com/matplotlib/matplotlib/pull/18816))
 
 ### MWPM decoder
@@ -77,6 +77,8 @@ Benchmarking of decoders can be enabled by attaching a *benchmarker* object to t
 'std': 0.002170364089572033}}}}
 ```
 
+## Plotting
+
 The figures in opensurfacesim allows for step-by-step visualization of the surface code simulation (and if supported the decoding process). Each figure logs its history such that the user can move backwards in time to view past states of the surface (and decoder). Press `h` when the figure is open for more information.
 
 ```python
@@ -95,6 +97,10 @@ Plotting will be performed on a 3D axis if faulty measurements are enabled.
 ```
 
 ![Interactive plotting on a toric code with faulty measurements.](https://raw.githubusercontent.com/watermarkhu/OpenSurfaceSim/master/images/toric-3d.gif "Iteractive plotting on a 3d axis")
+
+In IPython, inline images are created for each iteration of the plot, which can be tested in the [example notebook](https://mybinder.org/v2/gh/watermarkhu/opensurfacesim/master?filepath=examples.ipynb).
+
+## CLI
 
 Simulations can also be initiated from the command line
 

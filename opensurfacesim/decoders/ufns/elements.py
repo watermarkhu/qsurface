@@ -157,15 +157,16 @@ class OddNode(Node):
 def print_tree(current_node: Node, parent_node: Optional[Node] = None):
     """Prints the node-tree of ``current_node`` and its descendents.
 
-    Utilizes `pptree <https://pypi.org/project/pptree/>`_ to print a tree of nodes, which requires a list of children elements per node. Since the node-tree is semi-directional (the root can be any element in the tree), we need to traverse the node-tree from ``current_node`` in all directions except for the ``parent_node`` to find the children attributes for the current direction.  
+    Utilizes `pptree <https://pypi.org/project/pptree/>`_ to print a tree of nodes, which requires a list of children elements per node. Since the node-tree is semi-directional (the root can be any element in the tree), we need to traverse the node-tree from ``current_node`` in all directions except for the ``parent_node`` to find the children attributes for the current direction.
 
     Parameters
     ----------
     current_node
-        Current root of the node-tree to print. 
+        Current root of the node-tree to print.
     parent_node
         Parent node which will not be printed. s
     """
+
     def get_children(node, parent=None):
         node.children = [child for child, _ in node.neighbors if child is not parent]
         for child in node.children:

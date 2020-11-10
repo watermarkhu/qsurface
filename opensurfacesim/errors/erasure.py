@@ -12,7 +12,7 @@ class Sim(TemplateSim):
     p_erasure
         Default probability of erasure errors.
     initial_states
-        Default state of the qubit after re-initialization. 
+        Default state of the qubit after re-initialization.
     """
 
     def __init__(self, *args, p_erasure: float = 0, initial_states: Tuple[float, float] = (0, 0), **kwargs):
@@ -33,7 +33,7 @@ class Sim(TemplateSim):
         p_erasure
             Overriding probability of erasure errors.
         initial_states
-            Overriding state of the qubit after re-initialization. 
+            Overriding state of the qubit after re-initialization.
         """
         if p_erasure is None:
             p_erasure = self.default_error_rates["p_erasure"]
@@ -45,13 +45,13 @@ class Sim(TemplateSim):
     @staticmethod
     def erasure(qubit: DataQubit, instance: float = 0, initial_states: Tuple[float, float] = (0, 0), **kwargs):
         """Erases the ``qubit`` by resetting its attributes.
-        
+
         Parameters
         ----------
         qubit
-            Qubit to erase. 
+            Qubit to erase.
         instance
-            Current simulation instance. 
+            Current simulation instance.
         initial_states
             State of the qubit after re-initialization.
         """

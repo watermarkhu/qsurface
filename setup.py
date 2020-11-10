@@ -14,9 +14,7 @@ setup(
     long_description=README,
     long_description_content_type="text/markdown",
     url="https://github.com/watermarkhu/opensurfacesim",
-    project_urls={
-        "Documentation": "https://opensurfacesim.readthedocs.io/en/latest/"
-    },
+    project_urls={"Documentation": "https://opensurfacesim.readthedocs.io/en/latest/"},
     author="Mark Shui Hu",
     author_email="watermarkhu@gmail.com",
     license="BSD-3",
@@ -26,9 +24,9 @@ setup(
         "Programming Language :: Python :: 3.7",
         "Topic :: Scientific/Engineering :: Physics",
     ],
-    packages=find_packages(exclude=['tests', '*.tests', '*.tests.*']),
-    include_package_data = True,
-    python_requires='>3.7.0',
+    packages=find_packages(exclude=["tests", "*.tests", "*.tests.*"]),
+    include_package_data=True,
+    python_requires=">3.7.0",
     install_requires=[
         "matplotlib>=3.3.2",
         "networkx>=2.0",
@@ -37,7 +35,7 @@ setup(
         "pptree>=3.1",
     ],
     entry_points={
-        "console_scrips":[
+        "console_scrips": [
             "py-opensurfacesim=opensurfacesim.__main__:main",
             "opensurfacesim-getblossomv=opensurfacesim.decoders.mwpm:get_blossomv",
         ],

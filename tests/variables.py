@@ -2,7 +2,12 @@ import opensurfacesim as oss
 from opensurfacesim.codes.toric.sim import PerfectMeasurements as toric_code
 import itertools
 
+CODES = oss.codes.CODES
+DECODERS = oss.decoders.DECODERS
 ERRORS = oss.errors.ERRORS
+no_wait_param = oss.plot.PlotParams(blocking_wait=0.1)
+SIZE_PM = 9
+SIZE_FM = 3
 
 
 def get_error_combinations():

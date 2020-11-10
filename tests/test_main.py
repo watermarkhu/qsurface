@@ -1,14 +1,7 @@
 from opensurfacesim.main import *
-import opensurfacesim as oss
 import pytest
+from .variables import *
 
-
-CODES = oss.codes.CODES
-DECODERS = oss.decoders.DECODERS
-ERRORS = oss.errors.ERRORS
-no_wait_param = oss.plot.PlotParams(blocking_wait=0.001)
-SIZE_PM = 8
-SIZE_FM = 3
 SEED = 12345
 ITERS = [1, 10]
 MP_ITERS = 24
@@ -27,6 +20,7 @@ MP_ITERS = 24
 def test_initialize(size, Code, Decoder, error, faulty):
     """Test initialize function for all configurations."""
     initialize(size, Code, Decoder, enabled_errors=[error], faulty_measurements=faulty)
+
 
 @pytest.mark.plotting
 @pytest.mark.parametrize("Code", CODES)
@@ -54,10 +48,11 @@ def test_initialize_plot(size, Code, faulty, figure3d):
 
 
 @pytest.mark.parametrize("iterations", ITERS)
-def test_run(iterations):
+@pytest.mark.parametrize("initial_states, decode_initial", [((0, 0), False), ((None, None), True)])
+def test_run(iterations, initial_states, decode_initial):
     """Test run function for single and multiple iterations."""
-    code, decoder = initialize(SIZE_PM, CODES[0], DECODERS[0])
-    output = run(code, decoder, iterations=iterations)
+    code, decoder = initialize(SIZE_PM, CODES[0], DECODERS[0], initial_states=initial_states)
+    output = run(code, decoder, iterations=iterations, decode_initial=decode_initial)
     asserted_output = {"no_error": iterations}
     assert output == asserted_output
 

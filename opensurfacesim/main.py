@@ -33,7 +33,7 @@ def initialize(
 ):
     """Initializes a code and a decoder.
 
-    The function makes sure that the correct class is used to instance the surface code and decoder based on the arguments provided. A code instance must be initalized with ``enabled_errors`` by `~codes._template.sim.initialize` after class instance to make sure that plot parameters are properly loaded before loading the plotting items included in each included error module, if ``plotting`` is enabled. See `.plot.Template2D` and `.errors._template.Plot` for more information. 
+    The function makes sure that the correct class is used to instance the surface code and decoder based on the arguments provided. A code instance must be initalized with ``enabled_errors`` by `~codes._template.sim.initialize` after class instance to make sure that plot parameters are properly loaded before loading the plotting items included in each included error module, if ``plotting`` is enabled. See `.plot.Template2D` and `.errors._template.Plot` for more information.
 
     Parameters
     ----------
@@ -60,7 +60,7 @@ def initialize(
         (<toric (6, 6) PerfectMeasurements>,  <Minimum-Weight Perfect Matching decoder (Toric)>)
         ✅ This decoder is compatible with the code.
 
-    Keyword arguments for the code and decoder classes can be included for further customization of class initialization. Note that default errors rates for error class initialization (see `~.codes._template.sim.PerfectMeasurements.init_errors` and `.errors._template.Sim`) can also be provided as keyword arguments here. 
+    Keyword arguments for the code and decoder classes can be included for further customization of class initialization. Note that default errors rates for error class initialization (see `~.codes._template.sim.PerfectMeasurements.init_errors` and `.errors._template.Sim`) can also be provided as keyword arguments here.
 
         >>> enabled_errors = ["pauli"]
         >>> code_kwargs = {
@@ -121,7 +121,7 @@ def run(
     error_rates
         Dictionary of error rates (see `~opensurfacesim.errors`). Errors must have been loaded during code class initialization by `~.codes._template.sim.PerfectMeasurements.initialize` or `~.codes._template.sim.PerfectMeasurements.init_errors`.
     decode_initial
-        Decode initial code configuration before applying loaded errors. If random states are used for the data-qubits of the ``code`` at class initialization (default behavior), an initial round of decoding is required and is enabled through the ``decode_initial`` flag (default is enabled).  
+        Decode initial code configuration before applying loaded errors. If random states are used for the data-qubits of the ``code`` at class initialization (default behavior), an initial round of decoding is required and is enabled through the ``decode_initial`` flag (default is enabled).
     seed
         Float to use as the seed for the random number generator.
     benchmark
@@ -157,7 +157,7 @@ def run(
 
     if decode_initial:
         code.random_errors()
-        decoder.decode(**kwargs)    
+        decoder.decode(**kwargs)
         code.logical_state
 
     if benchmark:
@@ -169,7 +169,7 @@ def run(
         print(f"Running iteration {iteration+1}/{iterations}", end="\r")
         code.random_errors(**error_rates)
         decoder.decode(**kwargs)
-        code.logical_state          # Must get logical state property to update code.no_error
+        code.logical_state  # Must get logical state property to update code.no_error
         output["no_error"] += code.no_error
         if hasattr(code, "figure"):
             code.show_corrected()
@@ -221,7 +221,7 @@ def run_multiprocess(
     iterations
         Total number of iterations to run.
     decode_initial
-        Decode initial code configuration before applying loaded errors. 
+        Decode initial code configuration before applying loaded errors.
     seed
         Float to use as the seed for the random number generator.
     processes
@@ -243,7 +243,7 @@ def run_multiprocess(
 
     if decode_initial:
         code.random_errors()
-        decoder.decode(**kwargs)    
+        decoder.decode(**kwargs)
         code.logical_state
 
     # Initiate processes

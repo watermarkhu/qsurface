@@ -273,21 +273,21 @@ class Sim(ABC):
 class Plot(Sim):
     """Decoder plotting class template.
 
-    The plotting decoder class requires a surface code object that inherits from `.codes._template.plot.PerfectMeasurements`. The template decoder provides the `plot_matching_edge` method that is called by `correct_edge` to visualize the matched edges on the lattice. 
+    The plotting decoder class requires a surface code object that inherits from `.codes._template.plot.PerfectMeasurements`. The template decoder provides the `plot_matching_edge` method that is called by `correct_edge` to visualize the matched edges on the lattice.
 
     parameters
     ----------
     args, kwargs
-        Positional and keyword arguments are passed on to `~.decoders._template.Sim`. 
+        Positional and keyword arguments are passed on to `~.decoders._template.Sim`.
 
     attributes
     ----------
     line_color_match : dict
-        Plot properties for matched edges. 
+        Plot properties for matched edges.
     line_color_normal : dict
-        Plot properties for normal edges. 
+        Plot properties for normal edges.
     matching_lines : defaultdict(bool)
-        Dictionary of edges that have been added to the matching. 
+        Dictionary of edges that have been added to the matching.
     """
 
     name = ("Template plot decoder",)

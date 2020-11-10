@@ -155,17 +155,20 @@ def run(
     seed = float(f"{seed}{mp_process}")
     random.seed(seed)
 
-    if decode_initial:
-        code.random_errors()
-        decoder.decode(**kwargs)    
-        code.logical_state
-
     if benchmark:
         benchmark._set_decoder(decoder, seed=seed)
 
     output = {"no_error": 0}
 
-    for iteration in range(iterations):
+    if decode_initial:
+        code.random_errors()
+        decoder.decode(**kwargs)    
+        code.logical_state
+        output["no_error"] += code.no_error
+        if hasattr(code, "figure"):
+            code.show_corrected()
+
+    for iteration in range(int(decode_initial), iterations):
         print(f"Running iteration {iteration+1}/{iterations}", end="\r")
         code.random_errors(**error_rates)
         decoder.decode(**kwargs)

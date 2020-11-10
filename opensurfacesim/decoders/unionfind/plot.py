@@ -131,8 +131,9 @@ class Toric(SimToric, Plot):
         Parameters
         ----------
         args, kwargs
-            Positional and keyword arguments are forwarded to `.plot.Template2D`. 
+            Positional and keyword arguments are forwarded to `.plot.Template2D`.
         """
+
         def __init__(self, decoder, name, *args, **kwargs) -> None:
             self.decoder = decoder
             self.code = decoder.code
@@ -141,8 +142,6 @@ class Toric(SimToric, Plot):
             self.colors1 = {"x": self.params.color_x_primary, "z": self.params.color_z_primary}
             self.colors2 = {"x": self.params.color_x_secondary, "z": self.params.color_z_secondary}
 
-        def init_plot(self, **kwargs):
-            # Inherited docstring
             size = [xy + 0.25 for xy in self.code.size]
             self._init_axis([-0.25, -0.25] + size, title=self.decoder, aspect="equal")
 
@@ -181,7 +180,7 @@ class Toric(SimToric, Plot):
                 ),
             ]
             labels = [artist.get_label() if hasattr(artist, "get_label") else artist[0].get_label() for artist in handles]
-            self.legend_ax.legend(handles, labels, **kwargs)
+            self.legend_ax.legend(handles, labels, **kwargs.pop("uf_legend_kwargs", {}))
 
         def _plot_half_edge(
             self,
@@ -219,12 +218,12 @@ class Toric(SimToric, Plot):
                 for artist in edge.uf_plot.values():
                     self.new_properties(artist, {"visible": False})
 
-        def _match_edge(self, edge:Edge):
+        def _match_edge(self, edge: Edge):
             """Updates the color of an matched edge."""
             for artist in edge.uf_plot.values():
                 self.new_properties(artist, {"color": self.colors1[edge.state_type]})
 
-        def _plot_ancilla(self, ancilla:AncillaQubit, init:bool=False):
+        def _plot_ancilla(self, ancilla: AncillaQubit, init: bool = False):
             """Adds a syndrome to the plot."""
 
             rotations = {"x": 0, "z": 45}
@@ -286,8 +285,9 @@ class Toric(SimToric, Plot):
         Parameters
         ----------
         args, kwargs
-            Positional and keyword arguments are forwarded to `~.decoders.unionfind.plot.Toric.Figure2D` and `.plot.Template3D`. 
+            Positional and keyword arguments are forwarded to `~.decoders.unionfind.plot.Toric.Figure2D` and `.plot.Template3D`.
         """
+
         def _plot_half_edge(
             self,
             edge: Edge,
@@ -356,8 +356,9 @@ class Planar(Toric, SimPlanar):
         Parameters
         ----------
         args, kwargs
-            Positional and keyword arguments are forwarded to `.unionfind.plot.Toric.Figure2D`. 
+            Positional and keyword arguments are forwarded to `.unionfind.plot.Toric.Figure2D`.
         """
+
         def _plot_ancilla(self, ancilla, **kwargs):
             if type(ancilla) == AncillaQubit:
                 super()._plot_ancilla(ancilla, **kwargs)

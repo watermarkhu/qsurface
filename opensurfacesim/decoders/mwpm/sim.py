@@ -12,11 +12,11 @@ LA = List[AncillaQubit]
 
 class Toric(Sim):
     """Minimum-Weight Perfect Matching decoder for the toric lattice.
-    
+
     Parameters
     ----------
     args, kwargs
-        Positional and keyword arguments are passed on to `.decoders._template.Sim`. 
+        Positional and keyword arguments are passed on to `.decoders._template.Sim`.
     """
 
     name = "Minimum-Weight Perfect Matching"

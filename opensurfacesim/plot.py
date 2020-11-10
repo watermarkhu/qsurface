@@ -26,11 +26,10 @@ class PlotParams:
 
     Examples
     --------
-    See the below example where the background color of the figure is changed to black. Note that we first have to inherited from the `.Template2D` class and supply a `~.Template2D.init_plot` method for it to be able to be instanced.
+    See the below example where the background color of the figure is changed to black. Note that we have to inherit from the `.Template2D` class.
 
         >>> class Plotting(Template2D):
-        ...     def init_plot():
-        ...         pass
+        ...     pass
         >>> custom_params = PlotParams(color_background = (0,0,0,1))
         >>> plot_with_custom_params = Plotting(plot_params=custom_params)
     """
@@ -170,7 +169,7 @@ class Template2D(ABC):
     - Keyboard navigation for iteration selection.
     - Plot object information by picking.
 
-    To instance this class, one must inherit the current class and supply a :meth:`init_plot` method that draws the objects of the plot. The existing objects can then be altered by updating their plot properties by :meth:`new_properties`, where the changed properties must be a dictionary with keywords and values corresponding tho the respective matplotlib object. Every change in plot property is stored in ``self.history_dict``. This allows to undo or redo changes by simply applying the saved changed properties in the dictionary. Fast plotting is enabled by not drawing the figure after every queued change. Instead, each object is draw in the canvas individually after a property change and a series of changes is drawn to the figure when a new plot iteration is requested via :meth:`new_iter`. This is performed by *blitting* the canvas.
+    To instance this class, one must inherit the current class. The existing objects can then be altered by updating their plot properties by :meth:`new_properties`, where the changed properties must be a dictionary with keywords and values corresponding tho the respective matplotlib object. Every change in plot property is stored in ``self.history_dict``. This allows to undo or redo changes by simply applying the saved changed properties in the dictionary. Fast plotting is enabled by not drawing the figure after every queued change. Instead, each object is draw in the canvas individually after a property change and a series of changes is drawn to the figure when a new plot iteration is requested via :meth:`new_iter`. This is performed by *blitting* the canvas.
 
     Keyboard navigation and picking is enabled by blocking the code via a custom `.BlockingKeyInput` class. While the code is blocked, inputs are caught by the blocking class and processed for history navigation or picking navigation. Moving the iteration past the available history allows for the code to continue. The keyboard input is parsed by :meth:`focus`.
 
@@ -186,7 +185,7 @@ class Template2D(ABC):
     figure : `matplotlib.figure.Figure`
         Main figure.
     interactive : bool
-       Enables GUI elements and interactive plotting. 
+       Enables GUI elements and interactive plotting.
     main_ax : `matplotlib.axes.Axes`
         Main axis of the figure.
     history_dict : `.collections.defaultdict`
@@ -242,7 +241,8 @@ class Template2D(ABC):
 
         >>> import matplotlib.pyplot as plt
         ... class Example(Template2D):
-        ...     def init_plot(self):
+        ...     def __init__(self, *args, **kwargs):
+        ...         super().__init__(*args, **kwargs)
         ...         self.line = plt.plot(0, 0, color="k", ls="-")[0]    # Line located at [0] after plot
         >>> fig = Example()
         >>> fig.new_properties(fig.line, {"color": "r})
@@ -286,12 +286,13 @@ class Template2D(ABC):
 
     The ``history_dict`` for a plot with a Line2D object and a Circle object. In the second iteration, the color of the Line2D object is updated from black to red, and the linestyle of the Circle object is changed from "-" to ":".
     """
+
     def __init__(
         self,
         plot_params: Optional[PlotParams] = None,
         projection: Optional[str] = None,
         **kwargs,
-    ):  
+    ):
         self.interactive = self.load_interactive_backend()
         self.projection = projection
         self.params = plot_params if plot_params else PlotParams()
@@ -349,17 +350,17 @@ class Template2D(ABC):
         if self.interactive:
             self.canvas.draw()
 
-
     def load_interactive_backend(self) -> bool:
         """Configures the plotting backend.
-        
-        If the Tkinter backend is enabled or can be enabled, the function returns True. For other backends False is returned. 
+
+        If the Tkinter backend is enabled or can be enabled, the function returns True. For other backends False is returned.
         """
         backend = mpl.get_backend().lower()
         if backend in ["tkagg", "qt5agg"]:
             return True
         elif "inline" in backend:
             from IPython.display import display
+
             self.display = display
         else:
             DISPLAY = os.environ.get("DISPLAY", None)
@@ -369,7 +370,7 @@ class Template2D(ABC):
                     return True
                 except ImportError:
                     pass
-                try: 
+                try:
                     mpl.use("Qt5Agg")
                     return True
                 except ImportError:
@@ -379,7 +380,6 @@ class Template2D(ABC):
             else:
                 print(f"Display {DISPLAY} not available. Interactive plotting is disabled.")
         return False
-
 
     def close(self):
         """Closes the figure."""
@@ -396,11 +396,6 @@ class Template2D(ABC):
                                     Initialization
     -------------------------------------------------------------------------------
     """
-
-    @abstractmethod
-    def init_plot(self, **kwargs):
-        """Initializes the figure by plotting al main and recurring objects"""
-        pass
 
     def _init_axis(
         self,
@@ -468,7 +463,7 @@ class Template2D(ABC):
 
         When the method is active, the focus is on the figure. This will be indicated by a green circle in the bottom right of the figure. When the focus is lost, the code execution is continued and the icon is red. The change is icon color is performed by :meth:`_set_figure_state`, which also hides the interactive elements when the focus is lost.
         """
-        self.canvas.draw() 
+        self.canvas.draw()
         wait = True
         while wait:
             self._set_figure_state("g")
@@ -543,7 +538,7 @@ class Template2D(ABC):
         self.block_icon.set_color(color)
         self.block_box.draw_artist(self.block_icon)
         self.canvas.blit(self.block_box.bbox)
-        self.canvas.draw() 
+        self.canvas.draw()
 
     """
     -------------------------------------------------------------------------------
@@ -638,7 +633,7 @@ class Template2D(ABC):
             else:
                 print(f"Cannot add iteration {new_iter_name} to history, currently not on most recent iteration.")
         if not (new_iter_name and self.history_at_newest):
-            new_iter_name = self.history_iter_names[self.history_iter-1]
+            new_iter_name = self.history_iter_names[self.history_iter - 1]
         text = "{}/{}: {}".format(self.history_iter, self.history_iters, new_iter_name)
         self.text.set_text(text)
 
@@ -653,7 +648,6 @@ class Template2D(ABC):
             self.focus()
         else:
             self.display(self.figure)
-
 
     def _draw_from_history(self, condition: bool, direction: int, draw: bool = True, **kwargs) -> bool:
         """Move a single plot iteration forward or backwards.

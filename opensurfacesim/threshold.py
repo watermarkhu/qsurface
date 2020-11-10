@@ -64,7 +64,7 @@ def run_many(
 
     Examples
     --------
-    A series of simulations using the ``toric`` surface code and ``mwpm`` decoder can be easily setup. Benchmarking can be performed by supplying the ``methods_to_benchmark`` argument of the `~.main.BenchmarkDecoder` class. The function will initialize a benchmark object of each configuration and append all results as columns to the returned dataframe. 
+    A series of simulations using the ``toric`` surface code and ``mwpm`` decoder can be easily setup. Benchmarking can be performed by supplying the ``methods_to_benchmark`` argument of the `~.main.BenchmarkDecoder` class. The function will initialize a benchmark object of each configuration and append all results as columns to the returned dataframe.
 
         >>> data = run_many(
         ...     "toric",
@@ -75,18 +75,18 @@ def run_many(
         ...     error_rates = [{"p_bitflip: p} for p in [0.09, 0.1, 0.11]],
         ... )
         >>> print(data)
-                        datetime  decoded    iterations  no_error  p_bitflip          seed  size  
-        0   04/11/2020 14:45:36   1000.0        1000.0     820.0       0.09  13163.013981   8.0  
-        1   04/11/2020 14:45:45   1000.0        1000.0     743.0       0.10  13172.277886   8.0  
-        2   04/11/2020 14:45:54   1000.0        1000.0     673.0       0.11  13181.090130   8.0  
-        3   04/11/2020 14:46:36   1000.0        1000.0     812.0       0.09  13190.191461  12.0  
-        4   04/11/2020 14:47:18   1000.0        1000.0     768.0       0.10  13232.408302  12.0  
-        5   04/11/2020 14:48:16   1000.0        1000.0     629.0       0.11  13274.044268  12.0  
-        6   04/11/2020 14:51:47   1000.0        1000.0     855.0       0.09  13332.153639  16.0  
-        7   04/11/2020 14:55:15   1000.0        1000.0     754.0       0.10  13542.533067  16.0  
+                        datetime  decoded    iterations  no_error  p_bitflip          seed  size
+        0   04/11/2020 14:45:36   1000.0        1000.0     820.0       0.09  13163.013981   8.0
+        1   04/11/2020 14:45:45   1000.0        1000.0     743.0       0.10  13172.277886   8.0
+        2   04/11/2020 14:45:54   1000.0        1000.0     673.0       0.11  13181.090130   8.0
+        3   04/11/2020 14:46:36   1000.0        1000.0     812.0       0.09  13190.191461  12.0
+        4   04/11/2020 14:47:18   1000.0        1000.0     768.0       0.10  13232.408302  12.0
+        5   04/11/2020 14:48:16   1000.0        1000.0     629.0       0.11  13274.044268  12.0
+        6   04/11/2020 14:51:47   1000.0        1000.0     855.0       0.09  13332.153639  16.0
+        7   04/11/2020 14:55:15   1000.0        1000.0     754.0       0.10  13542.533067  16.0
         8   04/11/2020 14:59:14   1000.0        1000.0     621.0       0.11  13751.082511  16.0
 
-    
+
 
 
     """
@@ -160,11 +160,11 @@ def read_csv(file: str) -> pd.DataFrame:
 @dataclass
 class ThresholdFit:
     """Fitter for code threshold with data obtained by ``~.threshold.run``.
-    
-    Threshold fitting is performed using the equations described in [wang2003confinement]_. The threshold is computing the ground state of the Hamiltonian that described the phase transition or the Nishimori line in the Random Bond Ising Model. The source provides two functions which are included in this fitting class, where the ``modified_ansatz`` includes a nonuniversion additive correction to correct for finite size effects. 
 
-    .. [wang2003confinement] Chenyang Wang, Jim Harrington and John Preskill, *Confinement-Higgs transition in a disordered gauge theory and the accuracy threshold for quantum memory*, Annals of Physics, 1:31-58, 2003. 
-    
+    Threshold fitting is performed using the equations described in [wang2003confinement]_. The threshold is computing the ground state of the Hamiltonian that described the phase transition or the Nishimori line in the Random Bond Ising Model. The source provides two functions which are included in this fitting class, where the ``modified_ansatz`` includes a nonuniversion additive correction to correct for finite size effects.
+
+    .. [wang2003confinement] Chenyang Wang, Jim Harrington and John Preskill, *Confinement-Higgs transition in a disordered gauge theory and the accuracy threshold for quantum memory*, Annals of Physics, 1:31-58, 2003.
+
     """
 
     modified_ansatz: bool = False

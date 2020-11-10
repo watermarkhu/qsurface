@@ -510,14 +510,15 @@ class Toric(Sim):
         ancilla
         """
         ancilla.forest = self.code.instance
-        for key in ancilla.parity_qubits:
-            (new_ancilla, edge) = self.get_neighbor(ancilla, key)
+        neighbors = self.get_neighbors(ancilla)
+        for neighbor in neighbors.values():
+            (new_ancilla, edge) = neighbor
             if self.support[edge] == 2:
-                if new_ancilla.forest == self.code.instance and edge.forest != self.code.instance:
-                    self._edge_peel(edge, variant="cycle")
-                else:
+                if new_ancilla.forest != self.code.instance:
                     edge.forest = self.code.instance
                     self.static_forest(new_ancilla)
+                elif new_ancilla.forest == self.code.instance and edge.forest != self.code.instance:
+                    self._edge_peel(edge, variant="cycle")
 
 
 class Planar(Toric):

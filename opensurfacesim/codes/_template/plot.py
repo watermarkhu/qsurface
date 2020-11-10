@@ -152,7 +152,6 @@ class PerfectMeasurements(TemplateSimPM):
 
             self._plot_surface()
 
-
         def init_legend(self, legend_items: List[Line2D] = [], **kwargs):
             """Initializes the legend of the main axis of the figure. Also takes keyword arguments for `~matplotlib.axes.Axes.legend`.
 
@@ -390,20 +389,21 @@ class PerfectMeasurements(TemplateSimPM):
 class FaultyMeasurements(PerfectMeasurements, TemplateSimFM):
     """Plotting template code class for faulty measurements.
 
-    Inherits from `.codes._template.sim.FaultyMeasurements` and `.codes._template.plot.PerfectMeasurements`. See documentation for these classes for more. 
+    Inherits from `.codes._template.sim.FaultyMeasurements` and `.codes._template.plot.PerfectMeasurements`. See documentation for these classes for more.
 
-    Dependent on the ``figure3d`` argument, either a 3D figure object is created that inherits from `~.plot.Template3D` and `.codes._template.plot.PerfectMeasurements.Figure`, or the 2D `.codes._template.plot.PerfectMeasurements.Figure` is used. 
+    Dependent on the ``figure3d`` argument, either a 3D figure object is created that inherits from `~.plot.Template3D` and `.codes._template.plot.PerfectMeasurements.Figure`, or the 2D `.codes._template.plot.PerfectMeasurements.Figure` is used.
 
     Parameters
     ----------
     args
-        Positional arguments are passed on to `.codes._template.sim.FaultyMeasurements`. 
+        Positional arguments are passed on to `.codes._template.sim.FaultyMeasurements`.
     figure3d
         Enables plotting on a 3D lattice. Disable to plot layer-by-layer on a 2D lattice, which increases responsiveness.
     kwargs
-        Keyword arguments are passed on to `.codes._template.sim.FaultyMeasurements` and the figure object. 
-    
+        Keyword arguments are passed on to `.codes._template.sim.FaultyMeasurements` and the figure object.
+
     """
+
     def __init__(self, *args, figure3d: bool = True, **kwargs) -> None:
         self.figure3d = figure3d
         TemplateSimFM.__init__(self, *args, **kwargs)

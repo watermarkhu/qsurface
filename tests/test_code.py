@@ -1,11 +1,8 @@
 from opensurfacesim import codes
-import opensurfacesim as oss
 import pytest
+from .variables import *
 
-
-CODES = codes.CODES
 code_types = ["PerfectMeasurements", "FaultyMeasurements"]
-no_wait_param = oss.plot.PlotParams(blocking_wait=0.001)
 
 
 @pytest.mark.plotting

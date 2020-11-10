@@ -2,15 +2,10 @@ from opensurfacesim.main import *
 import opensurfacesim as oss
 import pytest
 import random
-from .errors import get_error_combinations, get_error_keys
+from .variables import *
 
 
-CODES = oss.codes.CODES
-ERRORS = oss.errors.ERRORS
-SIZE_PM = 12
-SIZE_FM = 4
 ITERS = 100
-no_wait_param = oss.plot.PlotParams(blocking_wait=0.001)
 
 
 @pytest.mark.parametrize("Code", CODES)
@@ -52,15 +47,19 @@ def test_unionfind_sim(size, Code, errors, faulty, max_rate, extra_keys):
 @pytest.mark.parametrize("dynamic_forest", [False, True])
 def test_unionfind_options(weighted_growth, weighted_union, dynamic_forest):
     """Test options of unionfind decoder."""
-    code, decoder = initialize(SIZE_PM, "toric", "unionfind", enabled_errors=["pauli"])
+    code, decoder = initialize(
+        SIZE_PM,
+        "toric",
+        "unionfind",
+        enabled_errors=["pauli"],
+        weighted_growth=weighted_growth,
+        weighted_union=weighted_union,
+        dynamic_forest=dynamic_forest,
+    )
     trivial = 0
     for _ in range(ITERS):
         code.random_errors(p_bitflip=random.random() * 0.2)
-        decoder.decode(
-            weighted_growth=weighted_growth,
-            weighted_union=weighted_union,
-            dynamic_forest=dynamic_forest,
-        )
+        decoder.decode()
         trivial += code.trivial_ancillas
 
     assert trivial == ITERS
@@ -80,17 +79,13 @@ def test_unionfind_plot(faulty, size):
         "toric",
         "unionfind",
         enabled_errors=["pauli"],
+        faulty_measurements=faulty,
+        initial_states=(0, 0),
         plotting=True,
         plot_params=no_wait_param,
-        faulty_measurements=faulty,
-    )
-    run(
-        code,
-        decoder,
-        error_rates={"p_bitflip": 0.1},
-        print_steps=True,
         step_bucket=True,
         step_cluster=True,
         step_cycle=True,
         step_peel=True,
     )
+    run(code, decoder, error_rates={"p_bitflip": 0.1}, decode_initial=False)

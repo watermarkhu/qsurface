@@ -8,7 +8,7 @@ from functools import wraps
 class Sim(ABC):
     """Template simulation class for errors.
 
-    The template simulation error class can be used as a parent class for error modules for surface code classes that inherit from `.codes._template.sim.PerfectMeasurements` or `.codes._template.sim.FaultyMeasurements`. The error of the module must be applied to each qubit separately using the abstract method `random_error`. 
+    The template simulation error class can be used as a parent class for error modules for surface code classes that inherit from `.codes._template.sim.PerfectMeasurements` or `.codes._template.sim.FaultyMeasurements`. The error of the module must be applied to each qubit separately using the abstract method `random_error`.
 
     Parameters
     ----------
@@ -44,9 +44,9 @@ class Sim(ABC):
 class Plot(Sim):
     """Template plot class for errors.
 
-    The template plotting error class can be used as a parent class for error modules for surface code classes that inherit from `.codes._template.plot.PerfectMeasurements` or `.codes._template.plot.FaultyMeasurements`, which have a figure object attribute at ``code.figure``. The error of the module must be applied to each qubit separately using the abstract method `random_error`. 
+    The template plotting error class can be used as a parent class for error modules for surface code classes that inherit from `.codes._template.plot.PerfectMeasurements` or `.codes._template.plot.FaultyMeasurements`, which have a figure object attribute at ``code.figure``. The error of the module must be applied to each qubit separately using the abstract method `random_error`.
 
-    To change properties of the qubit (a `matplotlib.patches.Circle` object) if an error has been appied to visualize the error. The template plot error class features an easy way to define the plot properties of an error. First of all, each error must be defined in an *error method* that applies the error to the qubit. The template can contain multiple *error methods*, all of which must be called by `random_error`. For all errors that we wish to plot, we must add the names of the methods to ``self.error_methods``. The plot properties are stored under the same name in ``self.plot_params``. 
+    To change properties of the qubit (a `matplotlib.patches.Circle` object) if an error has been appied to visualize the error. The template plot error class features an easy way to define the plot properties of an error. First of all, each error must be defined in an *error method* that applies the error to the qubit. The template can contain multiple *error methods*, all of which must be called by `random_error`. For all errors that we wish to plot, we must add the names of the methods to ``self.error_methods``. The plot properties are stored under the same name in ``self.plot_params``.
 
     .. code-block:: python
 
@@ -60,14 +60,14 @@ class Plot(Sim):
             def random_error(self, qubit):
                 if random.random < 0.5:
                     self.error_method(qubit)
-            
+
             def example_method(self, qubit):
                 # apply error
                 pass
 
     Note that the properties can either be literal or refer to some attribute of the `~.plot.PlotParams` object stored at ``self.code.figure.params`` (see `~.plot.PlotParams.load_params`). Thus the name for the error methods **must be unique** to any attribute in `~plot.PlotParams`.
-    
-    Similarly, additional legend items can be added to the surface code plot ``self.code.figure``. Each legend item is a ``matplotlib.lines.line2D``. The properties for each additional item in the legend is stored at ``self.legend_params``, and must also be unique to any `~.plot.PlotParams` attribute. The legend titles for each item is stored in ``self.legend_titles`` at the same keys. The additional legend items are added in `~.codes._template.PerfectMeasurements.Figure.init_legend`. 
+
+    Similarly, additional legend items can be added to the surface code plot ``self.code.figure``. Each legend item is a ``matplotlib.lines.line2D``. The properties for each additional item in the legend is stored at ``self.legend_params``, and must also be unique to any `~.plot.PlotParams` attribute. The legend titles for each item is stored in ``self.legend_titles`` at the same keys. The additional legend items are added in `~.codes._template.PerfectMeasurements.Figure.init_legend`.
 
     .. code-block:: python
 
@@ -92,12 +92,12 @@ class Plot(Sim):
             def random_error(self, qubit):
                 if random.random < 0.5:
                     self.error_method(qubit)
-            
+
             def example_method(self, qubit):
                 # apply error
                 pass
 
-    Finally, error methods can be also be added to the GUI of the surface code plot. For this, each error method must a *static method* that is not dependant on the error class. Each error method to be added in the GUI must be included in ``self.gui_methods``. The GUI elements are included in `~.codes._template.PerfectMeasurements.Figure.init_plot`. 
+    Finally, error methods can be also be added to the GUI of the surface code plot. For this, each error method must a *static method* that is not dependant on the error class. Each error method to be added in the GUI must be included in ``self.gui_methods``. The GUI elements are included in `~.codes._template.PerfectMeasurements.Figure.init_plot`.
 
     .. code-block:: python
 
@@ -123,7 +123,7 @@ class Plot(Sim):
             def random_error(self, qubit):
                 if random.random < 0.5:
                     self.error_method(qubit)
-            
+
             @staticmethod
             def example_method(qubit):
                 # apply error
@@ -137,25 +137,25 @@ class Plot(Sim):
     Attributes
     ----------
     error_methods : list
-        List of names of the error methods that changes the qubit surface code plot according to properties defined in ``self.plot_params``. 
+        List of names of the error methods that changes the qubit surface code plot according to properties defined in ``self.plot_params``.
     plot_params : {method_name: properties}
-        Qubit plot properties to apply for each of the error methods in ``self.error_methods``. Properties are loaded to the `~.plot.PlotParams` object stored at the ``self.code.figure.params`` attribute of the surface code plot (see `~.plot.PlotParams.load_params`). 
+        Qubit plot properties to apply for each of the error methods in ``self.error_methods``. Properties are loaded to the `~.plot.PlotParams` object stored at the ``self.code.figure.params`` attribute of the surface code plot (see `~.plot.PlotParams.load_params`).
     legend_params {method_name: Line2D properties}
-        Legend items to add to the surface code plot. Properties are loaded to the `~.plot.PlotParams` object stored at the ``self.code.figure.params`` attribute of the surface code plot (see `~.plot.PlotParams.load_params`), and used to initialize a `~matplotlib.lines.Line2D` legend item. 
+        Legend items to add to the surface code plot. Properties are loaded to the `~.plot.PlotParams` object stored at the ``self.code.figure.params`` attribute of the surface code plot (see `~.plot.PlotParams.load_params`), and used to initialize a `~matplotlib.lines.Line2D` legend item.
     legend_titles : {method_name: legend_title}
         Titles to display for the legend items in ``self.legend_params``.
     gui_permanent : bool
         If enabled, the application of an error method on a qubit cannot be reversed within the same simulation instance.
     gui_methods : list
-        List of names of the static error methods include in the surface plot GUI. 
+        List of names of the static error methods include in the surface plot GUI.
     """
+
     error_methods: list = []
     legend_params: dict = {}
     legend_titles: dict = {}
     plot_params: dict = {}
     gui_permanent: bool = False
     gui_methods: list = []
-    
 
     def __init__(self, *args, **kwargs) -> None:
         super().__init__(*args, *kwargs)
@@ -168,14 +168,14 @@ class Plot(Sim):
             setattr(self, error_name, self.plot_error(error_name))
 
     def plot_error(self, error_name):
-        """Decorates the error method with plotting features. 
+        """Decorates the error method with plotting features.
 
-        The method ``error_name`` is decorated with plot property changes defined in ``self.plot_params``. For each of the properties to change, the original property value of the artist is stored and requested as a change at the end of the simulation instance. 
+        The method ``error_name`` is decorated with plot property changes defined in ``self.plot_params``. For each of the properties to change, the original property value of the artist is stored and requested as a change at the end of the simulation instance.
 
         See Also
         --------
         `.plot.Template2D.temporary_properties`
-        `.plot.Template2D.new_properties`. 
+        `.plot.Template2D.new_properties`.
         """
         sim_method = getattr(self, error_name)
         figure = self.code.figure

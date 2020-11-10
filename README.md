@@ -102,7 +102,7 @@ Plotting will be performed on a 3D axis if faulty measurements are enabled.
 
 In IPython, inline images are created for each iteration of the plot, which can be tested in the [example notebook](https://mybinder.org/v2/gh/watermarkhu/opensurfacesim/master?filepath=examples.ipynb).
 
-## CLI
+## Command line interface
 
 Simulations can also be initiated from the command line
 

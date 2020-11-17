@@ -4,12 +4,12 @@ Template code
 Simulation
 ^^^^^^^^^^
 
-.. autoclass:: opensurfacesim.codes._template.sim.PerfectMeasurements
+.. autoclass:: qsurface.codes._template.sim.PerfectMeasurements
     :member-order: bysource
     :inherited-members:
     :members:
 
-.. autoclass:: opensurfacesim.codes._template.sim.FaultyMeasurements
+.. autoclass:: qsurface.codes._template.sim.FaultyMeasurements
     :member-order: bysource
     :inherited-members:
     :members:
@@ -17,9 +17,9 @@ Simulation
 Plotting
 ^^^^^^^^
 
-.. autoclass:: opensurfacesim.codes._template.plot.PerfectMeasurements
+.. autoclass:: qsurface.codes._template.plot.PerfectMeasurements
     :member-order: bysource
     :inherited-members:
     :members:
 
-.. autoclass:: opensurfacesim.codes._template.plot.FaultyMeasurements
+.. autoclass:: qsurface.codes._template.plot.FaultyMeasurements

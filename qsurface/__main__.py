@@ -1,5 +1,5 @@
-from opensurfacesim.main import BenchmarkDecoder, run, run_multiprocess, initialize
-from opensurfacesim.threshold import run_many, ThresholdFit, read_csv
+from qsurface.main import BenchmarkDecoder, run, run_multiprocess, initialize
+from qsurface.threshold import run_many, ThresholdFit, read_csv
 from collections import defaultdict
 import argparse
 import sys
@@ -28,7 +28,7 @@ def _get_kwargs(parsed_args, arg_group):
 def cli(args):
 
     parser = argparse.ArgumentParser(
-        prog="opensurfacesim",
+        prog="qsurface",
         description="Simulation of surface codes. Need more information here",
         usage="%(prog)s",
     )

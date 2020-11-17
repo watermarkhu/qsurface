@@ -1,6 +1,6 @@
 Running simulations
 ===================
 
-.. automodule:: opensurfacesim.main
+.. automodule:: qsurface.main
    :members:
    :member-order: bysource

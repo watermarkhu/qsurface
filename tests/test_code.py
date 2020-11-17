@@ -1,4 +1,4 @@
-from opensurfacesim import codes
+from qsurface import codes
 import pytest
 from .variables import *
 

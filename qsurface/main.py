@@ -119,7 +119,7 @@ def run(
     iterations
         Number of iterations to run.
     error_rates
-        Dictionary of error rates (see `~opensurfacesim.errors`). Errors must have been loaded during code class initialization by `~.codes._template.sim.PerfectMeasurements.initialize` or `~.codes._template.sim.PerfectMeasurements.init_errors`.
+        Dictionary of error rates (see `~qsurface.errors`). Errors must have been loaded during code class initialization by `~.codes._template.sim.PerfectMeasurements.initialize` or `~.codes._template.sim.PerfectMeasurements.init_errors`.
     decode_initial
         Decode initial code configuration before applying loaded errors. If random states are used for the data-qubits of the ``code`` at class initialization (default behavior), an initial round of decoding is required and is enabled through the ``decode_initial`` flag (default is enabled).
     seed
@@ -220,7 +220,7 @@ def run_multiprocess(
     decoder
         A decoder instance (see initialize).
     error_rates
-        Dictionary for error rates (see `~opensurfacesim.errors`).
+        Dictionary for error rates (see `~qsurface.errors`).
     iterations
         Total number of iterations to run.
     decode_initial

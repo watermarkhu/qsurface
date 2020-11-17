@@ -11,7 +11,7 @@ class Toric(SimToric, Plot):
 
     Has all class attributes and methods from `.unionfind.sim.Toric`, with additional parameters below. Default values for these parameters can be supplied via a *decoders.ini* file under the section of ``[unionfind]`` (see `.decoders._template.read_config`).
 
-    The plotting class initiates a `opensurfacesim.plot` object. For its usage, see :ref:`plot-usage`.
+    The plotting class initiates a `qsurface.plot` object. For its usage, see :ref:`plot-usage`.
 
     Parameters
     ----------
@@ -329,7 +329,7 @@ class Planar(Toric, SimPlanar):
 
     Has all class attributes and methods from `.unionfind.sim.Planar`, with additional parameters below. Default values for these parameters can be supplied via a *decoders.ini* file under the section of ``[unionfind]`` (see `.decoders._template.read_config`).
 
-    The plotting class initiates a `opensurfacesim.plot` object. For its usage, see :ref:`plot-usage`.
+    The plotting class initiates a `qsurface.plot` object. For its usage, see :ref:`plot-usage`.
 
     Parameters
     ----------

@@ -8,13 +8,13 @@ README = (directory / "README.md").read_text()
 
 
 setup(
-    name="opensurfacesim",
+    name="qsurface",
     version="0.1.3",
     description="Open library from surface code simulations and visualizations",
     long_description=README,
     long_description_content_type="text/markdown",
-    url="https://github.com/watermarkhu/opensurfacesim",
-    project_urls={"Documentation": "https://opensurfacesim.readthedocs.io/en/latest/"},
+    url="https://github.com/watermarkhu/qsurface",
+    project_urls={"Documentation": "https://qsurface.readthedocs.io/en/latest/"},
     author="Mark Shui Hu",
     author_email="watermarkhu@gmail.com",
     license="BSD-3",
@@ -36,8 +36,8 @@ setup(
     ],
     entry_points={
         "console_scrips": [
-            "py-opensurfacesim=opensurfacesim.__main__:main",
-            "opensurfacesim-getblossomv=opensurfacesim.decoders.mwpm:get_blossomv",
+            "qsurface=qsurface.__main__:main",
+            "qsurface-getblossomv=qsurface.decoders.mwpm:get_blossomv",
         ],
     },
 )

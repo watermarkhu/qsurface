@@ -161,7 +161,7 @@ class PerfectMeasurements(ABC):
         """
         for error_module in error_modules:
             if type(error_module) == str:
-                error_module = importlib.import_module(".errors.{}".format(error_module), package="opensurfacesim")
+                error_module = importlib.import_module(".errors.{}".format(error_module), package="qsurface")
             self._init_error(error_module, error_rates)
 
     def _init_error(self, error_module, error_rates):

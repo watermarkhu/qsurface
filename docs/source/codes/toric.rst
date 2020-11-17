@@ -4,12 +4,12 @@ Toric code
 Simulation
 ^^^^^^^^^^
 
-.. autoclass:: opensurfacesim.codes.toric.sim.PerfectMeasurements
+.. autoclass:: qsurface.codes.toric.sim.PerfectMeasurements
     :member-order: bysource
     :inherited-members:
     :members:
 
-.. autoclass:: opensurfacesim.codes.toric.sim.FaultyMeasurements
+.. autoclass:: qsurface.codes.toric.sim.FaultyMeasurements
     :member-order: bysource
     :inherited-members:
     :members:
@@ -17,9 +17,9 @@ Simulation
 Plotting
 ^^^^^^^^
 
-.. autoclass:: opensurfacesim.codes.toric.plot.PerfectMeasurements
+.. autoclass:: qsurface.codes.toric.plot.PerfectMeasurements
     :member-order: bysource
     :inherited-members:
     :members:
 
-.. autoclass:: opensurfacesim.codes.toric.plot.FaultyMeasurements
+.. autoclass:: qsurface.codes.toric.plot.FaultyMeasurements

@@ -34,6 +34,6 @@ Default values for plot properties such as colors and linewidths are saved in a 
 Development
 -----------
 
-.. automodule:: opensurfacesim.plot
+.. automodule:: qsurface.plot
     :members:
     :member-order: bysource

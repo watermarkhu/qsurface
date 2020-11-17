@@ -17,7 +17,7 @@ sys.path.insert(0, os.path.abspath("../../"))
 
 # -- Project information -----------------------------------------------------
 
-project = "Open Surface code Simulations"
+project = "Qsurface"
 copyright = "2020, Mark Shui Hu"
 author = "Mark Shui Hu"
 

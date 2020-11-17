@@ -8,9 +8,9 @@ import pptree
 class Node(ABC):
     """Element in the node-tree.
 
-    A subgraph :math:`\mathcal{V}\subseteq C` is a spanning-tree of a cluster :math:`C` if it is a connected acyclic subgraph that includes all vertices of :math:`C` and a minimum number of edges. We call the spanning-tree of a cluster its ancilla-tree. An acyclic connected spanning-forest is required for the Union-Find Decoder.
+    A subgraph :math:`\\mathcal{V}\\subseteq C` is a spanning-tree of a cluster :math:`C` if it is a connected acyclic subgraph that includes all vertices of :math:`C` and a minimum number of edges. We call the spanning-tree of a cluster its ancilla-tree. An acyclic connected spanning-forest is required for the Union-Find Decoder.
 
-    A node-tree :math:`\mathcal{N}` is a partition of a ancilla-tree :math:`\mathcal{V}`, such that each element of the partition -- which we call a *node* :math:`n` -- represents a set of adjacent vertices that lie at the same distance -- the *node radius :math:`r` -- from the *primer ancilla*, which initializes the node and lies at its center. The node-tree is a directed acyclic graph, and its edges :math:`\mathcal{E}_i` have lengths equal to the distance between the primer vertices of neighboring nodes.
+    A node-tree :math:`\\mathcal{N}` is a partition of a ancilla-tree :math:`\\mathcal{V}`, such that each element of the partition -- which we call a *node* :math:`n` -- represents a set of adjacent vertices that lie at the same distance -- the *node radius :math:`r` -- from the *primer ancilla*, which initializes the node and lies at its center. The node-tree is a directed acyclic graph, and its edges :math:`\\mathcal{E}_i` have lengths equal to the distance between the primer vertices of neighboring nodes.
 
     Parameters
     ----------
@@ -112,7 +112,7 @@ class Syndrome(Node):
 
         Tail recursive function that calculates the parities of the current node and all its descendent nodes.
 
-        .. math:: s_p = \\big( \\sum_{n \\in \\text{ children of } s} (1+s_p)\ \\big ) \\bmod 2
+        .. math:: s_p = \\big( \\sum_{n \\in \\text{ children of } s} (1+s_p) \\big) \\bmod 2
 
         Parameters
         ----------

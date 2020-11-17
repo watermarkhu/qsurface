@@ -9,7 +9,7 @@ README = (directory / "README.md").read_text()
 
 setup(
     name="qsurface",
-    version="0.1.3",
+    version="0.1.4",
     description="Open library from surface code simulations and visualizations",
     long_description=README,
     long_description_content_type="text/markdown",

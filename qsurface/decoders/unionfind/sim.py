@@ -344,7 +344,7 @@ class Toric(Sim):
     def union_bucket(self, union_list: List[Tuple[AncillaQubit, Edge, AncillaQubit]], **kwargs):
         """Merges clusters in ``union_list`` if checks are passed.
 
-        Items in ``union_list`` consists of ``[ancillaA, edge, ancillaB]`` of two ancillas that, at the time added to the list, were not part of the same cluster. The cluster of an ancilla is stored at ``ancilla.cluster``, but due to cluster mergers the cluster at ``ancilla_cluster`` may not be the root element in the cluster-tree, and thus the cluster must be requested by ``ancilla.cluster.``\ `~.unionfind.elements.Cluster.find`. Since the clusters of ``ancillaA`` and ``ancillaB`` may have already merged, checks are performed in `union_check` after which the clusters are conditionally merged on ``edge`` by `union_edge`.
+        Items in ``union_list`` consists of ``[ancillaA, edge, ancillaB]`` of two ancillas that, at the time added to the list, were not part of the same cluster. The cluster of an ancilla is stored at ``ancilla.cluster``, but due to cluster mergers the cluster at ``ancilla_cluster`` may not be the root element in the cluster-tree, and thus the cluster must be requested by ``ancilla.cluster.`` `~.unionfind.elements.Cluster.find`. Since the clusters of ``ancillaA`` and ``ancillaB`` may have already merged, checks are performed in `union_check` after which the clusters are conditionally merged on ``edge`` by `union_edge`.
 
         If ``weighted_union`` is enabled, the smaller cluster is always made a child of the bigger cluster in the cluster-tree. This ensures the that the depth of the tree is minimized and the future calls to `~.unionfind.elements.Cluster.find` is reduced.
 

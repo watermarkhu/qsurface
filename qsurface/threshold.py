@@ -52,7 +52,7 @@ def run_many(
     enabled_errors
         List of error modules from `.errors`.
     error_rates
-        List of dictionaries for error rates per configuration (see `~opensurfacesim.errors`).
+        List of dictionaries for error rates per configuration (see `~qsurface.errors`).
     faulty_measurements
         Enable faulty measurements (decode in a 3D lattice).
     methods_to_benchmark

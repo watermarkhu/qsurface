@@ -228,7 +228,7 @@ class Sim(ABC):
         Parameters
         ----------
         find_pseudo : bool, optional
-            If enabled, the lists of syndromes returned are not only `~.codes.elements.AncillaQubit`\ s, but tuples of ``(ancilla, pseudo)``, where ``pseudo`` is the closest `~.codes.elements.PseudoQubit` in the boundary of the code.
+            If enabled, the lists of syndromes returned are not only `~.codes.elements.AncillaQubit` objects, but tuples of ``(ancilla, pseudo)``, where ``pseudo`` is the closest `~.codes.elements.PseudoQubit` in the boundary of the code.
 
         Returns
         -------

@@ -7,7 +7,8 @@
 !requirements.txt
 !pytest.ini
 test.py
-opensurfacesim/decoders/mwpm/blossom5-v2.05.src/
+qsurface/decoders/mwpm/blossom5-v2.05.src/
+!qsurface/decoders/decoders.ini
 
 .python-version
 .vscode/

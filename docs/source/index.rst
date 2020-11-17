@@ -1,4 +1,4 @@
-.. opensurfacesim documentation master file, created by
+.. qsurface documentation master file, created by
    sphinx-quickstart on Mon Oct 12 11:56:41 2020.
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.

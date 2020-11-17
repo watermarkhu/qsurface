@@ -3,10 +3,10 @@
 Information
 -----------
 
-.. automodule:: opensurfacesim.decoders.unionfind
+.. automodule:: qsurface.decoders.unionfind
     :members:
 
-.. automodule:: opensurfacesim.decoders.unionfind.elements
+.. automodule:: qsurface.decoders.unionfind.elements
     :members:
 
 Simulation
@@ -14,27 +14,27 @@ Simulation
 
 The following description also applies to `.unionfind.sim.Planar`. 
 
-.. autoclass:: opensurfacesim.decoders.unionfind.sim.Toric
+.. autoclass:: qsurface.decoders.unionfind.sim.Toric
     :member-order: bysource
     :inherited-members:
     :members:
 
-.. autoclass:: opensurfacesim.decoders.unionfind.sim.Planar
+.. autoclass:: qsurface.decoders.unionfind.sim.Planar
 
 Plotting
 --------
 
-.. autoclass:: opensurfacesim.decoders.unionfind.plot.Toric
+.. autoclass:: qsurface.decoders.unionfind.plot.Toric
 
-    .. autoclass:: opensurfacesim.decoders.unionfind.plot::Toric.Figure2D
+    .. autoclass:: qsurface.decoders.unionfind.plot::Toric.Figure2D
 
-    .. autoclass:: opensurfacesim.decoders.unionfind.plot::Toric.Figure3D
+    .. autoclass:: qsurface.decoders.unionfind.plot::Toric.Figure3D
 
-.. autoclass:: opensurfacesim.decoders.unionfind.plot.Planar
+.. autoclass:: qsurface.decoders.unionfind.plot.Planar
 
-    .. autoclass:: opensurfacesim.decoders.unionfind.plot::Planar.Figure2D
+    .. autoclass:: qsurface.decoders.unionfind.plot::Planar.Figure2D
 
-    .. autoclass:: opensurfacesim.decoders.unionfind.plot::Planar.Figure3D
+    .. autoclass:: qsurface.decoders.unionfind.plot::Planar.Figure3D
 
 
 .. [delfosse2017almost] Delfosse, Nicolas and Nickerson, Naomi H., *Almost-linear time decoding algorithm for topological codes*, arXiv preprint arXiv:1709.06218, 2017. 

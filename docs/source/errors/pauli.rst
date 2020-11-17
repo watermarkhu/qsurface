@@ -1,5 +1,5 @@
 Pauli error
 -----------
 
-.. automodule:: opensurfacesim.errors.pauli
+.. automodule:: qsurface.errors.pauli
     :members:

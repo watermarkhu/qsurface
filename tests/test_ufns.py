@@ -1,5 +1,5 @@
-from opensurfacesim.main import *
-import opensurfacesim as oss
+from qsurface.main import *
+import qsurface as oss
 import matplotlib as mpl
 import pytest
 import random

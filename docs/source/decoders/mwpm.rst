@@ -1,18 +1,18 @@
 Information
 -----------
 
-.. automodule:: opensurfacesim.decoders.mwpm
+.. automodule:: qsurface.decoders.mwpm
     :members:
 
 Simulation
 ----------
 
-.. autoclass:: opensurfacesim.decoders.mwpm.sim.Toric
+.. autoclass:: qsurface.decoders.mwpm.sim.Toric
     :member-order: bysource
     :inherited-members:
     :members:
 
-.. autoclass:: opensurfacesim.decoders.mwpm.sim.Planar
+.. autoclass:: qsurface.decoders.mwpm.sim.Planar
     :member-order: bysource
     :inherited-members:
     :members:
@@ -21,7 +21,7 @@ Simulation
 Plotting
 --------
 
-.. automodule:: opensurfacesim.decoders.mwpm.plot
+.. automodule:: qsurface.decoders.mwpm.plot
     :member-order: bysource
     :members:
 

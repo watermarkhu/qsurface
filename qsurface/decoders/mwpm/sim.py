@@ -1,5 +1,5 @@
 from typing import List, Tuple
-from opensurfacesim.codes.elements import AncillaQubit
+from qsurface.codes.elements import AncillaQubit
 from .._template import Sim
 import networkx as nx
 from numpy.ctypeslib import ndpointer

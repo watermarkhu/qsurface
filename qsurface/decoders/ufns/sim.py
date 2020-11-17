@@ -10,7 +10,7 @@ UL = List[Tuple[AncillaQubit, Edge, AncillaQubit]]
 class Toric(UFToric):
     """Union-Find Node-Suspension decoder for the toric lattice.
 
-    Within the combined Union-Find and Node-Suspension data structure, every `~.unionfind.elements.Cluster` is partitioned into one or more `~.ufns.elements.Node`\ s. The ``node`` attribute is monkey-patched to the `~.codes.elements.AncillaQubit` object to assist the identification of its parent `~.ufns.elements.Node`.
+    Within the combined Union-Find and Node-Suspension data structure, every `~.unionfind.elements.Cluster` is partitioned into one or more `~.ufns.elements.Node` objectss. The ``node`` attribute is monkey-patched to the `~.codes.elements.AncillaQubit` object to assist the identification of its parent `~.ufns.elements.Node`.
 
     The boundary of every cluster is not stored at the cluster object, but divided under its partitioned nodes. Cluster growth is initiated from the root of the node-tree. The attributes ``root_node`` and ``min_delay`` are monkey-patched to the `~.unionfind.elements.Cluster` object to assist with cluster growth in the Node-Suspension data structure. See `grow_node` for more.
 
@@ -233,9 +233,9 @@ class Toric(UFToric):
 
         Grows the boundary list that is stored at the current node if there the current node is not suspended. The condition required is the following:
 
-        .. math: n_{\text{delay}} - n_{\text{waited}} - \min_{x \in \mathcal{N}}{n_{\text{delay}}} = 0
+        .. math: n_{\\text{delay}} - n_{\\text{waited}} - \\min_{x \\in \\mathcal{N}}{n_{\\text{delay}}} = 0
 
-        where :math:`\mathcal{N}` is the node-tree. The minimal delay value in the node-tree here stored as ``cluster.min_delay``. Fully grown edges are added to ``union_list`` to be later considered by `union_bucket`.
+        where :math:`\\mathcal{N}` is the node-tree. The minimal delay value in the node-tree here stored as ``cluster.min_delay``. Fully grown edges are added to ``union_list`` to be later considered by `union_bucket`.
 
         Parameters
         ----------

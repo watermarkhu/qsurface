@@ -8,7 +8,7 @@ class Toric(PlotToric, SimToric):
 
     Has all class attributes, methods, and nested figure classes from `.ufns.sim.Toric`, with additional parameters below. Default values for these parameters can be supplied via a *decoders.ini* file under the section of ``[ufns]`` (see `.decoders._template.read_config`).
 
-    The plotting class initiates a `opensurfacesim.plot` object. For its usage, see :ref:`plot-usage`.
+    The plotting class initiates a `qsurface.plot` object. For its usage, see :ref:`plot-usage`.
 
     Parameters
     ----------
@@ -46,7 +46,7 @@ class Planar(Toric, PlotPlanar, SimPlanar):
 
     Has all class attributes, methods, and nested figure classes from `.ufns.sim.Planar`, with additional parameters below. Default values for these parameters can be supplied via a *decoders.ini* file under the section of ``[ufns]`` (see `.decoders._template.read_config`).
 
-    The plotting class initiates a `opensurfacesim.plot` object. For its usage, see :ref:`plot-usage`.
+    The plotting class initiates a `qsurface.plot` object. For its usage, see :ref:`plot-usage`.
 
     Parameters
     ----------

@@ -1,4 +1,4 @@
-from opensurfacesim.main import *
+from qsurface.main import *
 import matplotlib as mpl
 import pytest
 from .variables import *

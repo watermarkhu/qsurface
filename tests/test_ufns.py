@@ -1,13 +1,10 @@
-from opensurfacesim.main import *
-import opensurfacesim as oss
+from qsurface.main import *
+import qsurface as oss
+import matplotlib as mpl
 import pytest
 import random
-from .errors import get_error_combinations, get_error_keys
+from .variables import *
 
-
-CODES = oss.codes.CODES
-SIZE_PM = 12
-SIZE_FM = 4
 ITERS = 100
 no_wait_param = oss.plot.PlotParams(blocking_wait=0.001)
 
@@ -61,19 +58,14 @@ def test_ufns_plot(faulty, size):
         "toric",
         "ufns",
         enabled_errors=["pauli"],
+        faulty_measurements=faulty,
+        initial_states=(0, 0),
         plotting=True,
         plot_params=no_wait_param,
-        faulty_measurements=faulty,
-    )
-    run(
-        code,
-        decoder,
-        error_rates={"p_bitflip": 0.1},
-        print_steps=True,
-        print_tree=True,
         step_bucket=True,
         step_cluster=True,
         step_node=True,
         step_cycle=True,
         step_peel=True,
     )
+    run(code, decoder, error_rates={"p_bitflip": 0.1}, decode_initial=False)

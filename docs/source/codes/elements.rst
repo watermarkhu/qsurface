@@ -1,7 +1,7 @@
 Code elements
 -------------
 
-.. automodule:: opensurfacesim.codes.elements
+.. automodule:: qsurface.codes.elements
     :member-order: bysource
     :inherited-members:
     :members:

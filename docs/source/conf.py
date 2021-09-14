@@ -12,11 +12,12 @@
 
 import os
 import sys
+
 sys.path.insert(0, os.path.abspath("../../"))
 
 # -- Project information -----------------------------------------------------
 
-project = "Open Surface code Simulations"
+project = "Qsurface"
 copyright = "2020, Mark Shui Hu"
 author = "Mark Shui Hu"
 
@@ -37,9 +38,9 @@ extensions = [
 ]
 
 intersphinx_mapping = {
-    'python': ('https://docs.python.org/3', None),
+    "python": ("https://docs.python.org/3", None),
     "matplotlib": ("https://matplotlib.org/", None),
-    "networkx": ("https://networkx.github.io/documentation/stable/", None), 
+    "networkx": ("https://networkx.github.io/documentation/stable/", None),
 }
 
 # Add any paths that contain templates here, relative to this directory.

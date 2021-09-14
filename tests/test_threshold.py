@@ -1,12 +1,9 @@
-from opensurfacesim.threshold import *
-import opensurfacesim as oss
+from qsurface.threshold import *
+import qsurface as oss
 import pytest
 import pandas as pd
 import matplotlib.pyplot as plt
-
-
-CODES = oss.codes.CODES
-DECODERS = oss.decoders.DECODERS
+from .variables import *
 
 
 @pytest.fixture

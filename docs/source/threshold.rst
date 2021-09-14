@@ -1,6 +1,6 @@
 Running a threshold simulation
 ==============================
 
-.. automodule:: opensurfacesim.threshold
+.. automodule:: qsurface.threshold
    :members:
    :member-order: bysource

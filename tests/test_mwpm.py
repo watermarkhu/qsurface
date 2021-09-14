@@ -1,14 +1,10 @@
-from opensurfacesim.main import *
-import opensurfacesim as oss
+from qsurface.main import *
+import qsurface as oss
 import pytest
 import random
-from .errors import get_error_combinations, get_error_keys
+from .variables import *
 
 
-CODES = oss.codes.CODES
-ERRORS = oss.errors.ERRORS
-SIZE_PM = 12
-SIZE_FM = 4
 ITERS = 100
 
 

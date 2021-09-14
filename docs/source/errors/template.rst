@@ -1,6 +1,6 @@
 Template error
 --------------
 
-.. automodule:: opensurfacesim.errors._template
+.. automodule:: qsurface.errors._template
     :member-order: bysource
     :members:

@@ -1,13 +1,7 @@
-from opensurfacesim.__main__ import cli
-import opensurfacesim as oss
+from qsurface.__main__ import cli
 import pytest
+from .variables import *
 
-
-CODES = oss.codes.CODES
-DECODERS = oss.decoders.DECODERS
-ERRORS = oss.errors.ERRORS
-SIZE_PM = 8
-SIZE_FM = 3
 ITERS = [1, 10]
 PROCESSES = [1, 2]
 

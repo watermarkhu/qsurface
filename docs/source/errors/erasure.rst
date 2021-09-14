@@ -1,5 +1,5 @@
 Erasure error
 -------------
 
-.. automodule:: opensurfacesim.errors.erasure
+.. automodule:: qsurface.errors.erasure
     :members:

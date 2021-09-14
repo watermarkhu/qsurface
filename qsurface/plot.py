@@ -383,7 +383,7 @@ class Template2D(ABC):
     def close(self):
         """Closes the figure."""
         if self.interactive:
-            self.draw_figure("Press (->/enter) to close figure.")
+            self.draw_figure("Press (➡️/enter) to close figure.")
             plt.close(self.figure)
 
     @property

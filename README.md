@@ -43,8 +43,8 @@ pip install qsurface
 ## Requirements
 
 * Python 3.7+
-* [Tkinter](https://docs.python.org/3/library/tkinter.html) or [PyQt5](https://riverbankcomputing.com/software/pyqt/intro) for interactive plotting.
-* Matplotlib 3.4+ for plotting on a 3D lattice (Refers to a future release of matplotlib, see [pull request](https://github.com/matplotlib/matplotlib/pull/18816))
+* Matplotlib 3.4+ for plotting on a 3D lattice, [Tkinter](https://docs.python.org/3/library/tkinter.html) or [PyQt5](https://riverbankcomputing.com/software/pyqt/intro) for interactive plotting.
+* ... For other requirements see `requirements.txt`
 
 ### MWPM decoder
 

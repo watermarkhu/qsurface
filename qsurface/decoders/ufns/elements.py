@@ -2,7 +2,9 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 from typing import Optional, Tuple
 from ...codes.elements import AncillaQubit
+import itertools
 import pptree
+import math
 
 
 class Node(ABC):
@@ -43,17 +45,18 @@ class Node(ABC):
 
     def __init__(self, primer: AncillaQubit):
 
+        # Vertex properties
         self.primer = primer
         primer.node = self
+        self.old_bound = self.new_bound = self.neighbors = self.root_list = []
 
-        self.old_bound = []
-        self.new_bound = []
-        self.neighbors = []
-        self.root_list = []
-        self.radius = 0
-        self.parity = 0
-        self.delay = 0
-        self.waited = 0
+        # Nodetree properties
+        self.radius = self.parity = self.delay = self.waited = 0
+
+        # Priority heap properties
+        self.parent = self.child = self.left = self.right = None
+        self.degree = 0
+        self.mark = False
 
     def __repr__(self):
         return f"{self.short}N({self.primer.loc[0]},{self.primer.loc[1]}|{self.primer.z})"
@@ -93,7 +96,8 @@ class Node(ABC):
 
         if parent is not None:
             parent, edge = parent
-            self.delay = int(parent.delay + (self.radius / 2 - parent.radius / 2) % 1 - edge * (-1) ** self.parity)
+
+            self.delay = parent.delay + int((self.radius / 2 - parent.radius / 2) % 1) - edge * (-1) ** self.parity
             if min_delay is None or (self.delay < min_delay):
                 min_delay = self.delay
 
@@ -138,7 +142,7 @@ class Junction(Node):
         parent_node
             Parent node in node-tree to indicate direction.
         """
-        self.parity = 1 - (sum([1 - node.ns_parity(self) for node, _ in self.neighbors if node is not parent_node]) % 2)
+        self.parity = (1 + sum([1 - node.ns_parity(self) for node, _ in self.neighbors if node is not parent_node]) % 2)
         return self.parity
 
 
@@ -173,4 +177,198 @@ def print_tree(current_node: Node, parent_node: Optional[Node] = None):
             get_children(child, node)
 
     get_children(current_node, parent_node)
-    pptree.print_tree(current_node, childattr="children", nameattr="_repr_status", horizontal=False)
+    pptree.print_tree(current_node, childattr="children", nameattr="_repr_status", horizontal=True)
+
+
+
+class FibonacciHeap:
+    """
+    From https://github.com/danielborowski/fibonacci-heap-python
+    """
+
+    def __init__(self) -> None:
+
+        # pointer to the head and minimum node in the root list
+        self.root_list, self.min_node = None, None
+
+        # maintain total node count in full fibonacci heap
+        self.total_nodes = 0
+
+    def __repr__(self) -> str:
+        if self.min_node:
+            return "Fibonacci Heap: " + ", ".join(
+                [str(n) for n in itertools.islice(self.iterate(self.find_min()), 3)]
+            ) + "..."
+        else:
+            return "Empty Fibonacci Heap"
+
+
+    # function to iterate through a doubly linked list
+    def iterate(self, head):
+        node = stop = head
+        flag = False
+        while True:
+            if node == stop and flag is True:
+                break
+            elif node == stop:
+                flag = True
+            yield node
+            node = node.right
+
+
+    # return min node in O(1) time
+    def find_min(self):
+        return self.min_node
+
+    # extract (delete) the min node from the heap in O(log n) time
+    # amortized cost analysis can be found here (http://bit.ly/1ow1Clm)
+    def extract_min(self):
+        z = self.min_node
+        if z is not None:
+            if z.child is not None:
+                # attach child nodes to root list
+                children = [x for x in self.iterate(z.child)]
+                for i in range(0, len(children)):
+                    self.merge_with_root_list(children[i])
+                    children[i].parent = None
+            self.remove_from_root_list(z)
+            # set new min node in heap
+            if z == z.right:
+                self.min_node = self.root_list = None
+            else:
+                self.min_node = z.right
+                self.consolidate()
+            self.total_nodes -= 1
+        return z
+
+    # insert new node into the unordered root list in O(1) time
+    # returns the node so that it can be used for decrease_key later
+    def insert(self, n: Node):
+        n.left = n.right = n
+        self.merge_with_root_list(n)
+        if self.min_node is None or n.delay < self.min_node.delay:
+            self.min_node = n
+        self.total_nodes += 1
+        return n
+
+    # modify the key of some node in the heap in O(1) time
+    def decrease_key(self, node: Node, delay: int):
+        if delay > node.delay:
+            return None
+        node.delay = delay
+        y = node.parent
+        if y is not None and node.delay < y.delay:
+            self.cut(node, y)
+            self.cascading_cut(y)
+        if node.delay < self.min_node.delay:
+            self.min_node = node
+
+    # merge two fibonacci heaps in O(1) time by concatenating the root lists
+    # the root of the new root list becomes equal to the first list and the second
+    # list is simply appended to the end (then the proper min node is determined)
+    def merge(self, h2):
+        H = FibonacciHeap()
+        H.root_list, H.min_node = self.root_list, self.min_node
+        # fix pointers when merging the two heaps
+        last = h2.root_list.left
+        h2.root_list.left = H.root_list.left
+        H.root_list.left.right = h2.root_list
+        H.root_list.left = last
+        H.root_list.left.right = H.root_list
+        # update min node if needed
+        if h2.min_node.delay < H.min_node.delay:
+            H.min_node = h2.min_node
+        # update total nodes
+        H.total_nodes = self.total_nodes + h2.total_nodes
+        return H
+
+    # if a child node becomes smaller than its parent node we
+    # cut this child node off and bring it up to the root list
+    def cut(self, node: Node, y):
+        self.remove_from_child_list(y, node)
+        y.degree -= 1
+        self.merge_with_root_list(node)
+        node.parent = None
+        node.mark = False
+
+    # cascading cut of parent node to obtain good time bounds
+    def cascading_cut(self, y):
+        z = y.parent
+        if z is not None:
+            if y.mark is False:
+                y.mark = True
+            else:
+                self.cut(y, z)
+                self.cascading_cut(z)
+
+    # combine root nodes of equal degree to consolidate the heap
+    # by creating a list of unordered binomial trees
+    def consolidate(self):
+        A = [None] * int(math.log(self.total_nodes) * 2)
+        nodes = [w for w in self.iterate(self.root_list)]
+        for w in range(0, len(nodes)):
+            x = nodes[w]
+            d = x.degree
+            while A[d] != None:
+                y = A[d]
+                if x.delay > y.delay:
+                    temp = x
+                    x, y = y, temp
+                self.heap_link(y, x)
+                A[d] = None
+                d += 1
+            A[d] = x
+        # find new min node - no need to reconstruct new root list below
+        # because root list was iteratively changing as we were moving
+        # nodes around in the above loop
+        for i in range(0, len(A)):
+            if A[i] is not None:
+                if A[i].delay < self.min_node.delay:
+                    self.min_node = A[i]
+
+    # actual linking of one node to another in the root list
+    # while also updating the child linked list
+    def heap_link(self, y: Node, x: Node):
+        self.remove_from_root_list(y)
+        y.left = y.right = y
+        self.merge_with_child_list(x, y)
+        x.degree += 1
+        y.parent = x
+        y.mark = False
+
+    # merge a node with the doubly linked root list
+    def merge_with_root_list(self, node: Node):
+        if self.root_list is None:
+            self.root_list = node
+        else:
+            node.right = self.root_list.right
+            node.left = self.root_list
+            self.root_list.right.left = node
+            self.root_list.right = node
+
+    # merge a node with the doubly linked child list of a root node
+    def merge_with_child_list(self, parent: Node, node: Node):
+        if parent.child is None:
+            parent.child = node
+        else:
+            node.right = parent.child.right
+            node.left = parent.child
+            parent.child.right.left = node
+            parent.child.right = node
+
+    # remove a node from the doubly linked root list
+    def remove_from_root_list(self, node: Node):
+        if node == self.root_list:
+            self.root_list = node.right
+        node.left.right = node.right
+        node.right.left = node.left
+
+    # remove a node from the doubly linked child list
+    def remove_from_child_list(self, parent: Node, node: Node):
+        if parent.child == parent.child.right:
+            parent.child = None
+        elif parent.child == node:
+            parent.child = node.right
+            node.right.parent = parent
+        node.left.right = node.right
+        node.right.left = node.left

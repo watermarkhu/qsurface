@@ -2,7 +2,7 @@ from typing import List, Optional, Tuple
 from ...codes.elements import AncillaQubit, Edge
 from ..unionfind.sim import Toric as UFToric, Planar as UFPlanar
 from ..unionfind.elements import Cluster
-from .elements import Node, Syndrome, Junction, OddNode, print_tree
+from .elements import Node, Syndrome, Junction, OddNode, print_tree, FibonacciHeap
 
 UL = List[Tuple[AncillaQubit, Edge, AncillaQubit]]
 
@@ -57,8 +57,10 @@ class Toric(UFToric):
         super().__init__(*args, **kwargs)
 
         self.code._AncillaQubit.node = None
-        self._Cluster.root_node = None
+        # TODO self._Cluster.root_node = None
+        self._Cluster.num_nodes = 0
         self._Cluster.min_delay = 0
+        self._Cluster.fibheap = None
         self.new_boundary = []
 
     """
@@ -138,7 +140,10 @@ class Toric(UFToric):
             if ancilla.cluster is None or ancilla.cluster.instance != self.code.instance:
                 node = self._Syndrome(ancilla)
                 cluster = self._Cluster(self.cluster_index, self.code.instance)
-                cluster.root_node = node
+                cluster.fibheap = FibonacciHeap()
+                # TODO cluster.root_node = node
+                cluster.num_nodes += 1
+
                 self.cluster_add_ancilla(cluster, ancilla)
                 self.cluster_index += 1
                 self.clusters.append(cluster)
@@ -213,65 +218,27 @@ class Toric(UFToric):
         if self.config["print_steps"]:
             print(f"{cluster}, ", end="")
 
-        for node, edge, parent_node in cluster.root_node.root_list:
-            node.ns_parity(parent_node)
-            min_delay = node.ns_delay((parent_node, edge))
-            if min_delay < cluster.min_delay:
-                cluster.min_delay = min_delay
-        if cluster.root_node.root_list:
-            cluster.root_node.root_list = []
-            if self.config["print_tree"]:
-                print_tree(cluster.root_node)
+        cluster.min_delay = cluster.fibheap.find_min().delay
 
-        self.grow_node(cluster, cluster.root_node, union_list)
+        while cluster.fibheap.findmin().delay == cluster.min_delay:
+
+            node = cluster.fibheap.extract_min()
+
+            node.delay += 1
+            node.radius += 1
+            node.old_bound, node.new_bound = node.new_bound, []
+            while node.old_bound:
+                boundary = node.old_bound.pop()
+                ancilla, new_edge, new_ancilla = boundary
+                if self.support[new_edge] != 2:
+                    self._edge_grow(*boundary)
+                    if self.support[new_edge] == 2:
+                        union_list.append(boundary)
+                    else:
+                        node.new_bound.append(boundary)
 
         if self.config["print_steps"]:
             print("")
-
-    def grow_node(self, cluster: Cluster, node: Node, union_list: UL, parent_node: Optional[Node] = None):
-        """Recursive function that grows a ``node`` and its descendents.
-
-        Grows the boundary list that is stored at the current node if there the current node is not suspended. The condition required is the following:
-
-        .. math: n_{\\text{delay}} - n_{\\text{waited}} - \\min_{x \\in \\mathcal{N}}{n_{\\text{delay}}} = 0
-
-        where :math:`\\mathcal{N}` is the node-tree. The minimal delay value in the node-tree here stored as ``cluster.min_delay``. Fully grown edges are added to ``union_list`` to be later considered by `union_bucket`.
-
-        Parameters
-        ----------
-        cluster
-            Parent cluster object of ``node``.
-        node
-            Node to consider for growth.
-        union_list
-            List of potential mergers between two cluster-distinct ancillas.
-        parent_node
-            Parent node in the node-tree to indicate recursive direction.
-        """
-        if node.delay - node.waited == cluster.min_delay:
-            self.grow_node_boundary(node, union_list)
-            if self.config["print_steps"]:
-                print(node._repr_status, end="; ")
-        else:
-            node.waited += 1
-
-        for child_node, _ in node.neighbors:
-            if child_node is not parent_node:
-                self.grow_node(cluster, child_node, union_list, node)
-
-    def grow_node_boundary(self, node: Node, union_list: UL):
-        """Grows the boundary of a ``node``."""
-        node.radius += 1
-        node.old_bound, node.new_bound = node.new_bound, []
-        while node.old_bound:
-            boundary = node.old_bound.pop()
-            ancilla, new_edge, new_ancilla = boundary
-            if self.support[new_edge] != 2:
-                self._edge_grow(*boundary)
-                if self.support[new_edge] == 2:
-                    union_list.append(boundary)
-                else:
-                    node.new_bound.append(boundary)
 
     """
     ================================================================================================
@@ -294,12 +261,7 @@ class Toric(UFToric):
             if self.union_check(edge, ancilla, new_ancilla, cluster, new_cluster):
 
                 node, new_node = ancilla.node, new_ancilla.node
-                even = (cluster.parity + new_cluster.parity) % 2 == 0
-
-                if not even and new_cluster.parity % 2 == 0:
-                    root_node, parent, child = cluster.root_node, node, new_node
-                else:
-                    root_node, parent, child = new_cluster.root_node, new_node, node
+                parent, child = node, new_node if cluster.num_nodes > new_cluster.num_nodes else new_node, node
 
                 if not node.radius % 2 and new_node.radius > 1:  # Connect via new junction-node
                     junction = self._Junction(new_ancilla)
@@ -308,22 +270,31 @@ class Toric(UFToric):
                     junction.neighbors = [(parent, parent_edge), (child, child_edge)]
                     parent.neighbors.append((junction, parent_edge))
                     child.neighbors.append((junction, child_edge))
-                    calc_delay = [junction, parent_edge, parent]
+                    cluster.num_nodes += 1
+                    junction.ns_parity(parent)
+                    junction.ns_delay((parent, parent_edge))
+
                 else:  # Connect directly
                     edge = (parent.radius + child.radius) // 2
                     parent.neighbors.append((child, edge))
                     child.neighbors.append((parent, edge))
-                    calc_delay = [child, edge, parent]
-                if not even:
-                    root_node.root_list.append(calc_delay)
+                    child.ns_parity(parent)
+                    child.ns_delay((parent, edge))
 
                 string = "{}∪{}=".format(cluster, new_cluster) if self.config["print_steps"] else ""
+
                 if cluster.size < new_cluster.size:
                     cluster, new_cluster = new_cluster, cluster
+
                 cluster.union(new_cluster)
-                cluster.root_node = root_node
+                cluster.num_nodes += new_cluster.num_nodes
+
                 if string:
                     print(string, cluster)
+
+                if self.config["print_tree"]:
+                    print("Merged on parent ")
+                    print_tree(parent)
 
         if union_list and self.config["print_steps"]:
             print("")

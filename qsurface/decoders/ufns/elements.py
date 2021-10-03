@@ -168,7 +168,7 @@ def print_tree(current_node: Node, parent_node: Optional[Node] = None):
     current_node
         Current root of the node-tree to print.
     parent_node
-        Parent node which will not be printed. s
+        Parent node which will not be printed.
     """
 
     def get_children(node, parent=None):

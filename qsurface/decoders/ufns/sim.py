@@ -2,7 +2,7 @@ from typing import List, Optional, Tuple
 from ...codes.elements import AncillaQubit, Edge
 from ..unionfind.sim import Toric as UFToric, Planar as UFPlanar
 from ..unionfind.elements import Cluster
-from .elements import Node, Syndrome, Junction, OddNode, print_tree, FibonacciHeap
+from .elements import SyndromeNode, JunctionNode, OddNode, print_tree, FibonacciHeap
 
 UL = List[Tuple[AncillaQubit, Edge, AncillaQubit]]
 
@@ -10,7 +10,7 @@ UL = List[Tuple[AncillaQubit, Edge, AncillaQubit]]
 class Toric(UFToric):
     """Union-Find Node-Suspension decoder for the toric lattice.
 
-    Within the combined Union-Find and Node-Suspension data structure, every `~.unionfind.elements.Cluster` is partitioned into one or more `~.ufns.elements.Node` objectss. The ``node`` attribute is monkey-patched to the `~.codes.elements.AncillaQubit` object to assist the identification of its parent `~.ufns.elements.Node`.
+    Within the combined Union-Find and Node-Suspension data structure, every `~.unionfind.elements.Cluster` is partitioned into one or more `~.ufns.elements.SyndromeNode` objectss. The ``node`` attribute is monkey-patched to the `~.codes.elements.AncillaQubit` object to assist the identification of its parent `~.ufns.elements.SyndromeNode`.
 
     The boundary of every cluster is not stored at the cluster object, but divided under its partitioned nodes. Cluster growth is initiated from the root of the node-tree. The attributes ``root_node`` and ``min_delay`` are monkey-patched to the `~.unionfind.elements.Cluster` object to assist with cluster growth in the Node-Suspension data structure. See `grow_node` for more.
 
@@ -33,8 +33,8 @@ class Toric(UFToric):
     name = "Union-Find Node-Suspension"
     short = "ufns"
 
-    _Syndrome = Syndrome
-    _Junction = Junction
+    _SyndromeNode = SyndromeNode
+    _JunctionNode = JunctionNode
     _OddNode = OddNode
 
     compatibility_measurements = dict(
@@ -56,12 +56,13 @@ class Toric(UFToric):
         )
         super().__init__(*args, **kwargs)
 
+        self.new_boundary = []
+
+        # Monkey patching UF decoder objects with additional default parameters
         self.code._AncillaQubit.node = None
-        # TODO self._Cluster.root_node = None
         self._Cluster.num_nodes = 0
         self._Cluster.min_delay = 0
         self._Cluster.fibheap = None
-        self.new_boundary = []
 
     """
     ================================================================================================
@@ -138,10 +139,9 @@ class Toric(UFToric):
 
         for ancilla in plaqs + stars:
             if ancilla.cluster is None or ancilla.cluster.instance != self.code.instance:
-                node = self._Syndrome(ancilla)
+                node = self._SyndromeNode(ancilla)
                 cluster = self._Cluster(self.cluster_index, self.code.instance)
                 cluster.fibheap = FibonacciHeap()
-                # TODO cluster.root_node = node
                 cluster.num_nodes += 1
 
                 self.cluster_add_ancilla(cluster, ancilla)
@@ -264,22 +264,23 @@ class Toric(UFToric):
                 parent, child = node, new_node if cluster.num_nodes > new_cluster.num_nodes else new_node, node
 
                 if not node.radius % 2 and new_node.radius > 1:  # Connect via new junction-node
-                    junction = self._Junction(new_ancilla)
+                    junction = self._SyndromeNode(new_ancilla)
                     new_ancilla.node = junction
                     parent_edge, child_edge = parent.radius // 2, child.radius // 2
-                    junction.neighbors = [(parent, parent_edge), (child, child_edge)]
-                    parent.neighbors.append((junction, parent_edge))
-                    child.neighbors.append((junction, child_edge))
+                    junction.neighbors = {parent: parent_edge, child: child_edge}
+                    parent.neighbors[junction] = parent_edge
+                    child.neighbors[junction] = child_edge
                     cluster.num_nodes += 1
-                    junction.ns_parity(parent)
-                    junction.ns_delay((parent, parent_edge))
+
+                    junction.ns_parity(parent=parent)
+                    junction.ns_delay(parent=parent)
 
                 else:  # Connect directly
                     edge = (parent.radius + child.radius) // 2
-                    parent.neighbors.append((child, edge))
-                    child.neighbors.append((parent, edge))
-                    child.ns_parity(parent)
-                    child.ns_delay((parent, edge))
+                    parent.neighbors[child] = edge
+                    child.neighbors[parent] = edge
+                    child.ns_parity(parent=parent)
+                    child.ns_delay(parent=parent)
 
                 string = "{}∪{}=".format(cluster, new_cluster) if self.config["print_steps"] else ""
 

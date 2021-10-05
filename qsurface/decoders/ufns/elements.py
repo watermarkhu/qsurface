@@ -1,13 +1,12 @@
 from __future__ import annotations
-from abc import ABC, abstractmethod
-from typing import Optional, Tuple
+from typing import Optional, Tuple, List
 from ...codes.elements import AncillaQubit
 import itertools
 import pptree
 import math
 
 
-class Node(ABC):
+class SyndromeNode(object):
     """Element in the node-tree.
 
     A subgraph :math:`\\mathcal{V}\\subseteq C` is a spanning-tree of a cluster :math:`C` if it is a connected acyclic subgraph that includes all vertices of :math:`C` and a minimum number of edges. We call the spanning-tree of a cluster its ancilla-tree. An acyclic connected spanning-forest is required for the Union-Find Decoder.
@@ -27,10 +26,8 @@ class Node(ABC):
         Current boundary edges.
     new_bound : list
         Next boundary edges.
-    neighbors : list
+    neighbors : dict
         Neighboring nodes in the node-tree.
-    root_list : list
-        List of even subroots of merged node-trees.
     radius : int
         Node radius size.
     parity : {0,1}
@@ -41,17 +38,18 @@ class Node(ABC):
         Number of iterations waited.
     """
 
-    short = "T"
+    short = "S"
 
     def __init__(self, primer: AncillaQubit):
 
         # Vertex properties
         self.primer = primer
         primer.node = self
-        self.old_bound = self.new_bound = self.neighbors = self.root_list = []
+        self.old_bound = self.new_bound = []
+        self.neighbors = {}
 
         # Nodetree properties
-        self.radius = self.parity = self.delay = self.waited = 0
+        self.radius = self.parity = self.delay = 0
 
         # Priority heap properties
         self.parent = self.child = self.left = self.right = None
@@ -70,48 +68,13 @@ class Node(ABC):
     def _repr_status(self):
         return str(self) + self._status
 
-    @abstractmethod
-    def ns_parity(self):
-        "Calculates and returns the parity of the current node."
-        pass
+    def get_children(self, parent: Optional[SyndromeNode] = None):
+        return [neighbor for neighbor in self.neighbors.keys() if neighbor is not parent]
 
-    def ns_delay(self, parent: Optional[Tuple[Node, int]] = None, min_delay: Optional[int] = None) -> int:
-        """Calculates the node delay.
-
-        Head recursive function that calculates the delays of the current node and all its descendent nodes.
-
-        .. math:: n_d = m_d + \\lfloor n_r-m_r \\rfloor - (-1)^{n_p} |(n,m)|
-
-        The minimal delay ``min_delay`` in the tree is maintained as the actual delay is relative to the minimal delay value within the entire node-tree.
-
-        Parameters
-        ----------
-        parent
-            The parent node and the distance to the parent node.
-        min_delay
-            Minimal delay value encountered during the current calculation.
-        """
-        self.root_list = []
-        self.waited = 0
-
-        if parent is not None:
-            parent, edge = parent
-
-            self.delay = parent.delay + int((self.radius / 2 - parent.radius / 2) % 1) - edge * (-1) ** self.parity
-            if min_delay is None or (self.delay < min_delay):
-                min_delay = self.delay
-
-        for node, edge in self.neighbors:
-            if node is not parent:
-                min_delay = node.ns_delay((self, edge), min_delay)
-
-        return min_delay
-
-
-class Syndrome(Node):
-    short = "S"
-
-    def ns_parity(self, parent_node: Optional[Node] = None) -> int:
+    def ns_parity(self, 
+        parent: Optional[SyndromeNode] = None, 
+        **kwargs
+    ) -> int:
         """Calculates the node parity.
 
         Tail recursive function that calculates the parities of the current node and all its descendent nodes.
@@ -120,17 +83,47 @@ class Syndrome(Node):
 
         Parameters
         ----------
-        parent_node
+        parent
             Parent node in node-tree to indicate direction.
         """
-        self.parity = sum([1 - node.ns_parity(self) for node, _ in self.neighbors if node is not parent_node]) % 2
+        self.parity = sum(
+            [
+                1 - node.ns_parity(self) 
+                for node in self.get_children(parent)
+            ]
+        ) % 2
         return self.parity
 
 
-class Junction(Node):
+    def ns_delay(self, parent: Optional[SyndromeNode] = None, **kwargs) -> int:
+        """Calculates the node delay.
+
+        Head recursive function that calculates the delays of the current node and all its descendent nodes.
+
+        .. math:: n_d = m_d + \\lfloor n_r-m_r \\rfloor - (-1)^{n_p} |(n,m)|
+
+        Parameters
+        ----------
+        parent
+            Parent node in node-tree to indicate direction.
+        """
+
+        if parent is not None:
+            edge = self.neighbors[parent]
+            self.delay = (parent.delay 
+                + int((self.radius / 2 - parent.radius / 2) % 1)
+                - edge * (-1) ** self.parity
+            )
+
+        for node in self.get_children(parent=parent):
+            node.ns_delay(parent=self)
+
+
+
+class JunctionNode(SyndromeNode):
     short = "J"
 
-    def ns_parity(self, parent_node: Optional[Node] = None) -> int:
+    def ns_parity(self, *args, **kwargs) -> int:
         """Calculates the node parity.
 
         Tail recursive function that calculates the parities of the current node and all its children.
@@ -142,11 +135,11 @@ class Junction(Node):
         parent_node
             Parent node in node-tree to indicate direction.
         """
-        self.parity = (1 + sum([1 - node.ns_parity(self) for node, _ in self.neighbors if node is not parent_node]) % 2)
+        self.parity = 1 - super().ns_parity(*args, **kwargs)
         return self.parity
 
 
-class OddNode(Node):
+class OddNode(SyndromeNode):
     short = "O"
 
     def __init__(self, *args, **kwargs) -> None:
@@ -158,7 +151,7 @@ class OddNode(Node):
         return self.parity
 
 
-def print_tree(current_node: Node, parent_node: Optional[Node] = None):
+def print_tree(current_node: SyndromeNode, parent_node: Optional[SyndromeNode] = None):
     """Prints the node-tree of ``current_node`` and its descendents.
 
     Utilizes `pptree <https://pypi.org/project/pptree/>`_ to print a tree of nodes, which requires a list of children elements per node. Since the node-tree is semi-directional (the root can be any element in the tree), we need to traverse the node-tree from ``current_node`` in all directions except for the ``parent_node`` to find the children attributes for the current direction.
@@ -243,7 +236,7 @@ class FibonacciHeap:
 
     # insert new node into the unordered root list in O(1) time
     # returns the node so that it can be used for decrease_key later
-    def insert(self, n: Node):
+    def insert(self, n: SyndromeNode):
         n.left = n.right = n
         self.merge_with_root_list(n)
         if self.min_node is None or n.delay < self.min_node.delay:
@@ -252,7 +245,7 @@ class FibonacciHeap:
         return n
 
     # modify the key of some node in the heap in O(1) time
-    def decrease_key(self, node: Node, delay: int):
+    def decrease_key(self, node: SyndromeNode, delay: int):
         if delay > node.delay:
             return None
         node.delay = delay
@@ -284,7 +277,7 @@ class FibonacciHeap:
 
     # if a child node becomes smaller than its parent node we
     # cut this child node off and bring it up to the root list
-    def cut(self, node: Node, y):
+    def cut(self, node: SyndromeNode, y):
         self.remove_from_child_list(y, node)
         y.degree -= 1
         self.merge_with_root_list(node)
@@ -328,7 +321,7 @@ class FibonacciHeap:
 
     # actual linking of one node to another in the root list
     # while also updating the child linked list
-    def heap_link(self, y: Node, x: Node):
+    def heap_link(self, y: SyndromeNode, x: SyndromeNode):
         self.remove_from_root_list(y)
         y.left = y.right = y
         self.merge_with_child_list(x, y)
@@ -337,7 +330,7 @@ class FibonacciHeap:
         y.mark = False
 
     # merge a node with the doubly linked root list
-    def merge_with_root_list(self, node: Node):
+    def merge_with_root_list(self, node: SyndromeNode):
         if self.root_list is None:
             self.root_list = node
         else:
@@ -347,7 +340,7 @@ class FibonacciHeap:
             self.root_list.right = node
 
     # merge a node with the doubly linked child list of a root node
-    def merge_with_child_list(self, parent: Node, node: Node):
+    def merge_with_child_list(self, parent: SyndromeNode, node: SyndromeNode):
         if parent.child is None:
             parent.child = node
         else:
@@ -357,14 +350,14 @@ class FibonacciHeap:
             parent.child.right = node
 
     # remove a node from the doubly linked root list
-    def remove_from_root_list(self, node: Node):
+    def remove_from_root_list(self, node: SyndromeNode):
         if node == self.root_list:
             self.root_list = node.right
         node.left.right = node.right
         node.right.left = node.left
 
     # remove a node from the doubly linked child list
-    def remove_from_child_list(self, parent: Node, node: Node):
+    def remove_from_child_list(self, parent: SyndromeNode, node: SyndromeNode):
         if parent.child == parent.child.right:
             parent.child = None
         elif parent.child == node:

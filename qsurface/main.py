@@ -185,6 +185,7 @@ def run(
     if benchmark:
         output["benchmark"] = {
             **benchmark.data,
+            **benchmark.values,
             **benchmark.lists_mean_var(),
         }
 
@@ -431,17 +432,26 @@ class BenchmarkDecoder(object):
 
         # Decorate decoder methods
         decorator_names = ["value_to_list"] + self.list_decorators + self.value_decorators
-        for method_name, decorators in self.methods_to_benchmark.items():
+        for handle_name, decorators in self.methods_to_benchmark.items():
             if isinstance(decorators, str):
                 decorators = [decorators]
 
-            class_method = getattr(decoder, method_name)
+            attribute_names = handle_name.split('.')
+            handle = decoder
+            for i, attribute_name in enumerate(attribute_names):
+                owner = handle
+                if hasattr(owner, attribute_name):
+                    handle = getattr(owner, attribute_name)
+                else:
+                    raise NameError(f"{attribute_name} is not a method of {decoder}.{attribute_names[:i]}")
+
             for decorator in decorators:
                 if decorator not in decorator_names:
                     raise NameError(f"Decorator {decorator} not defined.")
                 wrapper = getattr(self, decorator)
-                class_method = wrapper(class_method)
-            setattr(decoder, method_name, class_method)
+                handle = wrapper(handle)
+
+            setattr(owner, attribute_name, handle)
 
     def lists_mean_var(self, reset: bool = True):
         """Get mean and stand deviation of values in ``self.lists``.

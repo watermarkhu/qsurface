@@ -85,8 +85,8 @@ class PerfectMeasurements(ToricPM):
     def init_logical_operator(self, **kwargs):
         """Initiates the logical operators [x,z] of the rotated code."""
         operators = {
-            "x": [self.data_qubits[self.decode_layer][(0, i)].edges["x"] for i in range(self.size[0])],
-            "z": [self.data_qubits[self.decode_layer][(i, 0)].edges["z"] for i in range(self.size[1])],
+            "x": [self.data_qubits[self.decode_layer][(i, 0)].edges["x"] for i in range(self.size[0])],
+            "z": [self.data_qubits[self.decode_layer][(0, i)].edges["z"] for i in range(self.size[1])],
         }
         self.logical_operators = operators
 

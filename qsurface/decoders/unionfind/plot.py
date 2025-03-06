@@ -1,7 +1,7 @@
 from ...codes.elements import AncillaQubit, DataQubit, Edge
 from ...plot import Template2D, Template3D
 from .._template import Plot
-from .sim import Toric as SimToric, Planar as SimPlanar
+from .sim import Toric as SimToric, Planar as SimPlanar, Rotated as SimRotated
 from matplotlib.patches import Rectangle
 from matplotlib.lines import Line2D
 
@@ -362,3 +362,9 @@ class Planar(Toric, SimPlanar):
         def _plot_ancilla(self, ancilla, **kwargs):
             if type(ancilla) == AncillaQubit:
                 super()._plot_ancilla(ancilla, **kwargs)
+
+class Rotated(Planar, SimRotated):
+    def init_plot(self, **kwargs):
+        # Inherited docstring
+        size = [xy - 0.5 for xy in self.code.size]
+        self._init_axis([-0.5, -0.5] + size, title=self.decoder, aspect="equal")

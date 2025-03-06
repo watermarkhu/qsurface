@@ -7,4 +7,5 @@ from . import rotated
 CODES = [
     "toric",
     "planar",
+    "rotated"
 ]

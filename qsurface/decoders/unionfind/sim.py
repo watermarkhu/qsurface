@@ -661,3 +661,6 @@ class Planar(Toric):
                         key, (new_ancilla, edge) = leaf
                         self._edge_peel(edge, variant="peel")
                         self.peel_leaf(cluster, new_ancilla)
+
+class Rotated(Planar):
+    pass

@@ -1,4 +1,4 @@
-from .sim import Toric as SimToric, Planar as SimPlanar, Planar as SimRotated
+from .sim import Toric as SimToric, Planar as SimPlanar
 from .._template import Plot
 
 
@@ -21,17 +21,6 @@ class Planar(Toric, SimPlanar):
     ----------
     args, kwargs
         Positional and keyword arguments are passed on to `~.decoders.mwpm.plot.Toric` and `.decoders.mwpm.sim.Planar`.
-    """
-
-    pass
-
-class Rotated(Planar, SimRotated):
-    """Plot MWPM decoder for the rotated planar code.
-
-    Parameters
-    ----------
-    args, kwargs
-        Positional and keyword arguments are passed on to `~.decoders.mwpm.plot.Toric`.
     """
 
     pass
